@@ -811,7 +811,7 @@ class MainWindow(QMainWindow):
     from pipeline_thread import PipelineThread
 
     def _poll(self, ): self.maint.poll()
-    def _notify(self, msg,is_error=False): self.maint.notify(msg,is_error=False)
+    def _notify(self, msg, is_error=False): self.maint.notify(msg, is_error)
     def _check_updates(self, silent=False): self.maint.check_updates(silent=False)
     def _cu_single(self, w): self.maint.cu_single(w)
     def _restore_geometry(self, ): self.maint.restore_geometry()

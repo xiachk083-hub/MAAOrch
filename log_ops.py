@@ -87,24 +87,3 @@ class LogService:
         # Scroll to bottom
         te.moveCursor(te.textCursor().End)
         l.addWidget(te); l.addWidget(QPushButton("关闭",clicked=d.accept)); d.exec()
-    def _scan(self, a, cb): self.emu.scan(a, cb)
-    def _add_acc(self):
-        d=AccountDialog(self.mw)
-        if d.exec()==QDialog.Accepted: self.mw.accounts.append(d.r); self.mw._save(); self.mw._ra()
-    def _del_acc(self):
-        row=self.at.currentRow()
-        if row<0: return
-        it=self.at.item(row,0)
-        if not it or not hasattr(it,'_acc_id'): return
-        aid=it._acc_id
-        for j,a in enumerate(self.mw.accounts):
-            if a["id"]==aid:
-                if QMessageBox.question(self.mw,"确认",f"删除 {a['name']}?")==QMessageBox.Yes:
-                    for w in self.mw.warehouse:
-                        if w.get("account_ref")==a["id"]: w["account_ref"]=""
-                    self.mw.accounts.pop(j); self.mw._save(); self.mw._ra()
-                return
-    def _ac_menu(self,pos):
-        row=self.at.rowAt(pos.y())
-        if row<0: return
-        it=self.at.item(row,0)
