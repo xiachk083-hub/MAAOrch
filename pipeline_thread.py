@@ -7,6 +7,7 @@ class PipelineThread(QThread):
     def __init__(self,groups,warehouse,accounts,parent=None):
         super().__init__(); self.groups=groups; self.warehouse={w["id"]:w for w in warehouse}
         self.accounts={a["id"]:a for a in accounts}; self.stop_flag=False; self.pause_flag=False; self.mw=parent
+        self._running: list[subprocess.Popen] = []
     def run(self):
         for g in self.groups:
             if self.stop_flag: break
@@ -31,13 +32,20 @@ class PipelineThread(QThread):
             if ac and ac in self.accounts and self.mw:
                 try: self.mw.cfg.inject_for_thread(w,self.accounts[ac])
                 except: pass
-            subprocess.Popen([p]+w.get("args",[]),shell=False,cwd=w.get("cwd","") or None); self.program_started.emit(n,True)
+            proc = subprocess.Popen([p]+w.get("args",[]),shell=False,cwd=w.get("cwd","") or None)
+            self._running.append(proc)
+            self.program_started.emit(n,True)
         except Exception as e: self.program_started.emit(f"{n}:{e}",False)
     def _sleep(self,s):
         for _ in range(int(s*10)):
             if self.stop_flag: break
             while self.pause_flag and not self.stop_flag: self.msleep(200)
             time.sleep(0.1)
-    def stop(self): self.stop_flag=True
+    def stop(self):
+        self.stop_flag=True
+        for proc in self._running:
+            try: proc.terminate()
+            except: pass
+        self._running.clear()
     def pause(self): self.pause_flag=True
     def resume(self): self.pause_flag=False
