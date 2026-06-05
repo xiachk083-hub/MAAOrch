@@ -4,6 +4,7 @@ from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QLabel, QMessageBox, QHeaderView, QAbstractItemView
 from PySide6.QtGui import QColor, QFont
 from updater import UpdateCheckThread, UpdateDialog
+from dialogs import AccountDialog
 from utils import get_platform_key, parse_maa_version
 
 class LogService:
@@ -88,7 +89,7 @@ class LogService:
         l.addWidget(te); l.addWidget(QPushButton("关闭",clicked=d.accept)); d.exec()
     def _scan(self, a, cb): self.emu.scan(a, cb)
     def _add_acc(self):
-        d=AccountDialog(self)
+        d=AccountDialog(self.mw)
         if d.exec()==QDialog.Accepted: self.mw.accounts.append(d.r); self.mw._save(); self.mw._ra()
     def _del_acc(self):
         row=self.at.currentRow()
