@@ -11,3 +11,5 @@ screenshots/
 *.7z
 .DS_Store
 Thumbs.db
+.pytest_cache/
+.ruff_cache/

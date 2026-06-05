@@ -1,0 +1,19 @@
+[project]
+name = "MAAOrch"
+version = "5.0.0"
+description = "MAA 多账号批量管理工具"
+requires-python = ">=3.12"
+dependencies = ["PySide6>=6.0"]
+
+[tool.ruff]
+line-length = 200
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501", "E722", "F841", "N802", "N803", "N806"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = true

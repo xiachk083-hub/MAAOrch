@@ -317,12 +317,16 @@ MUMU_INSTANCE_DIRS=[
 ]
 
 MUMU_CLI_CANDIDATES=[
-    r"D:\Xiach\MuMuPlayer\nx_main\mumu-cli.exe",
-    r"C:\Program Files\Netease\MuMuPlayer\nx_main\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer-12.0\shell\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer-12.0\nx_main\mumu-cli.exe",
+    r"C:\Program Files\Netease\MuMuPlayer\nx_main\mumu-cli.exe",
+    r"D:\Program Files\Netease\MuMuPlayer-12.0\shell\mumu-cli.exe",
+    r"D:\Program Files\Netease\MuMuPlayer-12.0\nx_main\mumu-cli.exe",
     r"C:\Program Files (x86)\Netease\MuMuPlayer\nx_main\mumu-cli.exe",
 ]
+# Also check MUMU_CLI_HOME env var for custom installs
+if (ev:=os.environ.get("MUMU_CLI_HOME","")):
+    MUMU_CLI_CANDIDATES.insert(0,str(Path(ev)/"mumu-cli.exe"))
 
 def find_mumu_cli():
     for c in MUMU_CLI_CANDIDATES:
@@ -1918,7 +1922,8 @@ class ScheduleThread(QThread):
     def stop_thread(self): self._r=False
 
 if __name__=="__main__":
-    if not is_admin(): run_as_admin(); sys.exit(0)
+    if not is_admin() and "--no-elevate" not in sys.argv:
+        run_as_admin(); sys.exit(0)
     # Single instance: find existing window and activate it
     import ctypes as _ct
     hwnd=_ct.windll.user32.FindWindowW(None,"MAAOrch")
