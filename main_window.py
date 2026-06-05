@@ -390,8 +390,14 @@ class MainWindow(QMainWindow):
                 for j,a in enumerate(self.accounts):
                     if a["id"]==it._acc_id: self._sad(j); break
     def _sad(self,row):
-        if hasattr(self,'_sad_row') and self._sad_row==row: return  # same account, skip rebuild
+        if hasattr(self,'_sad_row') and self._sad_row==row: return
         self._sad_row=row
+        # Stop running threads to avoid signals to destroyed widgets
+        for attr in ('_t','_scan_thread'):
+            if hasattr(self,attr) and getattr(self,attr).isRunning():
+                try: getattr(self,attr).result.disconnect()
+                except: pass
+                getattr(self,attr).quit(); getattr(self,attr).wait(1000)
         for i in reversed(range(self.adl.count())):
             w=self.adl.itemAt(i).widget()
             if w and w is not self.ade: self.ade.hide(); w.setParent(None)
