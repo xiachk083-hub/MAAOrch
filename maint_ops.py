@@ -1,5 +1,6 @@
-import time,json
+import time,json,urllib.request
 from pathlib import Path
+from datetime import datetime
 from PySide6.QtCore import Qt,QTimer,QPointF
 from PySide6.QtGui import QPixmap,QPainter,QColor,QBrush,QPolygonF,QIcon
 from PySide6.QtWidgets import QDialog,QVBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QHeaderView,QAbstractItemView,QMessageBox,QApplication,QSystemTrayIcon,QMenu
@@ -87,7 +88,7 @@ class MaintService:
                 except: pass
 
     def notify(self,msg,is_error=False):
-        if hasattr(self,'tray_icon'):
+        if hasattr(self.mw,'tray_icon'):
             self.mw.tray_icon.showMessage("流水线启动器",msg,QSystemTrayIcon.Critical if is_error else QSystemTrayIcon.Information,3000)
         # Webhook
         wh=self.mw.config.get("webhook_url","")

@@ -23,7 +23,7 @@ class EmuService:
         self._refresh_t=_T()
         def _done(instances):
             try:
-                if not hasattr(self,'_sad_row'): return  # window destroyed
+                if not hasattr(self.mw,'_sad_row'): return  # window destroyed
                 combo.blockSignals(True)
                 combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
                 selected=-1
