@@ -35,20 +35,24 @@ MUMU_INSTANCE_DIRS=[
 ]
 
 MUMU_CLI_CANDIDATES=[
-    r"D:\Xiach\MuMuPlayer\nx_main\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer-12.0\shell\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer-12.0\nx_main\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer\nx_main\mumu-cli.exe",
     r"D:\Program Files\Netease\MuMuPlayer-12.0\shell\mumu-cli.exe",
     r"D:\Program Files\Netease\MuMuPlayer-12.0\nx_main\mumu-cli.exe",
     r"C:\Program Files (x86)\Netease\MuMuPlayer\nx_main\mumu-cli.exe",
-]
+] + [str(Path(d)/"MuMuPlayer"/"nx_main"/"mumu-cli.exe") for d in [
+    Path(os.environ.get("USERPROFILE","C:/")),
+    Path(os.environ.get("HOMEDRIVE","D:/")),
+] if (Path(d)/"MuMuPlayer"/"nx_main"/"mumu-cli.exe").exists()]
 # Also check MUMU_CLI_HOME env var for custom installs
 if (ev:=os.environ.get("MUMU_CLI_HOME","")):
     MUMU_CLI_CANDIDATES.insert(0,str(Path(ev)/"mumu-cli.exe"))
 
 def find_mumu_cli():
-    for c in MUMU_CLI_CANDIDATES:
+    # Check known paths + USERPROFILE
+    extra=[str(Path(os.environ.get("USERPROFILE","."))/"MuMuPlayer"/"nx_main"/"mumu-cli.exe")]
+    for c in extra + MUMU_CLI_CANDIDATES:
         if Path(c).exists(): return c
     # Search drives for MuMuPlayer
     for drv in "CDEFGH":

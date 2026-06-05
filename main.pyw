@@ -39,7 +39,7 @@ sys.excepthook = _global_excepthook
 from utils import is_admin, run_as_admin
 from main_window import MainWindow
 
-if __name__ == "__main__":
+def main():
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin()
         sys.exit(0)
@@ -54,15 +54,16 @@ if __name__ == "__main__":
     from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import qInstallMessageHandler
     qInstallMessageHandler(_qt_message_handler)
-    # Hook thread exceptions
     import threading
     threading.excepthook = _thread_excepthook
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setQuitOnLastWindowClosed(False)
-
     _write_crash("═══ MAAOrch 启动 ═══")
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()

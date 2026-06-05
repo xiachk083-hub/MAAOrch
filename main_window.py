@@ -45,9 +45,6 @@ try:
 except ImportError:
     ctypes.windll.user32.MessageBoxW(0,"pip install PySide6","错误",0); sys.exit(1)
 
-    if enabled: bp.write_text(f'@start "" "{sys.executable}" "{Path(__file__).resolve()}"\n',encoding="utf-8")
-    elif bp.exists(): bp.unlink()
-
 
 
 class MainWindow(QMainWindow):
@@ -107,6 +104,13 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(5000,lambda: _next(idx+1))
         _next()
     def _save(self):
+        # Debounce: coalesce rapid saves within 300ms
+        if hasattr(self,'_save_timer') and self._save_timer:
+            self._save_timer.stop()
+        self._save_timer=QTimer(self); self._save_timer.setSingleShot(True)
+        self._save_timer.timeout.connect(self._do_save)
+        self._save_timer.start(300)
+    def _do_save(self):
         # Sanitize adb_address (fix encoding artifacts)
         for a in self.accounts:
             raw=a.get("adb_address","")
@@ -1188,45 +1192,7 @@ class MainWindow(QMainWindow):
                 self.pipeline_thread.resume(); self.pab.setText("暂停"); self._log("流水线已继续")
 
     from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
-    from pipeline_thread import PipelineThread
+
     def _poll(self):
         now=time.time()
         for pid in list(self._cli_procs.keys()):
