@@ -14,13 +14,13 @@ class LogService:
 
     def switch_maa_version(self,w,channel):
         """Download and switch to latest version of specified channel"""
-        if QMessageBox.question(self,"切换版本",f"将下载最新 {channel} 版 MAA\n并替换当前版本\n\n是否继续？")!=QMessageBox.Yes: return
+        if QMessageBox.question(self.mw,"切换版本",f"将下载最新 {channel} 版 MAA\n并替换当前版本\n\n是否继续？")!=QMessageBox.Yes: return
         self.mw._log(f"切换 MAA 版本: {channel}")
         self.mw.sl.setText(f"下载 {channel} 版...")
         def _on_result(r):
-            if not r.get("ok"): QMessageBox.critical(self,"失败",r.get("error","")); self.mw.mw.sl.setText("就绪"); return
+            if not r.get("ok"): QMessageBox.critical(self.mw,"失败",r.get("error","")); self.mw.sl.setText("就绪"); return
             tag=r["tag"]; info=r["assets"].get(get_platform_key())
-            if not info: QMessageBox.warning(self,"失败","无可用包"); self.mw.mw.sl.setText("就绪"); return
+            if not info: QMessageBox.warning(self.mw,"失败","无可用包"); self.mw.sl.setText("就绪"); return
             dlg=UpdateDialog(self,tag,info,str(Path(w["path"]).parent))
             if dlg.exec()==QDialog.Accepted:
                 w["maa_version"]=tag; w["update_channel"]=channel; self.mw._save()
@@ -58,9 +58,9 @@ class LogService:
     def show_stats(self,w):
         tasks=self.parse_log(w)
         if not tasks:
-            QMessageBox.information(self,"统计","暂无运行数据\n等待 MAA 执行任务后自动生成")
+            QMessageBox.information(self.mw,"统计","暂无运行数据\n等待 MAA 执行任务后自动生成")
             return
-        d=QDialog(self); d.setWindowTitle("MAA 运行统计"); d.setMinimumSize(400,300)
+        d=QDialog(self.mw); d.setWindowTitle("MAA 运行统计"); d.setMinimumSize(400,300)
         l=QVBoxLayout(d); l.addWidget(QLabel(f"📊 MAA 运行统计 ({len(tasks)} 个任务)",font=QFont("Microsoft YaHei UI",13,QFont.Bold)))
         tw=QTableWidget(); tw.setColumnCount(3); tw.setHorizontalHeaderLabels(["任务","状态","详情"])
         tw.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch); tw.setColumnWidth(1,60); tw.setColumnWidth(2,200)
@@ -78,10 +78,10 @@ class LogService:
 
     def view_log(self,w):
         lp=self.asst_log_path(w)
-        if not lp.exists(): QMessageBox.information(self,"日志","暂无日志文件"); return
+        if not lp.exists(): QMessageBox.information(self.mw,"日志","暂无日志文件"); return
         try: content=lp.read_text(encoding="utf-8",errors="replace")
-        except: QMessageBox.information(self,"日志","无法读取日志"); return
-        d=QDialog(self); d.setWindowTitle("MAA 日志"); d.setMinimumSize(700,500)
+        except: QMessageBox.information(self.mw,"日志","无法读取日志"); return
+        d=QDialog(self.mw); d.setWindowTitle("MAA 日志"); d.setMinimumSize(700,500)
         l=QVBoxLayout(d); te=QPlainTextEdit(); te.setReadOnly(True); te.setPlainText("\n".join(content.split("\n")[-200:]))
         # Scroll to bottom
         te.moveCursor(te.textCursor().End)
@@ -98,8 +98,8 @@ class LogService:
         aid=it._acc_id
         for j,a in enumerate(self.mw.accounts):
             if a["id"]==aid:
-                if QMessageBox.question(self,"确认",f"删除 {a['name']}?")==QMessageBox.Yes:
-                    for w in self.warehouse:
+                if QMessageBox.question(self.mw,"确认",f"删除 {a['name']}?")==QMessageBox.Yes:
+                    for w in self.mw.warehouse:
                         if w.get("account_ref")==a["id"]: w["account_ref"]=""
                     self.mw.accounts.pop(j); self.mw._save(); self.mw._ra()
                 return

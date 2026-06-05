@@ -139,13 +139,13 @@ class MaintService:
                     screen=QApplication.primaryScreen().availableGeometry()
                     x=max(0,min(x,screen.width()-100)); y=max(0,min(y,screen.height()-100))
                     w=min(w,screen.width()); h=min(h,screen.height())
-                    self.setGeometry(x,y,w,h)
-                else: wh=p[0].split("x"); self.resize(int(wh[0]),int(wh[1]))
-            except: self.resize(960,650)
-        else: self.resize(960,650)
+                    self.mw.setGeometry(x,y,w,h)
+                else: wh=p[0].split("x"); self.mw.resize(int(wh[0]),int(wh[1]))
+            except: self.mw.resize(960,650)
+        else: self.mw.resize(960,650)
 
     def setup_tray(self):
-        self.mw.tray_icon=QSystemTrayIcon(self); self.mw.tray_icon.setToolTip("流水线启动器")
+        self.mw.tray_icon=QSystemTrayIcon(self.mw); self.mw.tray_icon.setToolTip("流水线启动器")
         pm=QPixmap(64,64); pm.fill(Qt.transparent); p=QPainter(pm); p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QBrush(QColor(58,126,191))); p.setPen(Qt.NoPen); p.drawEllipse(4,4,56,56); p.setBrush(QBrush(Qt.white))
         tri=QPolygonF([QPointF(24,18),QPointF(24,46),QPointF(46,32)]); p.drawPolygon(tri); p.end(); ic=QIcon(pm)

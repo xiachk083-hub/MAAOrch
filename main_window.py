@@ -407,10 +407,10 @@ class MainWindow(QMainWindow):
         self._sad_row=row
         # Stop running threads to avoid signals to destroyed widgets
         for attr in ('_t','_scan_thread','_refresh_t','_test_t','_ss_t','_stopemu_t'):
-            if hasattr(self,attr) and getattr(self,attr) and getattr(self,attr).isRunning():
-                try: getattr(self,attr).result.disconnect()
+            if hasattr(self.emu,attr) and getattr(self.emu,attr) and getattr(self.emu,attr).isRunning():
+                try: getattr(self.emu,attr).result.disconnect()
                 except: pass
-                getattr(self,attr).terminate(); getattr(self,attr).wait(200)
+                getattr(self.emu,attr).terminate(); getattr(self.emu,attr).wait(200)
         for i in reversed(range(self.adl.count())):
             w=self.adl.itemAt(i).widget()
             if w and w is not self.ade: self.ade.hide(); w.setParent(None)
