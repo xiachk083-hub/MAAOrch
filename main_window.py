@@ -398,7 +398,7 @@ class MainWindow(QMainWindow):
             if hasattr(self,attr) and getattr(self,attr) and getattr(self,attr).isRunning():
                 try: getattr(self,attr).result.disconnect()
                 except: pass
-                getattr(self,attr).quit(); getattr(self,attr).wait(1000)
+                getattr(self,attr).terminate(); getattr(self,attr).wait(200)
         for i in reversed(range(self.adl.count())):
             w=self.adl.itemAt(i).widget()
             if w and w is not self.ade: self.ade.hide(); w.setParent(None)
@@ -609,7 +609,7 @@ class MainWindow(QMainWindow):
         if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
             try: self._refresh_t.result.disconnect()
             except: pass
-            self._refresh_t.quit(); self._refresh_t.wait(500)
+            self._refresh_t.terminate(); self._refresh_t.wait(200)
         class _T(QThread):
             result=Signal(list)
             def run(s): s.result.emit(detect_emu_instances())
@@ -644,7 +644,7 @@ class MainWindow(QMainWindow):
         if hasattr(self,'_test_t') and self._test_t and self._test_t.isRunning():
             try: self._test_t.result.disconnect()
             except: pass
-            self._test_t.quit(); self._test_t.wait(500)
+            self._test_t.terminate(); self._test_t.wait(200)
         class _T(QThread):
             result=Signal(str)
             def run(s):
@@ -667,7 +667,7 @@ class MainWindow(QMainWindow):
         if hasattr(self,'_ss_t') and self._ss_t and self._ss_t.isRunning():
             try: self._ss_t.result.disconnect()
             except: pass
-            self._ss_t.quit(); self._ss_t.wait(500)
+            self._ss_t.terminate(); self._ss_t.wait(200)
         class _T(QThread):
             result=Signal(str)
             def run(s):
@@ -694,7 +694,7 @@ class MainWindow(QMainWindow):
             if hasattr(self,'_stopemu_t') and self._stopemu_t and self._stopemu_t.isRunning():
                 try: self._stopemu_t.result.disconnect()
                 except: pass
-                self._stopemu_t.quit(); self._stopemu_t.wait(500)
+                self._stopemu_t.terminate(); self._stopemu_t.wait(200)
             class _T(QThread):
                 result=Signal(str)
                 def run(s):
@@ -711,6 +711,11 @@ class MainWindow(QMainWindow):
         if not emu_idx: QMessageBox.information(self,"提示","请先选择模拟器实例"); return
         cli=find_mumu_cli()
         if not cli: QMessageBox.warning(self,"提示","未找到 mumu-cli"); return
+        # Prevent double-click: kill existing scan before starting new one
+        if hasattr(self,'_t') and self._t and self._t.isRunning():
+            try: self._t.result.disconnect()
+            except: pass
+            self._t.terminate(); self._t.wait(200)
         self._log(f"扫描端口: 实例 #{emu_idx}")
         self.sl.setText("启动模拟器...")
         adb=a.get("adb_path","") or "adb"
@@ -756,7 +761,7 @@ class MainWindow(QMainWindow):
                 except: pass
                 s.result.emit("__found__"+addr)
         if hasattr(self,'_t') and self._t.isRunning():
-            self._t.result.disconnect(); self._t.quit(); self._t.wait(1000)
+            self._t.result.disconnect(); self._t.terminate(); self._t.wait(200)
         self._t=_T(emu_idx,cli,adb)
         def _on_r(r):
             if r.startswith("__found__"):
@@ -870,7 +875,7 @@ class MainWindow(QMainWindow):
                     results.append(("__err__",str(e)))
                 s.result.emit(results)
         if hasattr(self,'_scan_thread') and self._scan_thread.isRunning():
-            self._scan_thread.result.disconnect(); self._scan_thread.quit(); self._scan_thread.wait(1000)
+            self._scan_thread.result.disconnect(); self._scan_thread.terminate(); self._scan_thread.wait(200)
         self._scan_thread=_T()
         def _on_results(results):
             cb.clear(); cb.addItem("— 在线设备 —","")
