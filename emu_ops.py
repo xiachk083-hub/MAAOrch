@@ -4,6 +4,7 @@ from datetime import datetime
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QMessageBox, QFileDialog
 from task_constants import (CF,EMU_PRESETS,MUMU_INSTANCE_DIRS,find_mumu_cli,detect_emu_instances)
+from background import BackgroundTask
 
 class EmuService:
     """ADB / emulator operations. Uses self.mw to access MainWindow resources."""
@@ -17,10 +18,7 @@ class EmuService:
             try: self._refresh_t.result.disconnect()
             except: pass
             self._refresh_t.terminate(); self._refresh_t.wait(200)
-        class _T(QThread):
-            result=Signal(list)
-            def run(s): s.result.emit(detect_emu_instances())
-        self._refresh_t=_T()
+        self._refresh_t=BackgroundTask(detect_emu_instances)
         def _done(instances):
             try:
                 if not hasattr(self.mw,'_sad_row'): return  # window destroyed
