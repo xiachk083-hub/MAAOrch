@@ -1,8 +1,23 @@
-import sys,json,os,ctypes,time,subprocess,re,shutil,io
+import sys,json,os,ctypes,time,subprocess,re,shutil,io,socket
 import urllib.request,urllib.error,zipfile,tempfile
 from pathlib import Path
 from datetime import datetime,time as dtime
 from collections import defaultdict
+
+# Auto-detect proxy (Clash/v2ray/etc) for GitHub access
+def _setup_proxy():
+    for p in [os.environ.get("HTTP_PROXY",""),os.environ.get("http_proxy",""),os.environ.get("HTTPS_PROXY",""),os.environ.get("https_proxy","")]:
+        if p:
+            urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({"http":p,"https":p})))
+            return
+    for port in [7890,7891,1080,10809,8080]:
+        try:
+            s=socket.socket(); s.settimeout(0.3); s.connect(("127.0.0.1",port)); s.close()
+            p=f"http://127.0.0.1:{port}"
+            urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({"http":p,"https":p})))
+            return
+        except: pass
+_setup_proxy()
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize
