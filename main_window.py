@@ -725,7 +725,7 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     s.result.emit(f"__err__启动失败: {e}"); return
                 # Step 2: wait for boot (background sleep)
-                s.result.emit("启动完成，等待端口..."); s.msleep(3000)
+                s.result.emit("启动完成，等待开机..."); s.msleep(5000)
                 # Step 3: get actual port — try config.json first, then mumu-cli, then predict
                 target_port=None
                 emu_idx_int = int(s.emu_idx) if str(s.emu_idx).isdigit() else 0
@@ -737,7 +737,7 @@ class MainWindow(QMainWindow):
                             if vm.is_dir() and (vm/"config.json").exists():
                                 cfg=json.loads((vm/"config.json").read_text(encoding="utf-8"))
                                 target_port = str(cfg.get("adb_port",""))
-                                if target_port: break
+                                if target_port and target_port!="0": break
                 except: pass
                 # Try mumu-cli as fallback
                 if not target_port:
@@ -750,29 +750,11 @@ class MainWindow(QMainWindow):
                 # As last resort, use MuMu 12 formula: port = 16384 + index*32
                 if not target_port:
                     target_port = str(16384 + emu_idx_int * 32)
-                # Step 4: wait for port
-                if target_port:
-                    addr=f"127.0.0.1:{target_port}"
-                    for remaining in range(40,0,-1):
-                        s.result.emit(f"等待端口 {target_port} ({remaining})...")
-                        try:
-                            r=subprocess.run([s.adb,"-s",addr,"shell","echo","ok"],capture_output=True,timeout=3,creationflags=CF)
-                            if r.returncode==0 and b"ok" in r.stdout:
-                                s.result.emit("__found__"+addr); return
-                        except: pass
-                        s.msleep(2000)
-                else:
-                    for remaining in range(20,0,-1):
-                        s.result.emit(f"扫描端口 ({remaining})...")
-                        for p in ["7555","5555","62001","21503"]:
-                            try: subprocess.run([s.adb,"connect",f"127.0.0.1:{p}"],capture_output=True,timeout=1,creationflags=CF)
-                            except: pass
-                        r=subprocess.run([s.adb,"devices"],capture_output=True,timeout=5,creationflags=CF)
-                        for m in re.finditer(rb':(\d+)\s+device\b',r.stdout):
-                            addr="127.0.0.1:"+m.group(1).decode('ascii')
-                            s.result.emit("__found__"+addr); return
-                        s.msleep(2000)
-                s.result.emit("__timeout__")
+                # Step 4: use port directly — adb connect only, no verification
+                addr=f"127.0.0.1:{target_port}"
+                try: subprocess.run([s.adb,"connect",addr],capture_output=True,timeout=3,creationflags=CF)
+                except: pass
+                s.result.emit("__found__"+addr)
         if hasattr(self,'_t') and self._t.isRunning():
             self._t.result.disconnect(); self._t.quit(); self._t.wait(1000)
         self._t=_T(emu_idx,cli,adb)
@@ -782,8 +764,6 @@ class MainWindow(QMainWindow):
                 self._log(f"端口: {addr}"); self._sl(f"端口: {addr}")
             elif r.startswith("__err__"):
                 self._log(r[8:]); self.sl.setText("就绪")
-            elif r=="__timeout__":
-                self.sl.setText("扫描超时"); self._log("扫描端口超时")
             else: self.sl.setText(r)
         self._t.result.connect(_on_r)
         self._t.start()
