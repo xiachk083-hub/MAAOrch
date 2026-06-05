@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install PySide6 ruff pytest
+      - run: ruff check main_window.py main.pyw utils.py config.py themes.py task_constants.py updater.py dialogs.py pipeline_thread.py api_server.py schedule_thread.py
+      - run: python -m pytest tests/ -v

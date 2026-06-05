@@ -9,8 +9,28 @@ class ApiServer(QThread):
         super().__init__(); self.port=port; self.token=token; self.mw=mw; self._httpd=None
     def run(self):
         mw=self.mw; token=self.token
+        # Simple rate limiter: max 60 req/min per IP
+        _rate_buckets: dict[str,list[float]] = {}
+        def _check_rate(ip: str, limit: int = 60) -> bool:
+            now = time.time()
+            bucket = _rate_buckets.get(ip, [])
+            bucket = [t for t in bucket if t > now - 60]
+            if len(bucket) >= limit:
+                _rate_buckets[ip] = bucket
+                return False
+            bucket.append(now)
+            _rate_buckets[ip] = bucket
+            return True
         class Handler(BaseHTTPRequestHandler):
-            def log_message(s,f,*a): pass  # suppress stderr
+            def log_message(s,f,*a): pass
+            def _check_rate_limit(s):
+                ip = s.client_address[0]
+                if not _check_rate(ip):
+                    s.send_response(429)
+                    s.send_header("Retry-After","60")
+                    s.end_headers()
+                    return False
+                return True
             def _check_auth(s):
                 if not token: return True
                 h=s.headers.get("x-agent-token","")
@@ -21,6 +41,7 @@ class ApiServer(QThread):
             def do_OPTIONS(s):
                 s.send_response(200);s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","x-agent-token,content-type");s.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");s.end_headers()
             def do_GET(s):
+                if not s._check_rate_limit(): return
                 if not s._check_auth(): return s._json({"error":"unauthorized"},401)
                 p=s.path.split("?")[0]
                 if p=="/api/status": return s._handle_status()
@@ -28,6 +49,7 @@ class ApiServer(QThread):
                 if p=="/api/logs": return s._handle_logs(s.path)
                 s._json({"error":"not found"},404)
             def do_POST(s):
+                if not s._check_rate_limit(): return
                 if not s._check_auth(): return s._json({"error":"unauthorized"},401)
                 cl=int(s.headers.get("Content-Length",0))
                 body=json.loads(s.rfile.read(cl)) if cl>0 else {}
