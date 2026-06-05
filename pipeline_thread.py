@@ -40,6 +40,7 @@ class PipelineThread(QThread):
         for _ in range(int(s*10)):
             if self.stop_flag: break
             while self.pause_flag and not self.stop_flag: self.msleep(200)
+            self._running = [p for p in self._running if p.poll() is None]
             time.sleep(0.1)
     def stop(self):
         self.stop_flag=True

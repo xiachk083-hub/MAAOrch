@@ -613,7 +613,7 @@ class MainWindow(QMainWindow):
         else:
             dl=QPushButton("⬇ 下载 MAA"); dl.setObjectName("addProgBtn"); dl.setMinimumHeight(36); dl.clicked.connect(lambda: self.maint.dl_maa(row)); bl.addWidget(dl)
             bl.addWidget(QPushButton("📂 绑定",clicked=lambda: self.maint.pk_maa(row)))
-        bl.addStretch(); self.adl.insertWidget(8,bw); self.adl.addStretch()
+        bl.addStretch(); self.adl.addWidget(bw); self.adl.addStretch()
 
     def _refresh_instance_list_async(self, combo, saved_idx=None, saved_name=None):
         self.emu.refresh_instance_list(combo, saved_idx, saved_name)

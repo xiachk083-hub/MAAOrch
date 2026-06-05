@@ -49,7 +49,7 @@ MUMU_CLI_CANDIDATES=[
 if (ev:=os.environ.get("MUMU_CLI_HOME","")):
     MUMU_CLI_CANDIDATES.insert(0,str(Path(ev)/"mumu-cli.exe"))
 
-def find_mumu_cli():
+def find_mumu_cli() -> str | None:
     # Check known paths + USERPROFILE
     extra=[str(Path(os.environ.get("USERPROFILE","."))/"MuMuPlayer"/"nx_main"/"mumu-cli.exe")]
     for c in extra + MUMU_CLI_CANDIDATES:
@@ -77,7 +77,7 @@ def find_mumu_cli():
         except Exception: pass
     return None
 
-def detect_emu_instances():
+def detect_emu_instances() -> list[dict]:
     """Detect all emulator instances via mumu-cli or directory scan"""
     instances=[]
     cli=find_mumu_cli()
