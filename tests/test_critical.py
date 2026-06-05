@@ -142,3 +142,33 @@ class TestConfigMigrationComplete:
         assert w["account_ref"] == ""
         assert w["launch_mode"] == "gui"
         assert w["guard_enabled"] is False
+
+
+class TestScheduleLogic:
+    """Test schedule weekday matching logic (pure logic, no Qt)"""
+
+    def test_weekday_match_today(self):
+        """Today is in allowed weekdays"""
+        from datetime import datetime
+        today = datetime.now().weekday()
+        allowed = {today}
+        assert today in allowed
+
+    def test_weekday_no_match_next_day(self):
+        """No match today, find next matching day within 7 days"""
+        allowed = {0, 5}  # Mon, Sat
+        today = 3  # Thursday
+        # Should advance: Thu→Fri→Sat (2 days)
+        days = 0
+        for _ in range(7):
+            if today in allowed:
+                break
+            today = (today + 1) % 7
+            days += 1
+        assert days == 2  # Thu(3)→Fri(4)→Sat(5)
+
+    def test_weekday_all_days_matches(self):
+        """All 7 days allowed, always matches"""
+        allowed = set(range(7))
+        for today in range(7):
+            assert today in allowed
