@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt,QTimer,QPointF
 from PySide6.QtGui import QPixmap,QPainter,QColor,QBrush,QPolygonF,QIcon
 from PySide6.QtWidgets import QDialog,QVBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QHeaderView,QAbstractItemView,QMessageBox,QApplication,QSystemTrayIcon,QMenu
-from utils import parse_maa_version
+from utils import parse_maa_version, get_platform_key
 from updater import UpdateCheckThread, UpdateDialog
 from schedule_thread import ScheduleThread
 
