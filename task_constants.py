@@ -1,3 +1,7 @@
+import os,json,subprocess,time
+from pathlib import Path
+from PySide6.QtCore import QThread, Signal
+
 TASK_NAMES={"StartUp":"启动游戏","Fight":"刷关作战","Recruit":"公开招募","Infrast":"基建换班",
     "Mall":"信用商店","Award":"领取奖励","Roguelike":"肉鸽探索","Reclamation":"生息演算","closedown":"关闭游戏"}
 TASK_DEFAULTS={
@@ -106,3 +110,20 @@ def detect_emu_instances():
 CLIENT_TYPES={"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
 CF=subprocess.CREATE_NO_WINDOW
 
+class EmuMonitor(QThread):
+    updated=Signal(list)
+    def run(self):
+        while True:
+            cli=find_mumu_cli()
+            if cli:
+                try:
+                    r=subprocess.run([cli,"info","--vmindex","all"],capture_output=True,text=True,timeout=8,creationflags=CF,encoding="utf-8",errors="replace")
+                    if r.stdout.strip():
+                        data=json.loads(r.stdout)
+                        results=[]
+                        for idx,info in data.items():
+                            if isinstance(info,dict):
+                                results.append({"name":info.get("name",idx),"index":idx,"running":info.get("is_process_started",False) or info.get("is_android_started",False)})
+                        self.updated.emit(results)
+                except: pass
+            time.sleep(30)
