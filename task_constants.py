@@ -35,6 +35,7 @@ MUMU_INSTANCE_DIRS=[
 ]
 
 MUMU_CLI_CANDIDATES=[
+    r"D:\Xiach\MuMuPlayer\nx_main\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer-12.0\shell\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer-12.0\nx_main\mumu-cli.exe",
     r"C:\Program Files\Netease\MuMuPlayer\nx_main\mumu-cli.exe",
@@ -59,7 +60,17 @@ def find_mumu_cli():
                     for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe"]:
                         p=d/sub
                         if p.exists(): return str(p)
-        except: pass
+                # Also check subdirectories (e.g. D:\Xiach\MuMuPlayer)
+                if d.is_dir():
+                    try:
+                        for sd in d.iterdir():
+                            if sd.is_dir() and "mumu" in sd.name.lower():
+                                for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe"]:
+                                    p=sd/sub
+                                    if p.exists(): return str(p)
+                    except PermissionError: pass
+        except PermissionError: pass
+        except Exception: pass
     return None
 
 def detect_emu_instances():
