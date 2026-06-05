@@ -84,39 +84,39 @@ class TestMigration:
 
 
 class TestAdbSanitize:
-    def test_broken_addr_fixed(self):
-        data = {"version": 5, "accounts": [{"adb_address": "27.0.0.1:16416"}],
-                "groups": [], "warehouse": []}
-        import re
-        for a in data.get("accounts", []):
-            raw = a.get("adb_address", "")
-            if raw and not raw.startswith("127.0.0.1:"):
-                m = re.search(r":(\d+)$", raw)
-                if m:
-                    a["adb_address"] = "127.0.0.1:" + m.group(1)
-        assert data["accounts"][0]["adb_address"] == "127.0.0.1:16416"
+    def test_broken_addr_fixed(self, tmp_path):
+        """load_config should fix 27.0.0.1 → 127.0.0.1"""
+        cf = tmp_path / "config.json"
+        cf.write_text(json.dumps({"version": 5, "accounts": [{"adb_address": "27.0.0.1:16416"}],
+                                  "groups": [], "warehouse": []}))
+        orig = config_mod.CONFIG_FILE; config_mod.CONFIG_FILE = cf
+        try:
+            data = config_mod.load_config()
+            assert data["accounts"][0]["adb_address"] == "127.0.0.1:16416"
+        finally:
+            config_mod.CONFIG_FILE = orig
 
-    def test_good_addr_unchanged(self):
-        data = {"accounts": [{"adb_address": "127.0.0.1:7555"}]}
-        import re
-        for a in data.get("accounts", []):
-            raw = a.get("adb_address", "")
-            if raw and not raw.startswith("127.0.0.1:"):
-                m = re.search(r":(\d+)$", raw)
-                if m:
-                    a["adb_address"] = "127.0.0.1:" + m.group(1)
-        assert data["accounts"][0]["adb_address"] == "127.0.0.1:7555"
+    def test_good_addr_unchanged(self, tmp_path):
+        cf = tmp_path / "config.json"
+        cf.write_text(json.dumps({"version": 5, "accounts": [{"adb_address": "127.0.0.1:7555"}],
+                                  "groups": [], "warehouse": []}))
+        orig = config_mod.CONFIG_FILE; config_mod.CONFIG_FILE = cf
+        try:
+            data = config_mod.load_config()
+            assert data["accounts"][0]["adb_address"] == "127.0.0.1:7555"
+        finally:
+            config_mod.CONFIG_FILE = orig
 
-    def test_empty_addr(self):
-        data = {"accounts": [{"adb_address": ""}]}
-        import re
-        for a in data.get("accounts", []):
-            raw = a.get("adb_address", "")
-            if raw and not raw.startswith("127.0.0.1:"):
-                m = re.search(r":(\d+)$", raw)
-                if m:
-                    a["adb_address"] = "127.0.0.1:" + m.group(1)
-        assert data["accounts"][0]["adb_address"] == ""
+    def test_empty_addr(self, tmp_path):
+        cf = tmp_path / "config.json"
+        cf.write_text(json.dumps({"version": 5, "accounts": [{"adb_address": ""}],
+                                  "groups": [], "warehouse": []}))
+        orig = config_mod.CONFIG_FILE; config_mod.CONFIG_FILE = cf
+        try:
+            data = config_mod.load_config()
+            assert data["accounts"][0]["adb_address"] == ""
+        finally:
+            config_mod.CONFIG_FILE = orig
 
 
 

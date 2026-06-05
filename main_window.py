@@ -19,8 +19,8 @@ from dialogs import ScheduleDialog,SettingsDialog,AccountDialog,TaskSettingsDial
 from api_server import ApiServer
 from schedule_thread import ScheduleThread
 
-# Auto-detect proxy (Clash/v2ray/etc) for GitHub access
-def _setup_proxy():
+def setup_proxy():
+    """Auto-detect proxy (Clash/v2ray/etc) for GitHub access. Call once at startup."""
     for p in [os.environ.get("HTTP_PROXY",""),os.environ.get("http_proxy",""),os.environ.get("HTTPS_PROXY",""),os.environ.get("https_proxy","")]:
         if p:
             urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({"http":p,"https":p})))
@@ -32,7 +32,6 @@ def _setup_proxy():
             urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({"http":p,"https":p})))
             return
         except: pass
-_setup_proxy()
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize
