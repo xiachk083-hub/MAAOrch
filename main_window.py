@@ -726,14 +726,30 @@ class MainWindow(QMainWindow):
                     s.result.emit(f"__err__启动失败: {e}"); return
                 # Step 2: wait for boot (background sleep)
                 s.result.emit("启动完成，等待端口..."); s.msleep(3000)
-                # Step 3: get actual port from instance data
+                # Step 3: get actual port — try config.json first, then mumu-cli, then predict
                 target_port=None
+                emu_idx_int = int(s.emu_idx) if str(s.emu_idx).isdigit() else 0
+                # Try directory scan (reads config.json, no mumu-cli needed)
                 try:
-                    instances=detect_emu_instances()
-                    for ins in instances:
-                        if str(ins.get("index",""))==str(s.emu_idx) and ins.get("adb_port"):
-                            target_port=ins["adb_port"]; break
+                    for vms_dir in MUMU_INSTANCE_DIRS:
+                        if vms_dir.exists():
+                            vm = vms_dir / str(s.emu_idx)
+                            if vm.is_dir() and (vm/"config.json").exists():
+                                cfg=json.loads((vm/"config.json").read_text(encoding="utf-8"))
+                                target_port = str(cfg.get("adb_port",""))
+                                if target_port: break
                 except: pass
+                # Try mumu-cli as fallback
+                if not target_port:
+                    try:
+                        instances=detect_emu_instances()
+                        for ins in instances:
+                            if str(ins.get("index",""))==str(s.emu_idx) and ins.get("adb_port"):
+                                target_port=ins["adb_port"]; break
+                    except: pass
+                # As last resort, use MuMu 12 formula: port = 16384 + index*32
+                if not target_port:
+                    target_port = str(16384 + emu_idx_int * 32)
                 # Step 4: wait for port
                 if target_port:
                     addr=f"127.0.0.1:{target_port}"
