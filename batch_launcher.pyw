@@ -3,6 +3,8 @@ import urllib.request,urllib.error,zipfile,tempfile
 from pathlib import Path
 from datetime import datetime,time as dtime
 from collections import defaultdict
+from http.server import HTTPServer,BaseHTTPRequestHandler
+import threading
 
 # Auto-detect proxy (Clash/v2ray/etc) for GitHub access
 def _setup_proxy():
@@ -72,7 +74,7 @@ STARTUP_DIR=Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Menu'/'Prog
 
 DEFAULT_CONFIG={"version":5,"appearance_mode":"Dark","window_geometry":"960x650","auto_start":False,
     "minimize_to_tray":True,"check_update_on_start":True,    "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
-    "warehouse":[],"groups":[],"accounts":[]}
+    "api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[]}
 
 def migrate_v4_to_v5(data):
     data.setdefault("accounts",[]); data.setdefault("check_update_on_start",True)
@@ -463,6 +465,12 @@ class SettingsDialog(QDialog):
         wr=QHBoxLayout(); wr.addWidget(QLabel("Webhook:"))
         self.wh=QLineEdit(cfg.get("webhook_url","")); self.wh.setPlaceholderText("企业微信/钉钉/自定义 URL"); wr.addWidget(self.wh,1)
         wh_tb=QPushButton("测试"); wh_tb.clicked.connect(lambda: self._test_webhook(self.wh.text().strip())); wr.addWidget(wh_tb); gl4.addLayout(wr); l.addWidget(g4)
+        # API
+        g5=QGroupBox("HTTP API"); gl5=QVBoxLayout(g5)
+        apr=QHBoxLayout(); apr.addWidget(QLabel("端口:"))
+        self.api_port=QSpinBox(); self.api_port.setRange(1024,65535); self.api_port.setValue(cfg.get("api_port",19999)); apr.addWidget(self.api_port,1); gl5.addLayout(apr)
+        atr=QHBoxLayout(); atr.addWidget(QLabel("Token:"))
+        self.api_token=QLineEdit(cfg.get("api_token","")); self.api_token.setPlaceholderText("留空不验证"); atr.addWidget(self.api_token,1); gl5.addLayout(atr); l.addWidget(g5)
         # 配置
         g3=QGroupBox("配置"); gl3=QHBoxLayout(g3)
         gl3.addWidget(QPushButton("导出",clicked=self._ex)); gl3.addWidget(QPushButton("导入",clicked=self._im)); l.addWidget(g3)
@@ -485,6 +493,7 @@ class SettingsDialog(QDialog):
         except Exception as e: QMessageBox.warning(self,"失败",f"发送失败:\n{e}")
     def _sv(self):
         self.c["appearance_mode"]=self.th.currentText(); self.c["auto_start"]=self.auto.isChecked(); self.c["minimize_to_tray"]=self.tray.isChecked();         self.c["check_update_on_start"]=self.cu.isChecked(); self.c["webhook_url"]=self.wh.text().strip()
+        self.c["api_port"]=self.api_port.value(); self.c["api_token"]=self.api_token.text().strip()
         set_auto_start(self.c["auto_start"]); self.accept()
 
 class AccountDialog(QDialog):
@@ -657,9 +666,17 @@ class MainWindow(QMainWindow):
         self._emu_monitor=EmuMonitor(); self._emu_status={}
         self._emu_monitor.updated.connect(lambda r: [self._emu_status.update({x["index"]:x}) for x in r])
         self._emu_monitor.start()
+        self._api_server=None
+        self._start_api_server()
         if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self._check_updates(True))
 
     def _set_theme(self,m): self.setStyleSheet(DARK_STYLE if m=="Dark" else LIGHT_STYLE)
+    def _start_api_server(self):
+        if self._api_server: self._api_server.stop_server(); self._api_server.quit(); self._api_server.wait(1000)
+        port=self.config.get("api_port",19999); token=self.config.get("api_token","")
+        self._api_server=ApiServer(port,token,self)
+        self._api_server.log_msg.connect(lambda m: self._log(m))
+        self._api_server.start()
     def _sl(self,msg): self.sl.setText((msg[:100]+"…") if len(msg)>100 else msg)
     def _log(self,msg):
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
@@ -1907,6 +1924,7 @@ class MainWindow(QMainWindow):
         else:
             if hasattr(self,'_emu_monitor'): self._emu_monitor.quit(); self._emu_monitor.wait(2000)
             if hasattr(self,'schedule_thread'): self.schedule_thread.quit(); self.schedule_thread.wait(2000)
+            if hasattr(self,'_api_server') and self._api_server: self._api_server.stop_server()
             e.accept(); QApplication.quit()
     def _tlog(self): self._log_expanded=not self._log_expanded; self.log_text.setFixedHeight(150 if self._log_expanded else 0)
     def _start_schedule(self):
@@ -1918,8 +1936,124 @@ class MainWindow(QMainWindow):
         if self.schedule_thread: self.schedule_thread.stop_thread()
         if d.r.get("enabled"): self.schedule_thread=ScheduleThread(self.config); self.schedule_thread.trigger.connect(self._start_pipeline); self.schedule_thread.start()
     def _settings(self):
+        old_port=self.config.get("api_port",19999); old_token=self.config.get("api_token","")
         d=SettingsDialog(self,self.config)
-        if d.exec()==QDialog.Accepted: self._set_theme(self.config.get("appearance_mode","Dark")); self._save()
+        if d.exec()==QDialog.Accepted:
+            self._set_theme(self.config.get("appearance_mode","Dark")); self._save()
+            if self.config.get("api_port",19999)!=old_port or self.config.get("api_token","")!=old_token:
+                self._start_api_server()
+
+class ApiServer(QThread):
+    log_msg=Signal(str)
+    def __init__(self,port,token,mw):
+        super().__init__(); self.port=port; self.token=token; self.mw=mw; self._httpd=None
+    def run(self):
+        mw=self.mw; token=self.token
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(s,f,*a): pass  # suppress stderr
+            def _check_auth(s):
+                if not token: return True
+                h=s.headers.get("x-agent-token","")
+                return h==token
+            def _json(s,data,code=200):
+                s.send_response(code); s.send_header("Content-Type","application/json"); s.send_header("Access-Control-Allow-Origin","*"); s.end_headers()
+                s.wfile.write(json.dumps(data,ensure_ascii=False).encode())
+            def do_OPTIONS(s):
+                s.send_response(200);s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","x-agent-token,content-type");s.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");s.end_headers()
+            def do_GET(s):
+                if not s._check_auth(): return s._json({"error":"unauthorized"},401)
+                p=s.path.split("?")[0]
+                if p=="/api/status": return s._handle_status()
+                if p.startswith("/api/account/") and p.endswith("/status"): return s._handle_account_status(p)
+                if p=="/api/logs": return s._handle_logs(s.path)
+                s._json({"error":"not found"},404)
+            def do_POST(s):
+                if not s._check_auth(): return s._json({"error":"unauthorized"},401)
+                cl=int(s.headers.get("Content-Length",0))
+                body=json.loads(s.rfile.read(cl)) if cl>0 else {}
+                p=s.path.split("?")[0]
+                if p=="/api/pipeline/start": return s._handle_pipeline_start()
+                if p=="/api/pipeline/stop": return s._handle_pipeline_stop()
+                if p=="/api/pipeline/pause": return s._handle_pipeline_pause(body)
+                if p.startswith("/api/account/") and p.endswith("/launch"): return s._handle_account_launch(p)
+                if p=="/api/config/sync": return s._handle_config_sync(body)
+                s._json({"error":"not found"},404)
+            def _handle_status(s):
+                accts=[]
+                for i,a in enumerate(mw.accounts):
+                    progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
+                    pid=progs[0]["id"] if progs else ""
+                    running=pid in mw._proc_status
+                    elapsed=0
+                    if running and pid in mw._proc_start_times: elapsed=int(time.time()-mw._proc_start_times[pid])
+                    accts.append({"name":a.get("name",""),"index":i,"running":running,"elapsed":elapsed,"adb":a.get("adb_address",""),"emu_index":a.get("emu_instance_index","")})
+                pipeline_running=mw.pipeline_thread.isRunning() if hasattr(mw,'pipeline_thread') and mw.pipeline_thread else False
+                s._json({"accounts":accts,"pipeline_running":pipeline_running})
+            def _handle_account_status(s,p):
+                try: idx=int(p.split("/")[3])
+                except: return s._json({"error":"bad index"},400)
+                if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                a=mw.accounts[idx]; progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
+                pid=progs[0]["id"] if progs else ""
+                running=pid in mw._proc_status
+                elapsed=0
+                if running and pid in mw._proc_start_times: elapsed=int(time.time()-mw._proc_start_times[pid])
+                s._json({"name":a.get("name",""),"running":running,"elapsed":elapsed})
+            def _handle_pipeline_start(s):
+                mw._start_pipeline(); s._json({"ok":True})
+            def _handle_pipeline_stop(s):
+                mw._stop_pipeline(); s._json({"ok":True})
+            def _handle_pipeline_pause(s,body):
+                action=body.get("action","pause")
+                if hasattr(mw,'pipeline_thread') and mw.pipeline_thread and mw.pipeline_thread.isRunning():
+                    if action=="pause": mw.pipeline_thread.pause(); s._json({"ok":True,"state":"paused"})
+                    else: mw.pipeline_thread.resume(); s._json({"ok":True,"state":"running"})
+                else: s._json({"ok":False,"error":"no pipeline running"})
+            def _handle_account_launch(s,p):
+                try: idx=int(p.split("/")[3])
+                except: return s._json({"error":"bad index"},400)
+                if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                mw._la(idx); s._json({"ok":True})
+            def _handle_logs(s,path):
+                qs=path.split("?")[-1] if "?" in path else ""
+                lines=50
+                for kv in qs.split("&"):
+                    if kv.startswith("lines="):
+                        try: lines=int(kv.split("=")[1])
+                        except: pass
+                lp=Path(__file__).parent/"debug.log"
+                if lp.exists():
+                    try:
+                        content=lp.read_text(encoding="utf-8",errors="replace").strip().split("\n")[-lines:]
+                        s._json({"lines":content})
+                    except: s._json({"error":"read failed"},500)
+                else: s._json({"lines":[]})
+            def _handle_config_sync(s,body):
+                acct_name=body.get("account_name",""); gui_json=body.get("gui_json")
+                if not acct_name or not gui_json: return s._json({"error":"missing fields"},400)
+                a=next((a for a in mw.accounts if a.get("name")==acct_name),None)
+                if not a: return s._json({"error":"account not found"},404)
+                progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
+                if not progs: return s._json({"error":"no MAA bound"},400)
+                try:
+                    d=Path(progs[0]["path"]).parent/"config"
+                    d.mkdir(parents=True,exist_ok=True)
+                    (d/"gui.json").write_text(json.dumps(gui_json,ensure_ascii=False,indent=2),encoding="utf-8")
+                    (d/"gui.new.json").write_text(json.dumps(gui_json,ensure_ascii=False,indent=2),encoding="utf-8")
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
+        try:
+            self._httpd=HTTPServer(("127.0.0.1",self.port),Handler)
+            self.log_msg.emit(f"API 服务已启动: http://127.0.0.1:{self.port}")
+            self._httpd.serve_forever()
+        except OSError as e:
+            self.log_msg.emit(f"API 启动失败 (端口 {self.port}): {e}")
+        except Exception as e:
+            self.log_msg.emit(f"API 服务异常: {e}")
+    def stop_server(self):
+        if self._httpd:
+            try: self._httpd.shutdown()
+            except: pass
 
 class ScheduleThread(QThread):
     trigger=Signal()
