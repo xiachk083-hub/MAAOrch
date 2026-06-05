@@ -1,140 +1,113 @@
-# Daigan ↔ MAAOrch 集成需求文档
+# MAAOrch HTTP API 参考
 
-## 背景
+MAAOrch 启动后自动在 `127.0.0.1` 开启 REST 服务，供外部调度系统调用。
 
-MAAOrch v1.0.0 已内置 HTTP API 服务（端口 19999），Daigan 调度引擎可直接通过 REST 接口控制本地 MAA 执行。替代原 `automation-agent.js` 的 spawn + log 监控模式。
+## 连接
 
-## MAAOrch API 参考
-
-- **地址**: `http://127.0.0.1:19999`
-- **鉴权**: Header `x-agent-token: <token>`（token 在 MAAOrch 设置中配置）
+- **地址**: `http://127.0.0.1:19999`（端口可在设置中修改）
+- **鉴权**: Header `x-agent-token: <token>`（token 为空则不验证）
 - **Content-Type**: `application/json`
 
-### 端点一览
+## 端点
 
-| 方法 | 路径 | Body | 返回 |
-|------|------|------|------|
-| GET | `/api/status` | - | `{accounts:[{name,index,running,elapsed,adb,emu_index}], pipeline_running:bool}` |
-| GET | `/api/account/{index}/status` | - | `{name, running, elapsed}` |
-| GET | `/api/logs?lines=100` | - | `{lines:[...]}` |
-| POST | `/api/pipeline/start` | - | `{ok:true}` |
-| POST | `/api/pipeline/stop` | - | `{ok:true}` |
-| POST | `/api/pipeline/pause` | `{action:"pause"|"resume"}` | `{ok:true, state:"paused"|"running"}` |
-| POST | `/api/account/{index}/launch` | - | `{ok:true}` |
-| POST | `/api/config/sync` | `{account_name, gui_json}` | `{ok:true}` |
+### 状态查询
 
-## 改造范围
+**`GET /api/status`**
 
-### 1. 引擎层 (`server/automation/engine.js`)
+返回所有账号运行状态和流水线状态。
 
-**现状**: 定时轮询 → 找空闲 agent → 下发 session → agent 拉取执行
-**改为**: 定时轮询 → 直接调 MAAOrch API 启动 → 定时查状态 → 写回 sessions
+```json
+{
+  "accounts": [
+    {"name": "官服大号", "index": 0, "running": true, "elapsed": 360, "adb": "127.0.0.1:16384", "emu_index": "0"}
+  ],
+  "pipeline_running": false
+}
+```
+
+**`GET /api/account/{index}/status`**
+
+单个账号状态。`index` 对应 MAAOrch 账号列表中的序号。
+
+```json
+{"name": "官服大号", "running": true, "elapsed": 120}
+```
+
+### 流水线控制
+
+**`POST /api/pipeline/start`** — 启动流水线
 
 ```js
-// engine.js 调度循环改为:
-async function tick() {
-  const url = "http://127.0.0.1:19999"
-  const opts = { headers: { "x-agent-token": config.apiToken } }
+fetch("http://127.0.0.1:19999/api/pipeline/start", { method: "POST" })
+// → {"ok": true}
+```
 
-  // 1. 查当前状态
-  const { pipeline_running, accounts } = await fetch(`${url}/api/status`, opts).then(r => r.json())
+**`POST /api/pipeline/stop`** — 停止流水线
 
-  // 2. 如果有到期该执行的 schedule 且 pipeline 空闲 → 启动
-  if (hasPendingSchedule() && !pipeline_running) {
-    await fetch(`${url}/api/pipeline/start`, { method: "POST", ...opts })
-  }
+**`POST /api/pipeline/pause`** — 暂停/恢复
 
-  // 3. 把 accounts 状态写回 automation_sessions 表
-  for (const a of accounts) {
-    if (a.running) updateSession(a.name, "running", a.elapsed)
-    else updateSession(a.name, a.running ? "running" : "idle")
+```js
+fetch("http://127.0.0.1:19999/api/pipeline/pause", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ action: "pause" }) // 或 "resume"
+})
+// → {"ok": true, "state": "paused"}
+```
+
+### 账号控制
+
+**`POST /api/account/{index}/launch`** — 启动单个账号
+
+### 日志
+
+**`GET /api/logs?lines=100`** — 最近 N 行 debug.log
+
+```json
+{"lines": ["[08:00:01] 启动", "[08:00:05] MAA v6.11.1 运行中", "..."]}
+```
+
+### 配置同步
+
+**`POST /api/config/sync`** — 下发 MAA gui.json 配置到指定账号
+
+```js
+fetch("http://127.0.0.1:19999/api/config/sync", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "x-agent-token": "your-token" },
+  body: JSON.stringify({
+    account_name: "官服大号",
+    gui_json: { /* MAA gui.json 配置对象 */ }
+  })
+})
+// → {"ok": true}
+```
+
+## 集成示例（Node.js）
+
+```js
+const ORCH = "http://127.0.0.1:19999"
+const opts = { headers: { "x-agent-token": process.env.ORCH_TOKEN } }
+
+// 定时轮询状态
+setInterval(async () => {
+  const { accounts, pipeline_running } = await fetch(`${ORCH}/api/status`, opts).then(r => r.json())
+  accounts.filter(a => a.running).forEach(a => {
+    console.log(`${a.name}: 运行中 ${a.elapsed}s`)
+  })
+}, 5000)
+
+// 按计划启动
+async function startIfIdle() {
+  const { pipeline_running } = await fetch(`${ORCH}/api/status`, opts).then(r => r.json())
+  if (!pipeline_running) {
+    await fetch(`${ORCH}/api/pipeline/start`, { method: "POST", ...opts })
   }
 }
 ```
 
-### 2. 配置同步 (`server/automation/routes/schedules.js`)
+## 安全
 
-- 新增端点 `POST /api/automation/schedules/:id/push-config`
-- 把 `maa_configs` 表中的 `gui_json` 下发到 MAAOrch：
-
-```js
-router.post("/:id/push-config", async (req, res) => {
-  const schedule = await db.getSchedule(req.params.id)
-  for (const item of schedule.queue_order) {
-    const config = await db.getMaaConfig(item.account_id)
-    await fetch("http://127.0.0.1:19999/api/config/sync", {
-      method: "POST",
-      headers: { "x-agent-token": config.apiToken, "Content-Type": "application/json" },
-      body: JSON.stringify({ account_name: item.account_name, gui_json: config.gui_json })
-    })
-  }
-  res.json({ ok: true })
-})
-```
-
-### 3. 前端仪表盘 (`frontend/src/components/AutomationView.vue`)
-
-新增面板展示 MAAOrch 实时状态：
-
-```vue
-<template>
-  <div class="maaorch-status">
-    <h3>MAAOrch 状态</h3>
-    <div v-if="status">
-      <span :class="status.pipeline_running ? 'running' : 'idle'">
-        {{ status.pipeline_running ? '流水线运行中' : '空闲' }}
-      </span>
-      <table>
-        <tr v-for="a in status.accounts" :key="a.index">
-          <td>{{ a.name }}</td>
-          <td>{{ a.adb }}</td>
-          <td :class="a.running ? 'on' : 'off'">{{ a.running ? `运行 ${a.elapsed}s` : '离线' }}</td>
-        </tr>
-      </table>
-    </div>
-    <div v-else class="error">无法连接 MAAOrch</div>
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-const status = ref(null); let timer
-onMounted(() => {
-  const fetchStatus = () => fetch("http://127.0.0.1:19999/api/status").then(r => r.json()).then(d => status.value = d).catch(() => status.value = null)
-  fetchStatus(); timer = setInterval(fetchStatus, 5000)
-})
-onUnmounted(() => clearInterval(timer))
-</script>
-```
-
-### 4. 管理后台配置 (`frontend/src/components/SettingsView.vue` 或等价)
-
-用现有的 settings 页加两项：
-
-- **MAAOrch 端口**: 默认 `19999`
-- **MAAOrch Token**: 和 MAAOrch 设置中的 token 一致
-
-存到 `config` 表或 `.env`。
-
-### 5. 干掉旧 Agent（可选）
-
-上线稳定后可移除：
-- `automation-agent.js` — MAAOrch API 替代
-- `agent.js` — MAAOrch 模拟器管理已内置（保留也可，做模拟器远程控制用）
-- `server/automation/routes/agent.js` 中的 agent polling 逻辑 — API 用不到了
-
-## 迁移步骤
-
-| 阶段 | 内容 | 预估 |
-|------|------|------|
-| Phase 1 | 后端加 config 表字段 `api_port`/`api_token`，engine.js 改调 MAAOrch API | 半天 |
-| Phase 2 | 前端加 MAAOrch 状态面板 + 设置页 | 半天 |
-| Phase 3 | 配置同步 flow（schedule → push-config → MAAOrch） | 半天 |
-| Phase 4 | 联调测试，下线旧 agent | 1 天 |
-
-## MAAOrch 侧已就绪
-
-- 启动后自动开启 HTTP 服务
-- 设置 → HTTP API 可配端口和 token
-- 只监听 127.0.0.1，不暴露公网
+- 仅监听 `127.0.0.1`，不暴露公网
+- Token 可选，建议生产环境设置
 - 退出时自动关闭服务
