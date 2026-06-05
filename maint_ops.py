@@ -155,14 +155,14 @@ class MaintService:
     def show_tray(self): self.mw.show(); self.mw.maint.restore_geometry(); self.mw.activateWindow()
 
     def closeEvent(self,e):
-        if not self.isMinimized():
-            self.mw.config["window_geometry"]=f"{self.width()}x{self.height()}+{self.x()}+{self.y()}"
+        if not self.mw.isMinimized():
+            self.mw.config["window_geometry"]=f"{self.mw.width()}x{self.mw.height()}+{self.mw.x()}+{self.mw.y()}"
             self.mw._save()
-        if self.mw.config.get("minimize_to_tray",True) and hasattr(self,'tray_icon'): self.hide(); e.ignore()
+        if self.mw.config.get("minimize_to_tray",True) and hasattr(self.mw,'tray_icon'): self.mw.hide(); e.ignore()
         else:
-            if hasattr(self,'_emu_monitor'): self.mw._emu_monitor.quit(); self.mw._emu_monitor.wait(2000)
-            if hasattr(self,'schedule_thread'): self.mw.schedule_thread.quit(); self.mw.schedule_thread.wait(2000)
-            if hasattr(self,'_api_server') and self.mw._api_server: self.mw._api_server.stop_server()
+            if hasattr(self.mw,'_emu_monitor'): self.mw._emu_monitor.quit(); self.mw._emu_monitor.wait(2000)
+            if hasattr(self.mw,'schedule_thread'): self.mw.schedule_thread.quit(); self.mw.schedule_thread.wait(2000)
+            if hasattr(self.mw,'_api_server') and self.mw._api_server: self.mw._api_server.stop_server()
             e.accept(); QApplication.quit()
 
     def _start_schedule(self):
