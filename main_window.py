@@ -455,26 +455,10 @@ class MainWindow(QMainWindow):
         rp.addWidget(QPushButton("📂",clicked=lambda: self._browse_file(emu_path_edit,a,"emu_path"))); ecl.addLayout(rp)
         # Row: instance selector
         ri=QHBoxLayout(); ri.addWidget(_lbl("实例:"))
-        def _refresh_instances(combo=None):
-            instances=detect_emu_instances()
-            if combo is None: return instances
-            saved_idx=a.get("emu_instance_index","")
-            saved_name=a.get("emu_instance_name","")
-            combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
-            selected=-1
-            for j,ins in enumerate(instances):
-                label=ins['name']; running=ins.get("running",False)
-                ms=self._emu_status.get(ins.get("index",""),{})
-                if ms.get("running"): running=True
-                if running: label="▶ "+label
-                if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
-                combo.addItem(label,ins)
-                if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
-            if saved_name and not saved_idx:
-                emu_path_edit.setText(saved_name); emu_path_edit.setToolTip(f"上次: {saved_name}")
-            if selected>=0: combo.setCurrentIndex(selected)
         ed_sel=QComboBox(); ed_sel.setMinimumWidth(180)
-        _refresh_instances(ed_sel)
+        combo_saved_idx=a.get("emu_instance_index",""); combo_saved_name=a.get("emu_instance_name","")
+        # Use async detection to avoid blocking UI during dashboard build
+        self._refresh_instance_list_async(ed_sel, combo_saved_idx, combo_saved_name)
         def _on_ins(i):
             if ed_sel.currentData():
                 ins=ed_sel.currentData()
@@ -619,8 +603,9 @@ class MainWindow(QMainWindow):
             bl.addWidget(QPushButton("📂 绑定",clicked=lambda: self._pk_maa(row)))
         bl.addStretch(); self.adl.insertWidget(8,bw); self.adl.addStretch()
 
-    def _refresh_instance_list_async(self,combo):
+    def _refresh_instance_list_async(self,combo,saved_idx=None,saved_name=None):
         combo.setEnabled(False)
+        combo.addItem("⏳ 检测中...","")
         if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
             try: self._refresh_t.result.disconnect()
             except: pass
@@ -634,11 +619,18 @@ class MainWindow(QMainWindow):
                 if not hasattr(self,'_sad_row'): return  # window destroyed
                 combo.blockSignals(True)
                 combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
+                selected=-1
                 for j,ins in enumerate(instances):
                     label=ins['name']; running=ins.get("running",False)
+                    ms=self._emu_status.get(ins.get("index",""),{})
+                    if ms.get("running"): running=True
                     if running: label="▶ "+label
                     if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
                     combo.addItem(label,ins)
+                    if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
+                if saved_name and not saved_idx:
+                    pass  # saved_name handled during _sad build
+                if selected>=0: combo.setCurrentIndex(selected)
                 combo.blockSignals(False)
                 combo.setEnabled(True)
             except RuntimeError: pass
