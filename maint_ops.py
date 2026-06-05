@@ -9,7 +9,7 @@ from schedule_thread import ScheduleThread
 class MaintService:
     def __init__(self, mw): self.mw = mw
 
-    def _dl_maa(self,row):
+    def dl_maa(self,row):
         a=self.mw.accounts[row]
         def oc(r):
             if not r.get("ok"): return
@@ -25,7 +25,7 @@ class MaintService:
             self.mw.warehouse.append(e); self.mw._save(); self.mw._sad(row); self.mw._inj(e,a); self.mw._ls(e)
         t=UpdateCheckThread(); t.result_ready.connect(oc); self.mw.update_thread=t; t.start()
 
-    def _pk_maa(self,row):
+    def pk_maa(self,row):
         a=self.mw.accounts[row]; f,_=QFileDialog.getOpenFileName(self,"选择","","MAA (*.exe);;所有文件 (*.*)")
         if not f: return
         p=str(Path(f)); e={"id":make_id(),"path":p,"args":[],"cwd":"","env":{},"maa_type":"maa","maa_version":parse_maa_version(p) or "","account_ref":a["id"],"launch_mode":"gui","task_pipeline":"startup,fight,recruit,infrast,mall,award","guard_enabled":False,"guard_max_restart":3,"guard_capture_log":False}
@@ -33,7 +33,7 @@ class MaintService:
 
     # Launch
 
-    def _poll(self):
+    def poll(self):
         now=time.time()
         for pid in list(self.mw._cli_procs.keys()):
             p=self.mw._cli_procs[pid]
@@ -84,7 +84,7 @@ class MaintService:
                             self.mw.sl.setText("MAA: 切换任务...")
                 except: pass
 
-    def _notify(self,msg,is_error=False):
+    def notify(self,msg,is_error=False):
         if hasattr(self,'tray_icon'):
             self.mw.tray_icon.showMessage("流水线启动器",msg,QSystemTrayIcon.Critical if is_error else QSystemTrayIcon.Information,3000)
         # Webhook
@@ -99,7 +99,7 @@ class MaintService:
                 except: pass
 
 
-    def _check_updates(self,silent=False):
+    def check_updates(self,silent=False):
         items=[w for w in self.mw.warehouse if w.get("maa_type")!="general"]
         if not items:
             if not silent: QMessageBox.information(self,"提示","无 MAA 程序"); return
@@ -119,7 +119,7 @@ class MaintService:
                 self.mw._save()
         t=UpdateCheckThread(); t.result_ready.connect(oc); self.mw.update_thread=t; t.start()
 
-    def _cu_single(self,w):
+    def cu_single(self,w):
         if w.get("maa_type")=="general": return
         def oc(r):
             if not r.get("ok"): return
@@ -129,7 +129,7 @@ class MaintService:
             if dlg.exec()==QDialog.Accepted: w["maa_version"]=tag; self.mw._save()
         t=UpdateCheckThread(); t.result_ready.connect(oc); self.mw.update_thread=t; t.start()
 
-    def _restore_geometry(self):
+    def restore_geometry(self):
         g=self.mw.config.get("window_geometry","")
         if g:
             p=g.split("+")
@@ -144,7 +144,7 @@ class MaintService:
             except: self.resize(960,650)
         else: self.resize(960,650)
 
-    def _setup_tray(self):
+    def setup_tray(self):
         self.mw.tray_icon=QSystemTrayIcon(self); self.mw.tray_icon.setToolTip("流水线启动器")
         pm=QPixmap(64,64); pm.fill(Qt.transparent); p=QPainter(pm); p.setRenderHint(QPainter.Antialiasing)
         p.setBrush(QBrush(QColor(58,126,191))); p.setPen(Qt.NoPen); p.drawEllipse(4,4,56,56); p.setBrush(QBrush(Qt.white))
@@ -152,7 +152,7 @@ class MaintService:
         self.mw.setWindowIcon(ic); self.mw.tray_icon.setIcon(ic); m=QMenu(); m.addAction("显示",self.show_tray); m.addAction("退出",QApplication.quit)
         self.mw.tray_icon.setContextMenu(m); self.mw.tray_icon.show()
 
-    def show_tray(self): self.mw.show(); self.mw.maint.restore_geometry(); self.mw.activateWindow()
+    def show_tray(self): self.mw.show(); self.restore_geometry(); self.mw.activateWindow()
 
     def closeEvent(self,e):
         if not self.mw.isMinimized():
@@ -165,17 +165,17 @@ class MaintService:
             if hasattr(self.mw,'_api_server') and self.mw._api_server: self.mw._api_server.stop_server()
             e.accept(); QApplication.quit()
 
-    def _start_schedule(self):
+    def start_schedule(self):
         if self.mw.config.get("schedule",{}).get("enabled"):
             self.mw.schedule_thread=ScheduleThread(self.mw.config); self.mw.schedule_thread.trigger.connect(self.mw._start_pipeline); self.mw.schedule_thread.start()
 
-    def _sch(self):
+    def sch(self):
         d=ScheduleDialog(self,self.mw.config.get("schedule",{}))
         if d.exec()==QDialog.Accepted: self.mw.config["schedule"]=d.r; self.mw._save()
         if self.mw.schedule_thread: self.mw.schedule_thread.stop_thread()
         if d.r.get("enabled"): self.mw.schedule_thread=ScheduleThread(self.mw.config); self.mw.schedule_thread.trigger.connect(self.mw._start_pipeline); self.mw.schedule_thread.start()
 
-    def _settings(self):
+    def settings(self):
         old_port=self.mw.config.get("api_port",19999); old_token=self.mw.config.get("api_token","")
         d=SettingsDialog(self,self.mw.config)
         if d.exec()==QDialog.Accepted:
