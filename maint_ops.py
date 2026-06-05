@@ -10,7 +10,7 @@ from updater import UpdateCheckThread, UpdateDialog
 from schedule_thread import ScheduleThread
 
 class MaintService:
-    def __init__(self, mw): self.mw = mw
+    def __init__(self, mw: "MainWindow") -> None: self.mw = mw
 
     def dl_maa(self,row):
         a=self.mw.accounts[row]

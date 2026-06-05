@@ -8,7 +8,7 @@ from background import BackgroundTask
 
 class EmuService:
     """ADB / emulator operations. Uses self.mw to access MainWindow resources."""
-    def __init__(self, mw):
+    def __init__(self, mw: "MainWindow") -> None:
         self.mw = mw
 
     def refresh_instance_list(self,combo,saved_idx=None,saved_name=None):

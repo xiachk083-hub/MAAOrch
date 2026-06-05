@@ -8,7 +8,7 @@ from dialogs import AccountDialog
 from utils import get_platform_key, parse_maa_version
 
 class LogService:
-    def __init__(self, mw): self.mw = mw
+    def __init__(self, mw: "MainWindow") -> None: self.mw = mw
 
     def asst_log_path(self,w):
         return Path(w.get("path","")).parent/"debug"/"asst.log"

@@ -3,7 +3,7 @@ from pathlib import Path
 from task_constants import find_mumu_cli
 
 class ConfigService:
-    def __init__(self, mw): self.mw = mw
+    def __init__(self, mw: "MainWindow") -> None: self.mw = mw
 
     def gtc(self,ac,w):
         pl=w.get("task_pipeline","")

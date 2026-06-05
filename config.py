@@ -3,14 +3,14 @@ from pathlib import Path
 from datetime import datetime
 from utils import make_id, parse_maa_version
 
-CONFIG_FILE=Path(__file__).parent/"config.json"
-STARTUP_DIR=Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Menu'/'Programs'/'Startup'
+CONFIG_FILE: Path = Path(__file__).parent/"config.json"
+STARTUP_DIR: Path = Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Menu'/'Programs'/'Startup'
 
-DEFAULT_CONFIG={"version":5,"appearance_mode":"Dark","window_geometry":"960x650","auto_start":False,
+DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"960x650","auto_start":False,
     "minimize_to_tray":True,"check_update_on_start":True,    "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[]}
 
-def migrate_v4_to_v5(data):
+def migrate_v4_to_v5(data: dict) -> dict:
     data.setdefault("accounts",[]); data.setdefault("check_update_on_start",True)
     for a in data.get("accounts",[]): a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch",""); a.setdefault("emu_path",""); a.setdefault("emu_launch",False); a.setdefault("emu_wait",30); a.setdefault("emu_add_cmd",""); a.setdefault("emu_instance_index",""); a.setdefault("emu_instance_name",""); a.setdefault("post_action",""); a.setdefault("start_minimized",False); a.setdefault("start_directly",False); a.setdefault("adb_fail_launch_emu",False); a.setdefault("adb_retry",0); a.setdefault("stats",{})
     data.setdefault("webhook_url","")
@@ -27,7 +27,7 @@ def migrate_v4_to_v5(data):
                 if v: w["maa_version"]=v
     data["version"]=5; return data
 
-def load_config():
+def load_config() -> dict:
     try:
         if CONFIG_FILE.exists():
             data=json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
@@ -56,13 +56,13 @@ def load_config():
     except: pass
     return dict(DEFAULT_CONFIG)
 
-def save_config(data):
+def save_config(data: dict) -> None:
     try: CONFIG_FILE.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
     except Exception as e:
         try: (Path(__file__).parent/"debug.log").open("a",encoding="utf-8").write(f"[ERR] save_config: {e}\n")
         except: pass
 
-def set_auto_start(enabled):
+def set_auto_start(enabled: bool) -> None:
     bp=STARTUP_DIR/"流水线启动器.bat"
     if enabled: bp.write_text(f'@start "" "{sys.executable}" "{Path(__file__).parent/"main.pyw"}"\n',encoding="utf-8")
     elif bp.exists(): bp.unlink()

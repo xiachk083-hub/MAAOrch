@@ -1,21 +1,14 @@
 """Reusable QThread helper — eliminates inline class _T(QThread) boilerplate."""
+from collections.abc import Callable
+from typing import Any
 from PySide6.QtCore import QThread, Signal
 
 
 class BackgroundTask(QThread):
-    """Run a function in background thread. Connect 'result' signal to handle output.
-    
-    Usage:
-        t = BackgroundTask(detect_emu_instances)
-        t.result.connect(on_done)
-        t.start()
-    
-    Or with args:
-        t = BackgroundTask(lambda: subprocess.run(...))
-    """
+    """Run a function in background thread. Connect 'result' signal to handle output."""
     result = Signal(object)  # pyright: ignore[reportCallIssue]
 
-    def __init__(self, func):
+    def __init__(self, func: Callable[[], Any]) -> None:
         super().__init__()
         self._func = func
 
