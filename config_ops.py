@@ -5,7 +5,7 @@ from task_constants import find_mumu_cli
 class ConfigService:
     def __init__(self, mw: "MainWindow") -> None: self.mw = mw
 
-    def gtc(self,ac,w):
+    def gtc(self, ac: dict, w: dict) -> "str | None":
         pl=w.get("task_pipeline","")
         if not pl: return None
         ts=[t.strip() for t in pl.split(",") if t.strip()]
