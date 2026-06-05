@@ -1478,7 +1478,7 @@ class MainWindow(QMainWindow):
             if cli:
                 self._log(f"启动模拟器 #{emu_idx}")
                 try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"launch"],creationflags=CF,timeout=15)
-                except: pass
+                except Exception as e: self._log(f"启动模拟器失败: {e}")
                 self._emu_wait_and_launch(progs,a,a.get("emu_wait",30),0)
                 return
         # ADB fail → launch emulator
