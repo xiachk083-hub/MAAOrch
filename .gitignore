@@ -13,3 +13,5 @@ screenshots/
 Thumbs.db
 .pytest_cache/
 .ruff_cache/
+tools/
+batch_launcher.pyw

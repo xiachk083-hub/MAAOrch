@@ -1,9 +1,12 @@
 [project]
 name = "MAAOrch"
-version = "5.0.0"
+version = "1.0.0"
 description = "MAA 多账号批量管理工具"
 requires-python = ">=3.12"
 dependencies = ["PySide6>=6.0"]
+
+[project.scripts]
+maaorch = "main:run"
 
 [tool.ruff]
 line-length = 200
