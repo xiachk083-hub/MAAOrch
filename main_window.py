@@ -958,7 +958,7 @@ class MainWindow(QMainWindow):
                 else:
                     self._log(f"ADB 失败，启动模拟器 #{emu_idx}")
                     try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"launch"],creationflags=CF,timeout=15)
-                    except: pass
+                    except Exception as e: self._log(f"启动模拟器失败: {e}")
                     self._emu_wait_and_launch(progs,a,a.get("emu_wait",30),0)
                     return
         # ADB retry
@@ -1003,7 +1003,7 @@ class MainWindow(QMainWindow):
             if addr:
                 self._log(f"连接 ADB: {addr}")
                 try: subprocess.run([adb,"connect",addr],capture_output=True,creationflags=CF,timeout=5)
-                except: pass
+                except Exception as e: self._log(f"ADB 连接失败: {e}")
             for w in progs:
                 try: self._inj(w,a); self._ls(w)
                 except Exception as e: self._log(f"失败: {e}"); QMessageBox.critical(self,"失败",str(e))

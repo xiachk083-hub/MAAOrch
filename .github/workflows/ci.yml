@@ -17,3 +17,19 @@ jobs:
       - run: pip install PySide6 ruff pytest
       - run: ruff check main_window.py main.pyw utils.py config.py themes.py task_constants.py updater.py dialogs.py pipeline_thread.py api_server.py schedule_thread.py
       - run: python -m pytest tests/ -v
+      - name: Check file size limits
+        run: |
+          python -c "
+          import os; ok=True
+          LIMITS={'main_window.py':800,'main.pyw':100,'utils.py':100,'config.py':150,'task_constants.py':200,'updater.py':200,'dialogs.py':350,'pipeline_thread.py':60,'api_server.py':150,'schedule_thread.py':40,'themes.py':100}
+          for f,limit in LIMITS.items():
+              if not os.path.exists(f): continue
+              lines=len(open(f,encoding='utf-8').readlines())
+              status='OK' if lines<=limit else 'OVER'
+              print(f'{f}: {lines}/{limit} {status}')
+              if lines>limit: ok=False
+          if not ok:
+              print('❌ 文件超过行数限制，请拆分')
+              exit(1)
+          print('✅ 所有文件行数检查通过')
+          "
