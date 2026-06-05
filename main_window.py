@@ -394,8 +394,8 @@ class MainWindow(QMainWindow):
         if hasattr(self,'_sad_row') and self._sad_row==row: return
         self._sad_row=row
         # Stop running threads to avoid signals to destroyed widgets
-        for attr in ('_t','_scan_thread'):
-            if hasattr(self,attr) and getattr(self,attr).isRunning():
+        for attr in ('_t','_scan_thread','_refresh_t','_test_t','_ss_t','_stopemu_t'):
+            if hasattr(self,attr) and getattr(self,attr) and getattr(self,attr).isRunning():
                 try: getattr(self,attr).result.disconnect()
                 except: pass
                 getattr(self,attr).quit(); getattr(self,attr).wait(1000)
@@ -621,12 +621,17 @@ class MainWindow(QMainWindow):
 
     def _refresh_instance_list_async(self,combo):
         combo.setEnabled(False)
+        if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
+            try: self._refresh_t.result.disconnect()
+            except: pass
+            self._refresh_t.quit(); self._refresh_t.wait(500)
         class _T(QThread):
             result=Signal(list)
             def run(s): s.result.emit(detect_emu_instances())
-        t=_T()
+        self._refresh_t=_T()
         def _done(instances):
             try:
+                if not hasattr(self,'_sad_row'): return  # window destroyed
                 combo.blockSignals(True)
                 combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
                 for j,ins in enumerate(instances):
@@ -636,14 +641,18 @@ class MainWindow(QMainWindow):
                     combo.addItem(label,ins)
                 combo.blockSignals(False)
                 combo.setEnabled(True)
-            except RuntimeError: pass  # widget deleted
-        t.result.connect(_done); t.start()
+            except RuntimeError: pass
+        self._refresh_t.result.connect(_done); self._refresh_t.start()
 
     def _test_adb(self,a):
         ad=a.get("adb_address","")
         if not ad: self._ast.setText("输入地址"); return
         self._ast.setText("测试中...")
         adb=a.get("adb_path","") or "adb"
+        if hasattr(self,'_test_t') and self._test_t and self._test_t.isRunning():
+            try: self._test_t.result.disconnect()
+            except: pass
+            self._test_t.quit(); self._test_t.wait(500)
         class _T(QThread):
             result=Signal(str)
             def run(s):
@@ -652,7 +661,7 @@ class MainWindow(QMainWindow):
                     out=(r.stdout+r.stderr).decode('utf-8','replace').strip()
                     s.result.emit("✅ 成功" if "connected" in out.lower() or "already" in out.lower() else f"⚠ {out[:80]}")
                 except Exception as e: s.result.emit(f"❌ {e}")
-        t=_T(); t.result.connect(lambda r: self._ast.setText(r)); t.start()
+        self._test_t=_T(); self._test_t.result.connect(lambda r: self._ast.setText(r)); self._test_t.start()
     def _browse_adb(self,le,ac):
         f,_=QFileDialog.getOpenFileName(self,"选择 ADB","","adb.exe (adb.exe);;所有文件 (*.*)")
         if f: le.setText(str(Path(f))); ac["adb_path"]=str(Path(f)); self._save()
@@ -663,6 +672,10 @@ class MainWindow(QMainWindow):
         addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
         if not addr: return
         self._log(f"截图: {addr}...")
+        if hasattr(self,'_ss_t') and self._ss_t and self._ss_t.isRunning():
+            try: self._ss_t.result.disconnect()
+            except: pass
+            self._ss_t.quit(); self._ss_t.wait(500)
         class _T(QThread):
             result=Signal(str)
             def run(s):
@@ -674,6 +687,7 @@ class MainWindow(QMainWindow):
                         fn.write_bytes(r.stdout); s.result.emit(f"ok|{fn.name}")
                     else: s.result.emit("fail|")
                 except Exception as e: s.result.emit(f"err|{e}")
+        self._ss_t=_T()
         def _on(r):
             if r.startswith("ok|"): self._log(f"截图: {r[3:]}")
             elif r.startswith("fail|"): self._log("截图失败")
@@ -685,15 +699,20 @@ class MainWindow(QMainWindow):
         cli=find_mumu_cli()
         if cli:
             self._log(f"关闭模拟器 #{emu_idx}...")
+            if hasattr(self,'_stopemu_t') and self._stopemu_t and self._stopemu_t.isRunning():
+                try: self._stopemu_t.result.disconnect()
+                except: pass
+                self._stopemu_t.quit(); self._stopemu_t.wait(500)
             class _T(QThread):
                 result=Signal(str)
                 def run(s):
                     try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"shutdown"],creationflags=CF,timeout=15); s.result.emit("ok")
                     except Exception as e: s.result.emit(str(e))
+            self._stopemu_t=_T()
             def _on(r):
                 if r=="ok": self._log("模拟器已关闭")
                 else: self._log(f"关闭失败: {r}")
-            t=_T(); t.result.connect(_on); t.start()
+            self._stopemu_t.result.connect(_on); self._stopemu_t.start()
     def _scan_port(self,a,path_edit,addr_edit):
         """Start emulator, wait, then scan ADB port"""
         emu_idx=a.get("emu_instance_index","")
