@@ -625,14 +625,17 @@ class MainWindow(QMainWindow):
             def run(s): s.result.emit(detect_emu_instances())
         t=_T()
         def _done(instances):
-            saved_idx=None; saved_name=None
-            combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
-            for j,ins in enumerate(instances):
-                label=ins['name']; running=ins.get("running",False)
-                if running: label="▶ "+label
-                if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
-                combo.addItem(label,ins)
-            combo.setEnabled(True)
+            try:
+                combo.blockSignals(True)
+                combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
+                for j,ins in enumerate(instances):
+                    label=ins['name']; running=ins.get("running",False)
+                    if running: label="▶ "+label
+                    if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
+                    combo.addItem(label,ins)
+                combo.blockSignals(False)
+                combo.setEnabled(True)
+            except RuntimeError: pass  # widget deleted
         t.result.connect(_done); t.start()
 
     def _test_adb(self,a):
