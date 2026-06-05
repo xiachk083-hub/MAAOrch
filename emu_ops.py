@@ -62,10 +62,10 @@ class EmuService:
                 except Exception as e: s.result.emit(f"❌ {e}")
         self._test_t=_T(); self._test_t.result.connect(lambda r: self.mw._ast.setText(r)); self._test_t.start()
     def browse_adb(self,le,ac):
-        f,_=QFileDialog.getOpenFileName(self,"选择 ADB","","adb.exe (adb.exe);;所有文件 (*.*)")
+        f,_=QFileDialog.getOpenFileName(self.mw,"选择 ADB","","adb.exe (adb.exe);;所有文件 (*.*)")
         if f: le.setText(str(Path(f))); ac["adb_path"]=str(Path(f)); self.mw._save()
     def browse_file(self,le,ac,key):
-        f,_=QFileDialog.getOpenFileName(self,"选择文件","","可执行文件 (*.exe);;所有文件 (*.*)")
+        f,_=QFileDialog.getOpenFileName(self.mw,"选择文件","","可执行文件 (*.exe);;所有文件 (*.*)")
         if f: le.setText(str(Path(f))); ac[key]=str(Path(f)); self.mw._save()
     def screenshot(self,a):
         addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
@@ -115,9 +115,9 @@ class EmuService:
     def scan_port(self,a,path_edit,addr_edit):
         """Start emulator, wait, then scan ADB port"""
         emu_idx=a.get("emu_instance_index","")
-        if not emu_idx: QMessageBox.information(self,"提示","请先选择模拟器实例"); return
+        if not emu_idx: QMessageBox.information(self.mw,"提示","请先选择模拟器实例"); return
         cli=find_mumu_cli()
-        if not cli: QMessageBox.warning(self,"提示","未找到 mumu-cli"); return
+        if not cli: QMessageBox.warning(self.mw,"提示","未找到 mumu-cli"); return
         # Prevent double-click: kill existing scan before starting new one
         if hasattr(self,'_t') and self._t and self._t.isRunning():
             try: self._t.result.disconnect()
@@ -173,7 +173,7 @@ class EmuService:
         def _on_r(r):
             if r.startswith("__found__"):
                 addr=r[9:]; addr_edit.setText(addr); a.__setitem__("adb_address",addr); self.mw._save()
-                self.mw._log(f"端口: {addr}"); self._sl(f"端口: {addr}")
+                self.mw._log(f"端口: {addr}"); self.mw._sl(f"端口: {addr}")
             elif r.startswith("__err__"):
                 self.mw._log(r[8:]); self.mw.sl.setText("就绪")
             else: self.mw.sl.setText(r)
