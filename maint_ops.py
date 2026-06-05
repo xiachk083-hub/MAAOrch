@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt,QTimer,QPointF
 from PySide6.QtGui import QPixmap,QPainter,QColor,QBrush,QPolygonF,QIcon
 from PySide6.QtWidgets import QDialog,QVBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QHeaderView,QAbstractItemView,QMessageBox,QApplication,QSystemTrayIcon,QMenu
 from utils import parse_maa_version
+from updater import UpdateCheckThread, UpdateDialog
 from schedule_thread import ScheduleThread
 
 class MaintService:
@@ -16,7 +17,7 @@ class MaintService:
             tag=r["tag"]; info=r["assets"].get(get_platform_key())
             if not info: return
             d=Path(__file__).parent/"accounts"/a["id"]/"MAA"; d.mkdir(parents=True,exist_ok=True)
-            dlg=UpdateDialog(self,tag,info,str(d))
+            dlg=UpdateDialog(self.mw,tag,info,str(d))
             if dlg.exec()!=QDialog.Accepted: return
             exe=None
             for p in d.rglob("MAA.exe"): exe=p; break
@@ -114,7 +115,7 @@ class MaintService:
             if silent: self.mw._log(f"MAA {tag} 可用"); return
             if QMessageBox.question(self,"更新",f"更新 {len(ups)} 个?")==QMessageBox.Yes:
                 for w,d in ups:
-                    dlg=UpdateDialog(self,tag,info,str(d))
+                    dlg=UpdateDialog(self.mw,tag,info,str(d))
                     if dlg.exec()==QDialog.Accepted: w["maa_version"]=tag
                 self.mw._save()
         t=UpdateCheckThread(); t.result_ready.connect(oc); self.mw.update_thread=t; t.start()
