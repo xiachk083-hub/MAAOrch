@@ -52,6 +52,16 @@ except ImportError:
 
 
 class MainWindow(QMainWindow):
+    # ── Constants ──
+    POLL_INTERVAL_MS = 2000
+    SAVE_DEBOUNCE_MS = 300
+    LOG_MAX_BYTES = 100 * 1024
+    LOG_KEEP_LINES = 200
+    BACKUP_MAX_COUNT = 10
+    EMU_WAIT_DEFAULT = 30
+    ADB_RETRY_DEFAULT = 0
+    API_DEFAULT_PORT = 19999
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MAAOrch"); self.setMinimumSize(960,620)
@@ -70,7 +80,7 @@ class MainWindow(QMainWindow):
         self.maint = MaintService(self)
         self._build_ui(); self.maint.restore_geometry(); self._rgl(); self._log("══ 启动 ══")
         self.maint.setup_tray(); self.maint.start_schedule()
-        self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(2000)
+        self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         self._emu_monitor=EmuMonitor(); self._emu_status={}
         self._emu_monitor.updated.connect(lambda r: [self._emu_status.update({x["index"]:x}) for x in r])
         self._emu_monitor.start()
@@ -92,9 +102,9 @@ class MainWindow(QMainWindow):
         if hasattr(self,'log_text'): self.log_text.appendPlainText(line)
         try:
             lp=Path(__file__).parent/"debug.log"
-            if lp.exists() and lp.stat().st_size>100*1024:
+            if lp.exists() and lp.stat().st_size>self.LOG_MAX_BYTES:
                 lines=lp.read_text(encoding="utf-8").split("\n")
-                lp.write_text("\n".join(lines[-200:])+"\n",encoding="utf-8")
+                lp.write_text("\n".join(lines[-self.LOG_KEEP_LINES:])+"\n",encoding="utf-8")
             with lp.open("a",encoding="utf-8") as f: f.write(line+"\n")
         except Exception:
             try: print(line,file=__import__('sys').stderr)
@@ -117,7 +127,7 @@ class MainWindow(QMainWindow):
             self._save_timer.stop()
         self._save_timer=QTimer(self); self._save_timer.setSingleShot(True)
         self._save_timer.timeout.connect(self._do_save)
-        self._save_timer.start(300)
+        self._save_timer.start(self.SAVE_DEBOUNCE_MS)
     def _do_save(self):
         # Sanitize adb_address (fix encoding artifacts)
         for a in self.accounts:
@@ -133,7 +143,7 @@ class MainWindow(QMainWindow):
                 dst=bp/f"config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
                 if not dst.exists(): shutil.copy2(str(src),str(dst))
             files=sorted(bp.glob("config_*.json"),key=lambda x:x.stat().st_mtime,reverse=True)
-            for f in files[10:]: f.unlink()
+            for f in files[self.BACKUP_MAX_COUNT:]: f.unlink()
         except Exception as e:
             try: self._log(f"备份失败: {e}")
             except: pass
