@@ -31,9 +31,9 @@
 
 ## 启动
 
-双击 `batch_launcher.pyw` 或命令行：
+双击 `main.pyw` 或命令行：
 ```bash
-python batch_launcher.pyw
+python main.pyw
 ```
 
 首次启动需同意 UAC 弹窗（管理员权限），之后自动最小化到系统托盘。程序同时只允许运行一个实例。
@@ -108,14 +108,29 @@ python batch_launcher.pyw
 
 ```
 MAAOrch/
-├── batch_launcher.pyw      # 主程序
-├── config.json              # 配置文件
-├── debug.log                # 启动器日志
-├── accounts/                # 各账号的 MAA 目录
-│   └── {账号ID}/MAA/
-├── maa-cli/                 # maa-cli 命令行工具
-├── backups/                 # 配置备份（保留最近 10 份）
-├── screenshots/             # ADB 截图输出
+├── main.pyw                  # 入口
+├── main_window.py            # 主窗口
+├── emu_ops.py                # ADB / 模拟器操作
+├── config_ops.py             # MAA 配置注入
+├── log_ops.py                # 日志解析
+├── maint_ops.py              # 监控 / 更新 / 托盘
+├── pipeline_thread.py        # 流水线调度
+├── api_server.py             # HTTP API 服务
+├── config.py                 # 配置加载 / 迁移
+├── utils.py                  # 工具函数
+├── task_constants.py         # 任务常量 + 模拟器检测
+├── themes.py                 # 暗色 / 亮色主题
+├── dialogs.py                # 对话框
+├── updater.py                # 下载 / 更新
+├── schedule_thread.py        # 定时任务
+├── config.json               # 配置文件
+├── debug.log                 # 启动器日志
+├── accounts/                 # 各账号的 MAA 目录
+├── maa-cli/                  # maa-cli 命令行工具
+├── backups/                  # 配置备份
+├── screenshots/              # ADB 截图
+├── tests/                    # 测试
+├── docs/                     # 文档
 └── README.md
 ```
 
