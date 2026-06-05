@@ -11,6 +11,10 @@ from config import (CONFIG_FILE,STARTUP_DIR,DEFAULT_CONFIG,migrate_v4_to_v5,load
 from themes import DARK_STYLE, LIGHT_STYLE
 from updater import UpdateCheckThread,DownloadThread,MaacliInstallThread,MaacliInstallDialog,UpdateDialog
 from task_constants import (TASK_NAMES,TASK_DEFAULTS,EMU_PRESETS,MUMU_INSTANCE_DIRS,MUMU_CLI_CANDIDATES,CLIENT_TYPES,CF,find_mumu_cli,detect_emu_instances,EmuMonitor)
+from emu_ops import EmuService
+from config_ops import ConfigService
+from log_ops import LogService
+from maint_ops import MaintService
 from dialogs import ScheduleDialog,SettingsDialog,AccountDialog,TaskSettingsDialog
 from api_server import ApiServer
 from schedule_thread import ScheduleThread
@@ -60,8 +64,12 @@ class MainWindow(QMainWindow):
         self._proc_start_times={}
         fm=self.fontMetrics(); self._row_h=max(28,fm.height()+8); self._btn_sm=max(18,fm.height()+2); self._btn_lg=max(28,int(fm.height()*1.6))
         self._set_theme(self.config.get("appearance_mode","Dark"))
-        self._build_ui(); self._restore_geometry(); self._rgl(); self._log("══ 启动 ══")
-        self._setup_tray(); self._start_schedule()
+        self.emu = EmuService(self)
+        self.cfg = ConfigService(self)
+        self.logs = LogService(self)
+        self.maint = MaintService(self)
+        self._build_ui(); self.maint.restore_geometry(); self._rgl(); self._log("══ 启动 ══")
+        self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(2000)
         self._emu_monitor=EmuMonitor(); self._emu_status={}
         self._emu_monitor.updated.connect(lambda r: [self._emu_status.update({x["index"]:x}) for x in r])
@@ -69,7 +77,7 @@ class MainWindow(QMainWindow):
         self._api_server=None
         self._start_api_server()
         self._log(f"账号: {len(self.accounts)} | 仓库: {len(self.warehouse)} | 分组: {len(self.groups)}")
-        if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self._check_updates(True))
+        if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self.maint.check_updates(True))
 
     def _set_theme(self,m): self.setStyleSheet(DARK_STYLE if m=="Dark" else LIGHT_STYLE)
     def _start_api_server(self):
@@ -96,7 +104,7 @@ class MainWindow(QMainWindow):
         total=len(self.accounts)
         def _next(idx=0):
             if idx>=total:
-                self._log("══ 全部启动完成 ══"); self._notify("全部账号启动完成"); return
+                self._log("══ 全部启动完成 ══"); self.maint.notify("全部账号启动完成"); return
             a=self.accounts[idx]; progs=[w for w in self.warehouse if w.get("account_ref")==a["id"]]
             self.sl.setText(f"启动中: {idx+1}/{total}")
             if not progs: self._log(f"跳过: {a['name']} (无绑定)"); QTimer.singleShot(500,lambda: _next(idx+1)); return
@@ -159,7 +167,7 @@ class MainWindow(QMainWindow):
         ws=QHBoxLayout(); self.whs=QLineEdit(); self.whs.setPlaceholderText("搜索..."); self.whs.textChanged.connect(self._rw); ws.addWidget(self.whs)
         cbtn=QPushButton("✕"); cbtn.setFixedWidth(28); cbtn.setToolTip("清除搜索"); cbtn.clicked.connect(lambda: self.whs.clear()); ws.addWidget(cbtn)
         ws.addWidget(QPushButton("＋ 添加",clicked=self._add_wh,objectName="addProgBtn"))
-        ws.addWidget(QPushButton("检查更新",clicked=lambda: self._check_updates())); wl.addLayout(ws)
+        ws.addWidget(QPushButton("检查更新",clicked=lambda: self.maint.check_updates())); wl.addLayout(ws)
         self.wt=QTableWidget(); self.wt.setColumnCount(4); self.wt.setHorizontalHeaderLabels(["","名称","类型",""])
         self.wt.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch); self.wt.setColumnWidth(0,30); self.wt.setColumnWidth(2,140); self.wt.setColumnWidth(3,36)
         self.wt.setSelectionBehavior(QAbstractItemView.SelectRows); self.wt.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -223,7 +231,7 @@ class MainWindow(QMainWindow):
         self.pab=QPushButton("暂停"); self.pab.clicked.connect(self._pause_pipeline); self.pab.setEnabled(False); sb2.addPermanentWidget(self.pab)
         self.stb=QPushButton("启动流水线"); self.stb.setObjectName("startBtn"); self.stb.clicked.connect(self._start_pipeline); sb2.addPermanentWidget(self.stb)
         mb=self.menuBar(); tm=mb.addMenu("工具")
-        tm.addAction("定时",self._sch); tm.addAction("检查更新",lambda: self._check_updates()); tm.addAction("设置",self._settings); tm.addAction("日志",self._tlog)
+        tm.addAction("定时",self._sch); tm.addAction("检查更新",lambda: self.maint.check_updates()); tm.addAction("设置",self._settings); tm.addAction("日志",self._tlog)
         from PySide6.QtGui import QShortcut,QKeySequence
         QShortcut(QKeySequence("Ctrl+Return"),self,self._start_pipeline); QShortcut(QKeySequence("Esc"),self,self._stop_pipeline)
         self._st("group"); self._sw("groups")
@@ -291,7 +299,7 @@ class MainWindow(QMainWindow):
         row=self.wt.rowAt(pos.y()); ft=self.whs.text().lower(); items=[w for w in self.warehouse if ft in Path(w.get("path","")).stem.lower() or not ft]
         if row>=len(items): return
         w=items[row]; m=QMenu(); m.addAction("▶ 启动",lambda: self._ls(w)); m.addAction("⚙ 设置",lambda: self._ed_wh(w))
-        if w.get("maa_type")!="general": m.addAction("检查更新",lambda: self._cu_single(w))
+        if w.get("maa_type")!="general": m.addAction("检查更新",lambda: self.maint.cu_single(w))
         m.addSeparator(); m.addAction("删除",lambda: self._rm_wh(row)); m.exec(self.wt.viewport().mapToGlobal(pos))
     def _ed_wh(self,w):
         d=QDialog(self); d.setWindowTitle("程序设置"); d.setFixedSize(450,350); l=QVBoxLayout(d)
@@ -433,12 +441,12 @@ class MainWindow(QMainWindow):
             cur_ch=progs[0].get("update_channel","Stable"); ch.setCurrentText(cur_ch)
             ch.currentTextChanged.connect(lambda t: (progs[0].__setitem__("update_channel",t),self._save()))
             vr.addWidget(ch); vr.addStretch()
-            sw_ver=QPushButton("🔄 切换版本"); sw_ver.clicked.connect(lambda: self._switch_maa_version(progs[0],ch.currentText()))
+            sw_ver=QPushButton("🔄 切换版本"); sw_ver.clicked.connect(lambda: self.logs.switch_maa_version(progs[0],ch.currentText()))
             vr.addWidget(sw_ver); mcl.addLayout(vr)
             # Stats/log buttons
             btr=QHBoxLayout()
-            stats_btn=QPushButton("📊 统计"); stats_btn.clicked.connect(lambda: self._show_maa_stats(progs[0])); btr.addWidget(stats_btn)
-            log_btn=QPushButton("📋 日志"); log_btn.clicked.connect(lambda: self._view_maa_log(progs[0])); btr.addWidget(log_btn)
+            stats_btn=QPushButton("📊 统计"); stats_btn.clicked.connect(lambda: self.logs.show_stats(progs[0])); btr.addWidget(stats_btn)
+            log_btn=QPushButton("📋 日志"); log_btn.clicked.connect(lambda: self.logs.view_log(progs[0])); btr.addWidget(log_btn)
             btr.addStretch(); mcl.addLayout(btr)
             # Daily stats
             today=datetime.now().strftime("%Y-%m-%d"); sd=a.get("stats",{}).get(today,{})
@@ -601,300 +609,26 @@ class MainWindow(QMainWindow):
             lb2=QPushButton("▶ 启动"); lb2.setObjectName("startBtn"); lb2.setMinimumHeight(36); lb2.setFont(QFont("Microsoft YaHei UI",12,QFont.Bold))
             lb2.clicked.connect(lambda: self._la(row)); bl.addWidget(lb2)
             bl.addWidget(QPushButton("▶ 启动全部",clicked=lambda: self._la_all()))
-            bl.addWidget(QPushButton("检查更新",clicked=lambda: self._cu_single(progs[0])))
+            bl.addWidget(QPushButton("检查更新",clicked=lambda: self.maint.cu_single(progs[0])))
         else:
-            dl=QPushButton("⬇ 下载 MAA"); dl.setObjectName("addProgBtn"); dl.setMinimumHeight(36); dl.clicked.connect(lambda: self._dl_maa(row)); bl.addWidget(dl)
-            bl.addWidget(QPushButton("📂 绑定",clicked=lambda: self._pk_maa(row)))
+            dl=QPushButton("⬇ 下载 MAA"); dl.setObjectName("addProgBtn"); dl.setMinimumHeight(36); dl.clicked.connect(lambda: self.maint.dl_maa(row)); bl.addWidget(dl)
+            bl.addWidget(QPushButton("📂 绑定",clicked=lambda: self.maint.pk_maa(row)))
         bl.addStretch(); self.adl.insertWidget(8,bw); self.adl.addStretch()
 
-    def _refresh_instance_list_async(self,combo,saved_idx=None,saved_name=None):
-        combo.setEnabled(False)
-        combo.addItem("⏳ 检测中...","")
-        if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
-            try: self._refresh_t.result.disconnect()
-            except: pass
-            self._refresh_t.terminate(); self._refresh_t.wait(200)
-        class _T(QThread):
-            result=Signal(list)
-            def run(s): s.result.emit(detect_emu_instances())
-        self._refresh_t=_T()
-        def _done(instances):
-            try:
-                if not hasattr(self,'_sad_row'): return  # window destroyed
-                combo.blockSignals(True)
-                combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
-                selected=-1
-                for j,ins in enumerate(instances):
-                    label=ins['name']; running=ins.get("running",False)
-                    ms=self._emu_status.get(ins.get("index",""),{})
-                    if ms.get("running"): running=True
-                    if running: label="▶ "+label
-                    if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
-                    combo.addItem(label,ins)
-                    if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
-                if saved_name and not saved_idx:
-                    pass  # saved_name handled during _sad build
-                if selected>=0: combo.setCurrentIndex(selected)
-                combo.blockSignals(False)
-                combo.setEnabled(True)
-            except RuntimeError: pass
-        self._refresh_t.result.connect(_done); self._refresh_t.start()
-
-    def _test_adb(self,a):
-        ad=a.get("adb_address","")
-        if not ad: self._ast.setText("输入地址"); return
-        self._ast.setText("测试中...")
-        adb=a.get("adb_path","") or "adb"
-        if hasattr(self,'_test_t') and self._test_t and self._test_t.isRunning():
-            try: self._test_t.result.disconnect()
-            except: pass
-            self._test_t.terminate(); self._test_t.wait(200)
-        class _T(QThread):
-            result=Signal(str)
-            def run(s):
-                try:
-                    r=subprocess.run([adb,"connect",ad],capture_output=True,timeout=10,creationflags=CF)
-                    out=(r.stdout+r.stderr).decode('utf-8','replace').strip()
-                    s.result.emit("✅ 成功" if "connected" in out.lower() or "already" in out.lower() else f"⚠ {out[:80]}")
-                except Exception as e: s.result.emit(f"❌ {e}")
-        self._test_t=_T(); self._test_t.result.connect(lambda r: self._ast.setText(r)); self._test_t.start()
-    def _browse_adb(self,le,ac):
-        f,_=QFileDialog.getOpenFileName(self,"选择 ADB","","adb.exe (adb.exe);;所有文件 (*.*)")
-        if f: le.setText(str(Path(f))); ac["adb_path"]=str(Path(f)); self._save()
-    def _browse_file(self,le,ac,key):
-        f,_=QFileDialog.getOpenFileName(self,"选择文件","","可执行文件 (*.exe);;所有文件 (*.*)")
-        if f: le.setText(str(Path(f))); ac[key]=str(Path(f)); self._save()
-    def _adb_screenshot(self,a):
-        addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
-        if not addr: return
-        self._log(f"截图: {addr}...")
-        if hasattr(self,'_ss_t') and self._ss_t and self._ss_t.isRunning():
-            try: self._ss_t.result.disconnect()
-            except: pass
-            self._ss_t.terminate(); self._ss_t.wait(200)
-        class _T(QThread):
-            result=Signal(str)
-            def run(s):
-                try:
-                    r=subprocess.run([adb,"-s",addr,"exec-out","screencap","-p"],capture_output=True,timeout=10,creationflags=CF)
-                    if r.returncode==0 and r.stdout:
-                        ss_dir=Path(__file__).parent/"screenshots"; ss_dir.mkdir(exist_ok=True)
-                        fn=ss_dir/f"MAA_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                        fn.write_bytes(r.stdout); s.result.emit(f"ok|{fn.name}")
-                    else: s.result.emit("fail|")
-                except Exception as e: s.result.emit(f"err|{e}")
-        self._ss_t=_T()
-        def _on(r):
-            if r.startswith("ok|"): self._log(f"截图: {r[3:]}")
-            elif r.startswith("fail|"): self._log("截图失败")
-            elif r.startswith("err|"): self._log(f"截图失败: {r[4:]}")
-        t=_T(); t.result.connect(_on); t.start()
-    def _stop_emu(self,a):
-        emu_idx=a.get("emu_instance_index","")
-        if not emu_idx: return
-        cli=find_mumu_cli()
-        if cli:
-            self._log(f"关闭模拟器 #{emu_idx}...")
-            if hasattr(self,'_stopemu_t') and self._stopemu_t and self._stopemu_t.isRunning():
-                try: self._stopemu_t.result.disconnect()
-                except: pass
-                self._stopemu_t.terminate(); self._stopemu_t.wait(200)
-            class _T(QThread):
-                result=Signal(str)
-                def run(s):
-                    try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"shutdown"],creationflags=CF,timeout=15); s.result.emit("ok")
-                    except Exception as e: s.result.emit(str(e))
-            self._stopemu_t=_T()
-            def _on(r):
-                if r=="ok": self._log("模拟器已关闭")
-                else: self._log(f"关闭失败: {r}")
-            self._stopemu_t.result.connect(_on); self._stopemu_t.start()
-    def _scan_port(self,a,path_edit,addr_edit):
-        """Start emulator, wait, then scan ADB port"""
-        emu_idx=a.get("emu_instance_index","")
-        if not emu_idx: QMessageBox.information(self,"提示","请先选择模拟器实例"); return
-        cli=find_mumu_cli()
-        if not cli: QMessageBox.warning(self,"提示","未找到 mumu-cli"); return
-        # Prevent double-click: kill existing scan before starting new one
-        if hasattr(self,'_t') and self._t and self._t.isRunning():
-            try: self._t.result.disconnect()
-            except: pass
-            self._t.terminate(); self._t.wait(200)
-        self._log(f"扫描端口: 实例 #{emu_idx}")
-        self.sl.setText("启动模拟器...")
-        adb=a.get("adb_path","") or "adb"
-        class _T(QThread):
-            result=Signal(str)
-            def __init__(s,emu_idx,cli_path,adb_path):
-                super().__init__(); s.emu_idx=emu_idx; s.cli=cli_path; s.adb=adb_path
-            def run(s):
-                # Step 1: launch emulator
-                try:
-                    subprocess.run([s.cli,"control","--vmindex",str(s.emu_idx),"launch"],creationflags=CF,timeout=15)
-                except Exception as e:
-                    s.result.emit(f"__err__启动失败: {e}"); return
-                # Step 2: wait for boot (background sleep)
-                s.result.emit("启动完成，等待开机..."); s.msleep(5000)
-                # Step 3: get actual port — try config.json first, then mumu-cli, then predict
-                target_port=None
-                emu_idx_int = int(s.emu_idx) if str(s.emu_idx).isdigit() else 0
-                # Try directory scan (reads config.json, no mumu-cli needed)
-                try:
-                    for vms_dir in MUMU_INSTANCE_DIRS:
-                        if vms_dir.exists():
-                            vm = vms_dir / str(s.emu_idx)
-                            if vm.is_dir() and (vm/"config.json").exists():
-                                cfg=json.loads((vm/"config.json").read_text(encoding="utf-8"))
-                                target_port = str(cfg.get("adb_port",""))
-                                if target_port and target_port!="0": break
-                except: pass
-                # Try mumu-cli as fallback
-                if not target_port:
-                    try:
-                        instances=detect_emu_instances()
-                        for ins in instances:
-                            if str(ins.get("index",""))==str(s.emu_idx) and ins.get("adb_port"):
-                                target_port=ins["adb_port"]; break
-                    except: pass
-                # As last resort, use MuMu 12 formula: port = 16384 + index*32
-                if not target_port:
-                    target_port = str(16384 + emu_idx_int * 32)
-                # Step 4: use port directly — adb connect only, no verification
-                addr=f"127.0.0.1:{target_port}"
-                try: subprocess.run([s.adb,"connect",addr],capture_output=True,timeout=3,creationflags=CF)
-                except: pass
-                s.result.emit("__found__"+addr)
-        if hasattr(self,'_t') and self._t.isRunning():
-            self._t.result.disconnect(); self._t.terminate(); self._t.wait(200)
-        self._t=_T(emu_idx,cli,adb)
-        def _on_r(r):
-            if r.startswith("__found__"):
-                addr=r[9:]; addr_edit.setText(addr); a.__setitem__("adb_address",addr); self._save()
-                self._log(f"端口: {addr}"); self._sl(f"端口: {addr}")
-            elif r.startswith("__err__"):
-                self._log(r[8:]); self.sl.setText("就绪")
-            else: self.sl.setText(r)
-        self._t.result.connect(_on_r)
-        self._t.start()
-    def _maa_asst_log(self,w):
-        return Path(w.get("path","")).parent/"debug"/"asst.log"
-    def _switch_maa_version(self,w,channel):
-        """Download and switch to latest version of specified channel"""
-        if QMessageBox.question(self,"切换版本",f"将下载最新 {channel} 版 MAA\n并替换当前版本\n\n是否继续？")!=QMessageBox.Yes: return
-        self._log(f"切换 MAA 版本: {channel}")
-        self.sl.setText(f"下载 {channel} 版...")
-        def _on_result(r):
-            if not r.get("ok"): QMessageBox.critical(self,"失败",r.get("error","")); self.sl.setText("就绪"); return
-            tag=r["tag"]; info=r["assets"].get(get_platform_key())
-            if not info: QMessageBox.warning(self,"失败","无可用包"); self.sl.setText("就绪"); return
-            dlg=UpdateDialog(self,tag,info,str(Path(w["path"]).parent))
-            if dlg.exec()==QDialog.Accepted:
-                w["maa_version"]=tag; w["update_channel"]=channel; self._save()
-                self._log(f"MAA 已切换至: {tag}")
-                # Regenerate config injection
-                ac=next((a for a in self.accounts if a["id"]==w.get("account_ref","")),None)
-                if ac: self._inj(w,ac)
-            self.sl.setText("就绪")
-        t=UpdateCheckThread(); t.result_ready.connect(_on_result); self.update_thread=t; t.start()
-    def _parse_maa_log(self,w,tail=500):
-        lp=self._maa_asst_log(w)
-        if not lp.exists(): return []
-        try:
-            lines=lp.read_text(encoding="utf-8",errors="replace").strip().split("\n")[-tail:]
-        except: return []
-        tasks=[]; cur_task=None
-        task_map={"StartUp":"开始唤醒","Fight":"刷关作战","Recruit":"公开招募","Infrast":"基建换班","Mall":"信用商店","Award":"领取奖励","Roguelike":"肉鸽探索","Reclamation":"生息演算","CloseDown":"关闭游戏"}
-        for line in lines:
-            m=re.match(r'\[([^\]]+)\].*',line)
-            ts=m.group(1) if m else ""
-            if "append_task" in line:
-                for k,v in task_map.items():
-                    if k in line:
-                        cur_task={"name":v,"start":ts,"status":"运行中","drops":"","error":""}; tasks.append(cur_task); break
-            elif "[ERR]" in line and cur_task:
-                cur_task["status"]="失败"; cur_task["error"]=line.split("[ERR]")[-1].strip()[:100]
-            elif "TaskSwitched" in line and cur_task:
-                cur_task["status"]="完成"
-            elif "StageDrops" in line and cur_task:
-                drops=re.findall(r'\b(\S+?)\s*[xX×]\s*(\d+)',line)
-                if drops: cur_task["drops"]=",".join(f"{d[0]}x{d[1]}" for d in drops[-5:])
-        return tasks
-    def _show_maa_stats(self,w):
-        tasks=self._parse_maa_log(w)
-        if not tasks:
-            QMessageBox.information(self,"统计","暂无运行数据\n等待 MAA 执行任务后自动生成")
-            return
-        d=QDialog(self); d.setWindowTitle("MAA 运行统计"); d.setMinimumSize(400,300)
-        l=QVBoxLayout(d); l.addWidget(QLabel(f"📊 MAA 运行统计 ({len(tasks)} 个任务)",font=QFont("Microsoft YaHei UI",13,QFont.Bold)))
-        tw=QTableWidget(); tw.setColumnCount(3); tw.setHorizontalHeaderLabels(["任务","状态","详情"])
-        tw.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch); tw.setColumnWidth(1,60); tw.setColumnWidth(2,200)
-        tw.setRowCount(len(tasks))
-        for i,t in enumerate(tasks):
-            tw.setItem(i,0,QTableWidgetItem(t.get("name","?")))
-            st=t.get("status",""); si=QTableWidgetItem(st)
-            if "失败" in st: si.setForeground(QColor("#a88"))
-            elif "完成" in st: si.setForeground(QColor("#8a8"))
-            tw.setItem(i,1,si)
-            detail=t.get("drops","") or t.get("error","")
-            tw.setItem(i,2,QTableWidgetItem(detail))
-        tw.verticalHeader().setVisible(False)
-        l.addWidget(tw); l.addWidget(QPushButton("关闭",clicked=d.accept)); d.exec()
-    def _view_maa_log(self,w):
-        lp=self._maa_asst_log(w)
-        if not lp.exists(): QMessageBox.information(self,"日志","暂无日志文件"); return
-        try: content=lp.read_text(encoding="utf-8",errors="replace")
-        except: QMessageBox.information(self,"日志","无法读取日志"); return
-        d=QDialog(self); d.setWindowTitle("MAA 日志"); d.setMinimumSize(700,500)
-        l=QVBoxLayout(d); te=QPlainTextEdit(); te.setReadOnly(True); te.setPlainText("\n".join(content.split("\n")[-200:]))
-        # Scroll to bottom
-        te.moveCursor(te.textCursor().End)
-        l.addWidget(te); l.addWidget(QPushButton("关闭",clicked=d.accept)); d.exec()
-    def _scan(self,a,cb):
-        cb.clear(); cb.addItem("扫描中...",""); cb.setEnabled(False)
-        adb=a.get("adb_path","") or "adb"
-        class _T(QThread):
-            result=Signal(list)
-            def run(s):
-                results=[]
-                try:
-                    r=subprocess.run([adb,"devices"],capture_output=True,timeout=5,creationflags=CF)
-                    for m in re.finditer(rb':(\d+)\s+(\S+)',r.stdout):
-                        addr="127.0.0.1:"+m.group(1).decode('ascii')
-                        st=m.group(2).decode('ascii','replace')
-                        if st in ("device","unauthorized","offline"):
-                            results.append((addr,st=="device"))
-                    # If nothing online, probe candidate ports and re-scan
-                    if not any(ok for _,ok in results):
-                        for ep in EMU_PRESETS:
-                            for p in ep["ports"]:
-                                try: subprocess.run([adb,"connect",f"127.0.0.1:{p}"],capture_output=True,timeout=0.3,creationflags=CF)
-                                except: pass
-                        r=subprocess.run([adb,"devices"],capture_output=True,timeout=5,creationflags=CF)
-                        for m in re.finditer(rb':(\d+)\s+(\S+)',r.stdout):
-                            addr="127.0.0.1:"+m.group(1).decode('ascii')
-                            st=m.group(2).decode('ascii','replace')
-                            if st in ("device","unauthorized","offline"):
-                                results.append((addr,st=="device"))
-                except Exception as e:
-                    results.append(("__err__",str(e)))
-                s.result.emit(results)
-        if hasattr(self,'_scan_thread') and self._scan_thread.isRunning():
-            self._scan_thread.result.disconnect(); self._scan_thread.terminate(); self._scan_thread.wait(200)
-        self._scan_thread=_T()
-        def _on_results(results):
-            cb.clear(); cb.addItem("— 在线设备 —","")
-            if not results: cb.addItem("未发现在线设备","")
-            else:
-                for addr,ok in results:
-                    if addr=="__err__":
-                        self._log(f"扫描出错: {ok}")
-                        cb.addItem(f"扫描出错: {ok}","")
-                        continue
-                    cb.addItem(f"{addr} {'✅' if ok else '⚠'}",addr)
-                cb.setCurrentIndex(1)
-            cb.setEnabled(True)
-        self._scan_thread.result.connect(_on_results)
-        self._scan_thread.start()
+    def _refresh_instance_list_async(self, combo, saved_idx=None, saved_name=None):
+        self.emu.refresh_instance_list(combo, saved_idx, saved_name)
+    def _test_adb(self, a): self.emu.test_adb(a)
+    def _browse_adb(self, le, ac): self.emu.browse_adb(le, ac)
+    def _browse_file(self, le, ac, key): self.emu.browse_file(le, ac, key)
+    def _adb_screenshot(self, a): self.emu.screenshot(a)
+    def _stop_emu(self, a): self.emu.stop_emu(a)
+    def _scan_port(self, a, path_edit, addr_edit): self.emu.scan_port(a, path_edit, addr_edit)
+    def _maa_asst_log(self, w): return self.logs.maa_asst_log(w)
+    def _switch_maa_version(self, w,channel): return self.logs.switch_maa_version(w,channel)
+    def _parse_maa_log(self, w,tail=500): return self.logs.parse_maa_log(w,tail=500)
+    def _show_maa_stats(self, w): return self.logs.show_maa_stats(w)
+    def _view_maa_log(self, w): return self.logs.view_maa_log(w)
+    def _scan(self, a, cb): self.emu.scan(a, cb)
     def _add_acc(self):
         d=AccountDialog(self)
         if d.exec()==QDialog.Accepted: self.accounts.append(d.r); self._save(); self._ra()
@@ -1007,27 +741,8 @@ class MainWindow(QMainWindow):
             for w in progs:
                 try: self._inj(w,a); self._ls(w)
                 except Exception as e: self._log(f"失败: {e}"); QMessageBox.critical(self,"失败",str(e))
-    def _dl_maa(self,row):
-        a=self.accounts[row]
-        def oc(r):
-            if not r.get("ok"): return
-            tag=r["tag"]; info=r["assets"].get(get_platform_key())
-            if not info: return
-            d=Path(__file__).parent/"accounts"/a["id"]/"MAA"; d.mkdir(parents=True,exist_ok=True)
-            dlg=UpdateDialog(self,tag,info,str(d))
-            if dlg.exec()!=QDialog.Accepted: return
-            exe=None
-            for p in d.rglob("MAA.exe"): exe=p; break
-            if not exe: return
-            e={"id":make_id(),"path":str(exe),"args":[],"cwd":"","env":{},"maa_type":"maa","maa_version":tag,"account_ref":a["id"],"launch_mode":"gui","task_pipeline":"startup,fight,recruit,infrast,mall,award","guard_enabled":True,"guard_max_restart":3,"guard_capture_log":False}
-            self.warehouse.append(e); self._save(); self._sad(row); self._inj(e,a); self._ls(e)
-        t=UpdateCheckThread(); t.result_ready.connect(oc); self.update_thread=t; t.start()
-    def _pk_maa(self,row):
-        a=self.accounts[row]; f,_=QFileDialog.getOpenFileName(self,"选择","","MAA (*.exe);;所有文件 (*.*)")
-        if not f: return
-        p=str(Path(f)); e={"id":make_id(),"path":p,"args":[],"cwd":"","env":{},"maa_type":"maa","maa_version":parse_maa_version(p) or "","account_ref":a["id"],"launch_mode":"gui","task_pipeline":"startup,fight,recruit,infrast,mall,award","guard_enabled":False,"guard_max_restart":3,"guard_capture_log":False}
-        self.warehouse.append(e); self._save(); self._sad(row); self._inj(e,a); self._ls(e)
-
+    def _dl_maa(self, row): self.maint.dl_maa(row)
+    def _pk_maa(self, row): self.maint.pk_maa(row)
     # Launch
     def _ls(self,w):
         try:
@@ -1052,106 +767,7 @@ class MainWindow(QMainWindow):
             else: self._running_procs[w["id"]]=p
             self._log(f"✓ 启动 {Path(w['path']).stem} PID={p.pid}")
         except Exception as e: self._log(f"❌ 失败: {e}"); QMessageBox.critical(self,"失败",str(e))
-    def _gtc(self,ac,w):
-        pl=w.get("task_pipeline","")
-        if not pl: return None
-        ts=[t.strip() for t in pl.split(",") if t.strip()]
-        if not ts: return None
-        md=Path(w["path"]).parent; td=md/"config"/"tasks"; td.mkdir(parents=True,exist_ok=True); ls=[]
-        for t in ts:
-            tl=t.lower()
-            if tl=="startup": ls.extend(["[[tasks]]",'type="StartUp"',"[tasks.params]",f'client_type="{ac.get("game_client","Official")}"',"start_game_enabled=true"])
-            elif tl=="fight": s=ac.get("fight_stage",""); ls.extend(["[[tasks]]",'type="Fight"'])
-            if s: ls.extend(["[tasks.params]",f'stage="{s}"'])
-            elif tl=="recruit": ls.extend(["[[tasks]]",'type="Recruit"',"[tasks.params]","refresh=true","select=[3,4,5]","confirm=[3,4,5]","times=4"])
-            elif tl=="infrast": ls.extend(["[[tasks]]",'type="Infrast"',"[tasks.params]","mode=0",'facility=["Trade","Reception","Mfg","Control","Power","Office","Dorm"]',"dorm_trust_enabled=true"])
-            elif tl=="mall": ls.extend(["[[tasks]]",'type="Mall"',"[tasks.params]","shopping=true"])
-            elif tl=="award": ls.extend(["[[tasks]]",'type="Award"'])
-            elif tl=="roguelike": ls.extend(["[[tasks]]",'type="Roguelike"',"[tasks.params]",'theme="Sarkaz"',"mode=0"])
-            elif tl=="reclamation": ls.extend(["[[tasks]]",'type="Reclamation"',"[tasks.params]",'theme="Tales"'])
-            elif tl=="closedown": ls.extend(["[[tasks]]",'type="CloseDown"'])
-            ls.append("")
-        (td/"daily.toml").write_text("\n".join(ls),encoding="utf-8")
-        pd=md/"config"/"profiles"; pd.mkdir(parents=True,exist_ok=True); pls=["[connection]"]
-        if ac.get("adb_address"): pls.append(f'address="{ac["adb_address"]}"')
-        if ac.get("adb_path"): pls.append(f'adb_path="{ac["adb_path"].replace(chr(92),chr(92)+chr(92))}"')
-        if ac.get("connection_preset"): pls.append(f'preset="{ac["connection_preset"]}"')
-        pls.extend(["[instance_options]",f'touch_mode="{ac.get("touch_mode","ADB")}"']); (pd/"default.toml").write_text("\n".join(pls)+"\n",encoding="utf-8")
-        return "daily"
-    def _inj(self,w,ac):
-        p=w.get("path",""); md=Path(p).parent if p else None
-        if not md or not md.exists(): return
-        cd=md/"config"; cd.mkdir(parents=True,exist_ok=True); pl=w.get("task_pipeline",""); ptasks=[t.strip().lower() for t in pl.split(",") if t.strip()] if pl else []
-        def _wcfg(fn):
-            gj=cd/fn; d={}
-            if gj.exists():
-                try: d=json.loads(gj.read_text(encoding="utf-8"))
-                except: d={}
-            d.setdefault("Configurations",{}).setdefault("Default",{}); d.setdefault("Current","Default"); d.setdefault("Global",{}); c=d["Configurations"]["Default"]
-            if ac.get("adb_address"): c["Connect.Address"]=ac["adb_address"]
-            if ac.get("adb_path"): c["Connect.AdbPath"]=ac["adb_path"]
-            pr=ac.get("connection_preset",""); to=ac.get("touch_mode","")
-            if pr: c["Connect.ConnectConfig"]={"MuMuPro":"MuMuEmulator12"}.get(pr,pr)
-            if to: c["Connect.TouchMode"]={"MiniTouch":"minitouch","MaaTouch":"maatouch","ADB":"adb"}.get(to,"adb")
-            c["Connect.AdbReplaced"]="True"; c["Connect.AutoDetect"]="False"; c["Connect.AlwaysAutoDetect"]="False"
-            if ac.get("game_client"): c["Start.ClientType"]=ac["game_client"]
-            sw=ac.get("account_switch","")
-            if sw: c["Start.RunDirectly"]="False"; c["Start.StartGame"]="True"
-            else: c["Start.RunDirectly"]="True"; c["Start.StartGame"]="True"
-            # Start options
-            if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
-            if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            if ac.get("post_action"): c["MainFunction.PostActions"]='"'+ac["post_action"]+'"'
-            if ac.get("adb_retry",0)>0: c["Connect.RetryOnDisconnected"]="True"
-            # Emulator: unchecked = MAA handles, checked = we handle
-            if ac.get("emu_instance_index","") and not ac.get("emu_launch"):
-                cli=find_mumu_cli()
-                if cli:
-                    c["Start.EmulatorPath"]=str(cli)
-                    c["Start.EmulatorAddCommand"]=f'control --vmindex {ac["emu_instance_index"]} launch'
-                    c["Start.OpenEmulatorAfterLaunch"]="True"
-                    if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
-            # Account switch in TaskQueue
-            sw=ac.get("account_switch","")
-            if sw and "TaskQueue" in c:
-                for item in c["TaskQueue"]:
-                    if item.get("TaskType","").lower()=="startup": item["AccountName"]=sw; break
-            if ac.get("sync_tasks",False):
-                ts=ac.get("task_settings",{})
-                if ptasks and "TaskQueue" in c:
-                    tq=c["TaskQueue"]
-                    for item in tq:
-                        tt=item.get("TaskType","").lower()
-                        if tt in ptasks:
-                            item["IsEnable"]=True
-                            if tt in ts:
-                                st=ts[tt]
-                                if tt=="fight":
-                                    if st.get("stage"): item["StagePlan"]=[st["stage"]]
-                                    if "medicine" in st: item["UseMedicine"]=st["medicine"]>0; item["MedicineCount"]=st["medicine"]
-                                elif tt=="recruit":
-                                    if "select" in st: item["Level3Choose"]=3 in st["select"]; item["Level4Choose"]=4 in st["select"]; item["Level5Choose"]=5 in st["select"]
-                                    if "confirm" in st: item["Confirm"]=st["confirm"]
-                                    if "times" in st: item["MaxTimes"]=st["times"]
-                                elif tt=="infrast":
-                                    if "facilities" in st: item["RoomList"]=[{"Room":f} for f in st["facilities"]]
-                                    if "drones" in st: item["UsesOfDrones"]=st["drones"]
-                                elif tt=="mall":
-                                    if "shopping" in st: item["Shopping"]=st["shopping"]
-                                    if "blacklist" in st: item["BlackList"]=st["blacklist"]
-                                elif tt=="award":
-                                    if "award" in st: item["Award"]=st["award"]
-                                    if "mail" in st: item["Mail"]=st["mail"]
-                                elif tt=="roguelike":
-                                    if "theme" in st: item["Theme"]=st["theme"]
-                                    if "mode" in st: item["Mode"]="Exp" if st["mode"]==0 else "Investment"
-                                elif tt=="reclamation":
-                                    if "theme" in st: item["Theme"]=st["theme"]
-                        else: item["IsEnable"]=False
-                    c["TaskQueue"]=tq
-            gj.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
-        _wcfg("gui.json"); _wcfg("gui.new.json")
-
+    def _gtc(self, ac, w): return self.cfg.gtc(ac, w)
     # Pipeline
     def _start_pipeline(self):
         if not self.groups or (self.pipeline_thread and self.pipeline_thread.isRunning()): return
@@ -1193,120 +809,13 @@ class MainWindow(QMainWindow):
 
     from pipeline_thread import PipelineThread
 
-    def _poll(self):
-        now=time.time()
-        for pid in list(self._cli_procs.keys()):
-            p=self._cli_procs[pid]
-            if p.poll() is not None:
-                out=p.stdout.read().decode(errors="replace").strip(); err=p.stderr.read().decode(errors="replace").strip()
-                if out: self._log(f"[maa-cli] {out[:500]}")
-                if err: self._log(f"[maa-cli] {err[:500]}")
-                rc=p.poll(); self._log(f"[maa-cli] 退出码: {rc}"); self._cli_procs.pop(pid,None); self._proc_status.discard(pid)
-                self._notify(f"MAA CLI 已退出" if rc==0 else f"MAA CLI 异常退出",rc!=0)
-        for pid in list(self._running_procs.keys()):
-            p=self._running_procs[pid]
-            if p.poll() is not None:
-                self._running_procs.pop(pid,None); self._proc_status.discard(pid); self._proc_start_times.pop(pid,None)
-                rc=p.poll()
-                if rc!=0:
-                    self._notify(f"进程异常退出 (code={rc})",True)
-                    w=next((x for x in self.warehouse if x["id"]==pid),None)
-                    if w and w.get("guard_enabled") and QMessageBox.question(self,"进程退出",f"{Path(w['path']).stem} 异常退出\n是否重启？")==QMessageBox.Yes:
-                        self._ls(w)
-                # Check MAA log for completion
-                w=next((x for x in self.warehouse if x["id"]==pid),None)
-                if w:
-                    tasks=self._parse_maa_log(w)
-                    errs=[t for t in tasks if t.get("status")=="失败"]
-                    if errs: self._notify(f"MAA 任务失败: {errs[0].get('name')}",True)
-                    elif tasks: self._notify(f"MAA 完成: {len(tasks)} 个任务")
-        # Update status label with runtime
-        running=[pid for pid in self._proc_status if pid in self._proc_start_times]
-        if running:
-            elapsed=int(now-self._proc_start_times[running[0]])
-            self.sl.setText(f"运行中 ({elapsed//60}m{elapsed%60}s)")
-        # Read current task from MAA log
-        for wid in list(self._running_procs.keys()):
-            w=next((x for x in self.warehouse if x["id"]==wid),None)
-            lp=self._maa_asst_log(w) if w else None
-            if lp and lp.exists():
-                try:
-                    last=lp.read_text(encoding="utf-8",errors="replace").strip().split("\n")[-3:]
-                    for l in last:
-                        if "append_task" in l:
-                            for k,v in {"StartUp":"唤醒","Fight":"刷关","Recruit":"公招","Infrast":"基建","Mall":"信用","Award":"奖励","Roguelike":"肉鸽","Reclamation":"生息"}.items():
-                                if k in l: self.sl.setText(f"MAA: {v}..."); break
-                        elif "[ERR]" in l:
-                            err=l.split("[ERR]")[-1].strip()[:80]
-                            self._log(f"MAA错误: {err}")
-                            self._notify(f"MAA: {err}",True)
-                        elif "TaskSwitched" in l:
-                            self.sl.setText("MAA: 切换任务...")
-                except: pass
-    def _notify(self,msg,is_error=False):
-        if hasattr(self,'tray_icon'):
-            self.tray_icon.showMessage("流水线启动器",msg,QSystemTrayIcon.Critical if is_error else QSystemTrayIcon.Information,3000)
-        # Webhook
-        wh=self.config.get("webhook_url","")
-        if wh:
-            try:
-                data=json.dumps({"msg":msg,"type":"error" if is_error else "info","time":datetime.now().isoformat()}).encode()
-                req=urllib.request.Request(wh,data=data,headers={"Content-Type":"application/json"},method="POST")
-                urllib.request.urlopen(req,timeout=5)
-            except Exception as e:
-                try: self._log(f"Webhook 失败: {e}")
-                except: pass
-
-    def _check_updates(self,silent=False):
-        items=[w for w in self.warehouse if w.get("maa_type")!="general"]
-        if not items:
-            if not silent: QMessageBox.information(self,"提示","无 MAA 程序"); return
-        def oc(r):
-            if not r.get("ok"):
-                if not silent: QMessageBox.warning(self,"失败",r.get("error","")); return
-            tag=r["tag"]; info=r["assets"].get(get_platform_key())
-            if not info: return
-            ups=[(w,Path(w["path"]).parent) for w in items if _version_tuple(w.get("maa_version",""))<_version_tuple(tag)]
-            if not ups:
-                if not silent: QMessageBox.information(self,"提示",f"已是最新 {tag}"); return
-            if silent: self._log(f"MAA {tag} 可用"); return
-            if QMessageBox.question(self,"更新",f"更新 {len(ups)} 个?")==QMessageBox.Yes:
-                for w,d in ups:
-                    dlg=UpdateDialog(self,tag,info,str(d))
-                    if dlg.exec()==QDialog.Accepted: w["maa_version"]=tag
-                self._save()
-        t=UpdateCheckThread(); t.result_ready.connect(oc); self.update_thread=t; t.start()
-    def _cu_single(self,w):
-        if w.get("maa_type")=="general": return
-        def oc(r):
-            if not r.get("ok"): return
-            tag=r["tag"]; info=r["assets"].get(get_platform_key())
-            if not info: return
-            dlg=UpdateDialog(self,tag,info,str(Path(w["path"]).parent))
-            if dlg.exec()==QDialog.Accepted: w["maa_version"]=tag; self._save()
-        t=UpdateCheckThread(); t.result_ready.connect(oc); self.update_thread=t; t.start()
-    def _restore_geometry(self):
-        g=self.config.get("window_geometry","")
-        if g:
-            p=g.split("+")
-            try:
-                if len(p)==3:
-                    wh=p[0].split("x"); w,h,x,y=int(wh[0]),int(wh[1]),int(p[1]),int(p[2])
-                    screen=QApplication.primaryScreen().availableGeometry()
-                    x=max(0,min(x,screen.width()-100)); y=max(0,min(y,screen.height()-100))
-                    w=min(w,screen.width()); h=min(h,screen.height())
-                    self.setGeometry(x,y,w,h)
-                else: wh=p[0].split("x"); self.resize(int(wh[0]),int(wh[1]))
-            except: self.resize(960,650)
-        else: self.resize(960,650)
-    def _setup_tray(self):
-        self.tray_icon=QSystemTrayIcon(self); self.tray_icon.setToolTip("流水线启动器")
-        pm=QPixmap(64,64); pm.fill(Qt.transparent); p=QPainter(pm); p.setRenderHint(QPainter.Antialiasing)
-        p.setBrush(QBrush(QColor(58,126,191))); p.setPen(Qt.NoPen); p.drawEllipse(4,4,56,56); p.setBrush(QBrush(Qt.white))
-        tri=QPolygonF([QPointF(24,18),QPointF(24,46),QPointF(46,32)]); p.drawPolygon(tri); p.end(); ic=QIcon(pm)
-        self.setWindowIcon(ic); self.tray_icon.setIcon(ic); m=QMenu(); m.addAction("显示",self._show_tray); m.addAction("退出",QApplication.quit)
-        self.tray_icon.setContextMenu(m); self.tray_icon.show()
-    def _show_tray(self): self.show(); self._restore_geometry(); self.activateWindow()
+    def _poll(self, ): self.maint.poll()
+    def _notify(self, msg,is_error=False): self.maint.notify(msg,is_error=False)
+    def _check_updates(self, silent=False): self.maint.check_updates(silent=False)
+    def _cu_single(self, w): self.maint.cu_single(w)
+    def _restore_geometry(self, ): self.maint.restore_geometry()
+    def _setup_tray(self, ): self.maint.setup_tray()
+    def _show_tray(self, ): self.maint.show_tray()
     def closeEvent(self,e):
         if not self.isMinimized():
             self.config["window_geometry"]=f"{self.width()}x{self.height()}+{self.x()}+{self.y()}"
@@ -1318,24 +827,9 @@ class MainWindow(QMainWindow):
             if hasattr(self,'_api_server') and self._api_server: self._api_server.stop_server()
             e.accept(); QApplication.quit()
     def _tlog(self): self._log_expanded=not self._log_expanded; self.log_text.setFixedHeight(150 if self._log_expanded else 0)
-    def _start_schedule(self):
-        if self.config.get("schedule",{}).get("enabled"):
-            self.schedule_thread=ScheduleThread(self.config); self.schedule_thread.trigger.connect(self._start_pipeline); self.schedule_thread.start()
-    def _sch(self):
-        d=ScheduleDialog(self,self.config.get("schedule",{}))
-        if d.exec()==QDialog.Accepted: self.config["schedule"]=d.r; self._save()
-        if self.schedule_thread: self.schedule_thread.stop_thread()
-        if d.r.get("enabled"): self.schedule_thread=ScheduleThread(self.config); self.schedule_thread.trigger.connect(self._start_pipeline); self.schedule_thread.start()
-    def _settings(self):
-        old_port=self.config.get("api_port",19999); old_token=self.config.get("api_token","")
-        d=SettingsDialog(self,self.config)
-        if d.exec()==QDialog.Accepted:
-            self._set_theme(self.config.get("appearance_mode","Dark")); self._save()
-            if self.config.get("api_port",19999)!=old_port or self.config.get("api_token","")!=old_token:
-                self._start_api_server()
-
-
-
+    def _start_schedule(self, ): self.maint.start_schedule()
+    def _sch(self, ): self.maint.sch()
+    def _settings(self, ): self.maint.settings()
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin(); sys.exit(0)

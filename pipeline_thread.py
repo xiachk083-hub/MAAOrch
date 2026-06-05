@@ -29,7 +29,7 @@ class PipelineThread(QThread):
         try:
             ac=w.get("account_ref","")
             if ac and ac in self.accounts and self.mw:
-                try: self.mw._inj(w,self.accounts[ac])
+                try: self.mw.cfg.inject_for_thread(w,self.accounts[ac])
                 except: pass
             subprocess.Popen([p]+w.get("args",[]),shell=False,cwd=w.get("cwd","") or None); self.program_started.emit(n,True)
         except Exception as e: self.program_started.emit(f"{n}:{e}",False)
