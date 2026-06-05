@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+debug.log
+config.json
+backups/
+accounts/
+maa-cli/
+screenshots/
+*.zip
+*.7z
+.DS_Store
+Thumbs.db
