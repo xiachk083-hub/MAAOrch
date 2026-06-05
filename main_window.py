@@ -412,18 +412,25 @@ class MainWindow(QMainWindow):
             if it and hasattr(it,'_acc_id'):
                 for j,a in enumerate(self.accounts):
                     if a["id"]==it._acc_id: self._sad(j); break
-    def _sad(self,row):
-        if hasattr(self,'_sad_row') and self._sad_row==row: return
-        self._sad_row=row
-        # Stop running threads to avoid signals to destroyed widgets
+    def _clear_dashboard(self):
+        """Remove all dashboard widgets safely"""
+        for i in reversed(range(self.adl.count())):
+            w=self.adl.itemAt(i).widget()
+            if w and w is not self.ade: self.ade.hide(); w.setParent(None)
+
+    def _cleanup_emu_threads(self):
+        """Kill all running emu threads before rebuilding dashboard"""
         for attr in ('_t','_scan_thread','_refresh_t','_test_t','_ss_t','_stopemu_t'):
             if hasattr(self.emu,attr) and getattr(self.emu,attr) and getattr(self.emu,attr).isRunning():
                 try: getattr(self.emu,attr).result.disconnect()
                 except: pass
                 getattr(self.emu,attr).terminate(); getattr(self.emu,attr).wait(200)
-        for i in reversed(range(self.adl.count())):
-            w=self.adl.itemAt(i).widget()
-            if w and w is not self.ade: self.ade.hide(); w.setParent(None)
+
+    def _sad(self,row):
+        if hasattr(self,'_sad_row') and self._sad_row==row: return
+        self._sad_row=row
+        self._cleanup_emu_threads()
+        self._clear_dashboard()
         if row<0 or row>=len(self.accounts): self.ade.show(); return
         a=self.accounts[row]; progs=[w for w in self.warehouse if w.get("account_ref")==a["id"]]
         tr=QHBoxLayout()
