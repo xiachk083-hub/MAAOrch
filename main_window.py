@@ -768,6 +768,7 @@ class MainWindow(QMainWindow):
             self._log(f"✓ 启动 {Path(w['path']).stem} PID={p.pid}")
         except Exception as e: self._log(f"❌ 失败: {e}"); QMessageBox.critical(self,"失败",str(e))
     def _gtc(self, ac, w): return self.cfg.gtc(ac, w)
+    def _inj(self, w, ac): self.cfg.inject(w, ac)
     # Pipeline
     def _start_pipeline(self):
         if not self.groups or (self.pipeline_thread and self.pipeline_thread.isRunning()): return

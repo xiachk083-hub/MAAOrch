@@ -91,7 +91,7 @@ class EmuService:
             if r.startswith("ok|"): self.mw._log(f"截图: {r[3:]}")
             elif r.startswith("fail|"): self.mw._log("截图失败")
             elif r.startswith("err|"): self.mw._log(f"截图失败: {r[4:]}")
-        t=_T(); t.result.connect(_on); t.start()
+        self._ss_t.result.connect(_on); self._ss_t.start()
     def stop_emu(self,a):
         emu_idx=a.get("emu_instance_index","")
         if not emu_idx: return

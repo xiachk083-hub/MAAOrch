@@ -64,3 +64,5 @@ def save_config(data):
 
 def set_auto_start(enabled):
     bp=STARTUP_DIR/"流水线启动器.bat"
+    if enabled: bp.write_text(f'@start "" "{sys.executable}" "{Path(__file__).parent/"main.pyw"}"\n',encoding="utf-8")
+    elif bp.exists(): bp.unlink()

@@ -27,21 +27,23 @@ class DownloadThread(QThread):
         super().__init__(); self.u=url; self.t=target; self.n=name; self.c=False
     def cancel(self): self.c=True
     def run(self):
-        tmp=None
+        tmp=None; tmpf=None
         try:
             self.status.emit("下载中...")
             req=urllib.request.Request(self.u,headers={"User-Agent":"MAA-Launcher"})
             with urllib.request.urlopen(req,timeout=600) as r:
-                total=r.length or 0; buf=bytearray(); dl=0
+                total=r.length or 0; dl=0
+                tmpf=tempfile.NamedTemporaryFile(delete=False,suffix=".zip",prefix="maa_")
                 while True:
                     if self.c: self.finished.emit(False,"取消"); return
                     chunk=r.read(65536)
                     if not chunk: break
-                    buf.extend(chunk); dl+=len(chunk)
+                    tmpf.write(chunk); dl+=len(chunk)
                     if total: self.progress.emit(dl,total)
+                tmpf.close()
             self.progress.emit(1,1); self.status.emit("解压...")
             tmp=tempfile.mkdtemp(prefix="maa_")
-            with zipfile.ZipFile(io.BytesIO(bytes(buf))) as zf: zf.extractall(tmp)
+            with zipfile.ZipFile(tmpf.name) as zf: zf.extractall(tmp)
             tgt=Path(self.t); tgt.mkdir(parents=True,exist_ok=True)
             items=list(Path(tmp).iterdir())
             src=items[0] if len(items)==1 and items[0].is_dir() else Path(tmp)
@@ -60,6 +62,9 @@ class DownloadThread(QThread):
         except Exception as e: self.finished.emit(False,str(e))
         finally:
             if tmp and Path(tmp).exists(): _rmtree_force(tmp)
+            if tmpf and Path(tmpf.name).exists():
+                try: os.unlink(tmpf.name)
+                except: pass
 
 class MaacliInstallThread(QThread):
     progress=Signal(str); finished=Signal(bool,str)

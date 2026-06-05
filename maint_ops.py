@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from PySide6.QtCore import Qt,QTimer,QPointF
 from PySide6.QtGui import QPixmap,QPainter,QColor,QBrush,QPolygonF,QIcon
-from PySide6.QtWidgets import QDialog,QVBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QHeaderView,QAbstractItemView,QMessageBox,QApplication,QSystemTrayIcon,QMenu
+from PySide6.QtWidgets import QDialog,QVBoxLayout,QLabel,QPushButton,QTableWidget,QTableWidgetItem,QHeaderView,QAbstractItemView,QMessageBox,QApplication,QSystemTrayIcon,QMenu,QFileDialog
 from utils import parse_maa_version, get_platform_key, _version_tuple, make_id
 from dialogs import ScheduleDialog, SettingsDialog
 from updater import UpdateCheckThread, UpdateDialog
@@ -29,7 +29,7 @@ class MaintService:
         t=UpdateCheckThread(); t.result_ready.connect(oc); self.mw.update_thread=t; t.start()
 
     def pk_maa(self,row):
-        a=self.mw.accounts[row]; f,_=QFileDialog.getOpenFileName(self,"选择","","MAA (*.exe);;所有文件 (*.*)")
+        a=self.mw.accounts[row]; f,_=QFileDialog.getOpenFileName(self.mw,"选择","","MAA (*.exe);;所有文件 (*.*)")
         if not f: return
         p=str(Path(f)); e={"id":make_id(),"path":p,"args":[],"cwd":"","env":{},"maa_type":"maa","maa_version":parse_maa_version(p) or "","account_ref":a["id"],"launch_mode":"gui","task_pipeline":"startup,fight,recruit,infrast,mall,award","guard_enabled":False,"guard_max_restart":3,"guard_capture_log":False}
         self.mw.warehouse.append(e); self.mw._save(); self.mw._sad(row); self.mw._inj(e,a); self.mw._ls(e)
@@ -59,7 +59,7 @@ class MaintService:
                 # Check MAA log for completion
                 w=next((x for x in self.mw.warehouse if x["id"]==pid),None)
                 if w:
-                    tasks=self.logs.parse_log(w)
+                    tasks=self.mw.logs.parse_log(w)
                     errs=[t for t in tasks if t.get("status")=="失败"]
                     if errs: self.mw._notify(f"MAA 任务失败: {errs[0].get('name')}",True)
                     elif tasks: self.mw._notify(f"MAA 完成: {len(tasks)} 个任务")
@@ -71,7 +71,7 @@ class MaintService:
         # Read current task from MAA log
         for wid in list(self.mw._running_procs.keys()):
             w=next((x for x in self.mw.warehouse if x["id"]==wid),None)
-            lp=self.logs.asst_log_path(w) if w else None
+            lp=self.mw.logs.asst_log_path(w) if w else None
             if lp and lp.exists():
                 try:
                     last=lp.read_text(encoding="utf-8",errors="replace").strip().split("\n")[-3:]
