@@ -36,7 +36,7 @@ def _thread_excepthook(args):
 
 sys.excepthook = _global_excepthook
 
-from utils import is_admin, run_as_admin
+from utils import is_admin, run_as_admin, setup_proxy
 from main_window import MainWindow
 
 def main():
@@ -57,7 +57,6 @@ def main():
     import threading
     threading.excepthook = _thread_excepthook
 
-    from main_window import setup_proxy
     setup_proxy()  # Auto-detect proxy before any network calls
 
     app = QApplication(sys.argv)

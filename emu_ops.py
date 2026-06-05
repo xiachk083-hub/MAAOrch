@@ -1,17 +1,22 @@
+from __future__ import annotations
 import json,subprocess,re
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 from PySide6.QtCore import QThread, Signal
-from PySide6.QtWidgets import QMessageBox, QFileDialog
+from PySide6.QtWidgets import QMessageBox, QFileDialog, QComboBox, QLineEdit
 from task_constants import (CF,EMU_PRESETS,MUMU_INSTANCE_DIRS,find_mumu_cli,detect_emu_instances)
 from background import BackgroundTask
+from callbacks import ServiceContext
 
 class EmuService:
-    """ADB / emulator operations. Uses self.mw to access MainWindow resources."""
-    def __init__(self, mw: "MainWindow") -> None:
-        self.mw = mw
+    """ADB / emulator operations."""
+    def __init__(self, ctx: ServiceContext) -> None:
+        self.ctx = ctx
 
-    def refresh_instance_list(self,combo,saved_idx=None,saved_name=None):
+    def refresh_instance_list(
+        self, combo: QComboBox, saved_idx: str | None = None, saved_name: str | None = None
+    ) -> None:
         combo.setEnabled(False)
         combo.addItem("⏳ 检测中...","")
         if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
@@ -21,13 +26,13 @@ class EmuService:
         self._refresh_t=BackgroundTask(detect_emu_instances)
         def _done(instances):
             try:
-                if not hasattr(self.mw,'_sad_row'): return  # window destroyed
+                if not hasattr(self.ctx._mw,'_sad_row'): return  # window destroyed
                 combo.blockSignals(True)
                 combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
                 selected=-1
                 for j,ins in enumerate(instances):
                     label=ins['name']; running=ins.get("running",False)
-                    ms=self.mw._emu_status.get(ins.get("index",""),{})
+                    ms=self.ctx.emu_status.get(ins.get("index",""),{})
                     if ms.get("running"): running=True
                     if running: label="▶ "+label
                     if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
@@ -41,10 +46,10 @@ class EmuService:
             except RuntimeError: pass
         self._refresh_t.result.connect(_done); self._refresh_t.start()
 
-    def test_adb(self,a):
+    def test_adb(self, a: dict) -> None:
         ad=a.get("adb_address","")
-        if not ad: self.mw._ast.setText("输入地址"); return
-        self.mw._ast.setText("测试中...")
+        if not ad: self.ctx._mw._ast.setText("输入地址"); return
+        self.ctx._mw._ast.setText("测试中...")
         adb=a.get("adb_path","") or "adb"
         if hasattr(self,'_test_t') and self._test_t and self._test_t.isRunning():
             try: self._test_t.result.disconnect()
@@ -58,17 +63,17 @@ class EmuService:
                     out=(r.stdout+r.stderr).decode('utf-8','replace').strip()
                     s.result.emit("✅ 成功" if "connected" in out.lower() or "already" in out.lower() else f"⚠ {out[:80]}")
                 except Exception as e: s.result.emit(f"❌ {e}")
-        self._test_t=_T(); self._test_t.result.connect(lambda r: self.mw._ast.setText(r)); self._test_t.start()
-    def browse_adb(self,le,ac):
-        f,_=QFileDialog.getOpenFileName(self.mw,"选择 ADB","","adb.exe (adb.exe);;所有文件 (*.*)")
-        if f: le.setText(str(Path(f))); ac["adb_path"]=str(Path(f)); self.mw._save()
-    def browse_file(self,le,ac,key):
-        f,_=QFileDialog.getOpenFileName(self.mw,"选择文件","","可执行文件 (*.exe);;所有文件 (*.*)")
-        if f: le.setText(str(Path(f))); ac[key]=str(Path(f)); self.mw._save()
-    def screenshot(self,a):
+        self._test_t=_T(); self._test_t.result.connect(lambda r: self.ctx._mw._ast.setText(r)); self._test_t.start()
+    def browse_adb(self, le: QLineEdit, ac: dict) -> None:
+        f,_=QFileDialog.getOpenFileName(self.ctx._mw,"选择 ADB","","adb.exe (adb.exe);;所有文件 (*.*)")
+        if f: le.setText(str(Path(f))); ac["adb_path"]=str(Path(f)); self.ctx.save()
+    def browse_file(self, le: QLineEdit, ac: dict, key: str) -> None:
+        f,_=QFileDialog.getOpenFileName(self.ctx._mw,"选择文件","","可执行文件 (*.exe);;所有文件 (*.*)")
+        if f: le.setText(str(Path(f))); ac[key]=str(Path(f)); self.ctx.save()
+    def screenshot(self, a: dict) -> None:
         addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
         if not addr: return
-        self.mw._log(f"截图: {addr}...")
+        self.ctx.log(f"截图: {addr}...")
         if hasattr(self,'_ss_t') and self._ss_t and self._ss_t.isRunning():
             try: self._ss_t.result.disconnect()
             except: pass
@@ -86,16 +91,16 @@ class EmuService:
                 except Exception as e: s.result.emit(f"err|{e}")
         self._ss_t=_T()
         def _on(r):
-            if r.startswith("ok|"): self.mw._log(f"截图: {r[3:]}")
-            elif r.startswith("fail|"): self.mw._log("截图失败")
-            elif r.startswith("err|"): self.mw._log(f"截图失败: {r[4:]}")
+            if r.startswith("ok|"): self.ctx.log(f"截图: {r[3:]}")
+            elif r.startswith("fail|"): self.ctx.log("截图失败")
+            elif r.startswith("err|"): self.ctx.log(f"截图失败: {r[4:]}")
         self._ss_t.result.connect(_on); self._ss_t.start()
-    def stop_emu(self,a):
+    def stop_emu(self, a: dict) -> None:
         emu_idx=a.get("emu_instance_index","")
         if not emu_idx: return
         cli=find_mumu_cli()
         if cli:
-            self.mw._log(f"关闭模拟器 #{emu_idx}...")
+            self.ctx.log(f"关闭模拟器 #{emu_idx}...")
             if hasattr(self,'_stopemu_t') and self._stopemu_t and self._stopemu_t.isRunning():
                 try: self._stopemu_t.result.disconnect()
                 except: pass
@@ -107,22 +112,22 @@ class EmuService:
                     except Exception as e: s.result.emit(str(e))
             self._stopemu_t=_T()
             def _on(r):
-                if r=="ok": self.mw._log("模拟器已关闭")
-                else: self.mw._log(f"关闭失败: {r}")
+                if r=="ok": self.ctx.log("模拟器已关闭")
+                else: self.ctx.log(f"关闭失败: {r}")
             self._stopemu_t.result.connect(_on); self._stopemu_t.start()
-    def scan_port(self,a,path_edit,addr_edit):
+    def scan_port(self, a: dict, path_edit: QLineEdit, addr_edit: QLineEdit) -> None:
         """Start emulator, wait, then scan ADB port"""
         emu_idx=a.get("emu_instance_index","")
-        if not emu_idx: QMessageBox.information(self.mw,"提示","请先选择模拟器实例"); return
+        if not emu_idx: QMessageBox.information(self.ctx._mw,"提示","请先选择模拟器实例"); return
         cli=find_mumu_cli()
-        if not cli: QMessageBox.warning(self.mw,"提示","未找到 mumu-cli"); return
+        if not cli: QMessageBox.warning(self.ctx._mw,"提示","未找到 mumu-cli"); return
         # Prevent double-click: kill existing scan before starting new one
         if hasattr(self,'_t') and self._t and self._t.isRunning():
             try: self._t.result.disconnect()
             except: pass
             self._t.terminate(); self._t.wait(200)
-        self.mw._log(f"扫描端口: 实例 #{emu_idx}")
-        self.mw.sl.setText("启动模拟器...")
+        self.ctx.log(f"扫描端口: 实例 #{emu_idx}")
+        self.ctx._mw.sl.setText("启动模拟器...")
         adb=a.get("adb_path","") or "adb"
         class _T(QThread):
             result=Signal(str)
@@ -170,14 +175,14 @@ class EmuService:
         self._t=_T(emu_idx,cli,adb)
         def _on_r(r):
             if r.startswith("__found__"):
-                addr=r[9:]; addr_edit.setText(addr); a.__setitem__("adb_address",addr); self.mw._save()
-                self.mw._log(f"端口: {addr}"); self.mw._sl(f"端口: {addr}")
+                addr=r[9:]; addr_edit.setText(addr); a.__setitem__("adb_address",addr); self.ctx.save()
+                self.ctx.log(f"端口: {addr}"); self.ctx._mw.sl.setText(f"端口: {addr}")
             elif r.startswith("__err__"):
-                self.mw._log(r[8:]); self.mw.sl.setText("就绪")
-            else: self.mw.sl.setText(r)
+                self.ctx.log(r[8:]); self.ctx._mw.sl.setText("就绪")
+            else: self.ctx._mw.sl.setText(r)
         self._t.result.connect(_on_r)
         self._t.start()
-    def scan(self,a,cb):
+    def scan(self, a: dict, cb: QComboBox) -> None:
         cb.clear(); cb.addItem("扫描中...",""); cb.setEnabled(False)
         adb=a.get("adb_path","") or "adb"
         class _T(QThread):
@@ -215,7 +220,7 @@ class EmuService:
             else:
                 for addr,ok in results:
                     if addr=="__err__":
-                        self.mw._log(f"扫描出错: {ok}")
+                        self.ctx.log(f"扫描出错: {ok}")
                         cb.addItem(f"扫描出错: {ok}","")
                         continue
                     cb.addItem(f"{addr} {'✅' if ok else '⚠'}",addr)

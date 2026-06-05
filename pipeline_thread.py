@@ -1,14 +1,21 @@
+from __future__ import annotations
 import time,subprocess
 from pathlib import Path
+from typing import Any
 from PySide6.QtCore import QThread, Signal
 
 class PipelineThread(QThread):
-    progress=Signal(str); program_started=Signal(str,bool); finished=Signal(bool)
-    def __init__(self,groups,warehouse,accounts,parent=None):
+    progress = Signal(str)
+    program_started = Signal(str, bool)
+    finished = Signal(bool)
+
+    def __init__(
+        self, groups: list[dict], warehouse: list[dict], accounts: list[dict], parent: Any = None
+    ) -> None:
         super().__init__(); self.groups=groups; self.warehouse={w["id"]:w for w in warehouse}
         self.accounts={a["id"]:a for a in accounts}; self.stop_flag=False; self.pause_flag=False; self.mw=parent
         self._running: list[subprocess.Popen] = []
-    def run(self):
+    def run(self) -> None:
         for g in self.groups:
             if self.stop_flag: break
             while self.pause_flag and not self.stop_flag: self.msleep(200)
@@ -25,7 +32,7 @@ class PipelineThread(QThread):
                     if self.stop_flag: break; self._l(ref)
             self._sleep(g.get("post_delay",3))
         self.finished.emit(self.stop_flag)
-    def _l(self,ref):
+    def _l(self, ref: dict) -> None:
         w=self.warehouse.get(ref.get("ref",""),{}); p=w.get("path",""); n=Path(p).stem
         try:
             ac=w.get("account_ref","")
@@ -36,17 +43,17 @@ class PipelineThread(QThread):
             self._running.append(proc)
             self.program_started.emit(n,True)
         except Exception as e: self.program_started.emit(f"{n}:{e}",False)
-    def _sleep(self,s):
+    def _sleep(self, s: float) -> None:
         for _ in range(int(s*10)):
             if self.stop_flag: break
             while self.pause_flag and not self.stop_flag: self.msleep(200)
             self._running = [p for p in self._running if p.poll() is None]
             time.sleep(0.1)
-    def stop(self):
+    def stop(self) -> None:
         self.stop_flag=True
         for proc in self._running:
             try: proc.terminate()
             except: pass
         self._running.clear()
-    def pause(self): self.pause_flag=True
-    def resume(self): self.pause_flag=False
+    def pause(self) -> None: self.pause_flag=True
+    def resume(self) -> None: self.pause_flag=False

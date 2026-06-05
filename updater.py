@@ -1,14 +1,17 @@
+from __future__ import annotations
 import json,io,os,shutil,time,zipfile,tempfile
 import urllib.request
 from pathlib import Path
+from typing import Any
 from PySide6.QtCore import Qt,QThread,Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QMessageBox,QProgressBar)
 from utils import get_platform_key,_rmtree_force
 
 class UpdateCheckThread(QThread):
-    result_ready=Signal(dict)
-    def run(self):
+    result_ready = Signal(dict)
+
+    def run(self) -> None:
         try:
             req=urllib.request.Request("https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/releases/latest",headers={"User-Agent":"MAA-Launcher"})
             with urllib.request.urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
@@ -22,11 +25,14 @@ class UpdateCheckThread(QThread):
         except Exception as e: self.result_ready.emit({"ok":False,"error":str(e)})
 
 class DownloadThread(QThread):
-    progress=Signal(int,int); status=Signal(str); finished=Signal(bool,str)
-    def __init__(self,url,target,name):
+    progress = Signal(int, int)
+    status = Signal(str)
+    finished = Signal(bool, str)
+
+    def __init__(self, url: str, target: str, name: str) -> None:
         super().__init__(); self.u=url; self.t=target; self.n=name; self.c=False
-    def cancel(self): self.c=True
-    def run(self):
+    def cancel(self) -> None: self.c=True
+    def run(self) -> None:
         tmp=None; tmpf=None
         try:
             self.status.emit("下载中...")
@@ -67,9 +73,13 @@ class DownloadThread(QThread):
                 except: pass
 
 class MaacliInstallThread(QThread):
-    progress=Signal(str); finished=Signal(bool,str)
-    def __init__(self,d): super().__init__(); self.d=d
-    def run(self):
+    progress = Signal(str)
+    finished = Signal(bool, str)
+
+    def __init__(self, d: str) -> None:
+        super().__init__(); self.d=d
+
+    def run(self) -> None:
         try:
             self.progress.emit("获取版本...")
             req=urllib.request.Request("https://api.github.com/repos/MaaAssistantArknights/maa-cli/releases/latest",headers={"User-Agent":"MAA-Launcher"})
@@ -97,18 +107,18 @@ class MaacliInstallThread(QThread):
         except Exception as e: self.finished.emit(False,str(e))
 
 class MaacliInstallDialog(QDialog):
-    def __init__(self,p):
+    def __init__(self, p: QDialog) -> None:
         super().__init__(p); self.setWindowTitle("安装 maa-cli"); self.setFixedSize(380,120)
         l=QVBoxLayout(self); l.addWidget(QLabel("正在安装 maa-cli..."))
         self.s=QLabel("准备中..."); l.addWidget(self.s)
         self.b=QProgressBar(); self.b.setRange(0,0); l.addWidget(self.b)
-    def start(self,d):
+    def start(self, d: str) -> None:
         self.t=MaacliInstallThread(d); self.t.progress.connect(self.s.setText)
         self.t.finished.connect(lambda ok,msg: self.accept() if ok else (QMessageBox.critical(self,"失败",msg),self.reject()))
         self.t.start()
 
 class UpdateDialog(QDialog):
-    def __init__(self,p,ver,info,tgt):
+    def __init__(self, p: QDialog, ver: str, info: dict, tgt: str) -> None:
         super().__init__(p); self.setWindowTitle("MAA 更新"); self.setFixedSize(420,200); self.i=info; self.t=tgt
         l=QVBoxLayout(self)
         l.addWidget(QLabel(f"版本: {ver}",font=QFont("Microsoft YaHei UI",13,QFont.Bold)))
@@ -117,7 +127,7 @@ class UpdateDialog(QDialog):
         self.s=QLabel(""); l.addWidget(self.s)
         bl=QHBoxLayout(); self.d=QPushButton("下载"); self.d.clicked.connect(self._dl); bl.addWidget(self.d)
         bl.addWidget(QPushButton("取消",clicked=self.reject)); l.addLayout(bl)
-    def _dl(self):
+    def _dl(self) -> None:
         self.d.setEnabled(False); self.b.setVisible(True)
         self.t=DownloadThread(self.i["url"],self.t,self.i["name"])
         self.t.progress.connect(lambda c,t:(self.b.setMaximum(t),self.b.setValue(c)))

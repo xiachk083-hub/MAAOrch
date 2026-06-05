@@ -1,13 +1,16 @@
+from __future__ import annotations
 import json,time,re
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from typing import Any
 from PySide6.QtCore import QThread, Signal
 
 class ApiServer(QThread):
-    log_msg=Signal(str)
-    def __init__(self,port,token,mw):
+    log_msg = Signal(str)
+
+    def __init__(self, port: int, token: str, mw: Any) -> None:
         super().__init__(); self.port=port; self.token=token; self.mw=mw; self._httpd=None
-    def run(self):
+    def run(self) -> None:
         mw=self.mw; token=self.token
         # Simple rate limiter: max 60 req/min per IP
         _rate_buckets: dict[str,list[float]] = {}

@@ -1,6 +1,25 @@
-import sys,os,ctypes,re,shutil
+import sys,os,ctypes,re,shutil,socket
+import urllib.request
 from pathlib import Path
 
+
+def setup_proxy() -> None:
+    """Auto-detect proxy (Clash/v2ray/etc) for GitHub access. Call once at startup."""
+    for p in [os.environ.get("HTTP_PROXY",""),os.environ.get("http_proxy",""),
+              os.environ.get("HTTPS_PROXY",""),os.environ.get("https_proxy","")]:
+        if p:
+            urllib.request.install_opener(urllib.request.build_opener(
+                urllib.request.ProxyHandler({"http":p,"https":p})))
+            return
+    for port in [7890,7891,1080,10809,8080]:
+        try:
+            s=socket.socket(); s.settimeout(0.3); s.connect(("127.0.0.1",port)); s.close()
+            p=f"http://127.0.0.1:{port}"
+            urllib.request.install_opener(urllib.request.build_opener(
+                urllib.request.ProxyHandler({"http":p,"https":p})))
+            return
+        except Exception:
+            pass
 
 def is_admin() -> bool:
     try: return ctypes.windll.shell32.IsUserAnAdmin()!=0

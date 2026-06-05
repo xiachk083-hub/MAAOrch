@@ -9,16 +9,19 @@
 - **程序仓库** — 所有可执行程序集中管理（MAA / maa-cli / 其他），可搜索、按分组分配
 - **MAA 自动下载/更新** — 从 GitHub Release 下载最新版，支持 Stable / Beta / Alpha 通道切换
 - **模拟器多实例** — 通过 mumu-cli 检测 MuMu 12 / MuMu 6 / 雷电 / 夜神 / 逍遥 / 蓝叠实例，自动填路径和 ADB 端口
-- **任务流水线** — 可视化勾选任务（启动游戏→刷关→公招→基建→信用→奖励→肉鸽→生息演算），参数详细配置
+- **任务流水线** — 可视化勾选任务（启动游戏→刷关→公招→基建→信用→奖励→肉鸽→生息演算），参数详细配置，支持暂停/恢复
 - **CLI 模式** — 支持 maa-cli，自动安装和生成 TOML 任务配置与连接配置
 - **启动后操作** — 完成后可组合：返回主屏、退出方舟、关闭模拟器、退出 MAA
 - **MAA 日志统计** — 解析 asst.log 展示任务时间线、掉落、错误，实时显示当前任务
 - **进度监控** — 状态栏实时展示运行时长和当前任务名，异常退出弹出托盘通知
-- **守护进程** — 进程异常退出时可弹窗询问重启（支持 MAA 程序绑定账号自动注入配置）
+- **守护进程** — 进程异常退出时可弹窗询问重启（支持 MAA 程序绑定账号自动注入配置），每个程序可独立设置最大重启次数和是否捕获日志
 - **定时任务** — 支持每日/每周定时自动启动流水线
 - **暗色/亮色主题** — 跟随系统或手动切换
 - **开机自启** — 可选添加启动项到 Windows 启动目录
 - **通知推送** — 支持企业微信/钉钉等 Webhook 推送运行状态
+- **HTTP API** — REST 接口支持外部调度：状态查询、启动/停止/暂停流水线、配置下发
+- **代理自动检测** — 启动时自动探测本地代理（Clash/v2ray），确保 GitHub 访问通畅
+- **打包构建** — PyInstaller 一键打包独立 .exe，内置 maa-cli 和 MaaCore.dll
 - **ADB 工具** — 内置 ADB 扫描、连接测试、截图功能
 - **配置导入/导出** — 支持导出/导入全局配置和单个账号配置
 
@@ -104,6 +107,73 @@ python main.pyw
 - **托盘通知**：MAA 完成或异常时弹出气泡提示
 - **Webhook**：在「设置 → 通知URL」填入企业微信/钉钉/自定义 Webhook 地址，运行状态自动推送
 
+## HTTP API
+
+MAAOrch 启动后自动在 `127.0.0.1:19999` 开启 REST 服务（端口可在设置中修改），供外部调度系统调用。认证通过 Header `x-agent-token` 传递，token 为空则不验证。详细文档见 `docs/daigan-integration.md`。
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/status` | GET | 全部账号运行状态 + 流水线状态 |
+| `/api/account/{index}/status` | GET | 单个账号状态 |
+| `/api/pipeline/start` | POST | 启动流水线 |
+| `/api/pipeline/stop` | POST | 停止流水线 |
+| `/api/pipeline/pause` | POST | 暂停/恢复（`{"action":"pause"/"resume"}`） |
+| `/api/account/{index}/launch` | POST | 启动单个账号 |
+| `/api/logs?lines=N` | GET | 读取最近 N 行 debug.log（默认 50） |
+| `/api/config/sync` | POST | 下发 MAA gui.json 配置到指定账号 |
+
+安全措施：
+
+- 仅监听 `127.0.0.1`，不暴露公网
+- 可选 Token 鉴权
+- 60 次/分钟的请求频率限制（返回 HTTP 429）
+- 修改端口/Token 后自动重启服务
+
+## 代理设置
+
+启动时自动检测代理以访问 GitHub：
+
+1. 优先使用环境变量 `HTTP_PROXY` / `HTTPS_PROXY` / `http_proxy` / `https_proxy`
+2. 未设置则探测本地常见代理端口：7890、7891、1080、10809、8080（Clash、v2ray 等）
+3. 检测到后自动为 GitHub 下载和更新检查启用代理
+
+## 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `HTTP_PROXY` / `HTTPS_PROXY` | HTTP(S) 代理地址，优先于自动探测 |
+| `MUMU_CLI_HOME` | 自定义 MuMu 模拟器安装目录，优先于默认搜索路径 |
+
+## 打包构建
+
+使用 PyInstaller 构建独立 `.exe`（无需安装 Python）：
+
+```bash
+pip install pyinstaller
+pyinstaller MAAOrch.spec
+```
+
+构建产物为 `dist/MAAOrch.exe`，包含 maa-cli 工具和 MaaCore.dll。`MAAOrch.spec` 已配置窗口模式（无控制台）、UPX 压缩、自定义图标（需提供 `icon.ico`）。
+
+## 开发
+
+```bash
+pip install -r requirements.txt    # 安装依赖
+pip install ruff pytest             # 安装开发工具
+
+ruff check .                        # 代码检查
+pytest tests/ -v                    # 运行测试
+```
+
+测试覆盖：
+
+- `test_core.py` — 配置加载/保存、ID 生成、版本解析、迁移
+- `test_critical.py` — gui.json 注入、ADB 端口提取、MAA 日志解析、定时匹配
+- `test_emu.py` — 模拟器预设、ADB 设备列表解析、MuMu 端口公式、mumu-cli 发现
+- `test_maint.py` — 版本比较链、配置迁移路径、字段默认值
+
+CI（GitHub Actions）在 push/PR 到 main 分支时自动执行 ruff 检查和 pytest 测试。
+
 ## 目录结构
 
 ```
@@ -130,7 +200,16 @@ MAAOrch/
 ├── backups/                  # 配置备份
 ├── screenshots/              # ADB 截图
 ├── tests/                    # 测试
-├── docs/                     # 文档
+├── docs/                     # 技术文档
+│   ├── architecture.md
+│   ├── account-management.md
+│   ├── pipeline.md
+│   ├── task-config.md
+│   ├── monitoring.md
+│   ├── update-download.md
+│   ├── http-api.md
+│   ├── dev-guide.md
+│   └── daigan-integration.md
 └── README.md
 ```
 
@@ -150,6 +229,19 @@ MAAOrch/
 - **任务参数不生效** — 勾选「启动时同步」
 - **查看详细错误** — 菜单 → 日志，或查看 `debug.log`
 - **程序已运行** — 程序仅允许单实例，再次启动会自动激活已有窗口
+
+## 技术文档
+
+| 文档 | 内容 |
+|------|------|
+| [系统架构](docs/architecture.md) | 模块划分、数据流、线程模型、ServiceContext 设计 |
+| [多账号与模拟器](docs/account-management.md) | 账号数据结构、ADB 工具、模拟器多实例、mumu-cli 集成 |
+| [流水线调度](docs/pipeline.md) | 分组/仓库、串并行调度、定时任务、启动选项 |
+| [任务配置注入](docs/task-config.md) | gui.json 注入、maa-cli TOML 生成、任务参数映射 |
+| [日志与监控](docs/monitoring.md) | asst.log 解析、实时监控、守护进程、通知系统 |
+| [下载更新与代理](docs/update-download.md) | MAA/maa-cli 下载更新、版本切换、代理自动检测 |
+| [HTTP API](docs/http-api.md) | REST 接口完整参考、安全机制、集成示例 |
+| [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、配置迁移、测试、打包 |
 
 ## 技术栈
 

@@ -20,3 +20,24 @@ ignore = ["E501", "F841", "N802", "N803", "N806", "SIM108", "SIM114"]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = true
+
+[tool.pyright]
+include = ["*.py", "*.pyw"]
+exclude = ["accounts/**", "backups/**", "maa-cli/**", "tests/**"]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
+reportCallIssue = false
+reportAttributeAccessIssue = false
+reportArgumentType = false
+reportOptionalMemberAccess = false
+reportOptionalSubscript = false
+reportOptionalIterable = false
+reportOptionalCall = false
+reportOptionalOperand = false
+reportUnusedCallResult = false

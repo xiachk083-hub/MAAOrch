@@ -1,11 +1,14 @@
+from __future__ import annotations
 import json
 from pathlib import Path
 from task_constants import find_mumu_cli
+from callbacks import ServiceContext
 
 class ConfigService:
-    def __init__(self, mw: "MainWindow") -> None: self.mw = mw
+    def __init__(self, ctx: ServiceContext) -> None:
+        self.ctx = ctx
 
-    def gtc(self, ac: dict, w: dict) -> "str | None":
+    def gtc(self, ac: dict, w: dict) -> str | None:
         pl=w.get("task_pipeline","")
         if not pl: return None
         ts=[t.strip() for t in pl.split(",") if t.strip()]
@@ -32,7 +35,7 @@ class ConfigService:
         pls.extend(["[instance_options]",f'touch_mode="{ac.get("touch_mode","ADB")}"']); (pd/"default.toml").write_text("\n".join(pls)+"\n",encoding="utf-8")
         return "daily"
 
-    def inject(self,w,ac):
+    def inject(self, w: dict, ac: dict) -> None:
         p=w.get("path",""); md=Path(p).parent if p else None
         if not md or not md.exists(): return
         cd=md/"config"; cd.mkdir(parents=True,exist_ok=True); pl=w.get("task_pipeline",""); ptasks=[t.strip().lower() for t in pl.split(",") if t.strip()] if pl else []
@@ -106,6 +109,6 @@ class ConfigService:
             gj.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
         _wcfg("gui.json"); _wcfg("gui.new.json")
 
-    def inject_for_thread(self, w, ac):
+    def inject_for_thread(self, w: dict, ac: dict) -> None:
         """Called from PipelineThread (no MainWindow ref needed)."""
         self.inject(w, ac)

@@ -1,11 +1,15 @@
+from __future__ import annotations
 import time
 from datetime import datetime, time as dtime, timedelta
 from PySide6.QtCore import QThread, Signal
 
 class ScheduleThread(QThread):
-    trigger=Signal()
-    def __init__(self,c): super().__init__(); self.c=c; self._r=True; self._last_run=None
-    def run(self):
+    trigger = Signal()
+
+    def __init__(self, c: dict) -> None:
+        super().__init__(); self.c=c; self._r=True; self._last_run=None
+
+    def run(self) -> None:
         while self._r:
             s=self.c.get("schedule",{})
             if not s.get("enabled"):
@@ -34,4 +38,4 @@ class ScheduleThread(QThread):
             if self._last_run and (n-self._last_run).total_seconds()<120: self.msleep(30000); continue
             self.trigger.emit(); self._last_run=n
             self.msleep(60000)
-    def stop_thread(self): self._r=False
+    def stop_thread(self) -> None: self._r=False
