@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         self._emu_monitor.start()
         self._api_server=None
         self._start_api_server()
+        self._log(f"账号: {len(self.accounts)} | 仓库: {len(self.warehouse)} | 分组: {len(self.groups)}")
         if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self._check_updates(True))
 
     def _set_theme(self,m): self.setStyleSheet(DARK_STYLE if m=="Dark" else LIGHT_STYLE)
