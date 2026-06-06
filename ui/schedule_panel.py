@@ -125,7 +125,16 @@ def refresh_schedule_view(mw: Any) -> None:
 
 def _get_last_sanity(aid: str) -> dict | None:
     try:
-        st = RunStats(aid); return st.get_last_sanity()
+        st = RunStats(aid)
+        runs = st._data.get("runs", [])
+        s = st.get_last_sanity()
+        if s and not s.get("report_time"):
+            # Fallback: use the latest run's ts
+            for r in reversed(runs):
+                if s.get("current") == r.get("sanity", {}).get("current"):
+                    s["report_time"] = r.get("ts", "")
+                    break
+        return s
     except Exception: return None
 
 
