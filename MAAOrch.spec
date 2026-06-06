@@ -9,7 +9,10 @@ Usage:
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).parent.absolute()
+try:
+    ROOT = Path(SPECPATH).resolve().parent
+except NameError:
+    ROOT = Path(specpath).resolve().parent if 'specpath' in dir() else Path('.').resolve()
 
 a = Analysis(
     [str(ROOT / "main.pyw")],
