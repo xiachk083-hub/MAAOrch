@@ -24,6 +24,27 @@ class UpdateCheckThread(QThread):
             self.result_ready.emit({"ok":True,"tag":tag,"assets":assets})
         except Exception as e: self.result_ready.emit({"ok":False,"error":str(e)})
 
+class OrchUpdateCheckThread(QThread):
+    """Check MAAOrch GitHub releases for updates."""
+    result_ready = Signal(dict)
+
+    def run(self) -> None:
+        try:
+            req = urllib.request.Request(
+                "https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest",
+                headers={"User-Agent": "MAAOrch-Updater"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = json.loads(r.read().decode())
+            tag = data.get("tag_name", "")
+            html_url = data.get("html_url", "")
+            assets = []
+            for a in data.get("assets", []):
+                assets.append({"name": a.get("name", ""), "url": a.get("browser_download_url", "")})
+            self.result_ready.emit({"ok": True, "tag": tag, "html_url": html_url, "assets": assets})
+        except Exception as e:
+            self.result_ready.emit({"ok": False, "error": str(e)})
+
 class DownloadThread(QThread):
     progress = Signal(int, int)
     status = Signal(str)

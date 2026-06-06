@@ -47,6 +47,7 @@ except ImportError:
 
 class MainWindow(QMainWindow):
     # ── Constants ──
+    VERSION = "1.1.0"
     POLL_INTERVAL_MS = 2000
     SAVE_DEBOUNCE_MS = 300
     LOG_MAX_BYTES = 100 * 1024
@@ -261,6 +262,7 @@ class MainWindow(QMainWindow):
         tm = mb.addMenu("工具")
         tm.addAction("定时", self._sch)
         tm.addAction("检查更新", lambda: self.maint.check_updates())
+        tm.addAction("检查 MAAOrch 更新", lambda: self.maint.check_orch_update())
         tm.addAction("设置", self._settings)
         tm.addAction("日志", self._tlog)
 

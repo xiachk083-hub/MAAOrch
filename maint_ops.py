@@ -306,6 +306,93 @@ class MaintService:
             if self.ctx.config.get("api_port", 19999) != old_port or self.ctx.config.get("api_token", "") != old_token:
                 self.ctx.restart_api_server()
 
+    def check_orch_update(self) -> None:
+        """Check for MAAOrch self-update, download and replace if newer."""
+        from updater import OrchUpdateCheckThread
+        from utils import _version_tuple
+
+        def _on_result(r):
+            if not r.get("ok"):
+                QMessageBox.information(self.ctx._mw, "检查更新", f"检查失败: {r.get('error', '')}")
+                return
+            tag = r["tag"]
+            new_ver = _version_tuple(tag)
+            # Get current version
+            try:
+                cur_ver = _version_tuple(self.ctx._mw.VERSION)
+            except Exception:
+                cur_ver = (0,)
+            if new_ver <= cur_ver:
+                QMessageBox.information(self.ctx._mw, "检查更新", f"已是最新版本 {tag}")
+                return
+
+            # Show update dialog
+            msg = f"MAAOrch {tag} 可用\n当前版本: {self.ctx._mw.VERSION}\n\n是否下载更新？\n\n下载后会自动替换并重启"
+            if QMessageBox.question(self.ctx._mw, "更新", msg) != QMessageBox.Yes:
+                return
+
+            # Download + generate replace script
+            self.ctx.log(f"下载 MAAOrch {tag}...")
+            import tempfile, shutil, zipfile, os as _os
+            try:
+                # Find a download URL (prefer zipball)
+                dl_url = r.get("html_url", "") + "/archive/refs/tags/" + tag + ".zip"
+                if not r.get("html_url"):
+                    dl_url = f"https://github.com/xiachk083-hub/MAAOrch/archive/refs/tags/{tag}.zip"
+
+                tmp = tempfile.mkdtemp()
+                tmpf = Path(tmp) / "update.zip"
+                self.ctx.log(f"下载中: {dl_url[:60]}...")
+                req = urllib.request.Request(dl_url, headers={"User-Agent": "MAAOrch-Updater"})
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    tmpf.write_bytes(resp.read())
+
+                # Extract to _update/
+                root = Path(__file__).parent
+                update_dir = root / "_update"
+                if update_dir.exists():
+                    shutil.rmtree(str(update_dir))
+                update_dir.mkdir()
+                with zipfile.ZipFile(str(tmpf)) as zf:
+                    # GitHub zip wraps in a folder like MAAOrch-1.1.0/
+                    for member in zf.namelist():
+                        # Strip the top-level folder
+                        parts = member.split("/", 1)
+                        if len(parts) < 2:
+                            continue
+                        target_path = update_dir / parts[1]
+                        if member.endswith("/"):
+                            target_path.mkdir(parents=True, exist_ok=True)
+                        else:
+                            target_path.parent.mkdir(parents=True, exist_ok=True)
+                            with zf.open(member) as src, open(str(target_path), "wb") as dst:
+                                dst.write(src.read())
+
+                # Generate replace.bat
+                bat = root / "replace.bat"
+                bat.write_text(
+                    '@echo off\r\n'
+                    'taskkill /f /im python.exe 2>nul\r\n'
+                    'timeout /t 3 /nobreak >nul\r\n'
+                    'xcopy /E /Y "%~dp0_update\\*" "%~dp0" >nul\r\n'
+                    'rmdir /S /Q "%~dp0_update"\r\n'
+                    'start "" python "%~dp0main.pyw"\r\n'
+                    'del "%~dp0replace.bat"\r\n'
+                )
+                shutil.rmtree(tmp)
+
+                self.ctx.log(f"更新准备完成，重启中...")
+                import subprocess as _sp
+                _sp.Popen(str(bat), shell=True, creationflags=0x08000000)  # CREATE_NO_WINDOW
+                self.ctx._mw.close()
+            except Exception as e:
+                self.ctx.log(f"下载更新失败: {e}")
+                QMessageBox.warning(self.ctx._mw, "更新失败", f"下载或解压失败:\n{e}")
+
+        t = OrchUpdateCheckThread()
+        t.result_ready.connect(_on_result)
+        t.start()
+
 
 
 
