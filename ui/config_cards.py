@@ -179,7 +179,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
 
     fl = QVBoxLayout(frame)
     fl.setContentsMargins(5, 4, 5, 4)
-    fl.setSpacing(0)
+    fl.setSpacing(1)
     fl.setAlignment(Qt.AlignTop)
 
     # Name row — bold, with status indicator
@@ -198,31 +198,37 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     name_row.addWidget(name_lbl)
     fl.addLayout(name_row)
 
-    # One-line summary: client | ADB | emu | pipeline
-    parts = []
+    # Client
     client_map = {"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
-    parts.append(client_map.get(a.get("game_client",""), a.get("game_client","")))
+    fl.addWidget(QLabel(client_map.get(a.get("game_client",""), a.get("game_client",""))))
 
+    # ADB
     adb = a.get("adb_address", "")
-    parts.append(f"📱{adb}" if adb else "⚠ADB")
+    adb_lbl = QLabel(f"📱 {adb}" if adb else "⚠ 未配置ADB")
+    if not adb: adb_lbl.setStyleSheet("color:#a88;font-size:8pt")
+    else: adb_lbl.setStyleSheet("font-size:8pt")
+    fl.addWidget(adb_lbl)
 
+    # Emulator
     emu = a.get("emu_instance_index", "")
     if emu:
-        ename = a.get("emu_instance_name", "") or emu
-        parts.append(f"🖥{ename}")
+        ename = a.get("emu_instance_name", emu)
+        fl.addWidget(QLabel(f"🖥 {ename}"))
+    elif a.get("emu_launch"):
+        fl.addWidget(QLabel("🖥 自启"))
 
+    # Pipeline
     progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
     pipe = progs[0].get("task_pipeline", "") if progs else ""
     if pipe:
-        tasks = [t.strip() for t in pipe.split(",") if t.strip()][:2]
-        parts.append(f"⚙{'.'.join(tasks)}")
-    if a.get("sanity_driven"):
-        parts.append("💊")
+        tasks = [t.strip() for t in pipe.split(",") if t.strip()][:4]
+        fl.addWidget(QLabel(f"⚙ {','.join(tasks)}"))
 
-    summary = QLabel(" │ ".join(parts))
-    summary.setStyleSheet("font-size:8pt;color:#aaa")
-    summary.setWordWrap(True)
-    fl.addWidget(summary)
+    # Sanity
+    if a.get("sanity_driven"):
+        s_lbl = QLabel("💊 理智驱动")
+        s_lbl.setStyleSheet("font-size:8pt")
+        fl.addWidget(s_lbl)
 
     # Tags
     tags = a.get("tags", "")
