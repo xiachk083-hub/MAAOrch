@@ -173,13 +173,13 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     frame.setFixedWidth(width)
     frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
 
-    # Border + subtle left color bar for run status
+    # Border + left color bar for run status
     accent = "#4a4" if running else ("#c90" if queued else "#555")
     frame.setStyleSheet(f"""
         QFrame#configCard{{
             border:1px solid #444;
-            border-radius:8px;
             border-left:3px solid {accent};
+            border-radius:0 8px 8px 0;
             background:rgba(255,255,255,0.04);
         }}
         QFrame#configCard:hover{{
@@ -189,7 +189,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     """)
 
     fl = QVBoxLayout(frame)
-    fl.setContentsMargins(8, 6, 8, 6)
+    fl.setContentsMargins(6, 6, 8, 6)
     fl.setSpacing(2)
 
     # ── Name row ──
@@ -201,23 +201,19 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     name_row.addWidget(name_lbl, 1)
     fl.addLayout(name_row)
 
-    # ── Meta line: client · ADB ──
+    # ── Meta line: client · ADB · emu ──
     meta = []
     client_map = {"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
     meta.append(client_map.get(a.get("game_client",""), a.get("game_client","")))
     adb = a.get("adb_address", "")
     meta.append(f"📱{adb}" if adb else "⚠无ADB")
-    meta_text = QLabel(" · ".join(meta))
-    meta_text.setStyleSheet("color:#999;font-size:8pt")
-    fl.addWidget(meta_text)
-
-    # ── Emulator ──
     emu = a.get("emu_instance_index", "")
     if emu:
         ename = a.get("emu_instance_name", emu)
-        emu_lbl = QLabel(f"🖥 {ename}")
-        emu_lbl.setStyleSheet("color:#aaa;font-size:8pt")
-        fl.addWidget(emu_lbl)
+        meta.append(f"🖥{ename}")
+    meta_text = QLabel(" · ".join(meta))
+    meta_text.setStyleSheet("color:#999;font-size:8pt")
+    fl.addWidget(meta_text)
 
     # ── Pipeline ──
     progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
