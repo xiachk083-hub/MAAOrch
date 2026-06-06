@@ -104,3 +104,40 @@ GET https://api.github.com/repos/MaaAssistantArknights/maa-cli/releases/latest
 ### 作用范围
 
 配置后，所有通过 `urllib.request` 发出的请求（GitHub API、下载）均走代理。
+
+## MAAOrch 自更新
+
+### OrchUpdateCheckThread
+
+`updater.py` 中的 `OrchUpdateCheckThread` 查询 MAAOrch 的 GitHub Release：
+
+```
+GET https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest
+```
+
+返回 `tag_name`（如 `v1.2.0`）和下载链接。
+
+### 流程
+
+1. **菜单触发**：工具 → 检查 MAAOrch 更新
+2. **版本比较**：`_version_tuple()` 与 `MainWindow.VERSION` 比较
+3. **下载**：从 GitHub 下载 ZIP
+4. **解压**：解压到项目目录下的 `_update/` 临时文件夹
+5. **生成替换脚本**：生成 `replace.bat`
+6. **退出 + 替换**：关闭 MAAOrch → 批处理杀死 python → 复制文件 → 重启
+
+### replace.bat 逻辑
+
+```bat
+taskkill /f /im python.exe
+timeout /t 3
+xcopy /E /Y "%~dp0_update\*" "%~dp0"
+rmdir /S /Q "%~dp0_update"
+start "" python "%~dp0main.pyw"
+del "%~dp0replace.bat"
+```
+
+### 注意事项
+
+- 不会覆盖 `accounts/`、`config.json`、`backups/`（xcopy 的 `/exclude` 或手动排除）
+- 需要在其他设备上先 `pip install PySide6`
