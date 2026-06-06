@@ -114,7 +114,7 @@ def _rebuild(mw: Any) -> None:
         is_running = a["id"] in running_ids
         is_queued = a["id"] in queued_ids
         frame = _make_card(mw, a, i, cw, is_running, is_queued)
-        grid.addWidget(frame, row, col, Qt.AlignTop)
+        grid.addWidget(frame, row, col)
         col += 1
         if col >= col_count:
             col = 0; row += 1
@@ -171,7 +171,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     frame = QFrame()
     frame.setObjectName("configCard")
     frame.setFixedWidth(width)
-    frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
+    frame.setMinimumHeight(140)
 
     # Border color for run status
     accent = "#4a4" if running else ("#c90" if queued else "#444")
