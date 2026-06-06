@@ -16,7 +16,7 @@
 - **进度监控** — 状态栏实时展示运行时长和当前任务名，异常退出弹出托盘通知
 - **守护进程** — 进程异常退出时可弹窗询问重启（支持 MAA 程序绑定账号自动注入配置），每个程序可独立设置最大重启次数和是否捕获日志
 - **定时任务** — 支持每日/每周定时自动启动流水线
-- **理智驱动调度** — 跑完后自动计算理智恢复时间，回满自动再启动
+- **循环调度** — 每日批量入队 + 距满差自动触发，全局并行上限控制，支持体力/时间/定时三种模式
 - **运行历史** — 每次运行结果计入 `stats.json`，可查看最近/本周/本月的任务成功率、掉落汇总、理智趋势
 - **暗色/亮色主题** — 跟随系统或手动切换
 - **开机自启** — 可选添加启动项到 Windows 启动目录
@@ -80,7 +80,7 @@ python main.pyw
 
 | 卡片 | 说明 |
 |------|------|
-| 📦 MAA 状态 | 版本号、运行状态（🟢运行中 + 时长）、切换通道、📊统计、📋日志、自动更新资源、理智回满自动启动 |
+| 📦 MAA 状态 | 版本号、运行状态（🟢运行中 + 时长）、切换通道、📊统计、📋日志、自动更新资源 |
 | 📱 连接 | 模拟器预设、ADB 路径/地址、🔍扫描、测试连接、切换账号、📸截图 |
 | 🖥 启动模拟器 | 实例列表（名称+端口+▶运行标识）、启动路径、🔄刷新、📂浏览、⏻关闭、🔍扫端口 |
 | ⚙ 流水线 | 任务勾选、参数配置、💾模板、启动时同步、gui/cli 模式 |
@@ -218,8 +218,10 @@ MAAOrch/
 ├── screenshots/              # ADB 截图
 ├── ui/                       # UI 面板模块
 │   ├── dashboard.py          # 账号仪表盘
-│   ├── groups_panel.py       # 分组/仓库面板
-│   └── accounts_panel.py     # 账号列表面板
+│   ├── accounts_panel.py     # 账号列表面板
+│   ├── queue_panel.py        # 队列运行状态
+│   ├── config_cards.py       # 配置卡片网格
+│   └── schedule_panel.py     # 循环调度管理
 ├── tests/                    # 测试
 ├── docs/                     # 技术文档
 │   ├── architecture.md
@@ -257,11 +259,11 @@ MAAOrch/
 |------|------|
 | [系统架构](docs/architecture.md) | 模块划分、数据流、线程模型、ServiceContext、启动队列架构 |
 | [多账号与模拟器](docs/account-management.md) | Account 类、ADB 工具、模拟器多实例、mumu-cli 集成 |
-| [流水线调度](docs/pipeline.md) | LaunchQueue、AccountRunner、分组调度、定时任务、理智驱动 |
+| [流水线调度](docs/pipeline.md) | LaunchQueue、AccountRunner、分组调度、循环调度、每日批量 |
 | [任务配置注入](docs/task-config.md) | gui.json 注入、maa-cli TOML 生成、任务参数映射 |
 | [日志与监控](docs/monitoring.md) | asst.log v5/v6 解析、Version 定位、统计持久化、日志轮转 |
 | [下载更新与代理](docs/update-download.md) | MAA/maa-cli 下载更新、版本切换、代理自动检测 |
-| [HTTP API](docs/http-api.md) | REST 接口完整参考、安全机制、stats 端点、集成示例 |
+| [HTTP API](docs/http-api.md) | REST 接口完整参考、安全机制、stats/queue 端点、集成示例 |
 | [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、配置迁移、测试、打包 |
 | [daigan 对接](docs/daigan-integration.md) | stats.json 格式、字段说明、统计计算示例 |
 

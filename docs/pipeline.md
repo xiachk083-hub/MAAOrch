@@ -218,8 +218,33 @@ check_processes() (每 2s 由 proc_timer 调用)
 | `adb_fail_launch_emu` | ADB 连接失败时自动启动模拟器 |
 | `adb_retry` | ADB 连接失败重试次数 |
 | `sync_tasks` | 启动时将任务参数同步写入 gui.json |
-| `sanity_driven` | 理智回满自动再启动 |
-| `min_sanity` | 理智最低阈值（低于此值不启动） |
+| `round_robin_deficit` | 距满差 N 点自动启动（0=回满） |
+
+## 循环调度
+
+`⚙ 调度`标签页管理全局循环调度配置：
+
+### 全局设置
+
+| 字段 | 说明 |
+|------|------|
+| `daily_batch_time` | 每日批量入队时间（如 "04:00"，空=关闭） |
+| `parallel_max` | 最大并行 MAA 进程数 |
+| `round_robin_deficit` | 距满差 N 点即自动入队（0=回满，30=差 30 点就启动） |
+
+### 调度逻辑
+
+```
+1. 每日批量: daily_batch_time 到点 → 全部账号入队 (priority=1)
+2. 跑完自动: 算恢复时间 → 距满 ≤ deficit 时自动入队 (priority=2)
+3. 并行控制: 同时运行 ≤ parallel_max，超过上限排队等待
+```
+
+### 与定时任务的关系
+
+- 定时任务（ScheduleThread）：固定时间触发（每天/每周）
+- 循环调度：每日批量 + 跑完自动算恢复时间
+- 手动入队：优先级最高(0)，随时可插队
 
 ## 启动后操作
 

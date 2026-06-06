@@ -14,8 +14,8 @@ main.pyw → MainWindow → ServiceContext
                          ├── LogService   (log_ops.py)       — 日志解析 / 统计
                          ├── MaintService (maint_ops.py)     — 守护 / 更新 / 托盘
                          ├── PipelineThread(pipeline_thread.py) — 分组流水线调度
-                         ├── ScheduleThread(schedule_thread.py) — 定时任务
-                         └── ApiServer    (api_server.py)    — HTTP API 服务
+                          ├── ScheduleThread(schedule_thread.py) — 定时/循环调度触发
+                          └── ApiServer    (api_server.py)    — HTTP API 服务
 ```
 
 ## 核心模块
@@ -44,8 +44,10 @@ main.pyw → MainWindow → ServiceContext
 | `background.py` | `BackgroundTask` 通用后台线程封装 |
 | `utils.py` | 工具函数（代理检测、管理员权限、ID 生成、版本解析等） |
 | `ui/dashboard.py` | 账号仪表盘，支持增量刷新 |
-| `ui/groups_panel.py` | 分组/仓库面板 |
 | `ui/accounts_panel.py` | 账号列表面板 |
+| `ui/queue_panel.py` | 队列运行状态 |
+| `ui/config_cards.py` | 配置卡片网格视图 |
+| `ui/schedule_panel.py` | 循环调度全局管理 |
 
 ## 数据流
 
@@ -125,7 +127,7 @@ class ServiceContext:
 |------|------|------|
 | 主线程 | GUI | Qt 事件循环，所有 UI 操作 |
 | `PipelineThread` | QThread | 流水线调度，支持暂停/停止 |
-| `ScheduleThread` | QThread | 定时检查，到点触发 |
+| `ScheduleThread` | QThread | 定时/循环调度检查，到点触发 |
 | `ApiServer` | QThread | HTTP 服务器，独立监听 |
 | `EmuMonitor` | QThread | 每 30s 轮询 MuMu 实例状态 |
 | `UpdateCheckThread` | QThread | GitHub API 查询 |
