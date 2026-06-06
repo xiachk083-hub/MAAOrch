@@ -26,8 +26,9 @@ def _global_excepthook(exc_type, exc_value, exc_tb):
     sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 def _qt_message_handler(mode, context, message):
-    """Catch Qt warnings and errors."""
-    _write_crash(f"Qt[{mode}]: {message}")
+    """Only log Qt critical/fatal errors."""
+    if mode > 2:
+        _write_crash(f"Qt[{mode}]: {message}")
 
 def _thread_excepthook(args):
     """Catch unhandled exceptions in QThreads."""
@@ -62,8 +63,25 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setQuitOnLastWindowClosed(False)
-    _write_crash("═══ MAAOrch 启动 ═══")
+
+    def _cleanup_threads():
+        for attr in ("_emu_monitor", "schedule_thread", "_api_server"):
+            t = getattr(win, attr, None)
+            if t is None:
+                continue
+            try:
+                if hasattr(t, "stop_server"):
+                    t.stop_server()
+                elif hasattr(t, "stop_thread"):
+                    t.stop_thread()
+                else:
+                    t.quit()
+                t.wait(2000)
+            except Exception:
+                pass
+
     win = MainWindow()
+    app.aboutToQuit.connect(_cleanup_threads)
     win.show()
     sys.exit(app.exec())
 

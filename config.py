@@ -7,12 +7,13 @@ CONFIG_FILE: Path = Path(__file__).parent/"config.json"
 STARTUP_DIR: Path = Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Menu'/'Programs'/'Startup'
 
 DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"960x650","auto_start":False,
-    "minimize_to_tray":True,"check_update_on_start":True,    "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
+    "minimize_to_tray":True,"check_update_on_start":True,"auto_update_maa":True,"maa_update_interval":6,
+    "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[]}
 
 def migrate_v4_to_v5(data: dict) -> dict:
     data.setdefault("accounts",[]); data.setdefault("check_update_on_start",True)
-    for a in data.get("accounts",[]): a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch",""); a.setdefault("emu_path",""); a.setdefault("emu_launch",False); a.setdefault("emu_wait",30); a.setdefault("emu_add_cmd",""); a.setdefault("emu_instance_index",""); a.setdefault("emu_instance_name",""); a.setdefault("post_action",""); a.setdefault("start_minimized",False); a.setdefault("start_directly",False); a.setdefault("adb_fail_launch_emu",False); a.setdefault("adb_retry",0); a.setdefault("stats",{})
+    for a in data.get("accounts",[]): a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch",""); a.setdefault("emu_path",""); a.setdefault("emu_launch",False); a.setdefault("emu_wait",30); a.setdefault("emu_add_cmd",""); a.setdefault("emu_instance_index",""); a.setdefault("emu_instance_name",""); a.setdefault("post_action",""); a.setdefault("start_minimized",False); a.setdefault("start_directly",False); a.setdefault("adb_fail_launch_emu",False); a.setdefault("adb_retry",0); a.setdefault("stats",{}); a.setdefault("loop_enabled",False); a.setdefault("loop_interval",5); a.setdefault("loop_max_rounds",10); a.setdefault("sanity_driven",False); a.setdefault("min_sanity",0)
     data.setdefault("webhook_url","")
     for w in data.get("warehouse",[]):
         for k,v in [("maa_type","general"),("maa_version",""),("update_channel","Stable"),

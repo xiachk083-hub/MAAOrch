@@ -65,6 +65,7 @@ class MaintService:
 
     def poll(self) -> None:
         now = time.time()
+        # CLI process monitoring (legacy, not managed by runner)
         for pid in list(self.ctx.cli_procs.keys()):
             p = self.ctx.cli_procs[pid]
             if p.poll() is not None:
@@ -79,50 +80,16 @@ class MaintService:
                 self.ctx.cli_procs.pop(pid, None)
                 self.ctx.proc_status.discard(pid)
                 self.ctx.notify("MAA CLI 已退出" if rc == 0 else "MAA CLI 异常退出", rc != 0)
-        for pid in list(self.ctx.running_procs.keys()):
-            p = self.ctx.running_procs[pid]
-            if p.poll() is not None:
-                self.ctx.running_procs.pop(pid, None)
-                self.ctx.proc_status.discard(pid)
-                self.ctx.proc_start_times.pop(pid, None)
-                rc = p.poll()
-                if rc != 0:
-                    self.ctx.notify(f"进程异常退出 (code={rc})", True)
-                    w = next((x for x in self.ctx.warehouse if x["id"] == pid), None)
-                    if w and w.get("guard_enabled") and QMessageBox.question(self.ctx._mw, "进程退出", f"{Path(w['path']).stem} 异常退出\n是否重启？") == QMessageBox.Yes:
-                        self.ctx.launch_program(w)
-                w = next((x for x in self.ctx.warehouse if x["id"] == pid), None)
-                if w and self.ctx.logs:
-                    tasks = self.ctx.logs.parse_log(w)
-                    errs = [t for t in tasks if t.get("status") == "失败"]
-                    if errs:
-                        self.ctx.notify(f"MAA 任务失败: {errs[0].get('name')}", True)
-                    elif tasks:
-                        self.ctx.notify(f"MAA 完成: {len(tasks)} 个任务")
+
+        # GUI process monitoring → delegate to runner
+        if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
+            self.ctx._mw.runner.check_processes()
+
+        # Status bar: show running accounts
         running = [pid for pid in self.ctx.proc_status if pid in self.ctx.proc_start_times]
         if running:
             elapsed = int(now - self.ctx.proc_start_times[running[0]])
             self.ctx.set_status(f"运行中 ({elapsed // 60}m{elapsed % 60}s)")
-        for wid in list(self.ctx.running_procs.keys()):
-            w = next((x for x in self.ctx.warehouse if x["id"] == wid), None)
-            lp = self.ctx.logs.asst_log_path(w) if w and self.ctx.logs else None
-            if lp and lp.exists():
-                try:
-                    last = lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-3:]
-                    for line in last:
-                        if "append_task" in line:
-                            for k, v in {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息"}.items():
-                                if k in line:
-                                    self.ctx.set_status(f"MAA: {v}...")
-                                    break
-                        elif "[ERR]" in line:
-                            err = line.split("[ERR]")[-1].strip()[:80]
-                            self.ctx.log(f"MAA错误: {err}")
-                            self.ctx.notify(f"MAA: {err}", True)
-                        elif "TaskSwitched" in line:
-                            self.ctx.set_status("MAA: 切换任务...")
-                except Exception:
-                    pass
 
     def notify(self, msg: str, is_error: bool = False) -> None:
         mw = self.ctx._mw
@@ -139,6 +106,51 @@ class MaintService:
                     self.ctx.log(f"Webhook 失败: {e}")
                 except Exception:
                     pass
+
+    def auto_check_updates(self) -> None:
+        """Periodic silent MAA update check (notification only, no auto-download dialog)."""
+        try:
+            self._do_auto_check()
+        except Exception as e:
+            try: self.ctx.log(f"自动检查更新失败: {e}")
+            except: pass
+
+    def _do_auto_check(self) -> None:
+        if not self.ctx.config.get("auto_update_maa", True):
+            return
+        items = [w for w in self.ctx.warehouse if w.get("maa_type") != "general"]
+        if not items:
+            return
+
+        def oc(r):
+            if not r.get("ok"):
+                return
+            tag = r["tag"]
+            info = r["assets"].get(get_platform_key())
+            if not info:
+                return
+            ups = [w for w in items if _version_tuple(w.get("maa_version", "")) < _version_tuple(tag) and w.get("auto_update", True)]
+            if not ups:
+                return
+            names = ", ".join(Path(w["path"]).stem for w in ups[:3])
+            more = f" +{len(ups)-3}" if len(ups) > 3 else ""
+            self.ctx.log(f"检测到资源更新: MAA {tag} ({len(ups)} 个: {names}{more})")
+            self.ctx.notify(f"MAA {tag} 可用 ({len(ups)} 个待更新)", False)
+
+        t = UpdateCheckThread()
+        t.result_ready.connect(oc)
+        self.ctx.update_thread = t
+        t.start()
+
+    def start_auto_update_timer(self) -> None:
+        """Start periodic MAA update check (runs every N hours)."""
+        from PySide6.QtCore import QTimer
+        interval_h = self.ctx.config.get("maa_update_interval", 6)
+        self._auto_update_timer = QTimer(self.ctx._mw)
+        self._auto_update_timer.timeout.connect(self.auto_check_updates)
+        self._auto_update_timer.start(interval_h * 3600 * 1000)
+        # Also check once after 30s on startup
+        QTimer.singleShot(30000, self.auto_check_updates)
 
     def check_updates(self, silent: bool = False) -> None:
         items = [w for w in self.ctx.warehouse if w.get("maa_type") != "general"]
@@ -240,7 +252,7 @@ class MaintService:
         mw.tray_icon.setIcon(ic)
         m = QMenu()
         m.addAction("显示", self.show_tray)
-        m.addAction("退出", QApplication.quit)
+        m.addAction("退出", self._quit_app)
         mw.tray_icon.setContextMenu(m)
         mw.tray_icon.show()
 
@@ -249,6 +261,13 @@ class MaintService:
         mw.show()
         self.restore_geometry()
         mw.activateWindow()
+
+    def _quit_app(self) -> None:
+        """Save config and quit (called from tray menu)."""
+        mw = self.ctx._mw
+        if mw and hasattr(mw, "_do_save"):
+            mw._do_save()
+        QApplication.quit()
 
     def start_schedule(self) -> None:
         if self.ctx.config.get("schedule", {}).get("enabled"):

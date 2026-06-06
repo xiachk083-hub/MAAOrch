@@ -132,6 +132,42 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         btr.addStretch()
         mcl.addLayout(btr)
 
+        # Resource auto-update indicator
+        aur = QHBoxLayout()
+        au_cb = QCheckBox("自动更新资源")
+        au_cb.setChecked(progs[0].get("auto_update", mw.config.get("auto_update_maa", True)))
+        au_cb.setToolTip("检测到新版本时自动下载更新")
+        au_cb.toggled.connect(lambda v: (progs[0].__setitem__("auto_update", v), mw._save()))
+        aur.addWidget(au_cb)
+        aur.addStretch()
+        au_lbl = QLabel("已启用" if au_cb.isChecked() else "已禁用")
+        au_lbl.setStyleSheet("color:#8a8" if au_cb.isChecked() else "color:#a88")
+        au_cb.toggled.connect(lambda v: au_lbl.setText("已启用" if v else "已禁用") or au_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
+        aur.addWidget(au_lbl)
+        mcl.addLayout(aur)
+
+        # Sanity-driven auto-launch toggle
+        sdr = QHBoxLayout()
+        sd_cb = QCheckBox("理智回满自动启动")
+        sd_cb.setChecked(a.get("sanity_driven", False))
+        sd_cb.setToolTip("上一轮刷完后，等理智回满自动再启动")
+        sd_cb.toggled.connect(lambda v: (a.__setitem__("sanity_driven", v), mw._save()))
+        sdr.addWidget(sd_cb)
+        # Show next launch time if available
+        nxt = getattr(mw, "scheduler", None)
+        if nxt:
+            nl = nxt.get_next_launch(a["id"])
+            if nl:
+                sdr.addWidget(QLabel(f"→ {nl.strftime('%m-%d %H:%M')}"))
+                sdr.addStretch()
+        else:
+            sdr.addStretch()
+        sd_lbl = QLabel("已启用" if sd_cb.isChecked() else "已禁用")
+        sd_lbl.setStyleSheet("color:#8a8" if sd_cb.isChecked() else "color:#a88")
+        sd_cb.toggled.connect(lambda v: sd_lbl.setText("已启用" if v else "已禁用") or sd_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
+        sdr.addWidget(sd_lbl)
+        mcl.addLayout(sdr)
+
         today = datetime.now().strftime("%Y-%m-%d")
         sd = a.get("stats", {}).get(today, {})
         if sd.get("launches"):

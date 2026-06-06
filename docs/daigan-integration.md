@@ -83,6 +83,151 @@ fetch("http://127.0.0.1:19999/api/config/sync", {
 // → {"ok": true}
 ```
 
+---
+
+## 运行统计数据 (daigan 对接)
+
+### 概述
+
+MAAOrch 每次任务完成后，将运行结果写入 `accounts/{account_id}/stats.json`。此文件可在本地读取，也可通过 API 获取。数据按次累积，支持月报、年报统计。
+
+### 数据格式 (stats.json)
+
+位置：`accounts/{account_id}/stats.json`
+
+```json
+{
+  "runs": [
+    {
+      "ts": "2026-06-06 09:45:29",
+      "tasks": {
+        "开始唤醒": "完成",
+        "刷关作战": "完成",
+        "公开招募": "完成",
+        "基建换班": "完成",
+        "信用商店": "完成",
+        "领取奖励": "完成"
+      },
+      "drops": {
+        "固源岩": 21,
+        "赤金": 12,
+        "源岩": 2,
+        "龙门币": 2592
+      },
+      "sanity": {
+        "current": 5,
+        "max": 210,
+        "deficit": 205
+      }
+    }
+  ],
+  "last_read_line": 0
+}
+```
+
+### 字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `runs[]` | array | 历史运行记录，按时间倒序 |
+| `runs[].ts` | string | 完成时间 (YYYY-MM-DD HH:MM:SS) |
+| `runs[].tasks` | object | 任务名 → 状态。状态：`完成` / `失败` / `运行中` |
+| `runs[].drops` | object | 材料名称 → 本次累计掉落数量 |
+| `runs[].sanity` | object | 剩余理智信息 |
+| `runs[].sanity.current` | int | 当前理智值 |
+| `runs[].sanity.max` | int | 理智上限 |
+| `runs[].sanity.deficit` | int | 距满需恢复的点数 (= max - current) |
+
+### 可用任务名
+
+| 英文 | 中文 | 说明 |
+|------|------|------|
+| StartUp | 开始唤醒 | 启动游戏、切换账号 |
+| Fight | 刷关作战 | 理智刷关 |
+| Recruit | 公开招募 | 自动公招 |
+| Infrast | 基建换班 | 智能基建排班 |
+| Mall | 信用商店 | 信用采购、收取 |
+| Award | 领取奖励 | 每日/每周奖励 |
+| Roguelike | 肉鸽探索 | 集成战略 |
+| Reclamation | 生息演算 | 生息演算 |
+| CloseDown | 关闭游戏 | 关闭明日方舟 |
+
+### 获取方式
+
+#### 方式 A：本地文件读取（MAAOrch 和 daigan 在同一台机器）
+
+直接读取 JSON 文件：
+```
+路径: {MAAOrch安装目录}/accounts/{account_id}/stats.json
+```
+
+Node.js 示例：
+```js
+const fs = require("fs")
+const path = require("path")
+const data = JSON.parse(fs.readFileSync(
+  path.join(maaOrchDir, "accounts", accountId, "stats.json"), "utf-8"
+))
+```
+
+#### 方式 B：HTTP API（远程 / 跨机器）
+
+**`GET /api/account/{index}/stats`** (计划中)
+
+返回账号的完整 stats.json 内容 + 当前运行状态。
+
+```json
+{
+  "account_name": "官服大号",
+  "running": false,
+  "stats": { /* stats.json 完整内容 */ }
+}
+```
+
+当前可通过 `GET /api/status` + 本地文件读取组合实现。
+
+### 统计计算示例
+
+#### 月报
+
+```js
+function monthlyReport(runs, yearMonth) {
+  const monthRuns = runs.filter(r => r.ts.startsWith(yearMonth))
+  return {
+    total_runs: monthRuns.length,
+    task_success: {} // { "刷关作战": { success: 58, fail: 2 } },
+    total_drops: {}, // { "固源岩": 1240, "赤金": 720 }
+    avg_sanity: 0,   // 平均结束理智
+  }
+}
+```
+
+#### 年报 / 趋势
+
+```js
+function yearlySummary(runs) {
+  const byMonth = {}
+  runs.forEach(r => {
+    const month = r.ts.substring(0, 7) // "2026-06"
+    byMonth[month] = (byMonth[month] || 0) + 1
+  })
+  return byMonth // { "2026-06": 58, "2026-07": 62 }
+}
+```
+
+### 理智恢复计算
+
+```
+恢复 1 点理智 = 6 分钟
+恢复至满 = deficit × 6 分钟
+
+示例: deficit = 205, 恢复至满 = 205 × 6 = 1230 分钟 ≈ 20.5 小时
+```
+
+daigan 可据此计算下次最佳启动时间，用于定时调度。
+
+---
+
 ## 集成示例（Node.js）
 
 ```js

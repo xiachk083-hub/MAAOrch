@@ -19,6 +19,8 @@ from dialogs import ScheduleDialog,SettingsDialog,AccountDialog,TaskSettingsDial
 from api_server import ApiServer
 from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
+from runner import AccountRunner
+from scheduler import SchedulerEngine
 from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_threads
 from ui.groups_panel import build_groups_panel
 from ui.accounts_panel import build_accounts_panel
@@ -84,16 +86,35 @@ class MainWindow(QMainWindow):
         self.maint = MaintService(self.ctx)
         self.ctx.cfg = self.cfg
         self.ctx.logs = self.logs
+        # ── Account runner ──
+        self.runner = AccountRunner(self.ctx)
+        self.runner.log_msg.connect(lambda m: self._log(m))
+        self.runner.status_msg.connect(lambda m: self._sl(m))
+        self.runner.account_started.connect(self._on_account_started)
+        self.runner.account_finished.connect(self._on_account_finished)
+        self.runner.account_error.connect(lambda aid, err: self._log(f"❌ {err}"))
+        self.ctx.on_account_done = self.runner.check_processes
+        # ── Sanity scheduler ──
+        self.scheduler = SchedulerEngine(self.ctx)
+        self.runner.account_finished.connect(self.scheduler.on_account_finished)
+        self.scheduler.start()
         self._build_ui(); self.maint.restore_geometry(); self._rgl(); self._log("══ 启动 ══")
         self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         self._emu_monitor=EmuMonitor()
-        self._emu_monitor.updated.connect(lambda r: [self._emu_status.update({x["index"]:x}) for x in r])
+        self._emu_monitor.updated.connect(lambda r: (_safe_update_emu(r)))
         self._emu_monitor.start()
+
+        def _safe_update_emu(r):
+            try:
+                for x in r: self._emu_status.update({x["index"]:x})
+            except Exception:
+                pass
         self._api_server=None
         self._start_api_server()
         self._log(f"账号: {len(self.accounts)} | 仓库: {len(self.warehouse)} | 分组: {len(self.groups)}")
         if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self.maint.check_updates(True))
+        self.maint.start_auto_update_timer()
 
     def _set_theme(self, m: str) -> None: self.setStyleSheet(DARK_STYLE if m=="Dark" else LIGHT_STYLE)
     def _start_api_server(self) -> None:
@@ -452,88 +473,41 @@ class MainWindow(QMainWindow):
         if fp:
             Path(fp).write_text(json.dumps({"name":a.get("name"),"game_client":a.get("game_client"),"adb_path":a.get("adb_path"),"adb_address":a.get("adb_address"),"connection_preset":a.get("connection_preset"),"touch_mode":a.get("touch_mode"),"account_switch":a.get("account_switch"),"emu_instance_index":a.get("emu_instance_index"),"emu_instance_name":a.get("emu_instance_name"),"emu_wait":a.get("emu_wait",30),"task_settings":a.get("task_settings",{}),"post_action":a.get("post_action"),"task_pipeline":(progs[0].get("task_pipeline","") if (progs:=[w for w in self.warehouse if w.get("account_ref")==a["id"]]) else "")},ensure_ascii=False,indent=2),encoding="utf-8")
     def _la(self, row: int) -> None:
-        if row<0 or row>=len(self.accounts): return
-        a=self.accounts[row]; progs=[w for w in self.warehouse if w.get("account_ref")==a["id"]]
-        if not progs: QMessageBox.information(self,"提示","请先下载或绑定"); return
-        self._log(f"[启动] {a['name']}")
         if not self._log_expanded: self._tlog()
-        # Track stats
-        today=datetime.now().strftime("%Y-%m-%d"); sd=a.setdefault("stats",{})
-        sd.setdefault(today,{"launches":0,"total_sec":0}); sd[today]["launches"]+=1
-        self._save()
-        emu_idx=a.get("emu_instance_index","")
-        if a.get("emu_launch") and emu_idx:
-            cli=find_mumu_cli()
-            if cli:
-                self._log(f"启动模拟器 #{emu_idx}")
-                try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"launch"],creationflags=CF,timeout=15)
-                except Exception as e: self._log(f"启动模拟器失败: {e}")
-                self._emu_wait_and_launch(progs,a,a.get("emu_wait",30),0)
+        self.runner.launch(row)
+
+    def _la_all(self) -> None:
+        self._log("══ 启动全部账号 ══")
+        self._log_expanded = True
+        self.log_text.setFixedHeight(150)
+        total = len(self.accounts)
+        def _next(idx=0):
+            if idx >= total:
+                self._log("══ 全部启动完成 ══")
+                self.maint.notify("全部账号启动完成")
                 return
-        # ADB fail → launch emulator
-        if a.get("adb_fail_launch_emu") and emu_idx:
-            cli=find_mumu_cli()
-            adb=a.get("adb_path","") or "adb"; addr=a.get("adb_address","")
-            if addr and cli:
-                r=subprocess.run([adb,"connect",addr],capture_output=True,text=True,timeout=5,creationflags=CF,encoding="utf-8",errors="replace")
-                out=(r.stdout+r.stderr).strip()
-                if "connected" in out.lower() or "already" in out.lower():
-                    self._log(f"ADB 已连接 {addr}")
-                else:
-                    self._log(f"ADB 失败，启动模拟器 #{emu_idx}")
-                    try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"launch"],creationflags=CF,timeout=15)
-                    except Exception as e: self._log(f"启动模拟器失败: {e}")
-                    self._emu_wait_and_launch(progs,a,a.get("emu_wait",30),0)
-                    return
-        # ADB retry
-        retry=a.get("adb_retry",0)
-        if retry>0 and a.get("adb_address",""):
-            adb_path=a.get("adb_path","") or "adb"; addr=a["adb_address"]
-            def _try_retry(attempt=0):
-                if attempt>=retry:
-                    self._log(f"ADB 重试耗尽 ({retry})")
-                    _do_launch(); return
-                r=subprocess.run([adb_path,"connect",addr],capture_output=True,text=True,timeout=5,creationflags=CF,encoding="utf-8",errors="replace")
-                if "connected" in (r.stdout+r.stderr).lower() or "already" in (r.stdout+r.stderr).lower():
-                    self._log(f"ADB 重试成功 ({attempt+1}/{retry})")
-                    _do_launch(); return
-                self.sl.setText(f"ADB 重试 ({attempt+1}/{retry})...")
-                QTimer.singleShot(1000,lambda: _try_retry(attempt+1))
-            def _do_launch():
-                for w in progs:
-                    try: self._inj(w,a); self._ls(w)
-                    except Exception as e: self._log(f"失败: {e}"); QMessageBox.critical(self,"失败",str(e))
-            _try_retry()
-            return
-        for w in progs:
-            try: self._inj(w,a); self._ls(w)
-            except Exception as e: self._log(f"失败: {e}"); QMessageBox.critical(self,"失败",str(e))
-    def _emu_wait_and_launch(self, progs: list[dict], a: dict, remaining: int, step: int) -> None:
-        if remaining>0:
-            self.sl.setText(f"等待模拟器 ({remaining}s)...")
-            QTimer.singleShot(1000,lambda: self._emu_wait_and_launch(progs,a,remaining-1,step+1))
-        else:
-            self.sl.setText("就绪")
-            adb=a.get("adb_path","") or "adb"; addr=a.get("adb_address","")
-            # Try auto-detect ADB port via adb devices
-            if not addr:
-                try:
-                    r=subprocess.run([adb,"devices"],capture_output=True,timeout=5,creationflags=CF)
-                    for m in re.finditer(rb':(\d+)\s+device\b',r.stdout):
-                        addr="127.0.0.1:"+m.group(1).decode('ascii')
-                        a["adb_address"]=addr; self._save()
-                        self._log(f"自动检测 ADB: {addr}"); break
-                except: pass
-            if addr:
-                self._log(f"连接 ADB: {addr}")
-                try: subprocess.run([adb,"connect",addr],capture_output=True,creationflags=CF,timeout=5)
-                except Exception as e: self._log(f"ADB 连接失败: {e}")
-            for w in progs:
-                try: self._inj(w,a); self._ls(w)
-                except Exception as e: self._log(f"失败: {e}"); QMessageBox.critical(self,"失败",str(e))
-    def _dl_maa(self, row: int) -> None: self.maint.dl_maa(row)
-    def _pk_maa(self, row: int) -> None: self.maint.pk_maa(row)
-    # Launch
+            a = self.accounts[idx]
+            progs = [w for w in self.warehouse if w.get("account_ref") == a["id"]]
+            self.sl.setText(f"启动中: {idx+1}/{total}")
+            if not progs:
+                self._log(f"跳过: {a['name']} (无绑定)")
+                QTimer.singleShot(500, lambda: _next(idx + 1))
+                return
+            self.runner.launch(idx)
+            QTimer.singleShot(5000, lambda: _next(idx + 1))
+        _next()
+
+    def _on_account_started(self, aid: str) -> None:
+        a = next((x for x in self.accounts if x["id"] == aid), None)
+        if a:
+            self._sad(self.accounts.index(a))
+
+    def _on_account_finished(self, aid: str, exit_code: int, tasks: list[dict]) -> None:
+        a = next((x for x in self.accounts if x["id"] == aid), None)
+        if a and self._main_tab == "accounts":
+            self._sad(self.accounts.index(a))
+
+    # Legacy launch helpers (kept for pipeline_thread / warehouse quick-launch)
     def _ls(self, w: dict) -> None:
         try:
             args=w.get("args",[]); cwd=w.get("cwd","") or None; env={k:v for k,v in w.get("env",{}).items()} or None; exe=w["path"]; lm=w.get("launch_mode","gui")
@@ -608,13 +582,10 @@ class MainWindow(QMainWindow):
     def closeEvent(self, e) -> None:
         if not self.isMinimized():
             self.config["window_geometry"]=f"{self.width()}x{self.height()}+{self.x()}+{self.y()}"
-            self._save()
-        if self.config.get("minimize_to_tray",True) and hasattr(self,'tray_icon'): self.hide(); e.ignore()
+        if self.config.get("minimize_to_tray",True) and hasattr(self,'tray_icon') and self.tray_icon:
+            self.hide(); e.ignore()
         else:
-            if hasattr(self,'_emu_monitor'): self._emu_monitor.quit(); self._emu_monitor.wait(2000)
-            if hasattr(self,'schedule_thread'): self.schedule_thread.quit(); self.schedule_thread.wait(2000)
-            if hasattr(self,'_api_server') and self._api_server: self._api_server.stop_server()
-            e.accept(); QApplication.quit()
+            self._do_save(); e.accept(); QApplication.quit()
     def _tlog(self) -> None: self._log_expanded=not self._log_expanded; self.log_text.setFixedHeight(150 if self._log_expanded else 0)
     def _start_schedule(self) -> None: self.maint.start_schedule()
     def _sch(self) -> None: self.maint.sch()

@@ -45,6 +45,8 @@ class SettingsDialog(QDialog):
         # 通知
         g4=QGroupBox("通知"); gl4=QVBoxLayout(g4)
         self.cu=QCheckBox("启动时检查更新"); self.cu.setChecked(cfg.get("check_update_on_start",True)); gl4.addWidget(self.cu)
+        ar=QHBoxLayout(); self.au=QCheckBox("自动更新 MAA"); self.au.setChecked(cfg.get("auto_update_maa",True)); ar.addWidget(self.au)
+        ar.addWidget(QLabel("间隔")); self.ai=QSpinBox(); self.ai.setRange(1,72); self.ai.setValue(cfg.get("maa_update_interval",6)); self.ai.setSuffix(" 小时"); ar.addWidget(self.ai); ar.addStretch(); gl4.addLayout(ar)
         wr=QHBoxLayout(); wr.addWidget(QLabel("Webhook:"))
         self.wh=QLineEdit(cfg.get("webhook_url","")); self.wh.setPlaceholderText("企业微信/钉钉/自定义 URL"); wr.addWidget(self.wh,1)
         wh_tb=QPushButton("测试"); wh_tb.clicked.connect(lambda: self._test_webhook(self.wh.text().strip())); wr.addWidget(wh_tb); gl4.addLayout(wr); l.addWidget(g4)
@@ -75,7 +77,7 @@ class SettingsDialog(QDialog):
             QMessageBox.information(self,"成功","Webhook 测试成功")
         except Exception as e: QMessageBox.warning(self,"失败",f"发送失败:\n{e}")
     def _sv(self):
-        self.c["appearance_mode"]=self.th.currentText(); self.c["auto_start"]=self.auto.isChecked(); self.c["minimize_to_tray"]=self.tray.isChecked();         self.c["check_update_on_start"]=self.cu.isChecked(); self.c["webhook_url"]=self.wh.text().strip()
+        self.c["appearance_mode"]=self.th.currentText(); self.c["auto_start"]=self.auto.isChecked(); self.c["minimize_to_tray"]=self.tray.isChecked(); self.c["check_update_on_start"]=self.cu.isChecked(); self.c["auto_update_maa"]=self.au.isChecked(); self.c["maa_update_interval"]=self.ai.value(); self.c["webhook_url"]=self.wh.text().strip()
         self.c["api_port"]=self.api_port.value(); self.c["api_token"]=self.api_token.text().strip()
         set_auto_start(self.c["auto_start"]); self.accept()
 

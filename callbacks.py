@@ -23,6 +23,7 @@ class ServiceContext:
     launch_program: Callable[[dict], None] = field(default=lambda _: None)
     start_pipeline: Callable[[], None] = field(default=lambda: None)
     restart_api_server: Callable[[], None] = field(default=lambda: None)
+    on_account_done: Callable[[str, int, list], None] = field(default=lambda _id, _rc, _tasks: None)
 
     # ── Shared data ──
     accounts: list[dict] = field(default_factory=list)
