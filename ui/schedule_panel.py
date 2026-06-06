@@ -42,7 +42,7 @@ def build_schedule_panel(mw: Any) -> QWidget:
 
     bar.addWidget(QLabel(" 距满差"))
     mw._sch_deficit_sp = QSpinBox()
-    mw._sch_deficit_sp.setRange(0, 999); mw._sch_deficit_sp.setValue(0)
+    mw._sch_deficit_sp.setRange(0, 999);     mw._sch_deficit_sp.setValue(mw.config.get("deficit", 0))
     mw._sch_deficit_sp.setSuffix(" 点")
     mw._sch_deficit_sp.setFixedWidth(60)
     bar.addWidget(mw._sch_deficit_sp)
