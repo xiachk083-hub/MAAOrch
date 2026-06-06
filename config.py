@@ -9,6 +9,7 @@ STARTUP_DIR: Path = Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Men
 
 DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"960x650","auto_start":False,
     "minimize_to_tray":True,"check_update_on_start":True,"auto_update_maa":True,"maa_update_interval":6,
+    "daigan_url":"",
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[]}
 

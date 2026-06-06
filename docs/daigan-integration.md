@@ -170,7 +170,27 @@ const data = JSON.parse(fs.readFileSync(
 ))
 ```
 
-#### 方式 B：HTTP API（远程 / 跨机器）
+#### 方式 B：HTTP 推送（MAAOrch → daigan）
+
+MAAOrch 设置面板配置 daigan 地址后，每次 MAA 任务完成会自动 POST 到 daigan：
+
+```
+POST {daigan_url}/api/maa/stats
+Content-Type: application/json
+
+{
+  "account_name": "官服大号",
+  "account_id": "abc123",
+  "ts": "2026-06-06 09:45:29",
+  "tasks": {"开始唤醒":"完成", "刷关作战":"完成", "公开招募":"完成"},
+  "drops": {"固源岩":21, "赤金":12},
+  "sanity": {"current":5, "max":210, "deficit":205, "report_time":"2026-06-06 09:36:33"}
+}
+```
+
+daigan 侧只需实现 `POST /api/maa/stats` 接收端点即可。
+
+### 方式 C：HTTP API（远程 / 跨机器）
 
 **`GET /api/account/{index}/stats`** (计划中)
 

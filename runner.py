@@ -403,6 +403,26 @@ class AccountRunner(QObject):
             except Exception:
                 pass
 
+        # Push to daigan if configured
+        if tasks and ac:
+            daigan_url = self.ctx.config.get("daigan_url", "").strip()
+            if daigan_url:
+                try:
+                    import urllib.request, json
+                    payload = json.dumps({
+                        "account_name": ac.get("name", aid),
+                        "account_id": aid,
+                        "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "tasks": {t["name"]: t["status"] for t in tasks},
+                        "drops": drops or {},
+                        "sanity": sanity,
+                    }).encode("utf-8")
+                    req = urllib.request.Request(f"{daigan_url}/api/maa/stats", data=payload,
+                                                 headers={"Content-Type": "application/json"}, method="POST")
+                    urllib.request.urlopen(req, timeout=5)
+                except Exception:
+                    pass
+
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
         sd = ac.setdefault("stats", {})

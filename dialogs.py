@@ -50,6 +50,10 @@ class SettingsDialog(QDialog):
         wr=QHBoxLayout(); wr.addWidget(QLabel("Webhook:"))
         self.wh=QLineEdit(cfg.get("webhook_url","")); self.wh.setPlaceholderText("企业微信/钉钉/自定义 URL"); wr.addWidget(self.wh,1)
         wh_tb=QPushButton("测试"); wh_tb.clicked.connect(lambda: self._test_webhook(self.wh.text().strip())); wr.addWidget(wh_tb); gl4.addLayout(wr); l.addWidget(g4)
+        # daigan
+        g6=QGroupBox("daigan 联动"); gl6=QVBoxLayout(g6)
+        dr=QHBoxLayout(); dr.addWidget(QLabel("地址:"))
+        self.daigan_url=QLineEdit(cfg.get("daigan_url","")); self.daigan_url.setPlaceholderText("http://localhost:3456"); dr.addWidget(self.daigan_url,1); gl6.addLayout(dr); l.addWidget(g6)
         # API
         g5=QGroupBox("HTTP API"); gl5=QVBoxLayout(g5)
         apr=QHBoxLayout(); apr.addWidget(QLabel("端口:"))
@@ -79,6 +83,7 @@ class SettingsDialog(QDialog):
     def _sv(self):
         self.c["appearance_mode"]=self.th.currentText(); self.c["auto_start"]=self.auto.isChecked(); self.c["minimize_to_tray"]=self.tray.isChecked(); self.c["check_update_on_start"]=self.cu.isChecked(); self.c["auto_update_maa"]=self.au.isChecked(); self.c["maa_update_interval"]=self.ai.value(); self.c["webhook_url"]=self.wh.text().strip()
         self.c["api_port"]=self.api_port.value(); self.c["api_token"]=self.api_token.text().strip()
+        self.c["daigan_url"]=self.daigan_url.text().strip()
         set_auto_start(self.c["auto_start"]); self.accept()
 
 class AccountDialog(QDialog):
