@@ -26,6 +26,7 @@ from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_t
 from ui.accounts_panel import build_accounts_panel
 from ui.queue_panel import build_queue_panel, refresh_queue_view
 from ui.config_cards import build_config_cards, refresh_config_cards
+from ui.schedule_panel import build_schedule_panel, refresh_schedule_view
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize
@@ -187,11 +188,13 @@ class MainWindow(QMainWindow):
         self.ta = QPushButton("  ⏳ 队列  ")
         self.tl = QPushButton("  📋 日志  ")
         self.tc = QPushButton("  ⚡ 配置  ")
+        self.ts = QPushButton("  ⚙ 调度  ")
         for btn, key in [
             (self.tg, "accounts"),
             (self.ta, "queue"),
             (self.tl, "logs"),
             (self.tc, "config"),
+            (self.ts, "schedule"),
         ]:
             btn.setObjectName("tabBtn")
             btn.setFlat(True)
@@ -237,6 +240,11 @@ class MainWindow(QMainWindow):
         self.cv.hide()
         ml.addWidget(self.cv, 1)
 
+        # Schedule panel
+        build_schedule_panel(self)
+        self.sv.hide()
+        ml.addWidget(self.sv, 1)
+
         # Status bar — clean single line
         sb2 = self.statusBar()
         sb2.setStyleSheet("QStatusBar{background:#111;border-top:1px solid #333;padding:1px 8px;font-size:9pt}")
@@ -266,7 +274,8 @@ class MainWindow(QMainWindow):
         self.qv.setVisible(tab == "queue")
         self.lv.setVisible(tab == "logs")
         self.cv.setVisible(tab == "config")
-        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config")]:
+        self.sv.setVisible(tab == "schedule")
+        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config"), (self.ts, "schedule")]:
             btn.setObjectName("tabBtnActive" if tab == key else "tabBtn")
             btn.style().unpolish(btn); btn.style().polish(btn)
         if tab == "accounts":
@@ -278,6 +287,8 @@ class MainWindow(QMainWindow):
             self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
         elif tab == "config":
             refresh_config_cards(self)
+        elif tab == "schedule":
+            refresh_schedule_view(self)
     def _st(self, tab: str) -> None:
         self._view_tab=tab; is_w=tab=="warehouse"; self.wv.setVisible(is_w); self.gv2.setVisible(not is_w)
         if is_w:
