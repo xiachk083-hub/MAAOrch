@@ -45,6 +45,9 @@ def build_accounts_panel(mw: Any) -> QWidget:
     mw.at.setDragEnabled(True)
     mw.at.setDragDropMode(QAbstractItemView.InternalMove)
     mw.at.setDropIndicatorShown(True)
+    mw.at.setShowGrid(False)
+    mw.at.setAlternatingRowColors(True)
+    mw.at.setStyleSheet("QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:2px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #333;padding:3px 6px;font-size:9pt;font-weight:bold}")
 
     mw._acc_drop_lock = False
 

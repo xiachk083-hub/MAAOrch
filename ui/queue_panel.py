@@ -3,13 +3,15 @@ from __future__ import annotations
 from typing import Any
 from datetime import datetime
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QSplitter, QComboBox,
+    QComboBox,
 )
+
+_TABLE_STYLE = "QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:1px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #333;padding:3px 6px;font-size:9pt;font-weight:bold}"
 
 
 def build_queue_panel(mw: Any) -> QWidget:
@@ -42,30 +44,38 @@ def build_queue_panel(mw: Any) -> QWidget:
     mw._queue_running_tbl.setHorizontalHeaderLabels(["账号", "当前任务", "", "👁"])
     mw._queue_running_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
     mw._queue_running_tbl.setColumnWidth(1, 90)
-    mw._queue_running_tbl.setColumnWidth(2, 40)
-    mw._queue_running_tbl.setColumnWidth(3, 30)
+    mw._queue_running_tbl.setColumnWidth(2, 32)
+    mw._queue_running_tbl.setColumnWidth(3, 28)
     mw._queue_running_tbl.verticalHeader().setVisible(False)
     mw._queue_running_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    mw._queue_running_tbl.setShowGrid(False)
+    mw._queue_running_tbl.setAlternatingRowColors(True)
+    mw._queue_running_tbl.verticalHeader().setDefaultSectionSize(28)
+    mw._queue_running_tbl.setStyleSheet(_TABLE_STYLE)
     qvl.addWidget(mw._queue_running_tbl)
 
     # ── Waiting section ──
     wait_row = QHBoxLayout()
     wait_row.addWidget(QLabel("⏳ 等待中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
     wait_row.addStretch()
-    clear_btn = QPushButton("清空全部")
-    clear_btn.setStyleSheet("QPushButton{color:#888;border:1px solid #555;border-radius:4px;padding:2px 8px;font-size:9pt}QPushButton:hover{color:#d32f2f;border-color:#d32f2f}")
+    clear_btn = QPushButton("清空")
+    clear_btn.setStyleSheet("QPushButton{color:#888;border:1px solid #555;border-radius:4px;padding:2px 8px;font-size:8pt}QPushButton:hover{color:#d32f2f;border-color:#d32f2f}")
     clear_btn.clicked.connect(lambda: _clear_queue(mw))
     wait_row.addWidget(clear_btn)
     qvl.addLayout(wait_row)
     mw._queue_waiting_tbl = QTableWidget(0, 5)
     mw._queue_waiting_tbl.setHorizontalHeaderLabels(["账号", "来源", "预计", "位置", ""])
     mw._queue_waiting_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-    mw._queue_waiting_tbl.setColumnWidth(1, 50)
+    mw._queue_waiting_tbl.setColumnWidth(1, 45)
     mw._queue_waiting_tbl.setColumnWidth(2, 80)
-    mw._queue_waiting_tbl.setColumnWidth(3, 50)
-    mw._queue_waiting_tbl.setColumnWidth(4, 40)
+    mw._queue_waiting_tbl.setColumnWidth(3, 55)
+    mw._queue_waiting_tbl.setColumnWidth(4, 28)
     mw._queue_waiting_tbl.verticalHeader().setVisible(False)
     mw._queue_waiting_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    mw._queue_waiting_tbl.setShowGrid(False)
+    mw._queue_waiting_tbl.setAlternatingRowColors(True)
+    mw._queue_waiting_tbl.verticalHeader().setDefaultSectionSize(28)
+    mw._queue_waiting_tbl.setStyleSheet(_TABLE_STYLE)
     qvl.addWidget(mw._queue_waiting_tbl)
 
     # ── History section ──
@@ -77,6 +87,10 @@ def build_queue_panel(mw: Any) -> QWidget:
     mw._queue_hist_tbl.setColumnWidth(2, 60)
     mw._queue_hist_tbl.verticalHeader().setVisible(False)
     mw._queue_hist_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    mw._queue_hist_tbl.setShowGrid(False)
+    mw._queue_hist_tbl.setAlternatingRowColors(True)
+    mw._queue_hist_tbl.verticalHeader().setDefaultSectionSize(28)
+    mw._queue_hist_tbl.setStyleSheet(_TABLE_STYLE)
     qvl.addWidget(mw._queue_hist_tbl)
     qvl.addStretch()
 
