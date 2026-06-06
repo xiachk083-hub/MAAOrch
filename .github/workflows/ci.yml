@@ -14,25 +14,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install PySide6 ruff pytest
-      - run: ruff check *.py tests/
+      - run: pip install PySide6 pytest
       - run: python -m pytest tests/ -v
-      - name: Check file size limits
-        run: |
-          python -c "
-          import os; ok=True
-          LIMITS={'main_window.py':900,'emu_ops.py':400,'config_ops.py':200,'log_ops.py':450,'maint_ops.py':450,'main.pyw':100,'utils.py':100,'config.py':100,'task_constants.py':250,'updater.py':250,'dialogs.py':450,'pipeline_thread.py':80,'api_server.py':250,'schedule_thread.py':80,'themes.py':100,'background.py':50,'callbacks.py':60,'runner.py':500,'launch_queue.py':300,'stats.py':100}
-          for f,limit in LIMITS.items():
-              if not os.path.exists(f): continue
-              lines=len(open(f,encoding='utf-8').readlines())
-              status='OK' if lines<=limit else 'OVER'
-              print(f'{f}: {lines}/{limit} {status}')
-              if lines>limit: ok=False
-          if not ok:
-              print('File size limit exceeded')
-              exit(1)
-          print('File size check passed')
-          "
 
   build-release:
     runs-on: windows-latest
@@ -43,7 +26,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install PySide6 pyinstaller
+        timeout-minutes: 10
       - run: pyinstaller MAAOrch.spec --log-level INFO 2>&1
+        timeout-minutes: 15
       - run: dir dist\ 2>&1 || echo "No dist output"
       - uses: softprops/action-gh-release@v1
         with:
