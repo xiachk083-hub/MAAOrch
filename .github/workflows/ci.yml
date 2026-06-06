@@ -34,8 +34,10 @@ jobs:
       - run: pyinstaller MAAOrch.spec --log-level INFO 2>&1
         timeout-minutes: 15
       - run: dir dist\ 2>&1 || echo "No dist output"
-      - uses: softprops/action-gh-release@v1
-        with:
-          files: dist/MAAOrch.exe
+      - name: Create Release
+        run: |
+          gh release create v1.1.2 dist/MAAOrch.exe --title "v1.1.2" --notes "MAAOrch v1.1.2 release" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
