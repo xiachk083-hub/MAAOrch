@@ -259,11 +259,21 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     edit_btn.clicked.connect(lambda c, i=idx: _edit(mw, i))
     btn_row.addWidget(edit_btn)
 
-    launch_btn = QPushButton("  ▶ 入队  ")
-    launch_btn.setToolTip("加入队列")
-    launch_btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:5px;font-size:9pt;padding:2px 8px}QPushButton:hover{background:#1e5a28}")
-    launch_btn.clicked.connect(lambda c, i=idx: _enqueue(mw, i))
-    btn_row.addWidget(launch_btn)
+    # State-aware launch button
+    if running:
+        btn = QPushButton(" 运行中 ")
+        btn.setEnabled(False)
+        btn.setStyleSheet("QPushButton{background:transparent;color:#4a4;border:1px solid #4a4;border-radius:5px;font-size:9pt;padding:2px 6px}")
+    elif queued:
+        btn = QPushButton(" 已排队 ")
+        btn.setEnabled(False)
+        btn.setStyleSheet("QPushButton{background:transparent;color:#c90;border:1px solid #c90;border-radius:5px;font-size:9pt;padding:2px 6px}")
+    else:
+        btn = QPushButton("  ▶ 入队  ")
+        btn.setToolTip("加入队列")
+        btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:5px;font-size:9pt;padding:2px 8px}QPushButton:hover{background:#1e5a28}")
+        btn.clicked.connect(lambda c, i=idx: _enqueue(mw, i))
+    btn_row.addWidget(btn)
     btn_row.addStretch()
     fl.addLayout(btn_row)
 

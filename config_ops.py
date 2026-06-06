@@ -114,7 +114,10 @@ class ConfigService:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType","").lower()=="fight":
                         item["StagePlan"]=[fs]
+                        self.ctx.log(f"inject关卡: {fs} → {fn}")
                         break
+            elif fs:
+                self.ctx.log(f"inject关卡: {fs} 但TaskQueue不存在于 {fn}")
             gj.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
         _wcfg("gui.json"); _wcfg("gui.new.json")
 
