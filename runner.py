@@ -35,6 +35,29 @@ class AccountRunner(QObject):
 
     # ── Public API ──
 
+    def preflight_check(self, ac: dict, progs: list[dict]) -> list[str]:
+        """Run validation checks before launch. Returns list of issues (empty = OK)."""
+        issues = []
+        name = ac.get("name", ac["id"])
+
+        # ADB address
+        if not ac.get("adb_address", "").strip():
+            issues.append(f"⚠ {name}: 未填写 ADB 地址")
+
+        # MAA exists
+        for w in progs:
+            p = w.get("path", "")
+            if p and not Path(p).exists():
+                issues.append(f"❌ {name}: MAA 程序不存在 — {p}")
+            if not p:
+                issues.append(f"❌ {name}: 程序路径为空")
+
+        # Emulator instance (only if emu_launch enabled)
+        if ac.get("emu_launch") and not ac.get("emu_instance_index", ""):
+            issues.append(f"⚠ {name}: 开启了自启模拟器但未选择实例")
+
+        return issues
+
     def launch(self, row: int) -> bool:
         """Start a single account by index. Returns True if process launched."""
         if row < 0 or row >= len(self.ctx.accounts):
@@ -49,6 +72,17 @@ class AccountRunner(QObject):
         if not progs:
             self.log_msg.emit(f"{ac.get('name', aid)} 未绑定程序")
             return False
+
+        # Pre-flight checks
+        issues = self.preflight_check(ac, progs)
+        for issue in issues:
+            self.log_msg.emit(issue)
+        # Block on critical errors (❌) only
+        critical = [i for i in issues if i.startswith("❌")]
+        if critical:
+            self.log_msg.emit(f"❌ {ac.get('name', aid)} 预检未通过，启动取消")
+            return False
+
         self._active[aid] = ac
         self._progs[aid] = progs
         self.log_msg.emit(f"[启动] {ac.get('name', aid)}")

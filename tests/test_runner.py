@@ -79,6 +79,29 @@ class TestAccountRunner:
         sd = ctx.accounts[0].get("stats", {}).get(today, {})
         assert sd.get("launches", 0) >= 1
 
+    def test_preflight_check(self):
+        from runner import AccountRunner
+        ctx = _make_ctx()
+        r = AccountRunner(ctx)
+        ac = ctx.accounts[0]
+
+        # OK case — use existing file
+        import sys
+        progs_ok = [{"id": "w1", "path": sys.executable, "account_ref": "a1"}]
+        issues = r.preflight_check(ac, progs_ok)
+        assert not any(i.startswith("❌") for i in issues)
+
+        # Missing ADB
+        ac2 = dict(ac)
+        ac2["adb_address"] = ""
+        issues = r.preflight_check(ac2, progs_ok)
+        assert any("ADB" in i for i in issues)
+
+        # Missing program
+        progs_bad = [{"id": "w1", "path": "C:\\nonexistent\\MAA.exe", "account_ref": "a1"}]
+        issues = r.preflight_check(ac, progs_bad)
+        assert any("不存在" in i for i in issues)
+
     def test_log_signals(self):
         """Verify signals are properly connected."""
         try:
