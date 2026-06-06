@@ -60,7 +60,7 @@ class MainWindow(QMainWindow):
         self.groups=self.config.get("groups",[]); self.warehouse=self.config.get("warehouse",[])
         self.accounts=self.config.get("accounts",[]); self.selected_group_idx=None
         self.pipeline_thread=None; self.schedule_thread=None; self.update_thread=None
-        self._log_expanded=False; self._main_tab="queue"
+        self._main_tab="accounts"
         self._running_procs={}; self._proc_status=set(); self._restart_cnt=defaultdict(int); self._cli_procs={}
         self._proc_start_times={}; self._emu_status={}
         fm=self.fontMetrics(); self._row_h=max(28,fm.height()+8); self._btn_sm=max(18,fm.height()+2); self._btn_lg=max(28,int(fm.height()*1.6))
@@ -100,9 +100,9 @@ class MainWindow(QMainWindow):
         self.runner.account_finished.connect(self.launch_queue.on_account_finished)
         self.launch_queue.start()
         self._build_ui(); self.maint.restore_geometry(); self._log("══ 启动 ══")
-        self._sw("queue")
+        self._sw("accounts")
         self.launch_queue._restore()
-        self.launch_queue._tick()  # Check queue after UI ready  # Default to queue tab
+        self.launch_queue._tick()
         self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         self._emu_monitor=EmuMonitor()
@@ -183,10 +183,14 @@ class MainWindow(QMainWindow):
         self.tg.setObjectName("tabBtn")
         self.tg.clicked.connect(lambda: self._sw("accounts"))
         self.ta = QPushButton("⏳ 队列")
-        self.ta.setObjectName("tabBtnActive")
+        self.ta.setObjectName("tabBtn")
         self.ta.clicked.connect(lambda: self._sw("queue"))
+        self.tl = QPushButton("📋 日志")
+        self.tl.setObjectName("tabBtnActive")
+        self.tl.clicked.connect(lambda: self._sw("logs"))
         th.addWidget(self.tg)
         th.addWidget(self.ta)
+        th.addWidget(self.tl)
         th.addStretch()
         self.qs = QPushButton("▶ 启动全部")
         self.qs.setObjectName("startBtn")
@@ -204,12 +208,22 @@ class MainWindow(QMainWindow):
         self.qv.hide()
         ml.addWidget(self.qv, 1)
 
-        # Log panel
+        # Log panel (full tab)
+        self.lv = QWidget()
+        lvl = QVBoxLayout(self.lv)
+        lvl.setContentsMargins(4, 4, 4, 4)
         self.log_text = QPlainTextEdit()
         self.log_text.setReadOnly(True)
-        self.log_text.setMaximumBlockCount(500)
-        self.log_text.setFixedHeight(0)
-        ml.addWidget(self.log_text)
+        self.log_text.setMaximumBlockCount(2000)
+        lvl.addWidget(self.log_text)
+        log_btn_row = QHBoxLayout()
+        clear_btn = QPushButton("清空")
+        clear_btn.clicked.connect(lambda: self.log_text.clear())
+        log_btn_row.addWidget(clear_btn)
+        log_btn_row.addStretch()
+        lvl.addLayout(log_btn_row)
+        self.lv.hide()
+        ml.addWidget(self.lv, 1)
 
         # Status bar
         sb2 = self.statusBar()
@@ -242,16 +256,20 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Esc"), self, self._stop_pipeline)
 
     def _sw(self, tab: str) -> None:
-        self._main_tab=tab; self.av.setVisible(tab=="accounts"); self.qv.setVisible(tab=="queue")
-        if tab=="accounts":
-            self.tg.setObjectName("tabBtnActive"); self.tg.style().unpolish(self.tg); self.tg.style().polish(self.tg)
-            self.ta.setObjectName("tabBtn"); self.ta.style().unpolish(self.ta); self.ta.style().polish(self.ta)
+        self._main_tab = tab
+        self.av.setVisible(tab == "accounts")
+        self.qv.setVisible(tab == "queue")
+        self.lv.setVisible(tab == "logs")
+        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs")]:
+            btn.setObjectName("tabBtnActive" if tab == key else "tabBtn")
+            btn.style().unpolish(btn); btn.style().polish(btn)
+        if tab == "accounts":
             self._ra()
-            if self.accounts: self.at.setCurrentCell(0,0)
-        else:
-            self.tg.setObjectName("tabBtn"); self.tg.style().unpolish(self.tg); self.tg.style().polish(self.tg)
-            self.ta.setObjectName("tabBtnActive"); self.ta.style().unpolish(self.ta); self.ta.style().polish(self.ta)
+            if self.accounts: self.at.setCurrentCell(0, 0)
+        elif tab == "queue":
             refresh_queue_view(self)
+        elif tab == "logs":
+            self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
     def _st(self, tab: str) -> None:
         self._view_tab=tab; is_w=tab=="warehouse"; self.wv.setVisible(is_w); self.gv2.setVisible(not is_w)
         if is_w:
@@ -467,19 +485,15 @@ class MainWindow(QMainWindow):
         """Manual single-account launch → enqueue with highest priority."""
         if row < 0 or row >= len(self.accounts):
             return
-        if not self._log_expanded:
-            self._tlog()
         aid = self.accounts[row]["id"]
         self.launch_queue.enqueue(aid, "manual", priority=0)
-        self.launch_queue._tick()  # Launch immediately
+        self.launch_queue._tick()
 
     def _la_all(self) -> None:
         """Batch enqueue all accounts with schedule priority."""
         self._log("══ 全部账号入队 ══")
-        self._log_expanded = True
-        self.log_text.setFixedHeight(150)
         self.launch_queue.enqueue_batch("manual", priority=0)
-        self.launch_queue._tick()  # Launch immediately
+        self.launch_queue._tick()
 
     def _on_account_started(self, aid: str) -> None:
         a = next((x for x in self.accounts if x["id"] == aid), None)
@@ -581,7 +595,7 @@ class MainWindow(QMainWindow):
             self.hide(); e.ignore()
         else:
             self._do_save(); e.accept(); QApplication.quit()
-    def _tlog(self) -> None: self._log_expanded=not self._log_expanded; self.log_text.setFixedHeight(150 if self._log_expanded else 0)
+    def _tlog(self) -> None: self._sw("logs")
     def _start_schedule(self) -> None: self.maint.start_schedule()
     def _sch(self) -> None: self.maint.sch()
     def _settings(self) -> None: self.maint.settings()
