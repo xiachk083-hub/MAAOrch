@@ -1,4 +1,4 @@
-"""Account dashboard builder — extracted from main_window.py."""
+﻿"""Account dashboard builder 鈥?extracted from main_window.py."""
 from __future__ import annotations
 from pathlib import Path
 from datetime import datetime
@@ -52,7 +52,7 @@ def build_account_dashboard(mw: Any, row: int) -> None:
     mw._sad_row = row
     progs = [w for w in mw.warehouse if w.get("account_ref") == mw.accounts[row]["id"]]
 
-    # First time — build skeleton
+    # First time 鈥?build skeleton
     if not hasattr(mw, "_dash_refs"):
         cleanup_emu_threads(mw)
         clear_dashboard(mw)
@@ -89,7 +89,7 @@ def _update_dashboard(mw: Any, row: int, progs: list[dict]) -> None:
         refs["header_name"].setText(a.get("name", ""))
         refs["header_name"].blockSignals(False)
     if "header_client" in refs:
-        idx = refs["header_client"].findData(a.game_client)
+        idx = refs["header_client"].findData(a.get("game_client", "Official"))
         if idx >= 0:
             refs["header_client"].blockSignals(True)
             refs["header_client"].setCurrentIndex(idx)
@@ -109,7 +109,7 @@ def _update_dashboard(mw: Any, row: int, progs: list[dict]) -> None:
     _upd_actions(mw, row, progs, refs)
 
 
-# ── Update helpers ──
+# 鈹€鈹€ Update helpers 鈹€鈹€
 
 def _upd_maa_status(mw, a, progs, refs):
     if "maa_version_lbl" not in refs:
@@ -117,9 +117,9 @@ def _upd_maa_status(mw, a, progs, refs):
     v = progs[0].get("maa_version", "") if progs else ""
     t = int(__import__("time").time() - mw._proc_start_times.get(progs[0]["id"], 0)) if progs and progs[0]["id"] in mw._proc_status else 0
     if t:
-        refs["maa_version_lbl"].setText(f"🟢 运行中 ({t // 60}m{t % 60}s)  {v}" if v else f"🟢 运行中 ({t // 60}m{t % 60}s)")
+        refs["maa_version_lbl"].setText(f"馃煝 杩愯涓?({t // 60}m{t % 60}s)  {v}" if v else f"馃煝 杩愯涓?({t // 60}m{t % 60}s)")
     else:
-        refs["maa_version_lbl"].setText(f"已安装 {v}" if v else "已安装")
+        refs["maa_version_lbl"].setText(f"宸插畨瑁?{v}" if v else "宸插畨瑁?)
     if "maa_channel" in refs and progs:
         cur = progs[0].get("update_channel", "Stable")
         refs["maa_channel"].blockSignals(True)
@@ -131,7 +131,7 @@ def _upd_maa_status(mw, a, progs, refs):
         refs["maa_auto_upd"].blockSignals(False)
     if "maa_sanity_cb" in refs:
         refs["maa_sanity_cb"].blockSignals(True)
-        refs["maa_sanity_cb"].setChecked(a.sanity_driven)
+        refs["maa_sanity_cb"].setChecked(a.get("sanity_driven",False))
         refs["maa_sanity_cb"].blockSignals(False)
 
 
@@ -142,7 +142,7 @@ def _upd_emu(mw, a, refs):
         refs["emu_path"].blockSignals(False)
     if "emu_launch_cb" in refs:
         refs["emu_launch_cb"].blockSignals(True)
-        refs["emu_launch_cb"].setChecked(a.emu_launch)
+        refs["emu_launch_cb"].setChecked(a.get("emu_launch",False))
         refs["emu_launch_cb"].blockSignals(False)
     if "emu_wait_sp" in refs:
         refs["emu_wait_sp"].blockSignals(True)
@@ -188,7 +188,7 @@ def _upd_pipeline(mw, a, progs, refs):
         refs["pipeline_mode"].blockSignals(False)
     if "pipeline_sync" in refs:
         refs["pipeline_sync"].blockSignals(True)
-        refs["pipeline_sync"].setChecked(a.sync_tasks)
+        refs["pipeline_sync"].setChecked(a.get("sync_tasks",False))
         refs["pipeline_sync"].blockSignals(False)
 
 
@@ -223,20 +223,20 @@ def _upd_actions(mw, row, progs, refs):
     mw.adl.addStretch()
 
 
-# ── Header (name + client) ──
+# 鈹€鈹€ Header (name + client) 鈹€鈹€
 
 def _build_header(mw: Any, row: int) -> None:
     a = mw.accounts[row]
     tr = QHBoxLayout()
     ne = QLineEdit(a.get("name", ""))
     ne.setFont(QFont("Microsoft YaHei UI", 16, QFont.Bold))
-    ne.setPlaceholderText("账号名")
+    ne.setPlaceholderText("璐﹀彿鍚?)
     ne.textChanged.connect(lambda t: (a.__setitem__("name", t), mw._save(), mw._ra()))
     tr.addWidget(ne, 1)
     cc = QComboBox()
     for k, v in CLIENT_TYPES.items():
         cc.addItem(v, k)
-    idx = cc.findData(a.game_client)
+    idx = cc.findData(a.get("game_client", "Official"))
     cc.setCurrentIndex(max(0, idx))
     cc.currentIndexChanged.connect(lambda: (a.__setitem__("game_client", cc.currentData()), mw._save()))
     tr.addWidget(cc)
@@ -247,7 +247,7 @@ def _build_header(mw: Any, row: int) -> None:
     mw._dash_refs["header_client"] = cc
 
 
-# ── MAA Status card ──
+# 鈹€鈹€ MAA Status card 鈹€鈹€
 
 def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
     a = mw.accounts[row]
@@ -256,15 +256,15 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
     mcl = QVBoxLayout(mc)
     mcl.setSpacing(5)
     mh = QHBoxLayout()
-    mh.addWidget(QLabel("📦 MAA 状态", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    mh.addWidget(QLabel("馃摝 MAA 鐘舵€?, font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
     mh.addStretch()
 
     if progs:
         v = progs[0].get("maa_version", "")
-        vl = QLabel(f"已安装 {v}" if v else "已绑定")
+        vl = QLabel(f"宸插畨瑁?{v}" if v else "宸茬粦瀹?)
         if progs[0]["id"] in mw._proc_status:
             t = int(__import__("time").time() - mw._proc_start_times.get(progs[0]["id"], 0))
-            vl.setText(f"🟢 运行中 ({t // 60}m{t % 60}s)  {v}" if v else f"🟢 运行中 ({t // 60}m{t % 60}s)")
+            vl.setText(f"馃煝 杩愯涓?({t // 60}m{t % 60}s)  {v}" if v else f"馃煝 杩愯涓?({t // 60}m{t % 60}s)")
             vl.setStyleSheet("color:#8a8;font-weight:bold")
         else:
             vl.setStyleSheet("color:#8a8;font-weight:bold")
@@ -272,10 +272,10 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         mcl.addLayout(mh)
 
         for p in progs:
-            mcl.addWidget(QLabel(f"  ▶ {p['path']}"))
+            mcl.addWidget(QLabel(f"  鈻?{p['path']}"))
 
         vr = QHBoxLayout()
-        vr.addWidget(QLabel("通道:"))
+        vr.addWidget(QLabel("閫氶亾:"))
         ch = QComboBox()
         ch.addItems(["Stable", "Beta", "Alpha"])
         cur_ch = progs[0].get("update_channel", "Stable")
@@ -283,16 +283,16 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         ch.currentTextChanged.connect(lambda t: (progs[0].__setitem__("update_channel", t), mw._save()))
         vr.addWidget(ch)
         vr.addStretch()
-        sw_ver = QPushButton("🔄 切换版本")
+        sw_ver = QPushButton("馃攧 鍒囨崲鐗堟湰")
         sw_ver.clicked.connect(lambda: mw.logs.switch_maa_version(progs[0], ch.currentText()))
         vr.addWidget(sw_ver)
         mcl.addLayout(vr)
 
         btr = QHBoxLayout()
-        stats_btn = QPushButton("📊 统计")
+        stats_btn = QPushButton("馃搳 缁熻")
         stats_btn.clicked.connect(lambda: mw.logs.show_stats(progs[0]))
         btr.addWidget(stats_btn)
-        log_btn = QPushButton("📋 日志")
+        log_btn = QPushButton("馃搵 鏃ュ織")
         log_btn.clicked.connect(lambda: mw.logs.view_log(progs[0]))
         btr.addWidget(log_btn)
         btr.addStretch()
@@ -300,23 +300,23 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
 
         # Resource auto-update indicator
         aur = QHBoxLayout()
-        au_cb = QCheckBox("自动更新资源")
+        au_cb = QCheckBox("鑷姩鏇存柊璧勬簮")
         au_cb.setChecked(progs[0].get("auto_update", mw.config.get("auto_update_maa", True)))
-        au_cb.setToolTip("检测到新版本时自动下载更新")
+        au_cb.setToolTip("妫€娴嬪埌鏂扮増鏈椂鑷姩涓嬭浇鏇存柊")
         au_cb.toggled.connect(lambda v: (progs[0].__setitem__("auto_update", v), mw._save()))
         aur.addWidget(au_cb)
         aur.addStretch()
-        au_lbl = QLabel("已启用" if au_cb.isChecked() else "已禁用")
+        au_lbl = QLabel("宸插惎鐢? if au_cb.isChecked() else "宸茬鐢?)
         au_lbl.setStyleSheet("color:#8a8" if au_cb.isChecked() else "color:#a88")
-        au_cb.toggled.connect(lambda v: au_lbl.setText("已启用" if v else "已禁用") or au_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
+        au_cb.toggled.connect(lambda v: au_lbl.setText("宸插惎鐢? if v else "宸茬鐢?) or au_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
         aur.addWidget(au_lbl)
         mcl.addLayout(aur)
 
         # Sanity-driven auto-launch toggle
         sdr = QHBoxLayout()
-        sd_cb = QCheckBox("理智回满自动启动")
-        sd_cb.setChecked(a.sanity_driven)
-        sd_cb.setToolTip("上一轮刷完后，等理智回满自动再启动")
+        sd_cb = QCheckBox("鐞嗘櫤鍥炴弧鑷姩鍚姩")
+        sd_cb.setChecked(a.get("sanity_driven",False))
+        sd_cb.setToolTip("涓婁竴杞埛瀹屽悗锛岀瓑鐞嗘櫤鍥炴弧鑷姩鍐嶅惎鍔?)
         sd_cb.toggled.connect(lambda v: (a.__setitem__("sanity_driven", v), mw._save()))
         sdr.addWidget(sd_cb)
         # Show next launch time if available
@@ -324,31 +324,31 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         if lq:
             nxt = lq.get_next_for(a["id"])
             if nxt:
-                if nxt == "即将启动":
-                    sdr.addWidget(QLabel("→ 即将启动"))
+                if nxt == "鍗冲皢鍚姩":
+                    sdr.addWidget(QLabel("鈫?鍗冲皢鍚姩"))
                 else:
-                    sdr.addWidget(QLabel(f"→ {nxt}"))
+                    sdr.addWidget(QLabel(f"鈫?{nxt}"))
                 sdr.addStretch()
             else:
                 sdr.addStretch()
         else:
             sdr.addStretch()
-        sd_lbl = QLabel("已启用" if sd_cb.isChecked() else "已禁用")
+        sd_lbl = QLabel("宸插惎鐢? if sd_cb.isChecked() else "宸茬鐢?)
         sd_lbl.setStyleSheet("color:#8a8" if sd_cb.isChecked() else "color:#a88")
-        sd_cb.toggled.connect(lambda v: sd_lbl.setText("已启用" if v else "已禁用") or sd_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
+        sd_cb.toggled.connect(lambda v: sd_lbl.setText("宸插惎鐢? if v else "宸茬鐢?) or sd_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
         sdr.addWidget(sd_lbl)
         mcl.addLayout(sdr)
 
         today = datetime.now().strftime("%Y-%m-%d")
         sd = a.get("stats", {}).get(today, {})
         if sd.get("launches"):
-            mcl.addWidget(QLabel(f"  今日: 启动 {sd['launches']} 次"))
+            mcl.addWidget(QLabel(f"  浠婃棩: 鍚姩 {sd['launches']} 娆?))
     else:
-        vl = QLabel("未安装")
+        vl = QLabel("鏈畨瑁?)
         vl.setStyleSheet("color:#a88;font-weight:bold")
         mh.addWidget(vl)
         mcl.addLayout(mh)
-        mcl.addWidget(QLabel("  点击下方下载或绑定"))
+        mcl.addWidget(QLabel("  鐐瑰嚮涓嬫柟涓嬭浇鎴栫粦瀹?))
 
     mw.adl.insertWidget(2, mc)
     if progs:
@@ -358,7 +358,7 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         mw._dash_refs["maa_sanity_cb"] = sd_cb
 
 
-# ── Emulator card ──
+# 鈹€鈹€ Emulator card 鈹€鈹€
 
 def _build_emu_card(mw: Any, row: int) -> None:
     a = mw.accounts[row]
@@ -373,19 +373,19 @@ def _build_emu_card(mw: Any, row: int) -> None:
     ec.setObjectName("card")
     ecl = QVBoxLayout(ec)
     ecl.setSpacing(5)
-    ecl.addWidget(QLabel("🖥 模拟器", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    ecl.addWidget(QLabel("馃枼 妯℃嫙鍣?, font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
 
     rp = QHBoxLayout()
-    rp.addWidget(_lbl("启动:"))
+    rp.addWidget(_lbl("鍚姩:"))
     emu_path_edit = QLineEdit(a.get("emu_path", ""))
-    emu_path_edit.setPlaceholderText("模拟器启动路径")
+    emu_path_edit.setPlaceholderText("妯℃嫙鍣ㄥ惎鍔ㄨ矾寰?)
     emu_path_edit.textChanged.connect(lambda t: a.update({"emu_path": t}) or mw._save())
     rp.addWidget(emu_path_edit, 1)
-    rp.addWidget(QPushButton("📂", clicked=lambda: mw.emu.browse_file(emu_path_edit, a, "emu_path")))
+    rp.addWidget(QPushButton("馃搨", clicked=lambda: mw.emu.browse_file(emu_path_edit, a, "emu_path")))
     ecl.addLayout(rp)
 
     ri = QHBoxLayout()
-    ri.addWidget(_lbl("实例:"))
+    ri.addWidget(_lbl("瀹炰緥:"))
     ed_sel = QComboBox()
     ed_sel.setMinimumWidth(180)
     combo_saved_idx = a.get("emu_instance_index", "")
@@ -411,26 +411,26 @@ def _build_emu_card(mw: Any, row: int) -> None:
 
     ed_sel.currentIndexChanged.connect(_on_ins)
     ri.addWidget(ed_sel, 1)
-    ri.addWidget(QPushButton("🔄", clicked=lambda: mw.emu.refresh_instance_list(ed_sel), toolTip="刷新实例列表"))
+    ri.addWidget(QPushButton("馃攧", clicked=lambda: mw.emu.refresh_instance_list(ed_sel), toolTip="鍒锋柊瀹炰緥鍒楄〃"))
     ecl.addLayout(ri)
 
     rl2 = QHBoxLayout()
     rl2.addWidget(_lbl(""))
-    cb_oe = QCheckBox("自启模拟器")
-    cb_oe.setChecked(a.emu_launch)
-    cb_oe.setToolTip("启动时自动通过 mumu-cli 启动模拟器")
+    cb_oe = QCheckBox("鑷惎妯℃嫙鍣?)
+    cb_oe.setChecked(a.get("emu_launch",False))
+    cb_oe.setToolTip("鍚姩鏃惰嚜鍔ㄩ€氳繃 mumu-cli 鍚姩妯℃嫙鍣?)
     cb_oe.toggled.connect(lambda v: a.update({"emu_launch": v}) or mw._save())
     rl2.addWidget(cb_oe)
-    rl2.addWidget(QLabel("等待"))
+    rl2.addWidget(QLabel("绛夊緟"))
     ws_sp = QSpinBox()
     ws_sp.setRange(0, 300)
     ws_sp.setValue(a.get("emu_wait", 30))
-    ws_sp.setSuffix(" 秒")
+    ws_sp.setSuffix(" 绉?)
     ws_sp.valueChanged.connect(lambda v: a.update({"emu_wait": v}) or mw._save())
     rl2.addWidget(ws_sp)
     rl2.addStretch()
-    rl2.addWidget(QPushButton("🔍 扫端口", clicked=lambda: mw.emu.scan_port(a, emu_path_edit, ae2_ref[0] if ae2_ref else None)))
-    rl2.addWidget(QPushButton("⏻ 关闭", clicked=lambda: mw.emu.stop_emu(a), objectName="stopBtn"))
+    rl2.addWidget(QPushButton("馃攳 鎵鍙?, clicked=lambda: mw.emu.scan_port(a, emu_path_edit, ae2_ref[0] if ae2_ref else None)))
+    rl2.addWidget(QPushButton("鈴?鍏抽棴", clicked=lambda: mw.emu.stop_emu(a), objectName="stopBtn"))
     ecl.addLayout(rl2)
 
     mw.adl.insertWidget(3, ec)
@@ -443,7 +443,7 @@ def _build_emu_card(mw: Any, row: int) -> None:
     mw._emu_ae2_ref = ae2_ref
 
 
-# ── ADB card ──
+# 鈹€鈹€ ADB card 鈹€鈹€
 
 def _build_adb_card(mw: Any, row: int) -> None:
     a = mw.accounts[row]
@@ -458,12 +458,12 @@ def _build_adb_card(mw: Any, row: int) -> None:
     cc.setObjectName("card")
     ccl = QVBoxLayout(cc)
     ccl.setSpacing(5)
-    ccl.addWidget(QLabel("📱 ADB 连接", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    ccl.addWidget(QLabel("馃摫 ADB 杩炴帴", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
 
     rpr = QHBoxLayout()
-    rpr.addWidget(_lbl("预设:"))
+    rpr.addWidget(_lbl("棰勮:"))
     emu_sel = QComboBox()
-    emu_sel.addItem("— 选择 —", "")
+    emu_sel.addItem("鈥?閫夋嫨 鈥?, "")
     for ep in EMU_PRESETS:
         emu_sel.addItem(ep["name"], ep["type"])
     idx = emu_sel.findData(a.get("connection_preset", ""))
@@ -483,42 +483,42 @@ def _build_adb_card(mw: Any, row: int) -> None:
     rap = QHBoxLayout()
     rap.addWidget(_lbl("ADB:"))
     adb_p = QLineEdit(a.get("adb_path", ""))
-    adb_p.setPlaceholderText("留空使用默认")
+    adb_p.setPlaceholderText("鐣欑┖浣跨敤榛樿")
     adb_p.textChanged.connect(lambda t: a.update({"adb_path": t}) or mw._save())
     rap.addWidget(adb_p, 1)
-    rap.addWidget(QPushButton("📂", clicked=lambda: mw.emu.browse_adb(adb_p, a)))
+    rap.addWidget(QPushButton("馃搨", clicked=lambda: mw.emu.browse_adb(adb_p, a)))
     ccl.addLayout(rap)
 
     raa = QHBoxLayout()
-    raa.addWidget(_lbl("地址:"))
+    raa.addWidget(_lbl("鍦板潃:"))
     ae2 = QLineEdit(a.get("adb_address", ""))
     ae2.setPlaceholderText("127.0.0.1:7555")
     ae2.textChanged.connect(lambda t: a.update({"adb_address": t}) or mw._save())
     raa.addWidget(ae2, 1)
     emu_combo = QComboBox()
-    emu_combo.addItem("在线设备", "")
+    emu_combo.addItem("鍦ㄧ嚎璁惧", "")
     emu_combo.setMinimumWidth(140)
     emu_combo.currentIndexChanged.connect(lambda i: ae2.setText(emu_combo.currentData()) if emu_combo.currentData() else None)
     raa.addWidget(emu_combo)
     ccl.addLayout(raa)
 
     ras = QHBoxLayout()
-    ras.addWidget(_lbl("账号:"))
+    ras.addWidget(_lbl("璐﹀彿:"))
     sw_an = QLineEdit(a.get("account_switch", ""))
-    sw_an.setPlaceholderText("如 123***4567 或 mail@gmail.com，留空禁用")
+    sw_an.setPlaceholderText("濡?123***4567 鎴?mail@gmail.com锛岀暀绌虹鐢?)
     sw_an.textChanged.connect(lambda t: a.update({"account_switch": t}) or mw._save())
     ras.addWidget(sw_an, 1)
     ccl.addLayout(ras)
 
     ract = QHBoxLayout()
     ract.addWidget(_lbl(""))
-    dc = QPushButton("🔍 扫描")
+    dc = QPushButton("馃攳 鎵弿")
     dc.clicked.connect(lambda cb=emu_combo: mw.emu.scan(a, cb))
     ract.addWidget(dc)
-    tb2 = QPushButton("测试")
+    tb2 = QPushButton("娴嬭瘯")
     tb2.clicked.connect(lambda: mw.emu.test_adb(a))
     ract.addWidget(tb2)
-    ss_btn = QPushButton("📸 截图")
+    ss_btn = QPushButton("馃摳 鎴浘")
     ss_btn.clicked.connect(lambda: mw.emu.screenshot(a))
     ract.addWidget(ss_btn)
     ract.addStretch()
@@ -538,7 +538,7 @@ def _build_adb_card(mw: Any, row: int) -> None:
         mw._emu_ae2_ref.append(ae2)
 
 
-# ── Pipeline card ──
+# 鈹€鈹€ Pipeline card 鈹€鈹€
 
 def _batch_apply(mw: Any, src_acc: dict, src_progs: list[dict], src_row: int) -> None:
     """Open dialog to apply current account's config to selected accounts."""
@@ -546,25 +546,25 @@ def _batch_apply(mw: Any, src_acc: dict, src_progs: list[dict], src_row: int) ->
     from PySide6.QtGui import QFont
 
     d = QDialog(mw)
-    d.setWindowTitle("批量应用配置")
+    d.setWindowTitle("鎵归噺搴旂敤閰嶇疆")
     d.setMinimumSize(350, 280)
     l = QVBoxLayout(d)
 
-    l.addWidget(QLabel("选择要应用配置的目标账号：", font=QFont("Microsoft YaHei UI", 11)))
-    l.addWidget(QLabel(f"  来源：{src_acc.get('name', '?')}"))
-    l.addWidget(QLabel(f"  流水线：{src_progs[0].get('task_pipeline', '无') if src_progs else '无'}"))
+    l.addWidget(QLabel("閫夋嫨瑕佸簲鐢ㄩ厤缃殑鐩爣璐﹀彿锛?, font=QFont("Microsoft YaHei UI", 11)))
+    l.addWidget(QLabel(f"  鏉ユ簮锛歿src_acc.get('name', '?')}"))
+    l.addWidget(QLabel(f"  娴佹按绾匡細{src_progs[0].get('task_pipeline', '鏃?) if src_progs else '鏃?}"))
 
     checks = {}
     for i, a in enumerate(mw.accounts):
         if a["id"] == src_acc["id"]:
             continue
-        cb = QCheckBox(a.get("name", f"账号{i+1}"))
+        cb = QCheckBox(a.get("name", f"璐﹀彿{i+1}"))
         cb.setChecked(True)
         checks[a["id"]] = cb
         l.addWidget(cb)
 
     if not checks:
-        l.addWidget(QLabel("（没有其他账号可应用）"))
+        l.addWidget(QLabel("锛堟病鏈夊叾浠栬处鍙峰彲搴旂敤锛?))
 
     def _apply():
         selected = [aid for aid, cb in checks.items() if cb.isChecked()]
@@ -583,10 +583,10 @@ def _batch_apply(mw: Any, src_acc: dict, src_progs: list[dict], src_row: int) ->
                 if w.get("account_ref") == a["id"]:
                     w["task_pipeline"] = src_pipe
         mw._save()
-        mw._log(f"批量应用配置到 {len(selected)} 个账号")
+        mw._log(f"鎵归噺搴旂敤閰嶇疆鍒?{len(selected)} 涓处鍙?)
         d.accept()
 
-    btn = QPushButton("应用")
+    btn = QPushButton("搴旂敤")
     btn.clicked.connect(_apply)
     l.addWidget(btn)
     d.exec()
@@ -599,7 +599,7 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     tc.setObjectName("card")
     tcl = QVBoxLayout(tc)
     tcl.setSpacing(5)
-    tcl.addWidget(QLabel("⚙ 流水线", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    tcl.addWidget(QLabel("鈿?娴佹按绾?, font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
 
     pt = progs[0].get("task_pipeline", "startup,fight,recruit,infrast,mall,award") if progs else "startup,fight,recruit,infrast,mall,award"
     all_tasks = [t.strip() for t in pt.split(",") if t.strip()]
@@ -642,7 +642,7 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
         cb.toggled.connect(lambda _: _up())
 
     mr2 = QHBoxLayout()
-    cfg_btn = QPushButton("⚙ 参数")
+    cfg_btn = QPushButton("鈿?鍙傛暟")
     ts = a.get("task_settings", {})
 
     def _cfg_clicked():
@@ -653,16 +653,16 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     cfg_btn.clicked.connect(lambda: _cfg_clicked())
     mr2.addWidget(cfg_btn)
 
-    tmpl_btn = QPushButton("💾 模板")
+    tmpl_btn = QPushButton("馃捑 妯℃澘")
     tm = QMenu()
 
     def _sv_tmpl():
-        name, ok = QInputDialog.getText(mw, "保存模板", "名称:", text="日常模式")
+        name, ok = QInputDialog.getText(mw, "淇濆瓨妯℃澘", "鍚嶇О:", text="鏃ュ父妯″紡")
         if ok and name:
             a.setdefault("task_templates", {})[name] = dict(ts)
             a.setdefault("pipe_templates", {})[name] = progs[0].get("task_pipeline", "")
             mw._save()
-            mw._log(f"模板已保存: {name}")
+            mw._log(f"妯℃澘宸蹭繚瀛? {name}")
 
     def _ld_tmpl(name):
         if name in a.get("task_templates", {}):
@@ -674,23 +674,23 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
             build_account_dashboard(mw, row)
 
     for n in a.get("task_templates", {}):
-        tm.addAction(f"📂 {n}", lambda n=n: _ld_tmpl(n))
-        tm.addAction(f"✕ 删{n}", lambda n=n: (a["task_templates"].pop(n, None), a.get("pipe_templates", {}).pop(n, None), mw._save(), build_account_dashboard(mw, row)))
+        tm.addAction(f"馃搨 {n}", lambda n=n: _ld_tmpl(n))
+        tm.addAction(f"鉁?鍒爗n}", lambda n=n: (a["task_templates"].pop(n, None), a.get("pipe_templates", {}).pop(n, None), mw._save(), build_account_dashboard(mw, row)))
     if a.get("task_templates", {}):
         tm.addSeparator()
-    tm.addAction("💾 保存当前...", _sv_tmpl)
+    tm.addAction("馃捑 淇濆瓨褰撳墠...", _sv_tmpl)
     tm.addSeparator()
-    tm.addAction("📋 批量应用当前配置到...", lambda: _batch_apply(mw, a, progs, row))
+    tm.addAction("馃搵 鎵归噺搴旂敤褰撳墠閰嶇疆鍒?..", lambda: _batch_apply(mw, a, progs, row))
     tmpl_btn.setMenu(tm)
     mr2.addWidget(tmpl_btn)
 
-    sc = QCheckBox("启动时同步")
-    sc.setChecked(a.sync_tasks)
+    sc = QCheckBox("鍚姩鏃跺悓姝?)
+    sc.setChecked(a.get("sync_tasks",False))
     sc.toggled.connect(lambda v: (a.__setitem__("sync_tasks", v), mw._save()))
     mr2.addWidget(sc)
     mr2.addStretch()
 
-    mr2.addWidget(QLabel("模式:"))
+    mr2.addWidget(QLabel("妯″紡:"))
     mc2 = QComboBox()
     mc2.addItems(["gui", "cli"])
     mc2.setCurrentText(progs[0].get("launch_mode", "gui") if progs else "gui")
@@ -701,7 +701,7 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
 
     if mc2.currentText() == "cli":
         cl = _find_maa_cli()
-        l2 = QLabel("maa-cli 就绪" if cl else "maa-cli 未安装")
+        l2 = QLabel("maa-cli 灏辩华" if cl else "maa-cli 鏈畨瑁?)
         l2.setStyleSheet("color:#8a8" if cl else "color:#a88")
         mr2.addWidget(l2)
     mr2.addStretch()
@@ -713,7 +713,7 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     mw._dash_refs["pipeline_sync"] = sc
 
 
-# ── Launch & post-actions card ──
+# 鈹€鈹€ Launch & post-actions card 鈹€鈹€
 
 def _build_launch_card(mw: Any, row: int) -> None:
     a = mw.accounts[row]
@@ -728,31 +728,31 @@ def _build_launch_card(mw: Any, row: int) -> None:
     oc.setObjectName("card")
     ocl = QVBoxLayout(oc)
     ocl.setSpacing(5)
-    ocl.addWidget(QLabel("🔄 启动与完成后", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    ocl.addWidget(QLabel("馃攧 鍚姩涓庡畬鎴愬悗", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
 
     or1 = QHBoxLayout()
-    or1.addWidget(_lbl("启动:"))
+    or1.addWidget(_lbl("鍚姩:"))
 
-    cb_sm = QCheckBox("启动后最小化")
-    cb_sm.setChecked(a.start_minimized)
+    cb_sm = QCheckBox("鍚姩鍚庢渶灏忓寲")
+    cb_sm.setChecked(a.get("start_minimized",False))
     cb_sm.toggled.connect(lambda v: (a.__setitem__("start_minimized", v), mw._save()))
     or1.addWidget(cb_sm)
 
-    cb_sd = QCheckBox("直接运行")
-    cb_sd.setChecked(a.start_directly)
+    cb_sd = QCheckBox("鐩存帴杩愯")
+    cb_sd.setChecked(a.get("start_directly",False))
     cb_sd.toggled.connect(lambda v: (a.__setitem__("start_directly", v), mw._save()))
     or1.addWidget(cb_sd)
 
-    cb_ad = QCheckBox("ADB 失败启模拟器")
+    cb_ad = QCheckBox("ADB 澶辫触鍚ā鎷熷櫒")
     cb_ad.setChecked(a.adb_fail_launch_emu)
     cb_ad.toggled.connect(lambda v: (a.__setitem__("adb_fail_launch_emu", v), mw._save()))
     or1.addWidget(cb_ad)
 
-    or1.addWidget(QLabel("ADB 重试"))
+    or1.addWidget(QLabel("ADB 閲嶈瘯"))
     ar = QSpinBox()
     ar.setRange(0, 10)
     ar.setValue(a.get("adb_retry", 0))
-    ar.setSuffix(" 次")
+    ar.setSuffix(" 娆?)
     ar.setMaximumWidth(60)
     ar.valueChanged.connect(lambda v: a.update({"adb_retry": v}) or mw._save())
     or1.addWidget(ar)
@@ -760,7 +760,7 @@ def _build_launch_card(mw: Any, row: int) -> None:
     ocl.addLayout(or1)
 
     or2 = QHBoxLayout()
-    or2.addWidget(_lbl("完成后:"))
+    or2.addWidget(_lbl("瀹屾垚鍚?"))
     post_actions = a.get("post_action", "")
     if post_actions and post_actions[0] == "[":
         try:
@@ -771,7 +771,7 @@ def _build_launch_card(mw: Any, row: int) -> None:
     post_arr = post_actions.split(",") if post_actions else []
     post_cbs = {}
 
-    for k, v in [("BackToAndroidHome", "返回主屏"), ("ExitArknights", "退出方舟"), ("ExitEmulator", "关模拟器"), ("ExitSelf", "退出MAA")]:
+    for k, v in [("BackToAndroidHome", "杩斿洖涓诲睆"), ("ExitArknights", "閫€鍑烘柟鑸?), ("ExitEmulator", "鍏虫ā鎷熷櫒"), ("ExitSelf", "閫€鍑篗AA")]:
         cb = QCheckBox(v)
         cb.setChecked(k in post_arr)
         post_cbs[k] = cb
@@ -794,64 +794,65 @@ def _build_launch_card(mw: Any, row: int) -> None:
     mw._dash_refs["launch_adb_retry"] = ar
 
 
-# ── Action buttons ──
+# 鈹€鈹€ Action buttons 鈹€鈹€
 
 def _build_action_buttons(mw: Any, row: int, progs: list[dict]) -> None:
     a = mw.accounts[row]
 
-    # ── Config summary bar ──
+    # 鈹€鈹€ Config summary bar 鈹€鈹€
     summary_parts = []
     if a.get("adb_address", ""):
-        summary_parts.append(f"📱 {a['adb_address']}")
+        summary_parts.append(f"馃摫 {a['adb_address']}")
     if a.get("emu_instance_index", ""):
-        summary_parts.append(f"🖥 MuMu#{a['emu_instance_index']}")
-    if a.sanity_driven:
-        summary_parts.append("💊 理智驱动")
+        summary_parts.append(f"馃枼 MuMu#{a['emu_instance_index']}")
+    if a.get("sanity_driven",False):
+        summary_parts.append("馃拪 鐞嗘櫤椹卞姩")
     if a.get("emu_launch"):
-        summary_parts.append("🖥 自启模拟器")
-    if a.start_minimized:
-        summary_parts.append("📐 最小化")
-    if a.start_directly:
-        summary_parts.append("⚡ 直接运行")
+        summary_parts.append("馃枼 鑷惎妯℃嫙鍣?)
+    if a.get("start_minimized",False):
+        summary_parts.append("馃搻 鏈€灏忓寲")
+    if a.get("start_directly",False):
+        summary_parts.append("鈿?鐩存帴杩愯")
     pipe = progs[0].get("task_pipeline", "") if progs else ""
     if pipe:
-        name_map = {"startup":"唤醒","fight":"刷关","recruit":"公招","infrast":"基建","mall":"信用","award":"奖励","roguelike":"肉鸽","reclamation":"生息","closedown":"关闭"}
+        name_map = {"startup":"鍞ら啋","fight":"鍒峰叧","recruit":"鍏嫑","infrast":"鍩哄缓","mall":"淇＄敤","award":"濂栧姳","roguelike":"鑲夐附","reclamation":"鐢熸伅","closedown":"鍏抽棴"}
         tasks = [name_map.get(t.strip().lower(), t.strip()) for t in pipe.split(",") if t.strip()][:5]
-        summary_parts.append(f"⚙ {'·'.join(tasks)}")
+        summary_parts.append(f"鈿?{'路'.join(tasks)}")
     if summary_parts:
-        summary_text = "  │  ".join(summary_parts)
+        summary_text = "  鈹? ".join(summary_parts)
         summary_lbl = QLabel(summary_text)
         summary_lbl.setStyleSheet("color:#888;padding:4px 0;font-size:10pt")
         summary_lbl.setWordWrap(True)
         mw.adl.addWidget(summary_lbl)
 
-    # ── Buttons ──
+    # 鈹€鈹€ Buttons 鈹€鈹€
     bw = QWidget()
     bl = QHBoxLayout(bw)
     bl.setContentsMargins(0, 0, 0, 0)
 
     if progs:
-        lb2 = QPushButton("▶ 加入队列")
+        lb2 = QPushButton("鈻?鍔犲叆闃熷垪")
         lb2.setObjectName("startBtn")
         lb2.setMinimumHeight(36)
         lb2.setFont(QFont("Microsoft YaHei UI", 12, QFont.Bold))
-        lb2.setToolTip("入队后立刻启动（若模拟器空闲）")
+        lb2.setToolTip("鍏ラ槦鍚庣珛鍒诲惎鍔紙鑻ユā鎷熷櫒绌洪棽锛?)
         lb2.clicked.connect(lambda: (mw.launch_queue.enqueue(a["id"], "manual", priority=0), mw.launch_queue._tick(), refresh_config_cards(mw)))
         mw._dash_refs["action_launch_btn"] = lb2
         bl.addWidget(lb2)
-        launch_all_btn = QPushButton("▶ 全部入队", clicked=lambda: mw._la_all())
+        launch_all_btn = QPushButton("鈻?鍏ㄩ儴鍏ラ槦", clicked=lambda: mw._la_all())
         mw._dash_refs["action_launch_all_btn"] = launch_all_btn
         bl.addWidget(launch_all_btn)
-        upd_btn = QPushButton("检查更新", clicked=lambda: mw.maint.cu_single(progs[0]))
+        upd_btn = QPushButton("妫€鏌ユ洿鏂?, clicked=lambda: mw.maint.cu_single(progs[0]))
         mw._dash_refs["action_update_btn"] = upd_btn
         bl.addWidget(upd_btn)
     else:
-        dl = QPushButton("⬇ 下载 MAA")
+        dl = QPushButton("猬?涓嬭浇 MAA")
         dl.setObjectName("addProgBtn")
         dl.setMinimumHeight(36)
         dl.clicked.connect(lambda: mw.maint.dl_maa(row))
         bl.addWidget(dl)
-        bl.addWidget(QPushButton("📂 绑定", clicked=lambda: mw.maint.pk_maa(row)))
+        bl.addWidget(QPushButton("馃搨 缁戝畾", clicked=lambda: mw.maint.pk_maa(row)))
 
     bl.addStretch()
     mw.adl.addWidget(bw)
+

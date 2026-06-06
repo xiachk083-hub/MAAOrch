@@ -458,7 +458,7 @@ class MainWindow(QMainWindow):
     def _scan(self, a: dict, cb) -> None: self.emu.scan(a, cb)
     def _add_acc(self) -> None:
         d=AccountDialog(self)
-        if d.exec()==QDialog.Accepted: self.accounts.append(d.r); self._save(); self._ra()
+        if d.exec()==QDialog.Accepted: self.accounts.append(Account.from_dict(d.r)); self._save(); self._ra()
     def _del_acc(self) -> None:
         row=self.at.currentRow()
         if row<0: return
