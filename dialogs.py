@@ -54,6 +54,10 @@ class SettingsDialog(QDialog):
         g6=QGroupBox("daigan 联动"); gl6=QVBoxLayout(g6)
         dr=QHBoxLayout(); dr.addWidget(QLabel("地址:"))
         self.daigan_url=QLineEdit(cfg.get("daigan_url","")); self.daigan_url.setPlaceholderText("http://localhost:3456"); dr.addWidget(self.daigan_url,1); gl6.addLayout(dr); l.addWidget(g6)
+        # 循环调度
+        g7=QGroupBox("循环调度"); gl7=QVBoxLayout(g7)
+        rr1=QHBoxLayout(); self.rr_enabled=QCheckBox("启用循环调度"); self.rr_enabled.setChecked(cfg.get("round_robin_enabled",False)); rr1.addWidget(self.rr_enabled); rr1.addStretch(); gl7.addLayout(rr1)
+        rr2=QHBoxLayout(); rr2.addWidget(QLabel("最大并行:")); self.parallel_max_sp=QSpinBox(); self.parallel_max_sp.setRange(1,10); self.parallel_max_sp.setValue(cfg.get("parallel_max",1)); rr2.addWidget(self.parallel_max_sp); rr2.addWidget(QLabel(" 个 MAA")); rr2.addStretch(); gl7.addLayout(rr2); l.addWidget(g7)
         # API
         g5=QGroupBox("HTTP API"); gl5=QVBoxLayout(g5)
         apr=QHBoxLayout(); apr.addWidget(QLabel("端口:"))
@@ -84,6 +88,7 @@ class SettingsDialog(QDialog):
         self.c["appearance_mode"]=self.th.currentText(); self.c["auto_start"]=self.auto.isChecked(); self.c["minimize_to_tray"]=self.tray.isChecked(); self.c["check_update_on_start"]=self.cu.isChecked(); self.c["auto_update_maa"]=self.au.isChecked(); self.c["maa_update_interval"]=self.ai.value(); self.c["webhook_url"]=self.wh.text().strip()
         self.c["api_port"]=self.api_port.value(); self.c["api_token"]=self.api_token.text().strip()
         self.c["daigan_url"]=self.daigan_url.text().strip()
+        self.c["round_robin_enabled"]=self.rr_enabled.isChecked(); self.c["parallel_max"]=self.parallel_max_sp.value()
         set_auto_start(self.c["auto_start"]); self.accept()
 
 class AccountDialog(QDialog):
@@ -148,6 +153,15 @@ class AccountDialog(QDialog):
         adv_opts.addStretch(); f.addRow(_lbl(""),adv_opts)
         self.use_activity_med_cb=QCheckBox("活动结束前48H吃当周过期药"); self.use_activity_med_cb.setChecked(fight_ts.get("use_expire_medicine_for_activity",True)); f.addRow(_lbl(""),self.use_activity_med_cb)
 
+        # ── 循环调度 ──
+        f.addRow(QWidget(), _sec("循环调度"))
+        rr_opts=QHBoxLayout(); rr_opts.setSpacing(8)
+        self.rr_cb=QCheckBox("参与循环调度"); self.rr_cb.setChecked(self.a.get("round_robin",False)); rr_opts.addWidget(self.rr_cb)
+        self.rr_mode_cb=QComboBox(); self.rr_mode_cb.addItems(["体力回满","时间间隔"]); self.rr_mode_cb.setCurrentText("体力回满" if self.a.get("round_robin_mode","sanity")=="sanity" else "时间间隔"); rr_opts.addWidget(self.rr_mode_cb)
+        rr_opts.addWidget(QLabel("间隔")); self.rr_hours_sp=QDoubleSpinBox(); self.rr_hours_sp.setRange(0.5,72); self.rr_hours_sp.setValue(self.a.get("round_robin_hours",0) or 2); self.rr_hours_sp.setSuffix(" 小时"); self.rr_hours_sp.setDecimals(1); rr_opts.addWidget(self.rr_hours_sp)
+        rr_opts.addStretch(); f.addRow(_lbl(""),rr_opts)
+        rr_opts2=QHBoxLayout(); rr_opts2.addWidget(QLabel("最低理智:")); self.rr_min_sanity_sp=QSpinBox(); self.rr_min_sanity_sp.setRange(0,999); self.rr_min_sanity_sp.setValue(self.a.get("min_sanity",0)); rr_opts2.addWidget(self.rr_min_sanity_sp); rr_opts2.addStretch(); f.addRow(_lbl(""),rr_opts2)
+
         # ── 启动选项 ──
         f.addRow(QWidget(), _sec("启动选项"))
         opts1=QHBoxLayout(); opts1.setSpacing(8)
@@ -175,7 +189,7 @@ class AccountDialog(QDialog):
         fight_ts["use_expiring_medicine"]=self.use_expiring_cb.isChecked()
         fight_ts["medicine_expire_days"]=self.expire_days_sp.value()
         fight_ts["use_expire_medicine_for_activity"]=self.use_activity_med_cb.isChecked()
-        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"sanity_driven":self.sanity_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
+        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"sanity_driven":self.sanity_cb.isChecked(),"min_sanity":self.rr_min_sanity_sp.value(),"round_robin":self.rr_cb.isChecked(),"round_robin_mode":"sanity" if self.rr_mode_cb.currentText()=="体力回满" else "time","round_robin_hours":self.rr_hours_sp.value(),"tags":self.tags.text().strip()}; self.accept()
 
 
 def _sec(title: str) -> QLabel:

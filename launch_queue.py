@@ -127,14 +127,34 @@ class LaunchQueue(QObject):
     # ── Lifecycle hooks (called from runner signals) ──
 
     def on_account_finished(self, account_id: str, exit_code: int, tasks: list | None = None) -> None:
-        """An account just finished — release its emulator and schedule sanity re-entry."""
-        # Release emulator
+        """An account just finished — release emulator, enqueue for round-robin."""
         emu_idx = self._get_emu_idx(account_id)
         self._active_emus.pop(emu_idx, None)
 
-        # Sanity-driven: re-enqueue with calculated recovery time
         ac = next((a for a in self.ctx.accounts if a.id == account_id), None)
-        if ac and ac.get("sanity_driven", False):
+        if not ac:
+            self._tick()
+            return
+
+        # Round-robin: re-enqueue based on mode
+        if ac.get("round_robin", False):
+            mode = ac.get("round_robin_mode", "sanity")
+            if mode == "sanity":
+                st = RunStats(account_id)
+                s = st.get_last_sanity()
+                if s:
+                    deficit = s["deficit"]
+                    mins = deficit * 6
+                    next_at = datetime.now() + timedelta(minutes=mins)
+                    self.enqueue(account_id, "sanity", priority=2, not_before=next_at)
+            elif mode == "time":
+                hours = ac.get("round_robin_hours", 0)
+                if hours > 0:
+                    next_at = datetime.now() + timedelta(hours=hours)
+                    self.enqueue(account_id, "schedule", priority=1, not_before=next_at)
+
+        # Legacy sanity_driven (backward compat, will be subsumed by round_robin)
+        elif ac.get("sanity_driven", False):
             st = RunStats(account_id)
             s = st.get_last_sanity()
             if s:
@@ -143,7 +163,6 @@ class LaunchQueue(QObject):
                 next_at = datetime.now() + timedelta(minutes=mins)
                 self.enqueue(account_id, "sanity", priority=2, not_before=next_at)
 
-        # Kick tick to check next in queue
         self._tick()
 
     # ── Internal ──
@@ -195,6 +214,11 @@ class LaunchQueue(QObject):
 
         # Launch all eligible (emu conflicts resolved: first marks emu busy, second skips)
         for entry in to_launch:
+            # Parallel limit check
+            max_parallel = self.ctx.config.get("parallel_max", 1)
+            if len(self._active_emus) >= max_parallel:
+                heapq.heappush(self._pending, entry)
+                continue
             emu_idx = self._get_emu_idx(entry.account_id)
             if emu_idx and emu_idx in self._active_emus:
                 # Already taken by a previous launch in this batch

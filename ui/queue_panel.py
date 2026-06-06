@@ -49,8 +49,14 @@ def build_queue_panel(mw: Any) -> QWidget:
     qvl.addWidget(mw._queue_running_tbl)
 
     # ── Waiting section ──
-    wait_lbl = QLabel("⏳ 等待中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold))
-    qvl.addWidget(wait_lbl)
+    wait_row = QHBoxLayout()
+    wait_row.addWidget(QLabel("⏳ 等待中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    wait_row.addStretch()
+    clear_btn = QPushButton("清空全部")
+    clear_btn.setStyleSheet("QPushButton{color:#888;border:1px solid #555;border-radius:4px;padding:2px 8px;font-size:9pt}QPushButton:hover{color:#d32f2f;border-color:#d32f2f}")
+    clear_btn.clicked.connect(lambda: _clear_queue(mw))
+    wait_row.addWidget(clear_btn)
+    qvl.addLayout(wait_row)
     mw._queue_waiting_tbl = QTableWidget(0, 5)
     mw._queue_waiting_tbl.setHorizontalHeaderLabels(["账号", "来源", "预计", "位置", ""])
     mw._queue_waiting_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -277,3 +283,11 @@ def _jump_to_account(mw: Any, idx: int) -> None:
             if it and hasattr(it, "_acc_id") and it._acc_id == mw.accounts[idx]["id"]:
                 mw.at.setCurrentCell(i, 0)
                 break
+
+
+def _clear_queue(mw: Any) -> None:
+    """Clear all pending queue entries."""
+    if hasattr(mw, "launch_queue"):
+        mw.launch_queue._pending.clear()
+        mw.launch_queue._save_queue()
+        refresh_queue_view(mw)
