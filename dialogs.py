@@ -135,6 +135,7 @@ class AccountDialog(QDialog):
 
         # ── 常规设置 ──
         f.addRow(QWidget(), _sec("常规设置"))
+        ts=self.a.get("task_settings",{}); fight_ts=ts.get("Fight",{})
         opts4=QHBoxLayout(); opts4.setSpacing(8)
         opts4.addWidget(QLabel("关卡重置:")); self.stage_reset_cb=QComboBox(); self.stage_reset_cb.addItems(["当前","上次","忽略"]); self.stage_reset_cb.setCurrentText({"Current":"当前","Last":"上次","Ignore":"忽略"}.get(fight_ts.get("stage_reset_mode","Current"),"当前")); opts4.addWidget(self.stage_reset_cb)
         opts4.addStretch(); f.addRow(_lbl(""),opts4)
