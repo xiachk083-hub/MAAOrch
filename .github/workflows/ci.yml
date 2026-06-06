@@ -35,6 +35,6 @@ jobs:
         timeout-minutes: 15
       - run: dir dist\ 2>&1 || echo "No dist output"
       - name: Upload Release
-        run: python tools/release.py
+        run: python release.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
