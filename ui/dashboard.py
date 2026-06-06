@@ -814,7 +814,8 @@ def _build_action_buttons(mw: Any, row: int, progs: list[dict]) -> None:
         summary_parts.append("⚡ 直接运行")
     pipe = progs[0].get("task_pipeline", "") if progs else ""
     if pipe:
-        tasks = pipe.split(",")[:5]
+        name_map = {"startup":"唤醒","fight":"刷关","recruit":"公招","infrast":"基建","mall":"信用","award":"奖励","roguelike":"肉鸽","reclamation":"生息","closedown":"关闭"}
+        tasks = [name_map.get(t.strip().lower(), t.strip()) for t in pipe.split(",") if t.strip()][:5]
         summary_parts.append(f"⚙ {'·'.join(tasks)}")
     if summary_parts:
         summary_text = "  │  ".join(summary_parts)

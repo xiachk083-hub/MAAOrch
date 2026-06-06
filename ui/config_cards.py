@@ -221,7 +221,8 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
     pipe = progs[0].get("task_pipeline", "") if progs else ""
     if pipe:
-        tasks = [t.strip() for t in pipe.split(",") if t.strip()][:4]
+        name_map = {"startup":"唤醒","fight":"刷关","recruit":"公招","infrast":"基建","mall":"信用","award":"奖励","roguelike":"肉鸽","reclamation":"生息","closedown":"关闭"}
+        tasks = [name_map.get(t.strip().lower(), t.strip()) for t in pipe.split(",") if t.strip()][:4]
         fl.addWidget(QLabel(f"⚙ {','.join(tasks)}"))
 
     # Sanity
