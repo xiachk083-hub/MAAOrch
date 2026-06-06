@@ -79,11 +79,12 @@ class AccountRunner(QObject):
         issues = self.preflight_check(ac, progs)
         for issue in issues:
             self.log_msg.emit(issue)
-        # Block on critical errors (❌) only
         critical = [i for i in issues if i.startswith("❌")]
         if critical:
             self.log_msg.emit(f"❌ {ac.get('name', aid)} 预检未通过，启动取消")
             return False
+
+        self.log_msg.emit(f"[启动] MAA({Path(progs[0]['path']).stem}) ADB({ac.get('adb_address','?')}) Emu({ac.get('emu_instance_index','?')})")
 
         self._active[aid] = ac
         self._progs[aid] = progs
@@ -217,6 +218,7 @@ class AccountRunner(QObject):
         for w in progs:
             try:
                 self.ctx.inject_config(w, ac)
+                self.log_msg.emit(f"注入配置: {Path(w['path']).parent}/config/")
                 self._spawn(w, ac)
             except Exception as e:
                 self.log_msg.emit(f"启动失败: {e}")
@@ -372,9 +374,14 @@ class AccountRunner(QObject):
     def _cleanup(self, aid: str, exit_code: int, tasks: list[dict], sanity: dict | None = None, drops: dict | None = None) -> None:
         ac = self._active.pop(aid, None)
         old_progs = self._progs.pop(aid, None)
-        self._start_times.pop(aid, None)
+        started = self._start_times.pop(aid, None)
+        duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)
         self.ctx.proc_status.discard(aid)
+
+        if ac:
+            name = ac.get("name", aid)
+            self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s")
         # Also remove program IDs from status tracking
         if old_progs:
             for w in old_progs:
@@ -438,8 +445,9 @@ class AccountRunner(QObject):
                     req = urllib.request.Request(f"{daigan_url}/api/maa/stats", data=payload,
                                                  headers={"Content-Type": "application/json"}, method="POST")
                     urllib.request.urlopen(req, timeout=5)
-                except Exception:
-                    pass
+                    self.log_msg.emit(f"[daigan] 推送成功 → {daigan_url}")
+                except Exception as e:
+                    self.log_msg.emit(f"[daigan] 推送失败: {e}")
 
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")

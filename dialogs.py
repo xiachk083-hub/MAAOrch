@@ -164,9 +164,45 @@ class AccountDialog(QDialog):
         self.sync_cb=QCheckBox("启动时同步配置"); self.sync_cb.setChecked(self.a.get("sync_tasks",False)); opts2.addWidget(self.sync_cb)
         opts2.addStretch(); f.addRow(_lbl(""),opts2)
 
+        # ── MAA 程序 ──
+        f.addRow(QWidget(), _sec("MAA 程序"))
+        wh_items = []
+        # Access warehouse through parent (MainWindow)
+        if p and hasattr(p, "warehouse"):
+            for w in p.warehouse:
+                if w.get("maa_type", "").startswith("maa"):
+                    wh_items.append(w)
+        if wh_items:
+            self.maa_cb = QComboBox()
+            self.maa_cb.addItem("— 不绑定 —", "")
+            cur_ref = self.a.get("id", "")
+            cur_idx = 0
+            for w in wh_items:
+                name = f"{Path(w['path']).parent.name}/{Path(w['path']).stem}"
+                self.maa_cb.addItem(f"{name}  {w.get('maa_version','')}", w["id"])
+                if w.get("account_ref") == cur_ref:
+                    cur_idx = self.maa_cb.count() - 1
+            self.maa_cb.setCurrentIndex(cur_idx)
+            f.addRow(_lbl("绑定"), self.maa_cb)
+        else:
+            lbl = QLabel("无 MAA 程序，请先下载")
+            lbl.setStyleSheet("color:#888")
+            f.addRow(_lbl(""), lbl)
+
+        # Download/Bind buttons
+        btn_r = QHBoxLayout(); btn_r.setSpacing(8)
+        dl_btn = QPushButton("⬇ 下载 MAA")
+        dl_btn.clicked.connect(lambda: (_dl_maa_for(p, self.a.get("id",""))))
+        btn_r.addWidget(dl_btn)
+        bind_btn = QPushButton("📂 绑定本地")
+        bind_btn.clicked.connect(lambda: (_bind_maa_for(p, self.a.get("id",""))))
+        btn_r.addWidget(bind_btn)
+        btn_r.addStretch(); f.addRow(_lbl(""), btn_r)
+
         scroll.setWidget(sw); l.addWidget(scroll,1)
         b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
         self.setStyleSheet("QScrollArea{background:transparent} QDialog{background:rgba(30,30,30,240)}")
+
     def _save(self):
         p=self.pc.currentText()
         if p=="— 无 —": p=""
@@ -175,11 +211,36 @@ class AccountDialog(QDialog):
         fight_ts=ts.setdefault("Fight",{})
         if self.fs.text().strip():
             fight_ts["stage"]=self.fs.text().strip()
-        fight_ts["stage_reset_mode"]={"当前":"Current","上次":"Last","忽略":"Ignore"}.get(self.stage_reset_cb.currentText(),"Current")
         fight_ts["use_expiring_medicine"]=self.use_expiring_cb.isChecked()
         fight_ts["medicine_expire_days"]=self.expire_days_sp.value()
         fight_ts["use_expire_medicine_for_activity"]=self.use_activity_med_cb.isChecked()
+        fight_ts["stage_reset_mode"]={"当前":"Current","上次":"Last","忽略":"Ignore"}.get(self.stage_reset_cb.currentText(),"Current")
         self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
+        # MAA binding
+        if hasattr(self, "maa_cb") and self.maa_cb.currentData():
+            aid = self.a.get("id", "")
+            wid = self.maa_cb.currentData()
+            if aid and wid:
+                parent = self.parent()
+                for w in parent.warehouse:
+                    if w["id"] == wid:
+                        w["account_ref"] = aid
+                    elif w.get("account_ref") == aid:
+                        w["account_ref"] = ""  # unbind old
+
+
+def _download_maa(mw):
+    """Trigger MAA download from AccountDialog."""
+    if hasattr(mw, "maint"):
+        row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == mw.accounts[mw.at.currentRow()].get("id", "")), 0)
+        mw.maint.dl_maa(row) if row >= 0 else None
+
+
+def _bind_local_maa(mw):
+    """Trigger local MAA binding from AccountDialog."""
+    if hasattr(mw, "maint"):
+        row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == mw.accounts[mw.at.currentRow()].get("id", "")), 0)
+        mw.maint.pk_maa(row) if row >= 0 else None
 
 
 def _sec(title: str) -> QLabel:
@@ -312,4 +373,22 @@ class TaskSettingsDialog(QDialog):
                 ts["theme"]=eds["theme"].currentText(); ts["mode"]=eds["mode"].currentText()
                 ts["tool_to_craft"]=eds["tool_to_craft"].text().strip(); ts["max_craft_count"]=eds["max_craft_count"].value(); ts["clear_store"]=chk("clear_store")
             self.s[t]=ts
+
+
+def _dl_maa_for(mw, aid):
+    """Download MAA for specific account."""
+    if hasattr(mw, "maint") and aid:
+        row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == aid), -1)
+        if row >= 0:
+            mw.maint.dl_maa(row)
+            mw._sad(row)
+
+
+def _bind_maa_for(mw, aid):
+    """Bind local MAA for specific account."""
+    if hasattr(mw, "maint") and aid:
+        row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == aid), -1)
+        if row >= 0:
+            mw.maint.pk_maa(row)
+            mw._sad(row)
 
