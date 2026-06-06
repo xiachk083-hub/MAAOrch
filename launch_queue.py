@@ -54,9 +54,7 @@ class LaunchQueue(QObject):
         return heapq
 
     def start(self, interval_sec: int = 30) -> None:
-        self._restore()
         self._tick_timer.start(interval_sec * 1000)
-        self._tick()
 
     def stop(self) -> None:
         self._tick_timer.stop()

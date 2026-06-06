@@ -100,7 +100,9 @@ class MainWindow(QMainWindow):
         self.runner.account_finished.connect(self.launch_queue.on_account_finished)
         self.launch_queue.start()
         self._build_ui(); self.maint.restore_geometry(); self._log("══ 启动 ══")
-        self._sw("queue")  # Default to queue tab
+        self._sw("queue")
+        self.launch_queue._restore()
+        self.launch_queue._tick()  # Check queue after UI ready  # Default to queue tab
         self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         self._emu_monitor=EmuMonitor()
