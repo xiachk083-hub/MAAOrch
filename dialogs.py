@@ -108,12 +108,13 @@ class AccountDialog(QDialog):
             cb=QCheckBox(v); cb.setChecked(k in self.a.get("tasks",["StartUp","Fight"])); self.tk[k]=cb; kl.addWidget(cb)
         kl.addStretch(); f.addRow("任务:",kw)
         self.fs=QLineEdit(self.a.get("fight_stage","")); self.fs.setPlaceholderText("关卡，如 1-7"); f.addRow("关卡:",self.fs)
+        self.tags=QLineEdit(self.a.get("tags","")); self.tags.setPlaceholderText("如 日常,材料,肉鸽"); f.addRow("标签:",self.tags)
         l.addLayout(f); l.addStretch()
         b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
     def _save(self):
         p=self.pc.currentText()
         if p=="— 无 —": p=""
-        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"tasks":[t for t,cb in self.tk.items() if cb.isChecked()],"fight_stage":self.fs.text().strip(),"task_settings":self.a.get("task_settings",{}),"sync_tasks":self.a.get("sync_tasks",False),"account_switch":self.a.get("account_switch",""),"emu_path":self.a.get("emu_path",""),"emu_launch":self.a.get("emu_launch",False),"emu_wait":self.a.get("emu_wait",60)}; self.accept()
+        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"tasks":[t for t,cb in self.tk.items() if cb.isChecked()],"fight_stage":self.fs.text().strip(),"task_settings":self.a.get("task_settings",{}),"sync_tasks":self.a.get("sync_tasks",False),"account_switch":self.a.get("account_switch",""),"emu_path":self.a.get("emu_path",""),"emu_launch":self.a.get("emu_launch",False),"emu_wait":self.a.get("emu_wait",60),"tags":self.tags.text().strip()}; self.accept()
 
 class TaskSettingsDialog(QDialog):
     def __init__(self,p,settings,pipe):

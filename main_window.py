@@ -24,6 +24,7 @@ from launch_queue import LaunchQueue
 from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_threads
 from ui.accounts_panel import build_accounts_panel
 from ui.queue_panel import build_queue_panel, refresh_queue_view
+from ui.config_cards import build_config_cards, refresh_config_cards
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize
@@ -186,11 +187,15 @@ class MainWindow(QMainWindow):
         self.ta.setObjectName("tabBtn")
         self.ta.clicked.connect(lambda: self._sw("queue"))
         self.tl = QPushButton("📋 日志")
-        self.tl.setObjectName("tabBtnActive")
+        self.tl.setObjectName("tabBtn")
         self.tl.clicked.connect(lambda: self._sw("logs"))
+        self.tc = QPushButton("⚡ 配置")
+        self.tc.setObjectName("tabBtn")
+        self.tc.clicked.connect(lambda: self._sw("config"))
         th.addWidget(self.tg)
         th.addWidget(self.ta)
         th.addWidget(self.tl)
+        th.addWidget(self.tc)
         th.addStretch()
         self.qs = QPushButton("▶ 启动全部")
         self.qs.setObjectName("startBtn")
@@ -224,6 +229,11 @@ class MainWindow(QMainWindow):
         lvl.addLayout(log_btn_row)
         self.lv.hide()
         ml.addWidget(self.lv, 1)
+
+        # Config cards panel
+        build_config_cards(self)
+        self.cv.hide()
+        ml.addWidget(self.cv, 1)
 
         # Status bar
         sb2 = self.statusBar()
@@ -260,7 +270,8 @@ class MainWindow(QMainWindow):
         self.av.setVisible(tab == "accounts")
         self.qv.setVisible(tab == "queue")
         self.lv.setVisible(tab == "logs")
-        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs")]:
+        self.cv.setVisible(tab == "config")
+        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config")]:
             btn.setObjectName("tabBtnActive" if tab == key else "tabBtn")
             btn.style().unpolish(btn); btn.style().polish(btn)
         if tab == "accounts":
@@ -270,6 +281,8 @@ class MainWindow(QMainWindow):
             refresh_queue_view(self)
         elif tab == "logs":
             self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
+        elif tab == "config":
+            refresh_config_cards(self)
     def _st(self, tab: str) -> None:
         self._view_tab=tab; is_w=tab=="warehouse"; self.wv.setVisible(is_w); self.gv2.setVisible(not is_w)
         if is_w:
