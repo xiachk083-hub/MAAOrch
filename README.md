@@ -179,6 +179,9 @@ pytest tests/ -v                    # 运行测试
 - `test_critical.py` — gui.json 注入、ADB 端口提取、MAA 日志解析、定时匹配
 - `test_emu.py` — 模拟器预设、ADB 设备列表解析、MuMu 端口公式、mumu-cli 发现
 - `test_maint.py` — 版本比较链、配置迁移路径、字段默认值
+- `test_queue.py` — 启动队列入队/出队、优先级排序、模拟器冲突、并行启动
+- `test_runner.py` — AccountRunner 启动/停止、进程跟踪、统计记录、信号
+- `test_stats.py` — RunStats 持久化、理智查询、每日汇总、上限截断
 
 CI（GitHub Actions）在 push/PR 到 main 分支时自动执行 ruff 检查和 pytest 测试。
 
