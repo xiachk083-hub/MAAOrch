@@ -13,6 +13,13 @@ from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 
 
+def _trigger_batch(self):
+    """Daily batch: enqueue all accounts."""
+    if hasattr(self.ctx._mw, "launch_queue"):
+        self.ctx._mw.launch_queue.batch_enqueue_all()
+        self.ctx.log("[调度] 每日批量入队")
+
+
 class MaintService:
     def __init__(self, ctx: ServiceContext) -> None:
         self.ctx = ctx
@@ -273,6 +280,7 @@ class MaintService:
         if self.ctx.config.get("schedule", {}).get("enabled"):
             self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
             self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
+            self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))
             self.ctx.schedule_thread.start()
 
     def sch(self) -> None:
@@ -285,6 +293,7 @@ class MaintService:
         if d.r.get("enabled"):
             self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
             self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
+            self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))
             self.ctx.schedule_thread.start()
 
     def settings(self) -> None:

@@ -312,33 +312,6 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         aur.addWidget(au_lbl)
         mcl.addLayout(aur)
 
-        # Sanity-driven auto-launch toggle
-        sdr = QHBoxLayout()
-        sd_cb = QCheckBox("理智回满自动启动")
-        sd_cb.setChecked(a.get("sanity_driven", False))
-        sd_cb.setToolTip("上一轮刷完后，等理智回满自动再启动")
-        sd_cb.toggled.connect(lambda v: (a.__setitem__("sanity_driven", v), mw._save()))
-        sdr.addWidget(sd_cb)
-        # Show next launch time if available
-        lq = getattr(mw, "launch_queue", None)
-        if lq:
-            nxt = lq.get_next_for(a["id"])
-            if nxt:
-                if nxt == "即将启动":
-                    sdr.addWidget(QLabel("→ 即将启动"))
-                else:
-                    sdr.addWidget(QLabel(f"→ {nxt}"))
-                sdr.addStretch()
-            else:
-                sdr.addStretch()
-        else:
-            sdr.addStretch()
-        sd_lbl = QLabel("已启用" if sd_cb.isChecked() else "已禁用")
-        sd_lbl.setStyleSheet("color:#8a8" if sd_cb.isChecked() else "color:#a88")
-        sd_cb.toggled.connect(lambda v: sd_lbl.setText("已启用" if v else "已禁用") or sd_lbl.setStyleSheet("color:#8a8" if v else "color:#a88"))
-        sdr.addWidget(sd_lbl)
-        mcl.addLayout(sdr)
-
         today = datetime.now().strftime("%Y-%m-%d")
         sd = a.get("stats", {}).get(today, {})
         if sd.get("launches"):

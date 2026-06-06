@@ -127,7 +127,7 @@ class LaunchQueue(QObject):
     # ── Lifecycle hooks (called from runner signals) ──
 
     def on_account_finished(self, account_id: str, exit_code: int, tasks: list | None = None) -> None:
-        """An account just finished — release emulator, enqueue for round-robin."""
+        """An account just finished — release emulator, enqueue based on deficit."""
         emu_idx = self._get_emu_idx(account_id)
         self._active_emus.pop(emu_idx, None)
 
@@ -136,33 +136,30 @@ class LaunchQueue(QObject):
             self._tick()
             return
 
-        # Round-robin: re-enqueue based on mode
-        if ac.get("round_robin", False):
-            mode = ac.get("round_robin_mode", "sanity")
-            if mode == "sanity":
-                st = RunStats(account_id)
-                s = st.get_last_sanity()
-                if s:
-                    deficit = s["deficit"]
-                    mins = deficit * 6
-                    next_at = datetime.now() + timedelta(minutes=mins)
-                    self.enqueue(account_id, "sanity", priority=2, not_before=next_at)
-            elif mode == "time":
-                hours = ac.get("round_robin_hours", 0)
-                if hours > 0:
-                    next_at = datetime.now() + timedelta(hours=hours)
-                    self.enqueue(account_id, "schedule", priority=1, not_before=next_at)
-
-        # Legacy sanity_driven (backward compat, will be subsumed by round_robin)
-        elif ac.get("sanity_driven", False):
+        # Round-robin: calculate recovery based on deficit
+        deficit_cfg = self.ctx.config.get("deficit", 0) or ac.get("round_robin_deficit", 0)
+        if deficit_cfg >= 0 and self.ctx.config.get("daily_batch_time", ""):
             st = RunStats(account_id)
             s = st.get_last_sanity()
             if s:
-                deficit = s["deficit"]
-                mins = deficit * 6
-                next_at = datetime.now() + timedelta(minutes=mins)
-                self.enqueue(account_id, "sanity", priority=2, not_before=next_at)
+                d = s["max"] - s["current"]  # how many points left until full
+                if d <= deficit_cfg:
+                    # Already close enough — launch immediately
+                    self.enqueue(account_id, "sanity", priority=2, not_before=datetime.now())
+                else:
+                    need = d - deficit_cfg
+                    mins = need * 6
+                    next_at = datetime.now() + timedelta(minutes=mins)
+                    self.enqueue(account_id, "sanity", priority=2, not_before=next_at)
 
+        self._tick()
+
+    def batch_enqueue_all(self) -> None:
+        """Enqueue all accounts for the daily batch run."""
+        if not self.ctx.config.get("daily_batch_time", ""):
+            return
+        for a in self.ctx.accounts:
+            self.enqueue(a["id"], "schedule", priority=1)
         self._tick()
 
     # ── Internal ──

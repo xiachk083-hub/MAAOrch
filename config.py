@@ -10,13 +10,13 @@ STARTUP_DIR: Path = Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Men
 DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"960x650","auto_start":False,
     "minimize_to_tray":True,"check_update_on_start":True,"auto_update_maa":True,"maa_update_interval":6,
     "daigan_url":"",
-    "parallel_max":1,"round_robin_enabled":False,
+    "parallel_max":1,"daily_batch_time":"",
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[]}
 
 def migrate_v4_to_v5(data: dict) -> dict:
     data.setdefault("accounts",[]); data.setdefault("check_update_on_start",True)
-    for a in data.get("accounts",[]): a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch",""); a.setdefault("emu_path",""); a.setdefault("emu_launch",False); a.setdefault("emu_wait",30); a.setdefault("emu_add_cmd",""); a.setdefault("emu_instance_index",""); a.setdefault("emu_instance_name",""); a.setdefault("post_action",""); a.setdefault("start_minimized",False); a.setdefault("start_directly",False); a.setdefault("adb_fail_launch_emu",False); a.setdefault("adb_retry",0); a.setdefault("stats",{}); a.setdefault("loop_enabled",False); a.setdefault("loop_interval",5); a.setdefault("loop_max_rounds",10); a.setdefault("sanity_driven",False); a.setdefault("min_sanity",0); a.setdefault("stuck_timeout_min",0); a.setdefault("tags",""); a.setdefault("round_robin",False); a.setdefault("round_robin_mode","sanity"); a.setdefault("round_robin_hours",0)
+    for a in data.get("accounts",[]): a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch",""); a.setdefault("emu_path",""); a.setdefault("emu_launch",False); a.setdefault("emu_wait",30); a.setdefault("emu_add_cmd",""); a.setdefault("emu_instance_index",""); a.setdefault("emu_instance_name",""); a.setdefault("post_action",""); a.setdefault("start_minimized",False); a.setdefault("start_directly",False); a.setdefault("adb_fail_launch_emu",False); a.setdefault("adb_retry",0); a.setdefault("stats",{}); a.setdefault("stuck_timeout_min",0); a.setdefault("tags",""); a.setdefault("round_robin_deficit",0)
     data.setdefault("webhook_url","")
     for w in data.get("warehouse",[]):
         for k,v in [("maa_type","general"),("maa_version",""),("update_channel","Stable"),

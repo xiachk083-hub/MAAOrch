@@ -38,9 +38,7 @@ class Account:
     min_sanity: int = 0
     stuck_timeout_min: int = 0  # 0=disabled
     tags: str = ""  # comma-separated, for search filtering
-    round_robin: bool = False
-    round_robin_mode: str = "sanity"  # "sanity" | "time"
-    round_robin_hours: float = 0  # time mode: re-enqueue N hours after completion
+    round_robin_deficit: int = 0  # 0=wait until full, N=launch when N points from full
 
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):
