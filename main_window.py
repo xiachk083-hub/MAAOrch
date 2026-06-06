@@ -229,6 +229,7 @@ class MainWindow(QMainWindow):
         mb = self.menuBar()
         tm = mb.addMenu("工具")
         tm.addAction("定时", self._sch)
+        tm.addAction("队列状态", self._show_queue_panel)
         tm.addAction("检查更新", lambda: self.maint.check_updates())
         tm.addAction("设置", self._settings)
         tm.addAction("日志", self._tlog)
@@ -580,6 +581,104 @@ class MainWindow(QMainWindow):
     def _start_schedule(self) -> None: self.maint.start_schedule()
     def _sch(self) -> None: self.maint.sch()
     def _settings(self) -> None: self.maint.settings()
+    def _show_queue_panel(self) -> None:
+        """Show a popup panel displaying running/queued account status."""
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QGroupBox
+        from PySide6.QtCore import QTimer
+        d = QDialog(self)
+        d.setWindowTitle("队列状态")
+        d.setMinimumSize(400, 280)
+        l = QVBoxLayout(d)
+
+        running_grp = QGroupBox("▶ 运行中")
+        rl = QVBoxLayout(running_grp)
+        running_tbl = QTableWidget(0, 3)
+        running_tbl.setHorizontalHeaderLabels(["账号", "状态", "时长"])
+        running_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        running_tbl.setColumnWidth(1, 100)
+        running_tbl.setColumnWidth(2, 70)
+        running_tbl.verticalHeader().setVisible(False)
+        running_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
+        rl.addWidget(running_tbl)
+        l.addWidget(running_grp)
+
+        queue_grp = QGroupBox("⏳ 排队中")
+        ql = QVBoxLayout(queue_grp)
+        queue_tbl = QTableWidget(0, 4)
+        queue_tbl.setHorizontalHeaderLabels(["账号", "来源", "优先级", "预计启动"])
+        queue_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        queue_tbl.setColumnWidth(1, 60)
+        queue_tbl.setColumnWidth(2, 50)
+        queue_tbl.setColumnWidth(3, 100)
+        queue_tbl.verticalHeader().setVisible(False)
+        queue_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
+        ql.addWidget(queue_tbl)
+        l.addWidget(queue_grp)
+
+        def _refresh():
+            import time
+            # Running
+            running = []
+            if hasattr(self, "runner"):
+                for aid in self.runner.active_ids():
+                    a = next((x for x in self.accounts if x["id"] == aid), None)
+                    name = a["name"] if a else aid[:8]
+                    t = int(time.time() - self.runner._start_times.get(aid, 0))
+                    status = f"运行中 {t//60}m{t%60}s"
+                    running.append((name, status, ""))
+                # Also check pipeline procs
+                for pid in list(getattr(self, "_running_procs", {}).keys()):
+                    p = self._running_procs[pid]
+                    if p.poll() is None:
+                        w = next((x for x in self.warehouse if x["id"] == pid), None)
+                        ac = next((x for x in self.accounts if x["id"] == w.get("account_ref", "")), None) if w else None
+                        name = ac["name"] if ac else (Path(w["path"]).stem if w else pid[:8])
+                        t = int(time.time() - self._proc_start_times.get(pid, 0))
+                        running.append((name, f"运行中 {t//60}m{t%60}s", ""))
+            running_tbl.setRowCount(max(1, len(running)) if running else 1)
+            if running:
+                for i, (name, status, _) in enumerate(running):
+                    running_tbl.setItem(i, 0, QTableWidgetItem(name))
+                    running_tbl.setItem(i, 1, QTableWidgetItem(status))
+            else:
+                running_tbl.setItem(0, 0, QTableWidgetItem("—"))
+                running_tbl.setItem(0, 1, QTableWidgetItem("无"))
+
+            # Queue
+            queue = []
+            if hasattr(self, "launch_queue"):
+                src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
+                now = __import__("datetime").datetime.now()
+                for e in sorted(self.launch_queue._pending, key=lambda x: x.sort_key):
+                    a = next((x for x in self.accounts if x["id"] == e.account_id), None)
+                    name = a["name"] if a else e.account_id[:8]
+                    when = ""
+                    if e.not_before > now:
+                        diff = int((e.not_before - now).total_seconds() / 60)
+                        if diff > 60:
+                            when = e.not_before.strftime("%m-%d %H:%M")
+                        else:
+                            when = f"{diff}分钟后"
+                    else:
+                        when = "等待空闲"
+                    queue.append((name, src_map.get(e.source, e.source), str(e.sort_key[0]), when))
+            queue_tbl.setRowCount(max(1, len(queue)) if queue else 1)
+            if queue:
+                for i, (name, src, pri, when) in enumerate(queue):
+                    queue_tbl.setItem(i, 0, QTableWidgetItem(name))
+                    queue_tbl.setItem(i, 1, QTableWidgetItem(src))
+                    queue_tbl.setItem(i, 2, QTableWidgetItem(pri))
+                    queue_tbl.setItem(i, 3, QTableWidgetItem(when))
+            else:
+                queue_tbl.setItem(0, 0, QTableWidgetItem("—"))
+                queue_tbl.setItem(0, 1, QTableWidgetItem("无"))
+
+        _refresh()
+        timer = QTimer(d)
+        timer.timeout.connect(_refresh)
+        timer.start(2000)
+        d.finished.connect(timer.stop)
+        d.exec()
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin(); sys.exit(0)
