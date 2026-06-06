@@ -87,8 +87,9 @@ class SettingsDialog(QDialog):
         set_auto_start(self.c["auto_start"]); self.accept()
 
 class AccountDialog(QDialog):
-    def __init__(self,p,acc=None):
+    def __init__(self,p,acc=None,task_pipeline=""):
         super().__init__(p); self.setWindowTitle("编辑账号" if acc else "新建账号"); self.setMinimumSize(540,520); self.a=acc or {}
+        self._pipe = task_pipeline
         l=QVBoxLayout(self); l.setContentsMargins(12,12,12,8); l.setSpacing(0)
         hdr=QHBoxLayout(); hdr.addWidget(QLabel("MAA 账号配置",font=QFont("Microsoft YaHei UI",14,QFont.Bold))); hdr.addStretch(); l.addLayout(hdr)
         l.addSpacing(6)
@@ -126,9 +127,10 @@ class AccountDialog(QDialog):
         # ── 任务 ──
         f.addRow(QWidget(), _sec("默认任务"))
         self.tk={}; kw=QWidget(); kl=QHBoxLayout(kw); kl.setContentsMargins(0,0,0,0); kl.setSpacing(6)
+        enabled_tasks = set(t.strip().lower() for t in self._pipe.split(",") if t.strip())
         for k,v in TASK_NAMES.items():
             if k=="closedown": continue
-            cb=QCheckBox(v); cb.setChecked(k in self.a.get("tasks",["StartUp","Fight"])); self.tk[k]=cb; kl.addWidget(cb)
+            cb=QCheckBox(v); cb.setChecked(k.lower() in enabled_tasks if self._pipe else k in ("StartUp","Fight")); self.tk[k]=cb; kl.addWidget(cb)
         kl.addStretch(); f.addRow(_lbl(""),kw)
 
         # ── 启动选项 ──
@@ -149,7 +151,11 @@ class AccountDialog(QDialog):
     def _save(self):
         p=self.pc.currentText()
         if p=="— 无 —": p=""
-        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"tasks":[t for t,cb in self.tk.items() if cb.isChecked()],"fight_stage":self.fs.text().strip(),"task_settings":self.a.get("task_settings",{}),"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"sanity_driven":self.sanity_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
+        pipe=",".join(t for t,cb in self.tk.items() if cb.isChecked())
+        ts=self.a.get("task_settings",{})
+        if self.fs.text().strip():
+            ts.setdefault("Fight",{})["stage"]=self.fs.text().strip()
+        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"sanity_driven":self.sanity_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
 
 
 def _sec(title: str) -> QLabel:

@@ -274,9 +274,15 @@ def _edit(mw: Any, idx: int) -> None:
     if idx < 0 or idx >= len(mw.accounts):
         return
     a = mw.accounts[idx]
-    d = AccountDialog(mw, a)
+    progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
+    pipe = progs[0].get("task_pipeline", "") if progs else ""
+    d = AccountDialog(mw, a, pipe)
     if d.exec() == 1:
         mw.accounts[idx].update(d.r)
+        if "task_pipeline" in d.r:
+            for w in mw.warehouse:
+                if w.get("account_ref") == a["id"]:
+                    w["task_pipeline"] = d.r["task_pipeline"]
         mw._save()
         mw._ra()
         _rebuild(mw)
