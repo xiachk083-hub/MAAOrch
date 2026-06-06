@@ -539,6 +539,58 @@ def _build_adb_card(mw: Any, row: int) -> None:
 
 # ── Pipeline card ──
 
+def _batch_apply(mw: Any, src_acc: dict, src_progs: list[dict], src_row: int) -> None:
+    """Open dialog to apply current account's config to selected accounts."""
+    from PySide6.QtWidgets import QDialog, QVBoxLayout, QCheckBox, QPushButton, QLabel
+    from PySide6.QtGui import QFont
+
+    d = QDialog(mw)
+    d.setWindowTitle("批量应用配置")
+    d.setMinimumSize(350, 280)
+    l = QVBoxLayout(d)
+
+    l.addWidget(QLabel("选择要应用配置的目标账号：", font=QFont("Microsoft YaHei UI", 11)))
+    l.addWidget(QLabel(f"  来源：{src_acc.get('name', '?')}"))
+    l.addWidget(QLabel(f"  流水线：{src_progs[0].get('task_pipeline', '无') if src_progs else '无'}"))
+
+    checks = {}
+    for i, a in enumerate(mw.accounts):
+        if a["id"] == src_acc["id"]:
+            continue
+        cb = QCheckBox(a.get("name", f"账号{i+1}"))
+        cb.setChecked(True)
+        checks[a["id"]] = cb
+        l.addWidget(cb)
+
+    if not checks:
+        l.addWidget(QLabel("（没有其他账号可应用）"))
+
+    def _apply():
+        selected = [aid for aid, cb in checks.items() if cb.isChecked()]
+        if not selected:
+            d.accept()
+            return
+        src_pipe = src_progs[0].get("task_pipeline", "") if src_progs else ""
+        src_settings = src_acc.get("task_settings", {})
+        src_sync = src_acc.get("sync_tasks", False)
+        for a in mw.accounts:
+            if a["id"] not in selected:
+                continue
+            a["task_settings"] = dict(src_settings)
+            a["sync_tasks"] = src_sync
+            for w in mw.warehouse:
+                if w.get("account_ref") == a["id"]:
+                    w["task_pipeline"] = src_pipe
+        mw._save()
+        mw._log(f"批量应用配置到 {len(selected)} 个账号")
+        d.accept()
+
+    btn = QPushButton("应用")
+    btn.clicked.connect(_apply)
+    l.addWidget(btn)
+    d.exec()
+
+
 def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     a = mw.accounts[row]
 
@@ -626,6 +678,8 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     if a.get("task_templates", {}):
         tm.addSeparator()
     tm.addAction("💾 保存当前...", _sv_tmpl)
+    tm.addSeparator()
+    tm.addAction("📋 批量应用当前配置到...", lambda: _batch_apply(mw, a, progs, row))
     tmpl_btn.setMenu(tm)
     mr2.addWidget(tmpl_btn)
 
