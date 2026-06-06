@@ -796,19 +796,48 @@ def _build_launch_card(mw: Any, row: int) -> None:
 # ── Action buttons ──
 
 def _build_action_buttons(mw: Any, row: int, progs: list[dict]) -> None:
+    a = mw.accounts[row]
+
+    # ── Config summary bar ──
+    summary_parts = []
+    if a.get("adb_address", ""):
+        summary_parts.append(f"📱 {a['adb_address']}")
+    if a.get("emu_instance_index", ""):
+        summary_parts.append(f"🖥 MuMu#{a['emu_instance_index']}")
+    if a.sanity_driven:
+        summary_parts.append("💊 理智驱动")
+    if a.get("emu_launch"):
+        summary_parts.append("🖥 自启模拟器")
+    if a.start_minimized:
+        summary_parts.append("📐 最小化")
+    if a.start_directly:
+        summary_parts.append("⚡ 直接运行")
+    pipe = progs[0].get("task_pipeline", "") if progs else ""
+    if pipe:
+        tasks = pipe.split(",")[:5]
+        summary_parts.append(f"⚙ {'·'.join(tasks)}")
+    if summary_parts:
+        summary_text = "  │  ".join(summary_parts)
+        summary_lbl = QLabel(summary_text)
+        summary_lbl.setStyleSheet("color:#888;padding:4px 0;font-size:10pt")
+        summary_lbl.setWordWrap(True)
+        mw.adl.addWidget(summary_lbl)
+
+    # ── Buttons ──
     bw = QWidget()
     bl = QHBoxLayout(bw)
     bl.setContentsMargins(0, 0, 0, 0)
 
     if progs:
-        lb2 = QPushButton("▶ 启动")
+        lb2 = QPushButton("▶ 加入队列")
         lb2.setObjectName("startBtn")
         lb2.setMinimumHeight(36)
         lb2.setFont(QFont("Microsoft YaHei UI", 12, QFont.Bold))
-        lb2.clicked.connect(lambda: mw._la(row))
+        lb2.setToolTip("入队后立刻启动（若模拟器空闲）")
+        lb2.clicked.connect(lambda: (mw.launch_queue.enqueue(a["id"], "manual", priority=0), mw.launch_queue._tick()))
         mw._dash_refs["action_launch_btn"] = lb2
         bl.addWidget(lb2)
-        launch_all_btn = QPushButton("▶ 启动全部", clicked=lambda: mw._la_all())
+        launch_all_btn = QPushButton("▶ 全部入队", clicked=lambda: mw._la_all())
         mw._dash_refs["action_launch_all_btn"] = launch_all_btn
         bl.addWidget(launch_all_btn)
         upd_btn = QPushButton("检查更新", clicked=lambda: mw.maint.cu_single(progs[0]))
