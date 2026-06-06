@@ -22,8 +22,8 @@ from callbacks import ServiceContext
 from runner import AccountRunner
 from launch_queue import LaunchQueue
 from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_threads
-from ui.groups_panel import build_groups_panel
 from ui.accounts_panel import build_accounts_panel
+from ui.queue_panel import build_queue_panel, refresh_queue_view
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize
@@ -60,7 +60,7 @@ class MainWindow(QMainWindow):
         self.groups=self.config.get("groups",[]); self.warehouse=self.config.get("warehouse",[])
         self.accounts=self.config.get("accounts",[]); self.selected_group_idx=None
         self.pipeline_thread=None; self.schedule_thread=None; self.update_thread=None
-        self._log_expanded=False; self._view_tab="group"; self._main_tab="groups"
+        self._log_expanded=False; self._main_tab="queue"
         self._running_procs={}; self._proc_status=set(); self._restart_cnt=defaultdict(int); self._cli_procs={}
         self._proc_start_times={}; self._emu_status={}
         fm=self.fontMetrics(); self._row_h=max(28,fm.height()+8); self._btn_sm=max(18,fm.height()+2); self._btn_lg=max(28,int(fm.height()*1.6))
@@ -99,7 +99,8 @@ class MainWindow(QMainWindow):
         self.launch_queue.log_msg.connect(lambda m: self._log(m))
         self.runner.account_finished.connect(self.launch_queue.on_account_finished)
         self.launch_queue.start()
-        self._build_ui(); self.maint.restore_geometry(); self._rgl(); self._log("══ 启动 ══")
+        self._build_ui(); self.maint.restore_geometry(); self._log("══ 启动 ══")
+        self._sw("queue")  # Default to queue tab
         self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         self._emu_monitor=EmuMonitor()
@@ -176,29 +177,30 @@ class MainWindow(QMainWindow):
         tb = QFrame()
         th = QHBoxLayout(tb)
         th.setContentsMargins(0, 0, 0, 4)
-        self.tg = QPushButton("📋 分组")
-        self.tg.setObjectName("tabBtnActive")
-        self.tg.clicked.connect(lambda: self._sw("groups"))
-        self.ta = QPushButton("👤 账号")
-        self.ta.setObjectName("tabBtn")
-        self.ta.clicked.connect(lambda: self._sw("accounts"))
+        self.tg = QPushButton("👤 账号")
+        self.tg.setObjectName("tabBtn")
+        self.tg.clicked.connect(lambda: self._sw("accounts"))
+        self.ta = QPushButton("⏳ 队列")
+        self.ta.setObjectName("tabBtnActive")
+        self.ta.clicked.connect(lambda: self._sw("queue"))
         th.addWidget(self.tg)
         th.addWidget(self.ta)
         th.addStretch()
-        self.qs = QPushButton("▶ 启动流水线")
+        self.qs = QPushButton("▶ 启动全部")
         self.qs.setObjectName("startBtn")
-        self.qs.clicked.connect(self._start_pipeline)
+        self.qs.clicked.connect(lambda: self._la_all())
         th.addWidget(self.qs)
         ml.addWidget(tb)
-
-        # Groups panel
-        build_groups_panel(self)
-        ml.addWidget(self.gv, 1)
 
         # Accounts panel
         build_accounts_panel(self)
         self.av.hide()
         ml.addWidget(self.av, 1)
+
+        # Queue panel
+        build_queue_panel(self)
+        self.qv.hide()
+        ml.addWidget(self.qv, 1)
 
         # Log panel
         self.log_text = QPlainTextEdit()
@@ -229,7 +231,6 @@ class MainWindow(QMainWindow):
         mb = self.menuBar()
         tm = mb.addMenu("工具")
         tm.addAction("定时", self._sch)
-        tm.addAction("队列状态", self._show_queue_panel)
         tm.addAction("检查更新", lambda: self.maint.check_updates())
         tm.addAction("设置", self._settings)
         tm.addAction("日志", self._tlog)
@@ -238,19 +239,17 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+Return"), self, self._start_pipeline)
         QShortcut(QKeySequence("Esc"), self, self._stop_pipeline)
 
-        self._st("group")
-        self._sw("groups")
-
     def _sw(self, tab: str) -> None:
-        self._main_tab=tab; self.gv.setVisible(tab=="groups"); self.av.setVisible(tab=="accounts")
-        if tab=="groups":
+        self._main_tab=tab; self.av.setVisible(tab=="accounts"); self.qv.setVisible(tab=="queue")
+        if tab=="accounts":
             self.tg.setObjectName("tabBtnActive"); self.tg.style().unpolish(self.tg); self.tg.style().polish(self.tg)
             self.ta.setObjectName("tabBtn"); self.ta.style().unpolish(self.ta); self.ta.style().polish(self.ta)
+            self._ra()
+            if self.accounts: self.at.setCurrentCell(0,0)
         else:
             self.tg.setObjectName("tabBtn"); self.tg.style().unpolish(self.tg); self.tg.style().polish(self.tg)
             self.ta.setObjectName("tabBtnActive"); self.ta.style().unpolish(self.ta); self.ta.style().polish(self.ta)
-            self._ra()
-            if self.accounts: self.at.setCurrentCell(0,0)
+            refresh_queue_view(self)
     def _st(self, tab: str) -> None:
         self._view_tab=tab; is_w=tab=="warehouse"; self.wv.setVisible(is_w); self.gv2.setVisible(not is_w)
         if is_w:
@@ -470,6 +469,7 @@ class MainWindow(QMainWindow):
             self._tlog()
         aid = self.accounts[row]["id"]
         self.launch_queue.enqueue(aid, "manual", priority=0)
+        self.launch_queue._tick()  # Launch immediately
 
     def _la_all(self) -> None:
         """Batch enqueue all accounts with schedule priority."""
@@ -477,6 +477,7 @@ class MainWindow(QMainWindow):
         self._log_expanded = True
         self.log_text.setFixedHeight(150)
         self.launch_queue.enqueue_batch("manual", priority=0)
+        self.launch_queue._tick()  # Launch immediately
 
     def _on_account_started(self, aid: str) -> None:
         a = next((x for x in self.accounts if x["id"] == aid), None)
@@ -555,15 +556,16 @@ class MainWindow(QMainWindow):
 
     def _poll(self) -> None:
         self.maint.poll()
+        refresh_queue_view(self)
         # Append queue status to status bar
         if hasattr(self, "launch_queue"):
             qs = self.launch_queue.pending_summary()
             if qs:
                 cur = self.sl.text()
                 if cur.startswith(" 就绪"):
-                    self.sl.setText(f" 就绪 | {qs}")
+                    self.sl.setText(f" 就绪 | 队列: {self.launch_queue.pending_count}等待, {self.launch_queue.active_count}运行")
                 elif cur.startswith(" 运行中"):
-                    self.sl.setText(f"{cur}  |  {qs}")
+                    self.sl.setText(f"{cur}  |  ⏳{self.launch_queue.pending_count}")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _check_updates(self, silent: bool = False) -> None: self.maint.check_updates(silent=False)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
