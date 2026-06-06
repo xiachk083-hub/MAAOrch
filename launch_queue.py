@@ -148,9 +148,12 @@ class LaunchQueue(QObject):
     # ── Internal ──
 
     def _tick(self) -> None:
-        """Check queue and launch the next eligible account."""
+        """Check queue and launch all eligible accounts (parallel across different emus)."""
         now = datetime.now()
         heapq = self._import_heapq()
+
+        to_launch = []
+        remaining = []
 
         while self._pending:
             entry = heapq.heappop(self._pending)
@@ -160,16 +163,16 @@ class LaunchQueue(QObject):
                 self.skipped.emit(entry.account_id, "已在运行")
                 continue
 
-            # ② Not yet time?
+            # ② Not yet time? Push back, stop checking this priority level
             if now < entry.not_before:
-                heapq.heappush(self._pending, entry)
-                return  # Later entries also not ready (sorted by not_before)
+                remaining.append(entry)
+                continue
 
-            # ③ Emulator occupied?
+            # ③ Emulator occupied? Keep in queue
             emu_idx = self._get_emu_idx(entry.account_id)
             if emu_idx and emu_idx in self._active_emus:
                 self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
-                heapq.heappush(self._pending, entry)
+                remaining.append(entry)
                 continue
 
             # ④ Sanity check (sanity-driven only)
@@ -183,12 +186,23 @@ class LaunchQueue(QObject):
                         self.skipped.emit(entry.account_id, "理智不足")
                         continue
 
-            # ⑤ All checks passed — launch!
+            to_launch.append(entry)
+
+        # Push back remaining entries
+        for entry in remaining:
+            heapq.heappush(self._pending, entry)
+
+        # Launch all eligible (emu conflicts resolved: first marks emu busy, second skips)
+        for entry in to_launch:
+            emu_idx = self._get_emu_idx(entry.account_id)
+            if emu_idx and emu_idx in self._active_emus:
+                # Already taken by a previous launch in this batch
+                heapq.heappush(self._pending, entry)
+                continue
             self._active_emus[emu_idx] = entry.account_id
             if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
                 self.ctx._mw.runner.launch_by_id(entry.account_id)
             self.launched.emit(entry.account_id)
-            break  # One at a time
 
     def _get_emu_idx(self, account_id: str) -> str:
         for a in self.ctx.accounts:
