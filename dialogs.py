@@ -146,10 +146,6 @@ class AccountDialog(QDialog):
         scroll.setWidget(sw); l.addWidget(scroll,1)
         b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
         self.setStyleSheet("QScrollArea{background:transparent} QDialog{background:rgba(30,30,30,240)}")
-
-        scroll.setWidget(sw); l.addWidget(scroll,1)
-        b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
-        self.setStyleSheet("QScrollArea{background:transparent} QFrame#configCard{background:transparent}")
     def _save(self):
         p=self.pc.currentText()
         if p=="— 无 —": p=""
