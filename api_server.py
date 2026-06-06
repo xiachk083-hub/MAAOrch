@@ -51,6 +51,7 @@ class ApiServer(QThread):
                 if p.startswith("/api/account/") and p.endswith("/status"): return s._handle_account_status(p)
                 if p.startswith("/api/account/") and p.endswith("/stats"): return s._handle_account_stats(p)
                 if p=="/api/stats": return s._handle_all_stats()
+                if p=="/api/queue": return s._handle_queue_status()
                 if p=="/api/logs": return s._handle_logs(s.path)
                 s._json({"error":"not found"},404)
             def do_POST(s):
@@ -64,6 +65,8 @@ class ApiServer(QThread):
                 if p=="/api/pipeline/pause": return s._handle_pipeline_pause(body)
                 if p.startswith("/api/account/") and p.endswith("/launch"): return s._handle_account_launch(p)
                 if p=="/api/config/sync": return s._handle_config_sync(body)
+                if p=="/api/queue/enqueue": return s._handle_queue_enqueue(body)
+                if p=="/api/queue/dequeue": return s._handle_queue_dequeue(body)
                 s._json({"error":"not found"},404)
             def _handle_status(s):
                 accts=[]
@@ -150,6 +153,48 @@ class ApiServer(QThread):
                     (d/"gui.new.json").write_text(json.dumps(gui_json,ensure_ascii=False,indent=2),encoding="utf-8")
                     s._json({"ok":True})
                 except Exception as e: s._json({"error":str(e)},500)
+            def _handle_queue_status(s):
+                lq=getattr(mw,"launch_queue",None)
+                if not lq: return s._json({"error":"queue not available"},500)
+                pending=[]
+                src_map={"manual":"手动","schedule":"定时","sanity":"理智"}
+                for e in sorted(lq._pending,key=lambda x:x.sort_key):
+                    a=next((x for x in mw.accounts if x["id"]==e.account_id),None)
+                    pending.append({"account_id":e.account_id,"account_name":a.get("name","") if a else "","source":src_map.get(e.source,e.source),"priority":e.sort_key[0],"not_before":e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
+                active=list(lq._active_emus.values())
+                s._json({"pending":pending,"active":active,"pending_count":len(pending),"active_count":len(active)})
+            def _handle_queue_enqueue(s,body):
+                lq=getattr(mw,"launch_queue",None)
+                if not lq: return s._json({"error":"queue not available"},500)
+                idx=body.get("account_index",-1)
+                if isinstance(idx,str):
+                    try: idx=int(idx)
+                    except: idx=-1
+                if idx<0 or idx>=len(mw.accounts): return s._json({"error":"invalid account_index"},400)
+                aid=mw.accounts[idx]["id"]
+                source=body.get("source","manual")
+                priority=body.get("priority",0)
+                not_before_str=body.get("not_before","")
+                not_before=None
+                if not_before_str:
+                    from datetime import datetime as dt
+                    try: not_before=dt.strptime(not_before_str,"%Y-%m-%d %H:%M:%S")
+                    except: pass
+                lq.enqueue(aid,source,priority,not_before)
+                s._json({"ok":True,"account_id":aid,"pending_count":lq.pending_count})
+            def _handle_queue_dequeue(s,body):
+                lq=getattr(mw,"launch_queue",None)
+                if not lq: return s._json({"error":"queue not available"},500)
+                aid=body.get("account_id","")
+                if not aid:
+                    idx=body.get("account_index",-1)
+                    if isinstance(idx,str):
+                        try: idx=int(idx)
+                        except: idx=-1
+                    if 0<=idx<len(mw.accounts): aid=mw.accounts[idx]["id"]
+                if not aid: return s._json({"error":"invalid account"},400)
+                lq.dequeue(aid)
+                s._json({"ok":True,"account_id":aid,"pending_count":lq.pending_count})
         try:
             self._httpd=HTTPServer(("127.0.0.1",self.port),Handler)
             self.log_msg.emit(f"API 服务已启动: http://127.0.0.1:{self.port}")

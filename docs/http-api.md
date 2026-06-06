@@ -159,6 +159,74 @@ Response 200:
 
 ---
 
+### 队列控制
+
+**`GET /api/queue`**
+
+查看当前启动队列状态。
+
+```
+Response 200:
+{
+  "pending": [
+    {
+      "account_id": "abc123",
+      "account_name": "小号",
+      "source": "理智",
+      "priority": 2,
+      "not_before": "2026-06-07 04:30:00"
+    }
+  ],
+  "active": ["def456"],
+  "pending_count": 1,
+  "active_count": 1
+}
+```
+
+---
+
+**`POST /api/queue/enqueue`**
+
+将账号加入启动队列。
+
+```
+Request:
+{
+  "account_index": 1,
+  "source": "manual",
+  "priority": 0,
+  "not_before": "2026-06-07 04:30:00"
+}
+
+Response 200:
+{"ok": true, "account_id": "def456", "pending_count": 2}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `account_index` | int | 账号列表中序号 |
+| `source` | string | 来源：manual/schedule/sanity |
+| `priority` | int | 优先级，0=最高 |
+| `not_before` | string | 不早于这个时间启动（可选） |
+
+---
+
+**`POST /api/queue/dequeue`**
+
+从队列中移除账号。
+
+```
+Request:
+{"account_index": 1}
+或
+{"account_id": "def456"}
+
+Response 200:
+{"ok": true, "account_id": "def456", "pending_count": 0}
+```
+
+---
+
 ### 统计
 
 **`GET /api/account/{index}/stats`**

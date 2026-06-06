@@ -126,6 +126,9 @@ MAAOrch 启动后自动在 `127.0.0.1:19999` 开启 REST 服务（端口可在�
 | `/api/config/sync` | POST | 下发 MAA gui.json 配置到指定账号 |
 | `/api/account/{index}/stats` | GET | 单个账号运行统计 |
 | `/api/stats` | GET | 全部账号统计汇总 |
+| `/api/queue` | GET | 队列状态（排队+运行中） |
+| `/api/queue/enqueue` | POST | 入队（`{"account_index":0,"source":"manual"}`） |
+| `/api/queue/dequeue` | POST | 取消排队（`{"account_index":0}`） |
 
 安全措施：
 

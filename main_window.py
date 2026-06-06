@@ -604,12 +604,13 @@ class MainWindow(QMainWindow):
 
         queue_grp = QGroupBox("⏳ 排队中")
         ql = QVBoxLayout(queue_grp)
-        queue_tbl = QTableWidget(0, 4)
-        queue_tbl.setHorizontalHeaderLabels(["账号", "来源", "优先级", "预计启动"])
+        queue_tbl = QTableWidget(0, 5)
+        queue_tbl.setHorizontalHeaderLabels(["账号", "来源", "优先级", "预计启动", ""])
         queue_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         queue_tbl.setColumnWidth(1, 60)
         queue_tbl.setColumnWidth(2, 50)
         queue_tbl.setColumnWidth(3, 100)
+        queue_tbl.setColumnWidth(4, 50)
         queue_tbl.verticalHeader().setVisible(False)
         queue_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
         ql.addWidget(queue_tbl)
@@ -661,14 +662,25 @@ class MainWindow(QMainWindow):
                             when = f"{diff}分钟后"
                     else:
                         when = "等待空闲"
-                    queue.append((name, src_map.get(e.source, e.source), str(e.sort_key[0]), when))
+                    queue.append((name, src_map.get(e.source, e.source), str(e.sort_key[0]), when, e.account_id))
             queue_tbl.setRowCount(max(1, len(queue)) if queue else 1)
             if queue:
-                for i, (name, src, pri, when) in enumerate(queue):
+                for i, (name, src, pri, when, aid) in enumerate(queue):
                     queue_tbl.setItem(i, 0, QTableWidgetItem(name))
                     queue_tbl.setItem(i, 1, QTableWidgetItem(src))
                     queue_tbl.setItem(i, 2, QTableWidgetItem(pri))
                     queue_tbl.setItem(i, 3, QTableWidgetItem(when))
+                    cancel_btn = QPushButton("✕")
+                    cancel_btn.setFixedSize(self._btn_lg, self._btn_lg)
+                    cancel_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none}QPushButton:hover{background:#d32f2f;color:#fff;border-radius:" + str(self._btn_lg // 2) + "px}")
+                    cancel_btn.setToolTip("取消排队")
+                    cancel_btn.clicked.connect(lambda c, a=aid: (self.launch_queue.dequeue(a), _refresh()))
+                    cw = QWidget()
+                    cwl = QHBoxLayout(cw)
+                    cwl.setContentsMargins(0, 0, 0, 0)
+                    cwl.setAlignment(Qt.AlignCenter)
+                    cwl.addWidget(cancel_btn)
+                    queue_tbl.setCellWidget(i, 4, cw)
             else:
                 queue_tbl.setItem(0, 0, QTableWidgetItem("—"))
                 queue_tbl.setItem(0, 1, QTableWidgetItem("无"))
