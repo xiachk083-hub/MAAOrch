@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QComboBox, QDoubleSpinBox, QSpinBox, QGroupBox,
+    QComboBox, QDoubleSpinBox, QSpinBox,
 )
 from stats import RunStats
 
@@ -16,54 +16,64 @@ def build_schedule_panel(mw: Any) -> QWidget:
     """Build the round-robin schedule management tab."""
     mw.sv = QWidget()
     svl = QVBoxLayout(mw.sv)
-    svl.setContentsMargins(6, 6, 6, 6)
-    svl.setSpacing(6)
+    svl.setContentsMargins(8, 8, 8, 8)
+    svl.setSpacing(8)
 
-    # ── Global settings ──
-    gs = QGroupBox("全局设置")
-    gsl = QHBoxLayout(gs)
-    mw._sch_enabled_cb = QCheckBox("启用循环调度")
+    # ── Header bar ──
+    hdr = QHBoxLayout()
+    hdr.addWidget(QLabel("⚙ 循环调度", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
+    hdr.addStretch()
+
+    mw._sch_enabled_cb = QCheckBox(" 启用")
     mw._sch_enabled_cb.setChecked(mw.config.get("round_robin_enabled", False))
     mw._sch_enabled_cb.toggled.connect(lambda: mw._save())
-    gsl.addWidget(mw._sch_enabled_cb)
+    hdr.addWidget(mw._sch_enabled_cb)
 
-    gsl.addWidget(QLabel("最大并行:"))
+    hdr.addWidget(QLabel("  最大并行:"))
     mw._sch_parallel_sp = QSpinBox()
     mw._sch_parallel_sp.setRange(1, 10)
     mw._sch_parallel_sp.setValue(mw.config.get("parallel_max", 1))
+    mw._sch_parallel_sp.setFixedWidth(50)
     mw._sch_parallel_sp.valueChanged.connect(lambda: mw._save())
-    gsl.addWidget(mw._sch_parallel_sp)
-    gsl.addWidget(QLabel("个 MAA"))
-    gsl.addStretch()
+    hdr.addWidget(mw._sch_parallel_sp)
+    hdr.addWidget(QLabel(" 个 "))
+    hdr.addSpacing(8)
 
-    save_btn = QPushButton("保存")
+    save_btn = QPushButton(" 保存 ")
+    save_btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:5px;padding:4px 12px;font-size:9pt}QPushButton:hover{background:#1e5a28}")
     save_btn.clicked.connect(lambda: _save_schedule(mw))
-    gsl.addWidget(save_btn)
-    svl.addWidget(gs)
+    hdr.addWidget(save_btn)
+    svl.addLayout(hdr)
 
-    # ── Account table ──
-    mw._sch_tbl = QTableWidget(0, 6)
-    mw._sch_tbl.setHorizontalHeaderLabels(["账号", "参与", "模式", "间隔(小时)", "最低理智", "下次预计"])
-    mw._sch_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-    mw._sch_tbl.setColumnWidth(1, 50)
-    mw._sch_tbl.setColumnWidth(2, 70)
-    mw._sch_tbl.setColumnWidth(3, 70)
-    mw._sch_tbl.setColumnWidth(4, 60)
-    mw._sch_tbl.setColumnWidth(5, 100)
-    mw._sch_tbl.verticalHeader().setVisible(False)
-    mw._sch_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
-    svl.addWidget(mw._sch_tbl, 1)
+    # ── Table ──
+    tbl = QTableWidget(0, 6)
+    tbl.setHorizontalHeaderLabels(["账号", "", "模式", "间隔", "最低理智", "下次预计"])
+    tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+    tbl.setColumnWidth(1, 30)
+    tbl.setColumnWidth(2, 80)
+    tbl.setColumnWidth(3, 70)
+    tbl.setColumnWidth(4, 70)
+    tbl.setColumnWidth(5, 90)
+    tbl.verticalHeader().setVisible(False)
+    tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    tbl.setShowGrid(False)
+    tbl.setAlternatingRowColors(True)
+    tbl.verticalHeader().setDefaultSectionSize(32)
+    tbl.setStyleSheet("QTableWidget{background:transparent;border:none} QTableWidget::item{color:#ccc;padding:2px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #333;padding:4px 6px;font-size:9pt;font-weight:bold}")
+    mw._sch_tbl = tbl
+    svl.addWidget(tbl, 1)
 
-    svl.addWidget(QLabel("提示: 时间模式=跑完后N小时再启 | 体力模式=理智回满再启"))
+    # ── Hint ──
+    hint = QLabel("时间模式=跑完 N 小时后重新入队  |  体力模式=理智回满自动入队")
+    hint.setStyleSheet("color:#666;font-size:8pt;padding:2px 6px")
+    svl.addWidget(hint)
 
     return mw.sv
 
 
 def refresh_schedule_view(mw: Any) -> None:
-    """Refresh the schedule table with current account data."""
     if not hasattr(mw, "_sch_tbl"):
         return
-
     tbl = mw._sch_tbl
     mode_map = {"sanity": "体力回满", "time": "时间"}
 
@@ -71,86 +81,68 @@ def refresh_schedule_view(mw: Any) -> None:
         if tbl.rowCount() <= i:
             tbl.insertRow(i)
 
-        # Name
         tbl.setItem(i, 0, QTableWidgetItem(a.get("name", "")))
 
-        # Enable checkbox
+        # ── Enable ──
         cb = QCheckBox()
         cb.setChecked(a.get("round_robin", False))
         cb.stateChanged.connect(lambda s, idx=i: _on_cell_changed(mw, idx))
-        cw = QWidget()
-        cl = QHBoxLayout(cw); cl.setContentsMargins(0, 0, 0, 0); cl.setAlignment(Qt.AlignCenter); cl.addWidget(cb)
-        tbl.setCellWidget(i, 1, cw)
+        w = QWidget()
+        l = QHBoxLayout(w); l.setContentsMargins(0,0,0,0); l.setAlignment(Qt.AlignCenter); l.addWidget(cb)
+        tbl.setCellWidget(i, 1, w)
 
-        # Mode combo
+        # ── Mode ──
         cmb = QComboBox()
         cmb.addItems(["体力回满", "时间"])
-        cur_mode = a.get("round_robin_mode", "sanity")
-        cmb.setCurrentText(mode_map.get(cur_mode, "体力回满"))
+        cmb.setCurrentText(mode_map.get(a.get("round_robin_mode", "sanity"), "体力回满"))
+        cmb.setStyleSheet("QComboBox{color:#ccc;background:transparent;border:1px solid #555;border-radius:3px;padding:1px 4px;font-size:8pt} QComboBox:hover{border-color:#888}")
         cmb.currentIndexChanged.connect(lambda _, idx=i: _on_cell_changed(mw, idx))
         tbl.setCellWidget(i, 2, cmb)
 
-        # Hours spin
+        # ── Hours ──
         hsp = QDoubleSpinBox()
-        hsp.setRange(0.5, 72)
-        hsp.setValue(a.get("round_robin_hours", 0) or 2)
-        hsp.setDecimals(1)
-        hsp.setSingleStep(0.5)
+        hsp.setRange(0.5, 72); hsp.setValue(a.get("round_robin_hours", 0) or 2)
+        hsp.setDecimals(1); hsp.setSingleStep(0.5); hsp.setSuffix("h")
+        hsp.setStyleSheet("QDoubleSpinBox{color:#ccc;background:transparent;border:1px solid #555;border-radius:3px;padding:1px 4px;font-size:8pt}")
         hsp.valueChanged.connect(lambda _, idx=i: _on_cell_changed(mw, idx))
         tbl.setCellWidget(i, 3, hsp)
 
-        # Min sanity
+        # ── Min sanity ──
         msp = QSpinBox()
-        msp.setRange(0, 999)
-        msp.setValue(a.get("min_sanity", 0))
+        msp.setRange(0, 999); msp.setValue(a.get("min_sanity", 0))
+        msp.setStyleSheet("QSpinBox{color:#ccc;background:transparent;border:1px solid #555;border-radius:3px;padding:1px 4px;font-size:8pt}")
         msp.valueChanged.connect(lambda _, idx=i: _on_cell_changed(mw, idx))
         tbl.setCellWidget(i, 4, msp)
 
-        # Next launch estimate
-        nxt = _estimate_next(mw, a["id"])
-        tbl.setItem(i, 5, QTableWidgetItem(nxt))
+        # ── Next ──
+        nxt = QLabel(_estimate_next(mw, a["id"]))
+        nxt.setStyleSheet("color:#888;font-size:8pt")
+        nxt.setAlignment(Qt.AlignCenter)
+        tbl.setCellWidget(i, 5, nxt)
 
-    # Remove extra rows
     while tbl.rowCount() > len(mw.accounts):
         tbl.removeRow(tbl.rowCount() - 1)
 
 
 def _on_cell_changed(mw: Any, idx: int) -> None:
-    """Read current table values and save back to account."""
-    tbl = mw._sch_tbl
-    a = mw.accounts[idx]
+    tbl = mw._sch_tbl; a = mw.accounts[idx]
     mode_map = {"体力回满": "sanity", "时间": "time"}
 
-    # Checkbox
-    cb_w = tbl.cellWidget(idx, 1)
-    if cb_w:
-        cb = cb_w.findChild(QCheckBox)
-        if cb:
-            a["round_robin"] = cb.isChecked()
-
-    # Mode
-    cmb = tbl.cellWidget(idx, 2)
-    if cmb:
+    if w := tbl.cellWidget(idx, 1):
+        if cb := w.findChild(QCheckBox): a["round_robin"] = cb.isChecked()
+    if cmb := tbl.cellWidget(idx, 2):
         a["round_robin_mode"] = mode_map.get(cmb.currentText(), "sanity")
-
-    # Hours
-    hsp = tbl.cellWidget(idx, 3)
-    if hsp:
+    if hsp := tbl.cellWidget(idx, 3):
         a["round_robin_hours"] = hsp.value()
-
-    # Min sanity
-    msp = tbl.cellWidget(idx, 4)
-    if msp:
+    if msp := tbl.cellWidget(idx, 4):
         a["min_sanity"] = msp.value()
 
 
 def _save_schedule(mw: Any) -> None:
-    """Save global settings and all account round_robin changes."""
     if hasattr(mw, "_sch_enabled_cb"):
         mw.config["round_robin_enabled"] = mw._sch_enabled_cb.isChecked()
     if hasattr(mw, "_sch_parallel_sp"):
         mw.config["parallel_max"] = mw._sch_parallel_sp.value()
-    # Read all cell values
     for i in range(len(mw.accounts)):
         _on_cell_changed(mw, i)
     mw._save()
@@ -158,20 +150,15 @@ def _save_schedule(mw: Any) -> None:
 
 
 def _estimate_next(mw: Any, aid: str) -> str:
-    """Estimate next launch time for an account."""
     try:
-        st = RunStats(aid)
-        s = st.get_last_sanity()
+        st = RunStats(aid); s = st.get_last_sanity()
         if s:
-            deficit = s["deficit"]
             from datetime import datetime, timedelta
-            nxt = datetime.now() + timedelta(minutes=deficit * 6)
+            nxt = datetime.now() + timedelta(minutes=s["deficit"] * 6)
             return nxt.strftime("%m-%d %H:%M")
     except Exception:
         pass
-    # Check queue
     if hasattr(mw, "launch_queue"):
-        pending = mw.launch_queue.get_next_for(aid)
-        if pending and pending != "即将启动":
-            return pending
+        p = mw.launch_queue.get_next_for(aid)
+        if p and p != "即将启动": return p
     return "—"
