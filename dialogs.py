@@ -88,59 +88,64 @@ class SettingsDialog(QDialog):
 
 class AccountDialog(QDialog):
     def __init__(self,p,acc=None):
-        super().__init__(p); self.setWindowTitle("编辑账号" if acc else "新建账号"); self.setMinimumSize(520,500); self.a=acc or {}
-        l=QVBoxLayout(self); l.setSpacing(0)
-        # Header
+        super().__init__(p); self.setWindowTitle("编辑账号" if acc else "新建账号"); self.setMinimumSize(540,520); self.a=acc or {}
+        l=QVBoxLayout(self); l.setContentsMargins(12,12,12,8); l.setSpacing(0)
         hdr=QHBoxLayout(); hdr.addWidget(QLabel("MAA 账号配置",font=QFont("Microsoft YaHei UI",14,QFont.Bold))); hdr.addStretch(); l.addLayout(hdr)
-        l.addSpacing(8)
+        l.addSpacing(6)
 
         scroll=QScrollArea(); scroll.setWidgetResizable(True); scroll.setFrameShape(QFrame.NoFrame)
-        sw=QWidget(); f=QFormLayout(sw); f.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow); f.setSpacing(6)
-        f.setContentsMargins(4,0,4,0)
+        sw=QWidget(); f=QFormLayout(sw); f.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow); f.setSpacing(4)
+        f.setContentsMargins(0,4,0,0)
 
         # ── 基本信息 ──
-        f.addRow(_sec("基本信息"))
-        self.n=QLineEdit(self.a.get("name","")); self.n.setPlaceholderText("例如: 官服大号"); f.addRow("账号名:",self.n)
+        f.addRow(QWidget(), _sec("基本信息"))
+        self.n=QLineEdit(self.a.get("name","")); self.n.setPlaceholderText("例如: 官服大号"); f.addRow(_lbl("账号名"),self.n)
         self.c=QComboBox()
         for k,v in CLIENT_TYPES.items(): self.c.addItem(v,k)
-        idx=self.c.findData(self.a.get("game_client","Official")); self.c.setCurrentIndex(max(0,idx)); f.addRow("区服:",self.c)
-        self.tags=QLineEdit(self.a.get("tags","")); self.tags.setPlaceholderText("逗号分隔，如 日常,材料,肉鸽"); f.addRow("标签:",self.tags)
-        self.fs=QLineEdit(self.a.get("fight_stage","")); self.fs.setPlaceholderText("关卡，如 1-7"); f.addRow("关卡:",self.fs)
+        idx=self.c.findData(self.a.get("game_client","Official")); self.c.setCurrentIndex(max(0,idx)); f.addRow(_lbl("区服"),self.c)
+        self.tags=QLineEdit(self.a.get("tags","")); self.tags.setPlaceholderText("逗号分隔，如 日常,材料,肉鸽"); f.addRow(_lbl("标签"),self.tags)
+        self.fs=QLineEdit(self.a.get("fight_stage","")); self.fs.setPlaceholderText("关卡，如 1-7"); f.addRow(_lbl("关卡"),self.fs)
 
-        # ── 连接设置 ──
-        f.addRow(_sec("连接设置"))
-        self.adr=QLineEdit(self.a.get("adb_address","")); self.adr.setPlaceholderText("例如: 127.0.0.1:7555"); f.addRow("ADB 地址:",self.adr)
-        self.adb=QLineEdit(self.a.get("adb_path","")); self.adb.setPlaceholderText("留空使用默认 ADB"); f.addRow("ADB 路径:",self.adb)
-        self.pc=QComboBox(); self.pc.addItems(["— 无 —","MuMuPro","PlayCover","Waydroid"]); self.pc.setCurrentText(self.a.get("connection_preset") or "— 无 —"); f.addRow("预设:",self.pc)
-        self.tc=QComboBox(); self.tc.addItems(["ADB","MiniTouch","MaaTouch"]); self.tc.setCurrentText(self.a.get("touch_mode","ADB")); f.addRow("触控:",self.tc)
-        self.sw_an=QLineEdit(self.a.get("account_switch","")); self.sw_an.setPlaceholderText("如 手机号或邮箱，留空不切换"); f.addRow("切换账号:",self.sw_an)
+        # ── 连接 ──
+        f.addRow(QWidget(), _sec("连接设置"))
+        self.adr=QLineEdit(self.a.get("adb_address","")); self.adr.setPlaceholderText("例如: 127.0.0.1:7555"); f.addRow(_lbl("ADB 地址"),self.adr)
+        self.adb=QLineEdit(self.a.get("adb_path","")); self.adb.setPlaceholderText("留空使用默认 ADB"); f.addRow(_lbl("ADB 路径"),self.adb)
+        self.pc=QComboBox(); self.pc.addItems(["— 无 —","MuMuPro","PlayCover","Waydroid"]); self.pc.setCurrentText(self.a.get("connection_preset") or "— 无 —"); f.addRow(_lbl("预设"),self.pc)
+        self.tc=QComboBox(); self.tc.addItems(["ADB","MiniTouch","MaaTouch"]); self.tc.setCurrentText(self.a.get("touch_mode","ADB")); f.addRow(_lbl("触控"),self.tc)
+        self.sw_an=QLineEdit(self.a.get("account_switch","")); self.sw_an.setPlaceholderText("如 手机号或邮箱，留空不切换"); f.addRow(_lbl("账号切换"),self.sw_an)
 
         # ── 模拟器 ──
-        f.addRow(_sec("模拟器"))
-        emu_row=QHBoxLayout()
-        self.emu_launch_cb=QCheckBox("自启模拟器"); self.emu_launch_cb.setChecked(self.a.get("emu_launch",False)); emu_row.addWidget(self.emu_launch_cb)
-        self.emu_path=QLineEdit(self.a.get("emu_path","")); self.emu_path.setPlaceholderText("留空自动检测"); f.addRow("启动路径:",self.emu_path)
-        emu_row.addStretch(); emu_row.addWidget(QLabel("等待")); self.emu_wait_sp=QSpinBox(); self.emu_wait_sp.setRange(0,300); self.emu_wait_sp.setValue(self.a.get("emu_wait",30)); self.emu_wait_sp.setSuffix(" 秒"); emu_row.addWidget(self.emu_wait_sp); f.addRow("",emu_row)
+        f.addRow(QWidget(), _sec("模拟器"))
+        self.emu_path=QLineEdit(self.a.get("emu_path","")); self.emu_path.setPlaceholderText("留空自动检测"); f.addRow(_lbl("启动路径"),self.emu_path)
+        emu_row=QHBoxLayout(); emu_row.setSpacing(8)
+        self.emu_launch_cb=QCheckBox("自启模拟器"); self.emu_launch_cb.setChecked(self.a.get("emu_launch",False))
+        emu_row.addWidget(self.emu_launch_cb)
+        emu_row.addWidget(QLabel("等待")); self.emu_wait_sp=QSpinBox(); self.emu_wait_sp.setRange(0,300); self.emu_wait_sp.setValue(self.a.get("emu_wait",30)); self.emu_wait_sp.setSuffix(" 秒  "); emu_row.addWidget(self.emu_wait_sp)
+        emu_row.addStretch(); f.addRow(_lbl(""),emu_row)
 
-        # ── 默认任务 ──
-        f.addRow(_sec("默认任务"))
-        self.tk={}; kw=QWidget(); kl=QHBoxLayout(kw); kl.setContentsMargins(0,0,0,0)
+        # ── 任务 ──
+        f.addRow(QWidget(), _sec("默认任务"))
+        self.tk={}; kw=QWidget(); kl=QHBoxLayout(kw); kl.setContentsMargins(0,0,0,0); kl.setSpacing(6)
         for k,v in TASK_NAMES.items():
             if k=="closedown": continue
             cb=QCheckBox(v); cb.setChecked(k in self.a.get("tasks",["StartUp","Fight"])); self.tk[k]=cb; kl.addWidget(cb)
-        kl.addStretch(); f.addRow(kw)
+        kl.addStretch(); f.addRow(_lbl(""),kw)
 
         # ── 启动选项 ──
-        f.addRow(_sec("启动选项"))
-        opts1=QHBoxLayout()
+        f.addRow(QWidget(), _sec("启动选项"))
+        opts1=QHBoxLayout(); opts1.setSpacing(8)
         self.sm_cb=QCheckBox("最小化启动"); self.sm_cb.setChecked(self.a.get("start_minimized",False)); opts1.addWidget(self.sm_cb)
         self.sd_cb=QCheckBox("直接运行"); self.sd_cb.setChecked(self.a.get("start_directly",False)); opts1.addWidget(self.sd_cb)
         self.adb_fail_cb=QCheckBox("ADB失败启模拟器"); self.adb_fail_cb.setChecked(self.a.get("adb_fail_launch_emu",False)); opts1.addWidget(self.adb_fail_cb)
-        opts1.addStretch(); f.addRow(opts1)
-        opts2=QHBoxLayout()
+        opts1.addStretch(); f.addRow(_lbl(""),opts1)
+        opts2=QHBoxLayout(); opts2.setSpacing(8)
         self.sync_cb=QCheckBox("启动时同步配置"); self.sync_cb.setChecked(self.a.get("sync_tasks",False)); opts2.addWidget(self.sync_cb)
         self.sanity_cb=QCheckBox("理智回满自动启动"); self.sanity_cb.setChecked(self.a.get("sanity_driven",False)); opts2.addWidget(self.sanity_cb)
-        opts2.addStretch(); f.addRow(opts2)
+        opts2.addStretch(); f.addRow(_lbl(""),opts2)
+
+        scroll.setWidget(sw); l.addWidget(scroll,1)
+        b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
+        self.setStyleSheet("QScrollArea{background:transparent} QDialog{background:rgba(30,30,30,240)}")
 
         scroll.setWidget(sw); l.addWidget(scroll,1)
         b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
@@ -154,6 +159,11 @@ class AccountDialog(QDialog):
 def _sec(title: str) -> QLabel:
     s=QLabel(title); s.setStyleSheet("font-weight:bold;color:#aaa;border-bottom:1px solid #444;margin-top:8px;padding-bottom:2px")
     return s
+
+def _lbl(text: str) -> QLabel:
+    l=QLabel(text); l.setFixedWidth(60); l.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+    l.setStyleSheet("color:#aaa")
+    return l
 
 class TaskSettingsDialog(QDialog):
     def __init__(self,p,settings,pipe):
