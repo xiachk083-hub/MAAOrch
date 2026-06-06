@@ -129,10 +129,6 @@ def _upd_maa_status(mw, a, progs, refs):
         refs["maa_auto_upd"].blockSignals(True)
         refs["maa_auto_upd"].setChecked(progs[0].get("auto_update", mw.config.get("auto_update_maa", True)))
         refs["maa_auto_upd"].blockSignals(False)
-    if "maa_sanity_cb" in refs:
-        refs["maa_sanity_cb"].blockSignals(True)
-        refs["maa_sanity_cb"].setChecked(a.get("sanity_driven", False))
-        refs["maa_sanity_cb"].blockSignals(False)
 
 
 def _upd_emu(mw, a, refs):
@@ -328,7 +324,6 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         mw._dash_refs["maa_version_lbl"] = vl
         mw._dash_refs["maa_channel"] = ch
         mw._dash_refs["maa_auto_upd"] = au_cb
-        mw._dash_refs["maa_sanity_cb"] = sd_cb
 
 
 # ── Emulator card ──
