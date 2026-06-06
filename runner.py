@@ -360,6 +360,15 @@ class AccountRunner(QObject):
             except Exception:
                 pass
 
+        # Rotate MAA log — keep only last 3 runs
+        if old_progs:
+            try:
+                from log_ops import LogService
+                lp = Path(old_progs[0].get("path", "")).parent / "debug" / "asst.log"
+                LogService.rotate_log(lp)
+            except Exception:
+                pass
+
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
         sd = ac.setdefault("stats", {})

@@ -83,6 +83,56 @@ class LogService:
                 return []
             return text.strip().split("\n")
 
+    @staticmethod
+    def rotate_log(log_path: Path, keep_runs: int = 3) -> None:
+        """Keep only the last N runs in asst.log, truncate older content."""
+        import os
+        try:
+            fsize = os.path.getsize(str(log_path))
+        except OSError:
+            return
+        if fsize < 50000:  # Don't bother if <50KB
+            return
+
+        # Scan backwards for Version markers
+        CHUNK = 8192
+        buf = b""
+        ver_positions = []
+        offset = fsize
+
+        with open(str(log_path), "rb") as f:
+            while offset > 0 and len(ver_positions) < keep_runs + 1:
+                read_size = min(CHUNK, offset)
+                offset -= read_size
+                f.seek(offset)
+                buf = f.read(read_size) + buf
+                pos = 0
+                while True:
+                    idx = buf.find(b"Version v", pos)
+                    if idx == -1:
+                        break
+                    line_start = buf.rfind(b"\n", 0, idx) + 1
+                    ver_positions.append(offset + line_start)
+                    pos = idx + 1
+                if len(ver_positions) > keep_runs + 1:
+                    ver_positions = sorted(ver_positions)[-(keep_runs + 1):]
+
+            if len(ver_positions) <= keep_runs:
+                return  # Not enough runs to rotate
+
+            # Cut point: start of the (N+1)th run from the end
+            ver_positions.sort()
+            cut = ver_positions[-(keep_runs + 1)]  # Keep last keep_runs runs
+
+            # Read from cut point to end, write back
+            f.seek(cut)
+            tail = f.read(fsize - cut)
+        try:
+            with open(str(log_path), "wb") as f:
+                f.write(tail.lstrip(b"\n"))
+        except Exception:
+            pass  # Never crash on rotation failure
+
     def switch_maa_version(self, w: dict, channel: str) -> None:
         if QMessageBox.question(self.ctx._mw, "切换版本", f"将下载最新 {channel} 版 MAA\n并替换当前版本\n\n是否继续？") != QMessageBox.Yes:
             return
