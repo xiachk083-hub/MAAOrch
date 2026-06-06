@@ -37,21 +37,184 @@ def cleanup_emu_threads(mw: Any) -> None:
 
 
 def build_account_dashboard(mw: Any, row: int) -> None:
+    if row < 0 or row >= len(mw.accounts):
+        mw.ade.show()
+        # Hide dashboard widgets if any
+        if hasattr(mw, "_dash_refs"):
+            for r in mw._dash_refs.values():
+                if isinstance(r, QWidget):
+                    r.hide()
+        return
+
     if hasattr(mw, "_sad_row") and mw._sad_row == row:
         return
     mw._sad_row = row
-    cleanup_emu_threads(mw)
-    clear_dashboard(mw)
-
-    if row < 0 or row >= len(mw.accounts):
-        mw.ade.show()
-        return
-
     progs = [w for w in mw.warehouse if w.get("account_ref") == mw.accounts[row]["id"]]
 
+    # First time — build skeleton
+    if not hasattr(mw, "_dash_refs"):
+        cleanup_emu_threads(mw)
+        clear_dashboard(mw)
+        mw._dash_refs = {}
+        _ensure_dashboard(mw, row, progs)
+    else:
+        mw.ade.hide()
+        for r in mw._dash_refs.values():
+            if isinstance(r, QWidget):
+                r.show()
+        _update_dashboard(mw, row, progs)
+
+
+def _ensure_dashboard(mw: Any, row: int, progs: list[dict]) -> None:
+    """Create all dashboard widgets once. Stores refs in mw._dash_refs."""
     _build_header(mw, row)
     _build_maa_card(mw, row, progs)
     _build_emu_card(mw, row)
+    _build_adb_card(mw, row)
+    _build_pipeline_card(mw, row, progs)
+    _build_launch_card(mw, row)
+    _build_action_buttons(mw, row, progs)
+    mw.adl.addStretch()
+
+
+def _update_dashboard(mw: Any, row: int, progs: list[dict]) -> None:
+    """Refresh existing dashboard widgets with new account data."""
+    refs = mw._dash_refs
+    a = mw.accounts[row]
+
+    # Header
+    if "header_name" in refs:
+        refs["header_name"].blockSignals(True)
+        refs["header_name"].setText(a.get("name", ""))
+        refs["header_name"].blockSignals(False)
+    if "header_client" in refs:
+        idx = refs["header_client"].findData(a.get("game_client", "Official"))
+        if idx >= 0:
+            refs["header_client"].blockSignals(True)
+            refs["header_client"].setCurrentIndex(idx)
+            refs["header_client"].blockSignals(False)
+
+    # MAA Status
+    _upd_maa_status(mw, a, progs, refs)
+    # Emulator
+    _upd_emu(mw, a, refs)
+    # ADB
+    _upd_adb(mw, a, refs)
+    # Pipeline
+    _upd_pipeline(mw, a, progs, refs)
+    # Launch options
+    _upd_launch(mw, a, refs)
+    # Action buttons
+    _upd_actions(mw, row, progs, refs)
+
+
+# ── Update helpers ──
+
+def _upd_maa_status(mw, a, progs, refs):
+    if "maa_version_lbl" not in refs:
+        return
+    v = progs[0].get("maa_version", "") if progs else ""
+    t = int(__import__("time").time() - mw._proc_start_times.get(progs[0]["id"], 0)) if progs and progs[0]["id"] in mw._proc_status else 0
+    if t:
+        refs["maa_version_lbl"].setText(f"🟢 运行中 ({t // 60}m{t % 60}s)  {v}" if v else f"🟢 运行中 ({t // 60}m{t % 60}s)")
+    else:
+        refs["maa_version_lbl"].setText(f"已安装 {v}" if v else "已安装")
+    if "maa_channel" in refs and progs:
+        cur = progs[0].get("update_channel", "Stable")
+        refs["maa_channel"].blockSignals(True)
+        refs["maa_channel"].setCurrentText(cur)
+        refs["maa_channel"].blockSignals(False)
+    if "maa_auto_upd" in refs and progs:
+        refs["maa_auto_upd"].blockSignals(True)
+        refs["maa_auto_upd"].setChecked(progs[0].get("auto_update", mw.config.get("auto_update_maa", True)))
+        refs["maa_auto_upd"].blockSignals(False)
+    if "maa_sanity_cb" in refs:
+        refs["maa_sanity_cb"].blockSignals(True)
+        refs["maa_sanity_cb"].setChecked(a.get("sanity_driven", False))
+        refs["maa_sanity_cb"].blockSignals(False)
+
+
+def _upd_emu(mw, a, refs):
+    if "emu_path" in refs:
+        refs["emu_path"].blockSignals(True)
+        refs["emu_path"].setText(a.get("emu_path", ""))
+        refs["emu_path"].blockSignals(False)
+    if "emu_launch_cb" in refs:
+        refs["emu_launch_cb"].blockSignals(True)
+        refs["emu_launch_cb"].setChecked(a.get("emu_launch", False))
+        refs["emu_launch_cb"].blockSignals(False)
+    if "emu_wait_sp" in refs:
+        refs["emu_wait_sp"].blockSignals(True)
+        refs["emu_wait_sp"].setValue(a.get("emu_wait", 30))
+        refs["emu_wait_sp"].blockSignals(False)
+    # Refresh instance list
+    if "emu_inst_sel" in refs:
+        mw.emu.refresh_instance_list(refs["emu_inst_sel"], a.get("emu_instance_index", ""), a.get("emu_instance_name", ""))
+
+
+def _upd_adb(mw, a, refs):
+    if "adb_preset" in refs:
+        idx = refs["adb_preset"].findData(a.get("connection_preset", ""))
+        if idx >= 0:
+            refs["adb_preset"].blockSignals(True)
+            refs["adb_preset"].setCurrentIndex(idx)
+            refs["adb_preset"].blockSignals(False)
+    if "adb_path" in refs:
+        refs["adb_path"].blockSignals(True)
+        refs["adb_path"].setText(a.get("adb_path", ""))
+        refs["adb_path"].blockSignals(False)
+    if "adb_addr" in refs:
+        refs["adb_addr"].blockSignals(True)
+        refs["adb_addr"].setText(a.get("adb_address", ""))
+        refs["adb_addr"].blockSignals(False)
+    if "adb_switch" in refs:
+        refs["adb_switch"].blockSignals(True)
+        refs["adb_switch"].setText(a.get("account_switch", ""))
+        refs["adb_switch"].blockSignals(False)
+
+
+def _upd_pipeline(mw, a, progs, refs):
+    pt = progs[0].get("task_pipeline", "startup,fight,recruit,infrast,mall,award") if progs else ""
+    all_tasks = set(t.strip().lower() for t in pt.split(",") if t.strip())
+    if "pipeline_cbs" in refs:
+        for tk, cb in refs["pipeline_cbs"].items():
+            cb.blockSignals(True)
+            cb.setChecked(tk.lower() in all_tasks)
+            cb.blockSignals(False)
+    if "pipeline_mode" in refs and progs:
+        refs["pipeline_mode"].blockSignals(True)
+        refs["pipeline_mode"].setCurrentText(progs[0].get("launch_mode", "gui"))
+        refs["pipeline_mode"].blockSignals(False)
+    if "pipeline_sync" in refs:
+        refs["pipeline_sync"].blockSignals(True)
+        refs["pipeline_sync"].setChecked(a.get("sync_tasks", False))
+        refs["pipeline_sync"].blockSignals(False)
+
+
+def _upd_launch(mw, a, refs):
+    for key, attr in [("launch_min", "start_minimized"), ("launch_dir", "start_directly"),
+                      ("launch_emu_fail", "adb_fail_launch_emu")]:
+        if key in refs:
+            refs[key].blockSignals(True)
+            refs[key].setChecked(a.get(attr, False))
+            refs[key].blockSignals(False)
+    if "launch_adb_retry" in refs:
+        refs["launch_adb_retry"].blockSignals(True)
+        refs["launch_adb_retry"].setValue(a.get("adb_retry", 0))
+        refs["launch_adb_retry"].blockSignals(False)
+
+
+def _upd_actions(mw, row, progs, refs):
+    # Update launch button click target
+    if "action_launch_btn" in refs:
+        refs["action_launch_btn"].clicked.disconnect()
+        refs["action_launch_btn"].clicked.connect(lambda: mw._la(row))
+    if "action_launch_all_btn" in refs:
+        refs["action_launch_all_btn"].clicked.disconnect()
+        refs["action_launch_all_btn"].clicked.connect(lambda: mw._la_all())
+    if "action_update_btn" in refs and progs:
+        refs["action_update_btn"].clicked.disconnect()
+        refs["action_update_btn"].clicked.connect(lambda: mw.maint.cu_single(progs[0]))
     _build_adb_card(mw, row)
     _build_pipeline_card(mw, row, progs)
     _build_launch_card(mw, row)
@@ -79,6 +242,8 @@ def _build_header(mw: Any, row: int) -> None:
     tw = QWidget()
     tw.setLayout(tr)
     mw.adl.insertWidget(0, tw)
+    mw._dash_refs["header_name"] = ne
+    mw._dash_refs["header_client"] = cc
 
 
 # ── MAA Status card ──
@@ -185,6 +350,11 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         mcl.addWidget(QLabel("  点击下方下载或绑定"))
 
     mw.adl.insertWidget(2, mc)
+    if progs:
+        mw._dash_refs["maa_version_lbl"] = vl
+        mw._dash_refs["maa_channel"] = ch
+        mw._dash_refs["maa_auto_upd"] = au_cb
+        mw._dash_refs["maa_sanity_cb"] = sd_cb
 
 
 # ── Emulator card ──
@@ -263,6 +433,10 @@ def _build_emu_card(mw: Any, row: int) -> None:
     ecl.addLayout(rl2)
 
     mw.adl.insertWidget(3, ec)
+    mw._dash_refs["emu_path"] = emu_path_edit
+    mw._dash_refs["emu_inst_sel"] = ed_sel
+    mw._dash_refs["emu_launch_cb"] = cb_oe
+    mw._dash_refs["emu_wait_sp"] = ws_sp
 
     # Store ae2_ref for later population by emulator card
     mw._emu_ae2_ref = ae2_ref
@@ -353,6 +527,10 @@ def _build_adb_card(mw: Any, row: int) -> None:
     ccl.addWidget(mw._ast)
 
     mw.adl.insertWidget(4, cc)
+    mw._dash_refs["adb_preset"] = emu_sel
+    mw._dash_refs["adb_path"] = adb_p
+    mw._dash_refs["adb_addr"] = ae2
+    mw._dash_refs["adb_switch"] = sw_an
 
     # Pass ae2 reference back to emu card via the stored ref
     if hasattr(mw, "_emu_ae2_ref"):
@@ -475,6 +653,9 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     tcl.addLayout(mr2)
 
     mw.adl.insertWidget(5, tc)
+    mw._dash_refs["pipeline_cbs"] = task_cbs
+    mw._dash_refs["pipeline_mode"] = mc2
+    mw._dash_refs["pipeline_sync"] = sc
 
 
 # ── Launch & post-actions card ──
@@ -552,6 +733,10 @@ def _build_launch_card(mw: Any, row: int) -> None:
     ocl.addLayout(or2)
 
     mw.adl.insertWidget(6, oc)
+    mw._dash_refs["launch_min"] = cb_sm
+    mw._dash_refs["launch_dir"] = cb_sd
+    mw._dash_refs["launch_emu_fail"] = cb_ad
+    mw._dash_refs["launch_adb_retry"] = ar
 
 
 # ── Action buttons ──
@@ -567,9 +752,14 @@ def _build_action_buttons(mw: Any, row: int, progs: list[dict]) -> None:
         lb2.setMinimumHeight(36)
         lb2.setFont(QFont("Microsoft YaHei UI", 12, QFont.Bold))
         lb2.clicked.connect(lambda: mw._la(row))
+        mw._dash_refs["action_launch_btn"] = lb2
         bl.addWidget(lb2)
-        bl.addWidget(QPushButton("▶ 启动全部", clicked=lambda: mw._la_all()))
-        bl.addWidget(QPushButton("检查更新", clicked=lambda: mw.maint.cu_single(progs[0])))
+        launch_all_btn = QPushButton("▶ 启动全部", clicked=lambda: mw._la_all())
+        mw._dash_refs["action_launch_all_btn"] = launch_all_btn
+        bl.addWidget(launch_all_btn)
+        upd_btn = QPushButton("检查更新", clicked=lambda: mw.maint.cu_single(progs[0]))
+        mw._dash_refs["action_update_btn"] = upd_btn
+        bl.addWidget(upd_btn)
     else:
         dl = QPushButton("⬇ 下载 MAA")
         dl.setObjectName("addProgBtn")
