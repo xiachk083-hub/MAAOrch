@@ -56,12 +56,13 @@ def build_schedule_panel(mw: Any) -> QWidget:
     svl.addLayout(bar)
 
     # ── Table ──
-    tbl = QTableWidget(0, 4)
-    tbl.setHorizontalHeaderLabels(["账号", "上次结束理智", "恢复情况", "预计启动"])
+    tbl = QTableWidget(0, 5)
+    tbl.setHorizontalHeaderLabels(["账号", "上次结束", "现在理智", "预计启动", "剩余"])
     tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-    tbl.setColumnWidth(1, 100)
-    tbl.setColumnWidth(2, 80)
-    tbl.setColumnWidth(3, 90)
+    tbl.setColumnWidth(1, 75)
+    tbl.setColumnWidth(2, 75)
+    tbl.setColumnWidth(3, 95)
+    tbl.setColumnWidth(4, 60)
     tbl.verticalHeader().setVisible(False); tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     tbl.setShowGrid(False); tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
@@ -91,23 +92,32 @@ def refresh_schedule_view(mw: Any) -> None:
         # Last sanity
         last = _get_last_sanity(a["id"])
         if last:
-            tbl.setItem(i, 1, QTableWidgetItem(f"{last['current']}/{last['max']}"))
-            # Recovery status
-            d = last["max"] - last["current"]
+            cur = last["current"]; mx = last["max"]
+            tbl.setItem(i, 1, QTableWidgetItem(f"{cur}/{mx}"))
+
+            # Current sanity (estimated)
+            rt = last.get("report_time", "")
+            now_cur = _estimate_current(cur, mx, rt)
+            tbl.setItem(i, 2, QTableWidgetItem(f"{now_cur}/{mx}"))
+
+            # Recovery / next launch
+            d = mx - now_cur
+            need = max(0, d - deficit)
+            mins = need * 6
+            h, m = divmod(mins, 60)
+            nxt_dt = datetime.now() + timedelta(minutes=mins)
+
             if d <= deficit:
-                tbl.setItem(i, 2, QTableWidgetItem("✅ 可启动"))
+                tbl.setItem(i, 3, QTableWidgetItem(nxt_dt.strftime("%m-%d %H:%M")))
+                tbl.setItem(i, 4, QTableWidgetItem("✅可启"))
             else:
-                need = d - deficit
-                mins = need * 6
-                h, m = divmod(mins, 60)
-                tbl.setItem(i, 2, QTableWidgetItem(f"恢复中 {h}h{m:02d}"))
-            # Next estimate
-            nxt = _estimate_next(mw, a["id"])
-            tbl.setItem(i, 3, QTableWidgetItem(nxt))
+                tbl.setItem(i, 3, QTableWidgetItem(nxt_dt.strftime("%m-%d %H:%M")))
+                tbl.setItem(i, 4, QTableWidgetItem(f"{h}h{m:02d}"))
         else:
             tbl.setItem(i, 1, QTableWidgetItem("—"))
-            tbl.setItem(i, 2, QTableWidgetItem("暂无数据"))
+            tbl.setItem(i, 2, QTableWidgetItem("—"))
             tbl.setItem(i, 3, QTableWidgetItem("—"))
+            tbl.setItem(i, 4, QTableWidgetItem("—"))
 
     while tbl.rowCount() > len(mw.accounts):
         tbl.removeRow(tbl.rowCount() - 1)
@@ -119,17 +129,16 @@ def _get_last_sanity(aid: str) -> dict | None:
     except Exception: return None
 
 
-def _estimate_next(mw: Any, aid: str) -> str:
-    s = _get_last_sanity(aid)
-    if not s: return "—"
-    deficit = mw.config.get("deficit", 0) if hasattr(mw, "config") else 0
-    d = max(0, (s["max"] - s["current"]) - deficit)
-    mins = d * 6
-    nxt = datetime.now() + timedelta(minutes=mins)
-    diff_h = (nxt - datetime.now()).total_seconds() / 3600
-    if diff_h < 1: return " <1h后"
-    if diff_h < 24: return f" {diff_h:.0f}h后"
-    return nxt.strftime("%m-%d %H:%M")
+def _estimate_current(last_current: int, max_sanity: int, report_time: str) -> int:
+    """Estimate current sanity based on recovery rate (1pt/6min)."""
+    try:
+        if report_time:
+            rt = datetime.strptime(report_time[:19], "%Y-%m-%d %H:%M:%S")
+            elapsed = (datetime.now() - rt).total_seconds()
+            recovered = int(elapsed / 360)  # 6min = 360s per point
+            return min(max_sanity, last_current + recovered)
+    except Exception: pass
+    return last_current
 
 
 def _save_schedule(mw: Any) -> None:

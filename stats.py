@@ -53,6 +53,7 @@ class RunStats:
                 "current": cur,
                 "max": mx,
                 "deficit": deficit,
+                "report_time": sanity.get("report_time", ""),
             }
         self._data.setdefault("runs", []).append(run)
         # Keep last 200 runs

@@ -29,7 +29,9 @@ class TestRunStats:
         assert len(data["runs"]) == 1
         r = data["runs"][0]
         assert r["tasks"] == {"刷关作战": "完成", "公开招募": "完成"}
-        assert r["sanity"] == {"current": 5, "max": 210, "deficit": 205}
+        assert r["sanity"]["current"] == 5
+        assert r["sanity"]["max"] == 210
+        assert r["sanity"]["deficit"] == 205
         assert r["drops"] == {"固源岩": 21, "赤金": 12}
         shutil.rmtree(tmp)
 
