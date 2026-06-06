@@ -135,13 +135,6 @@ class AccountDialog(QDialog):
 
         # ── 常规设置 ──
         f.addRow(QWidget(), _sec("常规设置"))
-        ts = self.a.get("task_settings",{})
-        fight_ts = ts.get("Fight",{})
-        opts3=QHBoxLayout(); opts3.setSpacing(8)
-        self.hide_series_cb=QCheckBox("隐藏代理倍率"); self.hide_series_cb.setChecked(fight_ts.get("hide_series",False)); opts3.addWidget(self.hide_series_cb)
-        self.use_stone_cb=QCheckBox("允许使用源石"); self.use_stone_cb.setChecked(fight_ts.get("use_stone",False)); opts3.addWidget(self.use_stone_cb)
-        opts3.addWidget(QLabel("数量")); self.stone_sp=QSpinBox(); self.stone_sp.setRange(0,999); self.stone_sp.setValue(fight_ts.get("stone",0)); opts3.addWidget(self.stone_sp)
-        opts3.addStretch(); f.addRow(_lbl(""),opts3)
         opts4=QHBoxLayout(); opts4.setSpacing(8)
         opts4.addWidget(QLabel("关卡重置:")); self.stage_reset_cb=QComboBox(); self.stage_reset_cb.addItems(["当前","上次","忽略"]); self.stage_reset_cb.setCurrentText({"Current":"当前","Last":"上次","Ignore":"忽略"}.get(fight_ts.get("stage_reset_mode","Current"),"当前")); opts4.addWidget(self.stage_reset_cb)
         opts4.addStretch(); f.addRow(_lbl(""),opts4)
@@ -177,9 +170,6 @@ class AccountDialog(QDialog):
         fight_ts=ts.setdefault("Fight",{})
         if self.fs.text().strip():
             fight_ts["stage"]=self.fs.text().strip()
-        fight_ts["hide_series"]=self.hide_series_cb.isChecked()
-        fight_ts["use_stone"]=self.use_stone_cb.isChecked()
-        fight_ts["stone"]=self.stone_sp.value()
         fight_ts["stage_reset_mode"]={"当前":"Current","上次":"Last","忽略":"Ignore"}.get(self.stage_reset_cb.currentText(),"Current")
         fight_ts["use_expiring_medicine"]=self.use_expiring_cb.isChecked()
         fight_ts["medicine_expire_days"]=self.expire_days_sp.value()

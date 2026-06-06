@@ -90,8 +90,6 @@ class ConfigService:
                                 if tt=="fight":
                                     if st.get("stage"): item["StagePlan"]=[st["stage"]]; item["IsStageManually"]=True
                                     if "medicine" in st: item["UseMedicine"]=st["medicine"]>0; item["MedicineCount"]=st["medicine"]
-                                    if "use_stone" in st: item["UseStone"]=st["use_stone"]; item["StoneCount"]=st.get("stone",0)
-                                    if "hide_series" in st: item["HideSeries"]=st["hide_series"]
                                     if "stage_reset_mode" in st: item["StageResetMode"]=st["stage_reset_mode"]
                                     if "use_expiring_medicine" in st: item["UseExpiringMedicine"]=st["use_expiring_medicine"]
                                     if "medicine_expire_days" in st: item["MedicineExpireDays"]=st["medicine_expire_days"]
