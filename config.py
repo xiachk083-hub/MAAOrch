@@ -2,6 +2,7 @@ import sys,json,os,re
 from pathlib import Path
 from datetime import datetime
 from utils import make_id, parse_maa_version
+from account import Account
 
 CONFIG_FILE: Path = Path(__file__).parent/"config.json"
 STARTUP_DIR: Path = Path(os.environ['APPDATA'])/'Microsoft'/'Windows'/'Start Menu'/'Programs'/'Startup'
