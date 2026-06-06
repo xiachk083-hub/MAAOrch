@@ -146,6 +146,14 @@ class AccountDialog(QDialog):
         opts4.addWidget(QLabel("关卡重置:")); self.stage_reset_cb=QComboBox(); self.stage_reset_cb.addItems(["当前","上次","忽略"]); self.stage_reset_cb.setCurrentText({"Current":"当前","Last":"上次","Ignore":"忽略"}.get(fight_ts.get("stage_reset_mode","Current"),"当前")); opts4.addWidget(self.stage_reset_cb)
         opts4.addStretch(); f.addRow(_lbl(""),opts4)
 
+        # ── 高级设置 ──
+        f.addRow(QWidget(), _sec("高级设置"))
+        adv_opts=QHBoxLayout(); adv_opts.setSpacing(8)
+        self.use_expiring_cb=QCheckBox("使用即将过期的理智药"); self.use_expiring_cb.setChecked(fight_ts.get("use_expiring_medicine",True)); adv_opts.addWidget(self.use_expiring_cb)
+        adv_opts.addWidget(QLabel("天数")); self.expire_days_sp=QSpinBox(); self.expire_days_sp.setRange(1,7); self.expire_days_sp.setValue(fight_ts.get("medicine_expire_days",2)); adv_opts.addWidget(self.expire_days_sp)
+        adv_opts.addStretch(); f.addRow(_lbl(""),adv_opts)
+        self.use_activity_med_cb=QCheckBox("活动结束前48H吃当周过期药"); self.use_activity_med_cb.setChecked(fight_ts.get("use_expire_medicine_for_activity",True)); f.addRow(_lbl(""),self.use_activity_med_cb)
+
         # ── 启动选项 ──
         f.addRow(QWidget(), _sec("启动选项"))
         opts1=QHBoxLayout(); opts1.setSpacing(8)
@@ -173,6 +181,9 @@ class AccountDialog(QDialog):
         fight_ts["use_stone"]=self.use_stone_cb.isChecked()
         fight_ts["stone"]=self.stone_sp.value()
         fight_ts["stage_reset_mode"]={"当前":"Current","上次":"Last","忽略":"Ignore"}.get(self.stage_reset_cb.currentText(),"Current")
+        fight_ts["use_expiring_medicine"]=self.use_expiring_cb.isChecked()
+        fight_ts["medicine_expire_days"]=self.expire_days_sp.value()
+        fight_ts["use_expire_medicine_for_activity"]=self.use_activity_med_cb.isChecked()
         self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"sanity_driven":self.sanity_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
 
 
