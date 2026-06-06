@@ -88,8 +88,11 @@ class ConfigService:
                             if tt in ts:
                                 st=ts[tt]
                                 if tt=="fight":
-                                    if st.get("stage"): item["StagePlan"]=[st["stage"]]
+                                    if st.get("stage"): item["StagePlan"]=[st["stage"]]; item["IsStageManually"]=True
                                     if "medicine" in st: item["UseMedicine"]=st["medicine"]>0; item["MedicineCount"]=st["medicine"]
+                                    if "use_stone" in st: item["UseStone"]=st["use_stone"]; item["StoneCount"]=st.get("stone",0)
+                                    if "hide_series" in st: item["HideSeries"]=st["hide_series"]
+                                    if "stage_reset_mode" in st: item["StageResetMode"]=st["stage_reset_mode"]
                                 elif tt=="recruit":
                                     if "select" in st: item["Level3Choose"]=3 in st["select"]; item["Level4Choose"]=4 in st["select"]; item["Level5Choose"]=5 in st["select"]
                                     if "confirm" in st: item["Confirm"]=st["confirm"]
@@ -116,6 +119,7 @@ class ConfigService:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType","").lower()=="fight":
                         item["StagePlan"]=[fs]
+                        item["IsStageManually"]=True
                         self.ctx.log(f"inject关卡: {fs} → {fn}")
                         break
             elif fs:

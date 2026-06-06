@@ -133,6 +133,19 @@ class AccountDialog(QDialog):
             cb=QCheckBox(v); cb.setChecked(k.lower() in enabled_tasks if self._pipe else k in ("StartUp","Fight")); self.tk[k]=cb; kl.addWidget(cb)
         kl.addStretch(); f.addRow(_lbl(""),kw)
 
+        # ── 常规设置 ──
+        f.addRow(QWidget(), _sec("常规设置"))
+        ts = self.a.get("task_settings",{})
+        fight_ts = ts.get("Fight",{})
+        opts3=QHBoxLayout(); opts3.setSpacing(8)
+        self.hide_series_cb=QCheckBox("隐藏代理倍率"); self.hide_series_cb.setChecked(fight_ts.get("hide_series",False)); opts3.addWidget(self.hide_series_cb)
+        self.use_stone_cb=QCheckBox("允许使用源石"); self.use_stone_cb.setChecked(fight_ts.get("use_stone",False)); opts3.addWidget(self.use_stone_cb)
+        opts3.addWidget(QLabel("数量")); self.stone_sp=QSpinBox(); self.stone_sp.setRange(0,999); self.stone_sp.setValue(fight_ts.get("stone",0)); opts3.addWidget(self.stone_sp)
+        opts3.addStretch(); f.addRow(_lbl(""),opts3)
+        opts4=QHBoxLayout(); opts4.setSpacing(8)
+        opts4.addWidget(QLabel("关卡重置:")); self.stage_reset_cb=QComboBox(); self.stage_reset_cb.addItems(["当前","上次","忽略"]); self.stage_reset_cb.setCurrentText({"Current":"当前","Last":"上次","Ignore":"忽略"}.get(fight_ts.get("stage_reset_mode","Current"),"当前")); opts4.addWidget(self.stage_reset_cb)
+        opts4.addStretch(); f.addRow(_lbl(""),opts4)
+
         # ── 启动选项 ──
         f.addRow(QWidget(), _sec("启动选项"))
         opts1=QHBoxLayout(); opts1.setSpacing(8)
@@ -153,8 +166,13 @@ class AccountDialog(QDialog):
         if p=="— 无 —": p=""
         pipe=",".join(t for t,cb in self.tk.items() if cb.isChecked())
         ts=self.a.get("task_settings",{})
+        fight_ts=ts.setdefault("Fight",{})
         if self.fs.text().strip():
-            ts.setdefault("Fight",{})["stage"]=self.fs.text().strip()
+            fight_ts["stage"]=self.fs.text().strip()
+        fight_ts["hide_series"]=self.hide_series_cb.isChecked()
+        fight_ts["use_stone"]=self.use_stone_cb.isChecked()
+        fight_ts["stone"]=self.stone_sp.value()
+        fight_ts["stage_reset_mode"]={"当前":"Current","上次":"Last","忽略":"Ignore"}.get(self.stage_reset_cb.currentText(),"Current")
         self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"sanity_driven":self.sanity_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
 
 
