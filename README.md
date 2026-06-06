@@ -189,6 +189,7 @@ MAAOrch/
 ├── config_ops.py             # MAA 配置注入
 ├── log_ops.py                # 日志解析 / 统计
 ├── maint_ops.py              # 监控 / 更新 / 托盘
+├── account.py                # Account 数据类
 ├── runner.py                 # 单号启动→监控→完成回调
 ├── launch_queue.py           # 统一启动队列（手动/定时/理智）
 ├── stats.py                  # 运行历史持久化
@@ -248,14 +249,15 @@ MAAOrch/
 
 | 文档 | 内容 |
 |------|------|
-| [系统架构](docs/architecture.md) | 模块划分、数据流、线程模型、ServiceContext 设计 |
-| [多账号与模拟器](docs/account-management.md) | 账号数据结构、ADB 工具、模拟器多实例、mumu-cli 集成 |
-| [流水线调度](docs/pipeline.md) | 分组/仓库、串并行调度、定时任务、启动选项 |
+| [系统架构](docs/architecture.md) | 模块划分、数据流、线程模型、ServiceContext、启动队列架构 |
+| [多账号与模拟器](docs/account-management.md) | Account 类、ADB 工具、模拟器多实例、mumu-cli 集成 |
+| [流水线调度](docs/pipeline.md) | LaunchQueue、AccountRunner、分组调度、定时任务、理智驱动 |
 | [任务配置注入](docs/task-config.md) | gui.json 注入、maa-cli TOML 生成、任务参数映射 |
-| [日志与监控](docs/monitoring.md) | asst.log 解析、实时监控、守护进程、通知系统 |
+| [日志与监控](docs/monitoring.md) | asst.log v5/v6 解析、Version 定位、统计持久化、日志轮转 |
 | [下载更新与代理](docs/update-download.md) | MAA/maa-cli 下载更新、版本切换、代理自动检测 |
-| [HTTP API](docs/http-api.md) | REST 接口完整参考、安全机制、集成示例 |
+| [HTTP API](docs/http-api.md) | REST 接口完整参考、安全机制、stats 端点、集成示例 |
 | [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、配置迁移、测试、打包 |
+| [daigan 对接](docs/daigan-integration.md) | stats.json 格式、字段说明、统计计算示例 |
 
 ## 技术栈
 

@@ -2,6 +2,48 @@
 
 ## 账号数据结构
 
+### Account 类 (`account.py`)
+
+`Account` 是一个 dataclass，提供类型化的账号模型，同时兼容旧的 dict 访问方式（支持 `__getitem__`、`__setitem__`、`get()`、`setdefault()`、`update()`）。
+
+```python
+@dataclass
+class Account:
+    id: str = ""
+    name: str = "未命名"
+    game_client: str = "Official"
+    adb_path: str = ""
+    adb_address: str = ""
+    connection_preset: str = ""
+    touch_mode: str = "ADB"
+    account_switch: str = ""
+    emu_path: str = ""
+    emu_instance_index: str = ""
+    emu_instance_name: str = ""
+    emu_launch: bool = False
+    emu_wait: int = 30
+    emu_add_cmd: str = ""
+    adb_fail_launch_emu: bool = False
+    adb_retry: int = 0
+    start_minimized: bool = False
+    start_directly: bool = False
+    sync_tasks: bool = False
+    post_action: str = ""
+    fight_stage: str = ""
+    task_pipeline: str = ""
+    task_settings: dict = field(default_factory=dict)
+    task_templates: dict = field(default_factory=dict)
+    pipe_templates: dict = field(default_factory=dict)
+    stats: dict = field(default_factory=dict)
+    loop_enabled: bool = False
+    loop_interval: int = 5
+    loop_max_rounds: int = 10
+    sanity_driven: bool = False
+    min_sanity: int = 0
+```
+
+### config.json 中的存储
+
 每个账号在 `config.json` 中存储为 `accounts[]` 数组的一个元素：
 
 ```json
@@ -27,9 +69,29 @@
   "adb_retry": 0,
   "task_settings": {},
   "sync_tasks": false,
-  "stats": {}
+  "stats": {},
+  "sanity_driven": false,
+  "min_sanity": 0
 }
 ```
+
+### 字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 唯一标识，8位随机ID |
+| `name` | string | 账号显示名 |
+| `game_client` | string | 区服标识 |
+| `adb_path` | string | ADB 可执行文件路径，空=系统默认 |
+| `adb_address` | string | ADB 连接地址，如 `127.0.0.1:16384` |
+| `connection_preset` | string | 连接预设 |
+| `touch_mode` | string | 触控模式 |
+| `account_switch` | string | 账号切换标识（手机号/邮箱），空=不切换 |
+| `emu_*` | various | 模拟器相关配置 |
+| `task_pipeline` | string | 逗号分隔的任务链 |
+| `task_settings` | object | 各任务的详细参数 |
+| `sanity_driven` | bool | 理智回满自动再启动 |
+| `min_sanity` | int | 理智最低阈值 |
 
 ## 区服支持
 

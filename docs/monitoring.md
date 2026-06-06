@@ -12,7 +12,18 @@ MAAOrch 自身的运行日志写入根目录的 `debug.log`：
 
 ### MAA 日志
 
-每个 MAA 程序的日志位于 `{MAA目录}/debug/asst.log`，由 MAA 自身写入，MAAOrch 负责解析和展示。MAA 日志永久追加，不会自动轮转。
+每个 MAA 程序的日志位于 `{MAA目录}/debug/asst.log`，由 MAA 自身写入，MAAOrch 负责解析和展示。
+
+### MAA 日志轮转
+
+每轮 MAA 运行完成后，`AccountRunner._cleanup()` 调用 `LogService.rotate_log()` 自动轮转：
+
+- 扫描 `asst.log` 找到所有 `Version v` 标记
+- 保留最近 3 轮的日志
+- 删除更早的内容
+- 文件小于 50KB 时跳过
+
+这防止了 asst.log 无限膨胀（典型使用：3天 10MB → 轮转后 ~1MB）。
 
 ## 日志解析 (`LogService`)
 

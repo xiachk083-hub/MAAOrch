@@ -57,9 +57,76 @@ MAAOrch 支持将可执行程序组织为分组，按组批量启动。
 | `maa-cli` | maa-cli 命令行工具 |
 | `general` | 通用可执行程序 |
 
+## LaunchQueue 统一启动队列
+
+`LaunchQueue`（`launch_queue.py`）是系统的核心调度入口，所有启动请求都先进入队列。
+
+### 队列条目
+
+```python
+@dataclass
+class QueueEntry:
+    sort_key: tuple     # (priority, not_before)
+    account_id: str
+    source: str         # "manual" | "schedule" | "sanity"
+    not_before: datetime
+```
+
+### 优先级
+
+| 来源 | priority | 触发方式 |
+|------|----------|----------|
+| 手动 | 0（最高） | 用户点击「▶ 启动」或 API |
+| 定时 | 1 | ScheduleThread 定时触发 |
+| 理智 | 2 | 上一轮完成后自动入队，设置 `not_before` 为恢复时间 |
+
+### 调度规则（tick 每 30 秒）
+
+```
+取队首 → 检查：
+  ① 已在运行？ → 跳过
+  ② 模拟器被占？ → 跳过
+  ③ 还没到 not_before？ → 跳过（后面的也不会到时间）
+  ④ 理智不够（仅 sanity 来源）？ → 跳过
+  ── 全部满足 ──
+  → 启动 → 标记模拟器占用
+```
+
+**核心原则：绝不中断正在运行的 MAA。只等空闲时启动下一个。**
+
+### 理智驱动流程
+
+```
+account_finished(大号)
+  → 读 stats.json 获取最后理智 (5/210)
+  → 计算恢复时间: 205 × 6 = 1230min ≈ 20.5h
+  → LaunchQueue.enqueue("大号", "sanity", priority=2, not_before=明天04:30)
+
+tick 每 30s:
+  → 检查队列 → 大号 not_before 未到 → 跳过
+  → 小号满足条件 → 启动
+  → 小号跑完 → 大号还没到时间 → 跳过
+  → ...第二天 04:30...
+  → 大号 not_before 已过，模拟器空闲 → 启动
+```
+
+### API
+
+```python
+queue.enqueue(account_id, source, priority, not_before)
+queue.enqueue_batch(source, priority, accounts)
+queue.dequeue(account_id)
+queue.pending_count          # 排队数
+queue.active_count           # 运行中数
+queue.is_queued(account_id)
+queue.is_running(account_id)
+queue.pending_summary()      # 状态栏文本
+queue.get_next_for(account_id)  # 下次启动时间
+```
+
 ## PipelineThread 调度线程
 
-`PipelineThread`（`pipeline_thread.py`）继承 `QThread`，运行逻辑：
+`PipelineThread`（`pipeline_thread.py`）继承 `QThread`，用于分组批量启动（非队列模式）：
 
 ```
 for 每个分组:
@@ -99,6 +166,27 @@ for 每个分组:
 
 在 `_sleep()` 等待循环中，每 100ms 检查一次 `_running` 列表中进程是否退出（`poll() is None`），已退出的进程自动移除。
 
+## AccountRunner 单号启动闭环
+
+`AccountRunner`（`runner.py`）管理单个账号的完整生命周期：
+
+```
+launch(row)
+  → 检查前提（有 MAA 程序？绑定模拟器？模拟器空闲？）
+  → 启动/连接模拟器
+  → ConfigService.inject() 注入配置
+  → subprocess.Popen() 启动 MAA
+  → 记录到 _procs[aid]
+  → 发射 account_started(aid)
+
+check_processes() (每 2s 由 proc_timer 调用)
+  → 进程退出？
+     → parse_log() 解析任务状态、理智、掉落
+     → RunStats.save_run() 持久化
+     → 发射 account_finished(aid, exit_code, tasks)
+     → LaunchQueue.on_account_finished() 释放模拟器
+```
+
 ## 定时任务
 
 `ScheduleThread`（`schedule_thread.py`）支持两种模式：
@@ -130,6 +218,8 @@ for 每个分组:
 | `adb_fail_launch_emu` | ADB 连接失败时自动启动模拟器 |
 | `adb_retry` | ADB 连接失败重试次数 |
 | `sync_tasks` | 启动时将任务参数同步写入 gui.json |
+| `sanity_driven` | 理智回满自动再启动 |
+| `min_sanity` | 理智最低阈值（低于此值不启动） |
 
 ## 启动后操作
 

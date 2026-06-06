@@ -159,6 +159,63 @@ Response 200:
 
 ---
 
+### 统计
+
+**`GET /api/account/{index}/stats`**
+
+返回单个账号的完整运行统计（`stats.json` 内容 + 当前状态）。
+
+```
+Response 200:
+{
+  "account_name": "官服大号",
+  "running": false,
+  "stats": {
+    "runs": [
+      {
+        "ts": "2026-06-06 09:45:29",
+        "tasks": {"开始唤醒":"完成", "刷关作战":"完成", "公开招募":"完成"},
+        "drops": {"固源岩":21, "赤金":12},
+        "sanity": {"current":5, "max":210, "deficit":205}
+      }
+    ]
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `account_name` | string | 账号名 |
+| `running` | bool | 是否正在运行 |
+| `stats.runs[]` | array | 历史运行记录 |
+| `stats.runs[].ts` | string | 完成时间 |
+| `stats.runs[].tasks` | object | 任务名→状态 |
+| `stats.runs[].drops` | object | 材料名→数量 |
+| `stats.runs[].sanity` | object | 剩余理智 |
+
+---
+
+**`GET /api/stats`**
+
+返回全部账号统计汇总。
+
+```
+Response 200:
+{
+  "accounts": [
+    {
+      "index": 0,
+      "account_name": "官服大号",
+      "running": false,
+      "total_runs": 24,
+      "stats": { "runs": [...] }
+    }
+  ]
+}
+```
+
+---
+
 ### 配置同步
 
 **`POST /api/config/sync`**
