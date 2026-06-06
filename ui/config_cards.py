@@ -173,23 +173,22 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     frame.setFixedWidth(width)
     frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
 
-    # Border + left color bar for run status
-    accent = "#4a4" if running else ("#c90" if queued else "#555")
+    # Border color for run status
+    accent = "#4a4" if running else ("#c90" if queued else "#444")
     frame.setStyleSheet(f"""
         QFrame#configCard{{
-            border:1px solid #444;
-            border-left:3px solid {accent};
-            border-radius:0 8px 8px 0;
+            border:2px solid {accent};
+            border-radius:8px;
             background:rgba(255,255,255,0.04);
         }}
         QFrame#configCard:hover{{
-            border-color:#666;
+            border-color:#888;
             background:rgba(255,255,255,0.07);
         }}
     """)
 
     fl = QVBoxLayout(frame)
-    fl.setContentsMargins(6, 6, 8, 6)
+    fl.setContentsMargins(8, 6, 8, 6)
     fl.setSpacing(2)
 
     # ── Name row ──
