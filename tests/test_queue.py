@@ -1,15 +1,16 @@
 """Tests for LaunchQueue — priority queue and scheduling logic."""
 from datetime import datetime, timedelta
 from callbacks import ServiceContext
+from account import Account
 
 
 def _make_ctx():
     """Create a minimal ServiceContext for queue testing."""
     return ServiceContext(
         accounts=[
-            {"id": "a1", "name": "大号", "emu_instance_index": "0"},
-            {"id": "a2", "name": "小号", "emu_instance_index": "0"},  # same emu
-            {"id": "a3", "name": "材料号", "emu_instance_index": "1"},  # different emu
+            Account(id="a1", name="大号", emu_instance_index="0"),
+            Account(id="a2", name="小号", emu_instance_index="0"),
+            Account(id="a3", name="材料号", emu_instance_index="1"),
         ],
         warehouse=[],
         config={},

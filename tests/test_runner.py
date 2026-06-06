@@ -1,13 +1,14 @@
 """Tests for AccountRunner — launch, stop, process tracking."""
 from datetime import datetime
 from callbacks import ServiceContext
+from account import Account
 
 
 def _make_ctx():
     """Create a minimal ServiceContext for runner testing."""
     return ServiceContext(
         accounts=[
-            {"id": "a1", "name": "test", "adb_address": "127.0.0.1:5555", "emu_instance_index": "0"},
+            Account(id="a1", name="test", adb_address="127.0.0.1:5555", emu_instance_index="0"),
         ],
         warehouse=[
             {"id": "w1", "path": "test.exe", "account_ref": "a1", "maa_type": "general", "launch_mode": "gui"},
@@ -92,8 +93,7 @@ class TestAccountRunner:
         assert not any(i.startswith("❌") for i in issues)
 
         # Missing ADB
-        ac2 = dict(ac)
-        ac2["adb_address"] = ""
+        ac2 = Account(id="a1", name="test", adb_address="", emu_instance_index="0")
         issues = r.preflight_check(ac2, progs_ok)
         assert any("ADB" in i for i in issues)
 

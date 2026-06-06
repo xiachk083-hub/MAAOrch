@@ -88,7 +88,7 @@ def _update_dashboard(mw: Any, row: int, progs: list[dict]) -> None:
         refs["header_name"].setText(a.get("name", ""))
         refs["header_name"].blockSignals(False)
     if "header_client" in refs:
-        idx = refs["header_client"].findData(a.get("game_client", "Official"))
+        idx = refs["header_client"].findData(a.game_client)
         if idx >= 0:
             refs["header_client"].blockSignals(True)
             refs["header_client"].setCurrentIndex(idx)
@@ -130,7 +130,7 @@ def _upd_maa_status(mw, a, progs, refs):
         refs["maa_auto_upd"].blockSignals(False)
     if "maa_sanity_cb" in refs:
         refs["maa_sanity_cb"].blockSignals(True)
-        refs["maa_sanity_cb"].setChecked(a.get("sanity_driven", False))
+        refs["maa_sanity_cb"].setChecked(a.sanity_driven)
         refs["maa_sanity_cb"].blockSignals(False)
 
 
@@ -141,7 +141,7 @@ def _upd_emu(mw, a, refs):
         refs["emu_path"].blockSignals(False)
     if "emu_launch_cb" in refs:
         refs["emu_launch_cb"].blockSignals(True)
-        refs["emu_launch_cb"].setChecked(a.get("emu_launch", False))
+        refs["emu_launch_cb"].setChecked(a.emu_launch)
         refs["emu_launch_cb"].blockSignals(False)
     if "emu_wait_sp" in refs:
         refs["emu_wait_sp"].blockSignals(True)
@@ -187,7 +187,7 @@ def _upd_pipeline(mw, a, progs, refs):
         refs["pipeline_mode"].blockSignals(False)
     if "pipeline_sync" in refs:
         refs["pipeline_sync"].blockSignals(True)
-        refs["pipeline_sync"].setChecked(a.get("sync_tasks", False))
+        refs["pipeline_sync"].setChecked(a.sync_tasks)
         refs["pipeline_sync"].blockSignals(False)
 
 
@@ -235,7 +235,7 @@ def _build_header(mw: Any, row: int) -> None:
     cc = QComboBox()
     for k, v in CLIENT_TYPES.items():
         cc.addItem(v, k)
-    idx = cc.findData(a.get("game_client", "Official"))
+    idx = cc.findData(a.game_client)
     cc.setCurrentIndex(max(0, idx))
     cc.currentIndexChanged.connect(lambda: (a.__setitem__("game_client", cc.currentData()), mw._save()))
     tr.addWidget(cc)
@@ -314,7 +314,7 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         # Sanity-driven auto-launch toggle
         sdr = QHBoxLayout()
         sd_cb = QCheckBox("理智回满自动启动")
-        sd_cb.setChecked(a.get("sanity_driven", False))
+        sd_cb.setChecked(a.sanity_driven)
         sd_cb.setToolTip("上一轮刷完后，等理智回满自动再启动")
         sd_cb.toggled.connect(lambda v: (a.__setitem__("sanity_driven", v), mw._save()))
         sdr.addWidget(sd_cb)
@@ -416,7 +416,7 @@ def _build_emu_card(mw: Any, row: int) -> None:
     rl2 = QHBoxLayout()
     rl2.addWidget(_lbl(""))
     cb_oe = QCheckBox("自启模拟器")
-    cb_oe.setChecked(a.get("emu_launch", False))
+    cb_oe.setChecked(a.emu_launch)
     cb_oe.setToolTip("启动时自动通过 mumu-cli 启动模拟器")
     cb_oe.toggled.connect(lambda v: a.update({"emu_launch": v}) or mw._save())
     rl2.addWidget(cb_oe)
@@ -684,7 +684,7 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     mr2.addWidget(tmpl_btn)
 
     sc = QCheckBox("启动时同步")
-    sc.setChecked(a.get("sync_tasks", False))
+    sc.setChecked(a.sync_tasks)
     sc.toggled.connect(lambda v: (a.__setitem__("sync_tasks", v), mw._save()))
     mr2.addWidget(sc)
     mr2.addStretch()
@@ -733,17 +733,17 @@ def _build_launch_card(mw: Any, row: int) -> None:
     or1.addWidget(_lbl("启动:"))
 
     cb_sm = QCheckBox("启动后最小化")
-    cb_sm.setChecked(a.get("start_minimized", False))
+    cb_sm.setChecked(a.start_minimized)
     cb_sm.toggled.connect(lambda v: (a.__setitem__("start_minimized", v), mw._save()))
     or1.addWidget(cb_sm)
 
     cb_sd = QCheckBox("直接运行")
-    cb_sd.setChecked(a.get("start_directly", False))
+    cb_sd.setChecked(a.start_directly)
     cb_sd.toggled.connect(lambda v: (a.__setitem__("start_directly", v), mw._save()))
     or1.addWidget(cb_sd)
 
     cb_ad = QCheckBox("ADB 失败启模拟器")
-    cb_ad.setChecked(a.get("adb_fail_launch_emu", False))
+    cb_ad.setChecked(a.adb_fail_launch_emu)
     cb_ad.toggled.connect(lambda v: (a.__setitem__("adb_fail_launch_emu", v), mw._save()))
     or1.addWidget(cb_ad)
 

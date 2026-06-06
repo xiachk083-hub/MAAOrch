@@ -93,7 +93,7 @@ class AccountRunner(QObject):
     def launch_by_id(self, account_id: str) -> bool:
         """Start an account by ID."""
         for i, a in enumerate(self.ctx.accounts):
-            if a["id"] == account_id:
+            if a.id == account_id:
                 return self.launch(i)
         return False
 

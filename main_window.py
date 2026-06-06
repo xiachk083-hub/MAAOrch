@@ -394,10 +394,10 @@ class MainWindow(QMainWindow):
         if not self.accounts: self.ad.setVisible(False); return
         self.ad.setVisible(True)
         search=getattr(self,'asrch',None); filter_text=search.text().strip().lower() if search and search.text() else ""
-        visible=[a for a in self.accounts if not filter_text or filter_text in a.get("name","").lower()]
+        visible=[a for a in self.accounts if not filter_text or filter_text in a.get("name", "").lower()]
         self.at.setRowCount(len(visible))
         for i,a in enumerate(visible):
-            ni=QTableWidgetItem(a.get("name","")); ni._acc_id=a["id"]; self.at.setItem(i,0,ni); self.at.setItem(i,1,QTableWidgetItem(a.get("game_client","")))
+            ni=QTableWidgetItem(a.get("name", "")); ni._acc_id=a["id"]; self.at.setItem(i,0,ni); self.at.setItem(i,1,QTableWidgetItem(a.get("game_client","")))
             lb=QPushButton("▶"); lb.setFixedSize(self._btn_sm,self._btn_sm); lb.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:3px}QPushButton:hover{background:#1e5a28}")
             orig_idx=self.accounts.index(a); lb.clicked.connect(lambda c,idx=orig_idx: self._la(idx)); lw=QWidget(); lwl2=QHBoxLayout(lw); lwl2.setContentsMargins(0,0,0,0); lwl2.setAlignment(Qt.AlignCenter); lwl2.addWidget(lb); self.at.setCellWidget(i,2,lw)
     def _on_acc_sel(self) -> None:
@@ -461,7 +461,7 @@ class MainWindow(QMainWindow):
         a=self.accounts[row]
         fp,_=QFileDialog.getSaveFileName(self,"导出账号",f"{a['name']}.json","JSON (*.json)")
         if fp:
-            Path(fp).write_text(json.dumps({"name":a.get("name"),"game_client":a.get("game_client"),"adb_path":a.get("adb_path"),"adb_address":a.get("adb_address"),"connection_preset":a.get("connection_preset"),"touch_mode":a.get("touch_mode"),"account_switch":a.get("account_switch"),"emu_instance_index":a.get("emu_instance_index"),"emu_instance_name":a.get("emu_instance_name"),"emu_wait":a.get("emu_wait",30),"task_settings":a.get("task_settings",{}),"post_action":a.get("post_action"),"task_pipeline":(progs[0].get("task_pipeline","") if (progs:=[w for w in self.warehouse if w.get("account_ref")==a["id"]]) else "")},ensure_ascii=False,indent=2),encoding="utf-8")
+            Path(fp).write_text(json.dumps({"name":a.get("name"),"game_client":a.get("game_client"),"adb_path":a.get("adb_path"),"adb_address":a.get("adb_address"),"connection_preset":a.get("connection_preset"),"touch_mode":a.get("touch_mode"),"account_switch":a.get("account_switch"),"emu_instance_index":a.get("emu_instance_index"),"emu_instance_name":a.get("emu_instance_name"),"emu_wait":a.get("emu_wait", 30),"task_settings":a.get("task_settings",{}),"post_action":a.get("post_action"),"task_pipeline":(progs[0].get("task_pipeline","") if (progs:=[w for w in self.warehouse if w.get("account_ref")==a["id"]]) else "")},ensure_ascii=False,indent=2),encoding="utf-8")
     def _la(self, row: int) -> None:
         """Manual single-account launch → enqueue with highest priority."""
         if row < 0 or row >= len(self.accounts):
@@ -526,7 +526,7 @@ class MainWindow(QMainWindow):
             if a.get("emu_launch") and emu_idx and emu_idx not in launched:
                 cli=find_mumu_cli()
                 if cli:
-                    to_launch.append((cli,emu_idx,a["name"],a.get("emu_wait",30)))
+                    to_launch.append((cli,emu_idx,a["name"],a.get("emu_wait", 30)))
                     launched.add(emu_idx)
         def _start_thread():
             self.pipeline_thread=PipelineThread(self.groups,self.warehouse,self.accounts,self)
