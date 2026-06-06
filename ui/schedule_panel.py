@@ -44,13 +44,14 @@ def build_schedule_panel(mw: Any) -> QWidget:
     svl.addLayout(bar)
 
     # ── Table ──
-    tbl = QTableWidget(0, 5)
-    tbl.setHorizontalHeaderLabels(["账号", "模式", "间隔", "最低理智", "预计启动"])
+    tbl = QTableWidget(0, 6)
+    tbl.setHorizontalHeaderLabels(["账号", "", "模式", "间隔", "最低理智", "预计启动"])
     tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-    tbl.setColumnWidth(1, 80)
-    tbl.setColumnWidth(2, 55)
-    tbl.setColumnWidth(3, 65)
-    tbl.setColumnWidth(4, 90)
+    tbl.setColumnWidth(1, 28)
+    tbl.setColumnWidth(2, 80)
+    tbl.setColumnWidth(3, 55)
+    tbl.setColumnWidth(4, 65)
+    tbl.setColumnWidth(5, 90)
     tbl.verticalHeader().setVisible(False); tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     tbl.setShowGrid(False); tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
@@ -80,32 +81,39 @@ def refresh_schedule_view(mw: Any) -> None:
         if not on: it.setForeground(Qt.gray)
         tbl.setItem(i, 0, it)
 
+        # ── Checkbox ──
+        cb = QCheckBox()
+        cb.setChecked(on)
+        cb.stateChanged.connect(lambda s, idx=i: _on_cell_changed(mw, idx))
+        w = QWidget(); l = QHBoxLayout(w); l.setContentsMargins(0,0,0,0); l.setAlignment(Qt.AlignCenter); l.addWidget(cb)
+        tbl.setCellWidget(i, 1, w)
+
         # Mode
         cmb = QComboBox(); cmb.addItems(["体力回满", "时间"])
         cmb.setCurrentText({"sanity":"体力回满","time":"时间"}.get(a.get("round_robin_mode","sanity"),"体力回满"))
         cmb.setEnabled(on); cmb.setStyleSheet(f"QComboBox{{color:{c};background:transparent;border:1px solid #444;border-radius:3px;padding:1px 4px;font-size:8pt}} QComboBox:hover{{border-color:#666}}")
         cmb.currentIndexChanged.connect(lambda _, idx=i: _on_cell_changed(mw, idx))
-        tbl.setCellWidget(i, 1, cmb)
+        tbl.setCellWidget(i, 2, cmb)
 
         # Hours
         hsp = QDoubleSpinBox(); hsp.setRange(0.5,72); hsp.setValue(a.get("round_robin_hours",0) or 2)
         hsp.setDecimals(1); hsp.setSingleStep(0.5); hsp.setSuffix("h")
         hsp.setEnabled(on); hsp.setStyleSheet(f"QDoubleSpinBox{{color:{c};background:transparent;border:1px solid #444;border-radius:3px;padding:1px 4px;font-size:8pt}} QDoubleSpinBox:hover{{border-color:#666}}")
         hsp.valueChanged.connect(lambda _, idx=i: _on_cell_changed(mw, idx))
-        tbl.setCellWidget(i, 2, hsp)
+        tbl.setCellWidget(i, 3, hsp)
 
         # Min sanity
         msp = QSpinBox(); msp.setRange(0,999); msp.setValue(a.get("min_sanity",0))
         msp.setEnabled(on); msp.setStyleSheet(f"QSpinBox{{color:{c};background:transparent;border:1px solid #444;border-radius:3px;padding:1px 4px;font-size:8pt}} QSpinBox:hover{{border-color:#666}}")
         msp.valueChanged.connect(lambda _, idx=i: _on_cell_changed(mw, idx))
-        tbl.setCellWidget(i, 3, msp)
+        tbl.setCellWidget(i, 4, msp)
 
         # Next
         nxt = _estimate_next(mw, a["id"])
         nl = QLabel(nxt)
         nl.setStyleSheet(f"color:#{'888' if on else '555'};font-size:8pt")
         nl.setAlignment(Qt.AlignCenter)
-        tbl.setCellWidget(i, 4, nl)
+        tbl.setCellWidget(i, 5, nl)
 
     while tbl.rowCount() > len(mw.accounts):
         tbl.removeRow(tbl.rowCount() - 1)
@@ -113,10 +121,16 @@ def refresh_schedule_view(mw: Any) -> None:
 
 def _on_cell_changed(mw: Any, idx: int) -> None:
     tbl = mw._sch_tbl; a = mw.accounts[idx]
-    if cmb := tbl.cellWidget(idx, 1):
+    # Checkbox
+    if w := tbl.cellWidget(idx, 1):
+        if cb := w.findChild(QCheckBox):
+            a["round_robin"] = cb.isChecked()
+    on = a.get("round_robin", False)
+    if cmb := tbl.cellWidget(idx, 2):
         a["round_robin_mode"] = {"体力回满":"sanity","时间":"time"}.get(cmb.currentText(),"sanity")
-    if hsp := tbl.cellWidget(idx, 2): a["round_robin_hours"] = hsp.value()
-    if msp := tbl.cellWidget(idx, 3): a["min_sanity"] = msp.value()
+        cmb.setEnabled(on)
+    if hsp := tbl.cellWidget(idx, 3): a["round_robin_hours"] = hsp.value(); hsp.setEnabled(on)
+    if msp := tbl.cellWidget(idx, 4): a["min_sanity"] = msp.value(); msp.setEnabled(on)
 
 
 def _save_schedule(mw: Any) -> None:
