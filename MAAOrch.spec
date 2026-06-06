@@ -55,7 +55,6 @@ a = Analysis(
         "ui.queue_panel",
         "ui.config_cards",
         "ui.schedule_panel",
-        "ui.groups_panel",
         "ui",
     ],
     hookspath=[],

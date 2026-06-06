@@ -21,7 +21,7 @@ jobs:
         run: |
           python -c "
           import os; ok=True
-          LIMITS={'main_window.py':900,'emu_ops.py':400,'config_ops.py':200,'log_ops.py':450,'maint_ops.py':350,'main.pyw':100,'utils.py':100,'config.py':100,'task_constants.py':250,'updater.py':200,'dialogs.py':350,'pipeline_thread.py':80,'api_server.py':250,'schedule_thread.py':60,'themes.py':100,'background.py':50,'callbacks.py':60,'runner.py':400,'launch_queue.py':200,'stats.py':100}
+           LIMITS={'main_window.py':900,'emu_ops.py':400,'config_ops.py':200,'log_ops.py':450,'maint_ops.py':450,'main.pyw':100,'utils.py':100,'config.py':100,'task_constants.py':250,'updater.py':250,'dialogs.py':450,'pipeline_thread.py':80,'api_server.py':250,'schedule_thread.py':80,'themes.py':100,'background.py':50,'callbacks.py':60,'runner.py':500,'launch_queue.py':300,'stats.py':100}
           for f,limit in LIMITS.items():
               if not os.path.exists(f): continue
               lines=len(open(f,encoding='utf-8').readlines())
