@@ -176,26 +176,27 @@ class MainWindow(QMainWindow):
         ml.setContentsMargins(8, 8, 8, 4)
         ml.setSpacing(4)
 
-        # Top tab bar
+        # Top tab bar — modern flat tabs with bottom indicator
         tb = QFrame()
+        tb.setStyleSheet("QFrame{background:rgba(255,255,255,0.02);border-bottom:1px solid #333}")
         th = QHBoxLayout(tb)
-        th.setContentsMargins(0, 0, 0, 4)
-        self.tg = QPushButton("👤 账号")
-        self.tg.setObjectName("tabBtn")
-        self.tg.clicked.connect(lambda: self._sw("accounts"))
-        self.ta = QPushButton("⏳ 队列")
-        self.ta.setObjectName("tabBtn")
-        self.ta.clicked.connect(lambda: self._sw("queue"))
-        self.tl = QPushButton("📋 日志")
-        self.tl.setObjectName("tabBtn")
-        self.tl.clicked.connect(lambda: self._sw("logs"))
-        self.tc = QPushButton("⚡ 配置")
-        self.tc.setObjectName("tabBtn")
-        self.tc.clicked.connect(lambda: self._sw("config"))
-        th.addWidget(self.tg)
-        th.addWidget(self.ta)
-        th.addWidget(self.tl)
-        th.addWidget(self.tc)
+        th.setContentsMargins(8, 2, 4, 0)
+        th.setSpacing(0)
+        self.tg = QPushButton("  👤 账号  ")
+        self.ta = QPushButton("  ⏳ 队列  ")
+        self.tl = QPushButton("  📋 日志  ")
+        self.tc = QPushButton("  ⚡ 配置  ")
+        for btn, key in [
+            (self.tg, "accounts"),
+            (self.ta, "queue"),
+            (self.tl, "logs"),
+            (self.tc, "config"),
+        ]:
+            btn.setObjectName("tabBtn")
+            btn.setFlat(True)
+            btn.setStyleSheet("QPushButton{color:#888;border:none;padding:6px 10px;font-size:10pt;border-bottom:2px solid transparent}QPushButton:hover{color:#ddd;background:rgba(255,255,255,0.03)}QPushButton#tabBtnActive{color:#fff;border-bottom:2px solid #5a9}")
+            btn.clicked.connect(lambda _, k=key: self._sw(k))
+            th.addWidget(btn)
         th.addStretch()
         self.qs = QPushButton("▶ 启动全部")
         self.qs.setObjectName("startBtn")
@@ -235,23 +236,16 @@ class MainWindow(QMainWindow):
         self.cv.hide()
         ml.addWidget(self.cv, 1)
 
-        # Status bar
+        # Status bar — clean single line
         sb2 = self.statusBar()
+        sb2.setStyleSheet("QStatusBar{background:#111;border-top:1px solid #333;padding:1px 8px;font-size:9pt}")
         self.sl = QLabel(" 就绪")
+        self.sl.setStyleSheet("color:#aaa")
         sb2.addWidget(self.sl)
-        self.spb = QPushButton("停止")
-        self.spb.setObjectName("stopBtn")
-        self.spb.clicked.connect(self._stop_pipeline)
-        self.spb.setEnabled(False)
-        sb2.addPermanentWidget(self.spb)
-        self.pab = QPushButton("暂停")
-        self.pab.clicked.connect(self._pause_pipeline)
-        self.pab.setEnabled(False)
-        sb2.addPermanentWidget(self.pab)
-        self.stb = QPushButton("启动流水线")
-        self.stb.setObjectName("startBtn")
-        self.stb.clicked.connect(self._start_pipeline)
-        sb2.addPermanentWidget(self.stb)
+        # Queue summary on right
+        self._qsb = QLabel("")
+        self._qsb.setStyleSheet("color:#666")
+        sb2.addPermanentWidget(self._qsb)
 
         # Menu bar
         mb = self.menuBar()
@@ -547,7 +541,7 @@ class MainWindow(QMainWindow):
     # Pipeline
     def _start_pipeline(self) -> None:
         if not self.groups or (self.pipeline_thread and self.pipeline_thread.isRunning()): return
-        self.stb.setEnabled(False); self.qs.setEnabled(False); self.spb.setEnabled(True); self.pab.setEnabled(True); self.pab.setText("暂停"); self._log("流水线启动")
+        self.qs.setEnabled(False); self._log("流水线启动")
         # Collect emulators to launch
         to_launch=[]
         launched=set()
@@ -562,7 +556,7 @@ class MainWindow(QMainWindow):
             self.pipeline_thread=PipelineThread(self.groups,self.warehouse,self.accounts,self)
             self.pipeline_thread.progress.connect(lambda m:(self.sl.setText(m),self._log(m)))
             self.pipeline_thread.program_started.connect(lambda n,ok: self._log(f"启动 {n}" if ok else f"失败 {n}"))
-            self.pipeline_thread.finished.connect(lambda s:(self.stb.setEnabled(True),self.qs.setEnabled(True),self.spb.setEnabled(False),self.pab.setEnabled(False)))
+            self.pipeline_thread.finished.connect(lambda s: self.qs.setEnabled(True))
             self.pipeline_thread.start()
         def _launch_next(i=0):
             if i>=len(to_launch): _start_thread(); return
@@ -578,23 +572,23 @@ class MainWindow(QMainWindow):
         if self.pipeline_thread: self.pipeline_thread.stop()
     def _pause_pipeline(self) -> None:
         if self.pipeline_thread and self.pipeline_thread.isRunning():
-            if self.pab.text()=="暂停":
-                self.pipeline_thread.pause(); self.pab.setText("继续"); self._log("流水线已暂停")
+            if getattr(self.pipeline_thread, "pause_flag", False):
+                self.pipeline_thread.resume(); self._log("流水线已继续")
             else:
-                self.pipeline_thread.resume(); self.pab.setText("暂停"); self._log("流水线已继续")
+                self.pipeline_thread.pause(); self._log("流水线已暂停")
 
     def _poll(self) -> None:
         self.maint.poll()
         refresh_queue_view(self)
-        # Append queue status to status bar
         if hasattr(self, "launch_queue"):
-            qs = self.launch_queue.pending_summary()
-            if qs:
-                cur = self.sl.text()
-                if cur.startswith(" 就绪"):
-                    self.sl.setText(f" 就绪 | 队列: {self.launch_queue.pending_count}等待, {self.launch_queue.active_count}运行")
-                elif cur.startswith(" 运行中"):
-                    self.sl.setText(f"{cur}  |  ⏳{self.launch_queue.pending_count}")
+            if self.launch_queue.active_count:
+                ac = self.launch_queue.active_count
+                qc = self.launch_queue.pending_count
+                self._qsb.setText(f"▶{ac}" + (f"  ⏳{qc}" if qc else ""))
+            elif self.launch_queue.pending_count:
+                self._qsb.setText(f"⏳{self.launch_queue.pending_count}")
+            else:
+                self._qsb.setText("")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _check_updates(self, silent: bool = False) -> None: self.maint.check_updates(silent=False)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
