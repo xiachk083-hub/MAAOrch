@@ -19,6 +19,7 @@ from dialogs import ScheduleDialog,SettingsDialog,AccountDialog,TaskSettingsDial
 from api_server import ApiServer
 from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
+from account import Account
 from runner import AccountRunner
 from launch_queue import LaunchQueue
 from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_threads
