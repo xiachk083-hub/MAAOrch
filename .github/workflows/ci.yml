@@ -31,5 +31,21 @@ jobs:
           if not ok:
               print('❌ 文件超过行数限制，请拆分')
               exit(1)
-          print('✅ 所有文件行数检查通过')
-          "
+               print('✅ 所有文件行数检查通过')
+           "
+
+  build-release:
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install PySide6 pyinstaller
+      - run: pyinstaller MAAOrch.spec
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: dist/MAAOrch.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
