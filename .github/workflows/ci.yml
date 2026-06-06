@@ -35,34 +35,16 @@ jobs:
         timeout-minutes: 15
       - run: dir dist\ 2>&1 || echo "No dist output"
       - name: Upload Release
-        shell: python
         run: |
-          import json, urllib.request, os
-          token = os.environ['GITHUB_TOKEN']
-          repo = os.environ['GITHUB_REPOSITORY']
-          tag = os.environ['GITHUB_REF_NAME']
-          base = f'https://api.github.com/repos/{repo}'
-          auth = {'Authorization': f'Bearer {token}', 'User-Agent': 'MAAOrch', 'Content-Type': 'application/json'}
-          # Get or create release
+          python -c "import json,urllib.request,os; token=os.environ['GITHUB_TOKEN']; repo=os.environ['GITHUB_REPOSITORY']; tag=os.environ['GITHUB_REF_NAME']; base=f'https://api.github.com/repos/{repo}'; auth={'Authorization':f'Bearer {token}','User-Agent':'MAAOrch','Content-Type':'application/json'};
           try:
-              req = urllib.request.Request(f'{base}/releases/tags/{tag}', headers=auth)
-              with urllib.request.urlopen(req, timeout=10) as r:
-                  release = json.loads(r.read().decode())
-              print(f'Found existing release: {release["html_url"]}')
+              r=urllib.request.Request(f'{base}/releases/tags/{tag}',headers=auth); release=json.loads(urllib.request.urlopen(r,timeout=10).read()); print(f'Found: {release[\"html_url\"]}')
           except:
-              body = json.dumps({'tag_name': tag, 'name': tag, 'body': f'MAAOrch {tag}'}).encode()
-              req = urllib.request.Request(f'{base}/releases', data=body, headers=auth)
-              with urllib.request.urlopen(req, timeout=10) as r:
-                  release = json.loads(r.read().decode())
-              print(f'Created release: {release["html_url"]}')
-          # Upload asset
-          name = 'MAAOrch.exe'
-          upload_url = release['upload_url'].split('{?')[0] + f'?name={name}'
-          with open('dist/MAAOrch.exe', 'rb') as f:
-              data = f.read()
-          req = urllib.request.Request(upload_url, data=data, headers={'Authorization': auth['Authorization'], 'User-Agent': 'MAAOrch', 'Content-Type': 'application/octet-stream'})
-          with urllib.request.urlopen(req, timeout=60) as r:
-              print(f'Uploaded {name} ({len(data)} bytes)')
+              body=json.dumps({'tag_name':tag,'name':tag,'body':f'MAAOrch {tag}'}).encode(); r=urllib.request.Request(f'{base}/releases',data=body,headers=auth); release=json.loads(urllib.request.urlopen(r,timeout=10).read()); print(f'Created: {release[\"html_url\"]}')
+          url=release['upload_url'].split('{?')[0]+f'?name=MAAOrch.exe'
+          with open('dist/MAAOrch.exe','rb') as f: data=f.read()
+          r=urllib.request.Request(url,data=data,headers={'Authorization':auth['Authorization'],'User-Agent':'MAAOrch','Content-Type':'application/octet-stream'})
+          urllib.request.urlopen(r,timeout=60); print(f'Uploaded {len(data)} bytes')"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         env:
