@@ -293,3 +293,4 @@ def _enqueue(mw: Any, idx: int) -> None:
         return
     mw.launch_queue.enqueue(mw.accounts[idx]["id"], "manual", priority=0)
     mw.launch_queue._tick()
+    _rebuild(mw)

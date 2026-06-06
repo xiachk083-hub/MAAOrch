@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from task_constants import TASK_NAMES, EMU_PRESETS, CLIENT_TYPES, find_mumu_cli
 from utils import _find_maa_cli
 from dialogs import TaskSettingsDialog
+from ui.config_cards import refresh_config_cards
 
 
 def clear_dashboard(mw: Any) -> None:
@@ -835,7 +836,7 @@ def _build_action_buttons(mw: Any, row: int, progs: list[dict]) -> None:
         lb2.setMinimumHeight(36)
         lb2.setFont(QFont("Microsoft YaHei UI", 12, QFont.Bold))
         lb2.setToolTip("入队后立刻启动（若模拟器空闲）")
-        lb2.clicked.connect(lambda: (mw.launch_queue.enqueue(a["id"], "manual", priority=0), mw.launch_queue._tick()))
+        lb2.clicked.connect(lambda: (mw.launch_queue.enqueue(a["id"], "manual", priority=0), mw.launch_queue._tick(), refresh_config_cards(mw)))
         mw._dash_refs["action_launch_btn"] = lb2
         bl.addWidget(lb2)
         launch_all_btn = QPushButton("▶ 全部入队", clicked=lambda: mw._la_all())
