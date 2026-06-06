@@ -188,7 +188,7 @@ MAAOrch/
 ├── log_ops.py                # 日志解析 / 统计
 ├── maint_ops.py              # 监控 / 更新 / 托盘
 ├── runner.py                 # 单号启动→监控→完成回调
-├── scheduler.py              # 理智驱动调度引擎
+├── launch_queue.py           # 统一启动队列（手动/定时/理智）
 ├── stats.py                  # 运行历史持久化
 ├── pipeline_thread.py        # 流水线调度
 ├── api_server.py             # HTTP API 服务

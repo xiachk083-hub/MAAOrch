@@ -20,7 +20,7 @@ from api_server import ApiServer
 from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 from runner import AccountRunner
-from scheduler import SchedulerEngine
+from launch_queue import LaunchQueue
 from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_threads
 from ui.groups_panel import build_groups_panel
 from ui.accounts_panel import build_accounts_panel
@@ -94,10 +94,11 @@ class MainWindow(QMainWindow):
         self.runner.account_finished.connect(self._on_account_finished)
         self.runner.account_error.connect(lambda aid, err: self._log(f"❌ {err}"))
         self.ctx.on_account_done = self.runner.check_processes
-        # ── Sanity scheduler ──
-        self.scheduler = SchedulerEngine(self.ctx)
-        self.runner.account_finished.connect(self.scheduler.on_account_finished)
-        self.scheduler.start()
+        # ── Launch queue (unified entry for all launch sources) ──
+        self.launch_queue = LaunchQueue(self.ctx)
+        self.launch_queue.log_msg.connect(lambda m: self._log(m))
+        self.runner.account_finished.connect(self.launch_queue.on_account_finished)
+        self.launch_queue.start()
         self._build_ui(); self.maint.restore_geometry(); self._rgl(); self._log("══ 启动 ══")
         self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
@@ -136,18 +137,6 @@ class MainWindow(QMainWindow):
         except Exception:
             try: print(line,file=__import__('sys').stderr)
             except: pass
-    def _la_all(self) -> None:
-        self._log("══ 启动全部账号 ══"); self._log_expanded=True; self.log_text.setFixedHeight(150)
-        total=len(self.accounts)
-        def _next(idx=0):
-            if idx>=total:
-                self._log("══ 全部启动完成 ══"); self.maint.notify("全部账号启动完成"); return
-            a=self.accounts[idx]; progs=[w for w in self.warehouse if w.get("account_ref")==a["id"]]
-            self.sl.setText(f"启动中: {idx+1}/{total}")
-            if not progs: self._log(f"跳过: {a['name']} (无绑定)"); QTimer.singleShot(500,lambda: _next(idx+1)); return
-            self._la(idx)
-            QTimer.singleShot(5000,lambda: _next(idx+1))
-        _next()
     def _save(self) -> None:
         # Debounce: coalesce rapid saves within 300ms
         if hasattr(self,'_save_timer') and self._save_timer:
@@ -473,29 +462,20 @@ class MainWindow(QMainWindow):
         if fp:
             Path(fp).write_text(json.dumps({"name":a.get("name"),"game_client":a.get("game_client"),"adb_path":a.get("adb_path"),"adb_address":a.get("adb_address"),"connection_preset":a.get("connection_preset"),"touch_mode":a.get("touch_mode"),"account_switch":a.get("account_switch"),"emu_instance_index":a.get("emu_instance_index"),"emu_instance_name":a.get("emu_instance_name"),"emu_wait":a.get("emu_wait",30),"task_settings":a.get("task_settings",{}),"post_action":a.get("post_action"),"task_pipeline":(progs[0].get("task_pipeline","") if (progs:=[w for w in self.warehouse if w.get("account_ref")==a["id"]]) else "")},ensure_ascii=False,indent=2),encoding="utf-8")
     def _la(self, row: int) -> None:
-        if not self._log_expanded: self._tlog()
-        self.runner.launch(row)
+        """Manual single-account launch → enqueue with highest priority."""
+        if row < 0 or row >= len(self.accounts):
+            return
+        if not self._log_expanded:
+            self._tlog()
+        aid = self.accounts[row]["id"]
+        self.launch_queue.enqueue(aid, "manual", priority=0)
 
     def _la_all(self) -> None:
-        self._log("══ 启动全部账号 ══")
+        """Batch enqueue all accounts with schedule priority."""
+        self._log("══ 全部账号入队 ══")
         self._log_expanded = True
         self.log_text.setFixedHeight(150)
-        total = len(self.accounts)
-        def _next(idx=0):
-            if idx >= total:
-                self._log("══ 全部启动完成 ══")
-                self.maint.notify("全部账号启动完成")
-                return
-            a = self.accounts[idx]
-            progs = [w for w in self.warehouse if w.get("account_ref") == a["id"]]
-            self.sl.setText(f"启动中: {idx+1}/{total}")
-            if not progs:
-                self._log(f"跳过: {a['name']} (无绑定)")
-                QTimer.singleShot(500, lambda: _next(idx + 1))
-                return
-            self.runner.launch(idx)
-            QTimer.singleShot(5000, lambda: _next(idx + 1))
-        _next()
+        self.launch_queue.enqueue_batch("manual", priority=0)
 
     def _on_account_started(self, aid: str) -> None:
         a = next((x for x in self.accounts if x["id"] == aid), None)

@@ -154,7 +154,7 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         sd_cb.toggled.connect(lambda v: (a.__setitem__("sanity_driven", v), mw._save()))
         sdr.addWidget(sd_cb)
         # Show next launch time if available
-        nxt = getattr(mw, "scheduler", None)
+        nxt = getattr(mw, "launch_queue", None)
         if nxt:
             nl = nxt.get_next_launch(a["id"])
             if nl:
