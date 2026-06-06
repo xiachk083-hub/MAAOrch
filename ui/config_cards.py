@@ -177,54 +177,50 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     frame.setStyleSheet(f"QFrame#configCard{{border:2px solid {border};border-radius:6px;background:rgba(255,255,255,0.03)}}QFrame#configCard:hover{{border-color:#888;background:rgba(255,255,255,0.05)}}")
 
     fl = QVBoxLayout(frame)
-    fl.setContentsMargins(6, 5, 6, 5)
-    fl.setSpacing(1)
+    fl.setContentsMargins(5, 4, 5, 4)
+    fl.setSpacing(0)
 
     # Name row — bold, with status indicator
     name_row = QHBoxLayout()
     name_row.setSpacing(4)
     if running:
         dot = QLabel("▶")
-        dot.setStyleSheet("color:#4a4;font-weight:bold;font-size:10pt")
+        dot.setStyleSheet("color:#4a4;font-weight:bold;font-size:9pt")
         name_row.addWidget(dot)
     elif queued:
         dot = QLabel("⏳")
-        dot.setStyleSheet("color:#c90;font-weight:bold;font-size:10pt")
+        dot.setStyleSheet("color:#c90;font-weight:bold;font-size:9pt")
         name_row.addWidget(dot)
     name_lbl = QLabel(a.get("name", ""))
-    name_lbl.setFont(QFont("Microsoft YaHei UI", 10, QFont.Bold))
+    name_lbl.setFont(QFont("Microsoft YaHei UI", 9, QFont.Bold))
     name_row.addWidget(name_lbl, 1)
     fl.addLayout(name_row)
 
-    # Client + summary line
+    # One-line summary: client | ADB | emu | pipeline
+    parts = []
     client_map = {"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
-    client = client_map.get(a.get("game_client",""), a.get("game_client",""))
-    fl.addWidget(QLabel(client))
+    parts.append(client_map.get(a.get("game_client",""), a.get("game_client","")))
 
-    # ADB
     adb = a.get("adb_address", "")
-    adb_lbl = QLabel(f"📱{adb}" if adb else "⚠无ADB")
-    if not adb: adb_lbl.setStyleSheet("color:#a88")
-    fl.addWidget(adb_lbl)
+    parts.append(f"📱{adb}" if adb else "⚠ADB")
 
-    # Emulator
     emu = a.get("emu_instance_index", "")
     if emu:
-        ename = a.get("emu_instance_name", emu)
-        fl.addWidget(QLabel(f"🖥{ename}"))
-    elif a.get("emu_launch"):
-        fl.addWidget(QLabel("🖥自启"))
+        ename = a.get("emu_instance_name", "") or emu
+        parts.append(f"🖥{ename}")
 
-    # Pipeline
     progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
     pipe = progs[0].get("task_pipeline", "") if progs else ""
     if pipe:
-        tasks = [t.strip() for t in pipe.split(",") if t.strip()][:3]
-        fl.addWidget(QLabel(f"⚙{','.join(tasks)}"))
-
-    # Sanity
+        tasks = [t.strip() for t in pipe.split(",") if t.strip()][:2]
+        parts.append(f"⚙{'.'.join(tasks)}")
     if a.get("sanity_driven"):
-        fl.addWidget(QLabel("💊理智驱动"))
+        parts.append("💊")
+
+    summary = QLabel(" │ ".join(parts))
+    summary.setStyleSheet("font-size:8pt;color:#aaa")
+    summary.setWordWrap(True)
+    fl.addWidget(summary)
 
     # Tags
     tags = a.get("tags", "")
@@ -236,26 +232,25 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
             if not t: continue
             bg, _ = _tag_color(t)
             tl = QLabel(t)
-            tl.setStyleSheet(f"background:{bg};color:#fff;border-radius:3px;padding:0 4px;font-size:8pt")
+            tl.setStyleSheet(f"background:{bg};color:#fff;border-radius:3px;padding:0 3px;font-size:7pt")
             tag_row.addWidget(tl)
         tag_row.addStretch()
         fl.addLayout(tag_row)
-
-    fl.addStretch()
 
     # Buttons
     btn_row = QHBoxLayout()
     btn_row.setSpacing(4)
     edit_btn = QPushButton("✏️")
-    edit_btn.setFixedSize(26, 22)
+    edit_btn.setFixedSize(24, 20)
     edit_btn.setToolTip("编辑")
+    edit_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none;font-size:9pt}QPushButton:hover{color:#fff}")
     edit_btn.clicked.connect(lambda c, i=idx: _edit(mw, i))
     btn_row.addWidget(edit_btn)
 
     launch_btn = QPushButton("▶")
-    launch_btn.setFixedSize(26, 22)
+    launch_btn.setFixedSize(24, 20)
     launch_btn.setToolTip("加入队列")
-    launch_btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:3px}QPushButton:hover{background:#1e5a28}")
+    launch_btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:3px;font-size:9pt}QPushButton:hover{background:#1e5a28}")
     launch_btn.clicked.connect(lambda c, i=idx: _enqueue(mw, i))
     btn_row.addWidget(launch_btn)
     btn_row.addStretch()
