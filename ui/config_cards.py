@@ -200,19 +200,27 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     name_row.addWidget(name_lbl, 1)
     fl.addLayout(name_row)
 
-    # ── Meta line: client · ADB · emu ──
-    meta = []
+    # ── Meta line: client · ADB ──
     client_map = {"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
-    meta.append(client_map.get(a.get("game_client",""), a.get("game_client","")))
+    fl.addWidget(QLabel(client_map.get(a.get("game_client",""), a.get("game_client",""))))
+
+    # ── ADB ──
     adb = a.get("adb_address", "")
-    meta.append(f"📱{adb}" if adb else "⚠无ADB")
+    adb_lbl = QLabel(f"📱 {adb}" if adb else "⚠ 未配置ADB")
+    adb_lbl.setStyleSheet("color:#999;font-size:8pt")
+    fl.addWidget(adb_lbl)
+
+    # ── Emulator ──
     emu = a.get("emu_instance_index", "")
     if emu:
         ename = a.get("emu_instance_name", emu)
-        meta.append(f"🖥{ename}")
-    meta_text = QLabel(" · ".join(meta))
-    meta_text.setStyleSheet("color:#999;font-size:8pt")
-    fl.addWidget(meta_text)
+        emu_lbl = QLabel(f"🖥 {ename}")
+        emu_lbl.setStyleSheet("color:#999;font-size:8pt")
+        fl.addWidget(emu_lbl)
+    elif a.get("emu_launch"):
+        emu_lbl = QLabel("🖥 自启")
+        emu_lbl.setStyleSheet("color:#999;font-size:8pt")
+        fl.addWidget(emu_lbl)
 
     # ── Pipeline ──
     progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
