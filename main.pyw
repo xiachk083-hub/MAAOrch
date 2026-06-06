@@ -74,6 +74,8 @@ def main():
                     t.stop_server()
                 elif hasattr(t, "stop_thread"):
                     t.stop_thread()
+                elif hasattr(t, "stop_monitor"):
+                    t.stop_monitor()
                 else:
                     t.quit()
                 t.wait(2000)

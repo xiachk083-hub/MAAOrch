@@ -127,8 +127,12 @@ CF=subprocess.CREATE_NO_WINDOW
 
 class EmuMonitor(QThread):
     updated=Signal(list)
+    def __init__(self):
+        super().__init__()
+        self._stop_flag = False
+
     def run(self):
-        while True:
+        while not self._stop_flag:
             cli=find_mumu_cli()
             if cli:
                 try:
@@ -140,5 +144,14 @@ class EmuMonitor(QThread):
                             if isinstance(info,dict):
                                 results.append({"name":info.get("name",idx),"index":idx,"running":info.get("is_process_started",False) or info.get("is_android_started",False)})
                         self.updated.emit(results)
-                except: pass
-            time.sleep(30)
+                except Exception:
+                    pass
+            for _ in range(30):
+                if self._stop_flag:
+                    break
+                time.sleep(1)
+
+    def stop_monitor(self):
+        self._stop_flag = True
+        self.quit()
+        self.wait(2000)

@@ -206,6 +206,5 @@ class ApiServer(QThread):
     def stop_server(self):
         if self._httpd:
             try: self._httpd.shutdown()
-            except: pass
-
-from schedule_thread import ScheduleThread
+            except Exception:
+                pass

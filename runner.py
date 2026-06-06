@@ -1,11 +1,12 @@
 """Single-account launch → monitor → complete cycle runner."""
 from __future__ import annotations
-import time, subprocess, re
+import time, subprocess, re, json, os, shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal, QTimer
+from PySide6.QtWidgets import QDialog
 
 from task_constants import find_mumu_cli, CF
 from callbacks import ServiceContext
@@ -254,7 +255,7 @@ class AccountRunner(QObject):
         if not cl:
             d = MaacliInstallDialog(self.ctx._mw)
             d.start(str(Path(__file__).parent / "maa-cli"))
-            if d.exec() != __import__("PySide6.QtWidgets").QDialog.Accepted:
+            if d.exec() != QDialog.Accepted:
                 return
             cl = _find_maa_cli()
         if not cl:
@@ -263,11 +264,10 @@ class AccountRunner(QObject):
         md = Path(w["path"]).parent
         lc = md / Path(cl).name
         if not lc.exists() or lc.stat().st_mtime < Path(cl).stat().st_mtime:
-            import shutil
             shutil.copy2(cl, str(lc))
         tn = self.ctx.cfg.gtc(ac, w)
         if tn:
-            env = (env or __import__("os").environ.copy())
+            env = (env or os.environ.copy())
             env["MAA_CONFIG_DIR"] = str(md / "config")
             exe = str(lc)
             args = ["run", tn] + args
@@ -331,10 +331,10 @@ class AccountRunner(QObject):
                 for line in last:
                     # v6: append_callback SubTaskStart
                     if "append_callback" in line and "SubTaskStart" in line:
-                        jm = __import__("re").search(r"\{.*\}", line)
+                        jm = re.search(r"\{.*\}", line)
                         if jm:
                             try:
-                                data = __import__("json").loads(jm.group(0))
+                                data = json.loads(jm.group(0))
                                 tc = data.get("taskchain", "")
                                 st_map = {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息", "CloseDown": "关闭"}
                                 if tc in st_map:

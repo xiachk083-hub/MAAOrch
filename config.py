@@ -53,12 +53,14 @@ def load_config() -> dict:
                 for a in data.get("accounts",[]):
                     raw=a.get("adb_address","")
                     if raw and not raw.startswith("127.0.0.1:"):
-                        m=re.search(r':(\d+)$',raw)
+                        m=re.match(r'^2?7\.0\.0\.1:(\d+)$',raw)
                         if m: a["adb_address"]="127.0.0.1:"+m.group(1)
                 # Convert accounts to Account objects
                 data["accounts"]=[Account.from_dict(a) for a in data["accounts"]]
                 return data
-    except: pass
+    except Exception as e:
+        try: (Path(__file__).parent/"debug.log").open("a",encoding="utf-8").write(f"[ERR] load_config: {e}\n")
+        except: pass
     return dict(DEFAULT_CONFIG)
 
 def save_config(data: dict) -> None:
