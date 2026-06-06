@@ -154,11 +154,16 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         sd_cb.toggled.connect(lambda v: (a.__setitem__("sanity_driven", v), mw._save()))
         sdr.addWidget(sd_cb)
         # Show next launch time if available
-        nxt = getattr(mw, "launch_queue", None)
-        if nxt:
-            nl = nxt.get_next_launch(a["id"])
-            if nl:
-                sdr.addWidget(QLabel(f"→ {nl.strftime('%m-%d %H:%M')}"))
+        lq = getattr(mw, "launch_queue", None)
+        if lq:
+            nxt = lq.get_next_for(a["id"])
+            if nxt:
+                if nxt == "即将启动":
+                    sdr.addWidget(QLabel("→ 即将启动"))
+                else:
+                    sdr.addWidget(QLabel(f"→ {nxt}"))
+                sdr.addStretch()
+            else:
                 sdr.addStretch()
         else:
             sdr.addStretch()

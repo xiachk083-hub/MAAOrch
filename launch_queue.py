@@ -102,6 +102,27 @@ class LaunchQueue(QObject):
     def is_running(self, account_id: str) -> bool:
         return account_id in self._active_emus.values()
 
+    def pending_summary(self) -> str:
+        """Short text for status bar: '排队: 小号(理智), 材料号(定时)'."""
+        if not self._pending:
+            return ""
+        parts = []
+        src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
+        for e in sorted(self._pending, key=lambda x: x.sort_key):
+            ac = next((a for a in self.ctx.accounts if a["id"] == e.account_id), None)
+            name = ac.get("name", e.account_id[:6]) if ac else e.account_id[:6]
+            parts.append(f"{name}({src_map.get(e.source, e.source)})")
+        return "排队: " + ", ".join(parts[:3])
+
+    def get_next_for(self, account_id: str) -> str:
+        """Return next launch time for an account (for dashboard display)."""
+        for e in self._pending:
+            if e.account_id == account_id:
+                if e.not_before > datetime.now():
+                    return e.not_before.strftime("%m-%d %H:%M")
+                return "即将启动"
+        return ""
+
     # ── Lifecycle hooks (called from runner signals) ──
 
     def on_account_finished(self, account_id: str, exit_code: int, tasks: list | None = None) -> None:

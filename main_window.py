@@ -552,7 +552,17 @@ class MainWindow(QMainWindow):
             else:
                 self.pipeline_thread.resume(); self.pab.setText("暂停"); self._log("流水线已继续")
 
-    def _poll(self) -> None: self.maint.poll()
+    def _poll(self) -> None:
+        self.maint.poll()
+        # Append queue status to status bar
+        if hasattr(self, "launch_queue"):
+            qs = self.launch_queue.pending_summary()
+            if qs:
+                cur = self.sl.text()
+                if cur.startswith(" 就绪"):
+                    self.sl.setText(f" 就绪 | {qs}")
+                elif cur.startswith(" 运行中"):
+                    self.sl.setText(f"{cur}  |  {qs}")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _check_updates(self, silent: bool = False) -> None: self.maint.check_updates(silent=False)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
