@@ -124,6 +124,8 @@ MAAOrch 启动后自动在 `127.0.0.1:19999` 开启 REST 服务（端口可在�
 | `/api/account/{index}/launch` | POST | 启动单个账号 |
 | `/api/logs?lines=N` | GET | 读取最近 N 行 debug.log（默认 50） |
 | `/api/config/sync` | POST | 下发 MAA gui.json 配置到指定账号 |
+| `/api/account/{index}/stats` | GET | 单个账号运行统计 |
+| `/api/stats` | GET | 全部账号统计汇总 |
 
 安全措施：
 

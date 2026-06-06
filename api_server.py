@@ -49,6 +49,8 @@ class ApiServer(QThread):
                 p=s.path.split("?")[0]
                 if p=="/api/status": return s._handle_status()
                 if p.startswith("/api/account/") and p.endswith("/status"): return s._handle_account_status(p)
+                if p.startswith("/api/account/") and p.endswith("/stats"): return s._handle_account_stats(p)
+                if p=="/api/stats": return s._handle_all_stats()
                 if p=="/api/logs": return s._handle_logs(s.path)
                 s._json({"error":"not found"},404)
             def do_POST(s):
@@ -84,6 +86,27 @@ class ApiServer(QThread):
                 elapsed=0
                 if running and pid in mw._proc_start_times: elapsed=int(time.time()-mw._proc_start_times[pid])
                 s._json({"name":a.get("name",""),"running":running,"elapsed":elapsed})
+            def _handle_account_stats(s,p):
+                try: idx=int(p.split("/")[3])
+                except: return s._json({"error":"bad index"},400)
+                if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                a=mw.accounts[idx]
+                from stats import RunStats
+                st=RunStats(a["id"])
+                progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
+                pid=progs[0]["id"] if progs else ""
+                running=pid in mw._proc_status
+                s._json({"account_name":a.get("name",""),"running":running,"stats":st._data})
+            def _handle_all_stats(s):
+                from stats import RunStats
+                result=[]
+                for i,a in enumerate(mw.accounts):
+                    st=RunStats(a["id"])
+                    progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
+                    pid=progs[0]["id"] if progs else ""
+                    running=pid in mw._proc_status
+                    result.append({"index":i,"account_name":a.get("name",""),"running":running,"total_runs":st.total_runs,"stats":st._data})
+                s._json({"accounts":result})
             def _handle_pipeline_start(s):
                 mw._start_pipeline(); s._json({"ok":True})
             def _handle_pipeline_stop(s):
