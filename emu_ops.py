@@ -155,7 +155,7 @@ class EmuService:
         def _on_r(r):
             s=str(r)
             if s.startswith("__found__"):
-                addr=s[9:]; addr_edit.setText(addr); a.adb_address =addr); self.ctx.save()
+                addr=s[9:]; addr_edit.setText(addr); a.adb_address = addr; self.ctx.save()
                 self.ctx.log(f"端口: {addr}"); self.ctx._mw.sl.setText(f"端口: {addr}")
             elif s.startswith("__err__"):
                 self.ctx.log(s[8:]); self.ctx._mw.sl.setText("就绪")
