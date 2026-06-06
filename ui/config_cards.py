@@ -70,6 +70,7 @@ def build_config_cards(mw: Any) -> QWidget:
     mw._card_grid = QGridLayout(mw._card_container)
     mw._card_grid.setSpacing(6)
     mw._card_grid.setContentsMargins(0, 0, 0, 0)
+    mw._card_grid.setAlignment(Qt.AlignTop | Qt.AlignLeft)
     scroll.setWidget(mw._card_container)
     cvl.addWidget(scroll, 1)
 
@@ -113,7 +114,7 @@ def _rebuild(mw: Any) -> None:
         is_running = a["id"] in running_ids
         is_queued = a["id"] in queued_ids
         frame = _make_card(mw, a, i, cw, is_running, is_queued)
-        grid.addWidget(frame, row, col)
+        grid.addWidget(frame, row, col, Qt.AlignTop)
         col += 1
         if col >= col_count:
             col = 0; row += 1
@@ -179,6 +180,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     fl = QVBoxLayout(frame)
     fl.setContentsMargins(5, 4, 5, 4)
     fl.setSpacing(0)
+    fl.setAlignment(Qt.AlignTop)
 
     # Name row — bold, with status indicator
     name_row = QHBoxLayout()
@@ -193,7 +195,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
         name_row.addWidget(dot)
     name_lbl = QLabel(a.get("name", ""))
     name_lbl.setFont(QFont("Microsoft YaHei UI", 9, QFont.Bold))
-    name_row.addWidget(name_lbl, 1)
+    name_row.addWidget(name_lbl)
     fl.addLayout(name_row)
 
     # One-line summary: client | ADB | emu | pipeline
