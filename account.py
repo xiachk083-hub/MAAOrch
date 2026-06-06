@@ -36,6 +36,7 @@ class Account:
     loop_max_rounds: int = 10
     sanity_driven: bool = False
     min_sanity: int = 0
+    stuck_timeout_min: int = 0  # 0=disabled
 
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):

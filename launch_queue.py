@@ -54,6 +54,7 @@ class LaunchQueue(QObject):
         return heapq
 
     def start(self, interval_sec: int = 30) -> None:
+        self._restore()
         self._tick_timer.start(interval_sec * 1000)
         self._tick()
 
@@ -75,6 +76,7 @@ class LaunchQueue(QObject):
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
         nb_str = f" → {entry.not_before.strftime('%H:%M')}" if entry.not_before > datetime.now() else ""
         self.log_msg.emit(f"[队列] {name} 入队 ({src_map.get(source, source)}){nb_str}")
+        self._save_queue()
 
     def enqueue_batch(self, source: str = "schedule", priority: int = 1,
                       accounts: list[str] | None = None) -> None:
@@ -87,6 +89,7 @@ class LaunchQueue(QObject):
     def dequeue(self, account_id: str) -> None:
         """Remove an account from the queue."""
         self._pending = [e for e in self._pending if e.account_id != account_id]
+        self._save_queue()
 
     @property
     def pending_count(self) -> int:
@@ -206,6 +209,33 @@ class LaunchQueue(QObject):
 
     def _get_emu_idx(self, account_id: str) -> str:
         for a in self.ctx.accounts:
-            if a.id == account_id:
-                return a.emu_instance_index
+            if a["id"] == account_id:
+                return a.get("emu_instance_index", "")
         return ""
+
+    def _save_queue(self) -> None:
+        """Persist queue to config.json."""
+        data = []
+        for e in self._pending:
+            data.append({"account_id": e.account_id, "source": e.source,
+                         "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
+        self.ctx.config["queue"] = data
+        try: self.ctx.save()
+        except: pass
+
+    def _restore(self) -> None:
+        """Restore queue from config.json on startup."""
+        data = self.ctx.config.get("queue", [])
+        if not data:
+            return
+        from datetime import datetime as dt
+        heapq = self._import_heapq()
+        for d in data:
+            try:
+                nb = dt.strptime(d["not_before"], "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                nb = dt.now()
+            entry = QueueEntry.make(d["account_id"], d.get("source", "saved"), d.get("priority", 0), nb)
+            heapq.heappush(self._pending, entry)
+        self.ctx.config["queue"] = []
+        self.ctx.log(f"[队列] 从历史恢复 {len(data)} 个等待项")

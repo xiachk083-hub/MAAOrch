@@ -31,6 +31,7 @@ class AccountRunner(QObject):
         self._progs: dict[str, list[dict]] = {}     # account_id → bound programs
         self._procs: dict[str, subprocess.Popen] = {}  # account_id → Popen
         self._start_times: dict[str, float] = {}    # account_id → time.time()
+        self._task_start_times: dict[str, float] = {}  # account_id → last task start
         self._stopping: set = set()                 # accounts being stopped
 
     # ── Public API ──
@@ -293,9 +294,25 @@ class AccountRunner(QObject):
             return
         if p.poll() is None:
             self._update_status(aid)
+            # Stuck detection: same task over timeout → kill
+            ac = self._active.get(aid)
+            if ac:
+                timeout = ac.get("stuck_timeout_min", 0)
+                if timeout > 0 and aid in self._task_start_times:
+                    elapsed = time.time() - self._task_start_times[aid]
+                    if elapsed > timeout * 60:
+                        self.log_msg.emit(f"⚠ {ac.get('name', aid)} 任务卡死 ({int(elapsed/60)}分钟)，自动重启")
+                        self._task_start_times.pop(aid, None)
+                        try: p.terminate(); p.wait(5)
+                        except: pass
+                        try: p.kill()
+                        except: pass
+                        tasks, sanity, drops = self._parse_log(aid)
+                        self._cleanup(aid, -9, tasks, sanity, drops)
             return
         rc = p.poll()
         self._procs.pop(aid, None)
+        self._task_start_times.pop(aid, None)
         tasks, sanity, drops = self._parse_log(aid)
         self._cleanup(aid, rc, tasks, sanity, drops)
 
@@ -321,6 +338,7 @@ class AccountRunner(QObject):
                                 tc = data.get("taskchain", "")
                                 st_map = {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息", "CloseDown": "关闭"}
                                 if tc in st_map:
+                                    self._task_start_times[aid] = time.time()
                                     self.status_msg.emit(f"MAA: {st_map[tc]}...")
                                     return
                             except Exception:
