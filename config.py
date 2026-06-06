@@ -54,11 +54,16 @@ def load_config() -> dict:
                     if raw and not raw.startswith("127.0.0.1:"):
                         m=re.search(r':(\d+)$',raw)
                         if m: a["adb_address"]="127.0.0.1:"+m.group(1)
+                # Convert accounts to Account objects
+                data["accounts"]=[Account.from_dict(a) for a in data["accounts"]]
                 return data
     except: pass
     return dict(DEFAULT_CONFIG)
 
 def save_config(data: dict) -> None:
+    # Convert Account objects back to plain dicts for JSON serialization
+    if "accounts" in data:
+        data["accounts"] = [a.to_dict() if hasattr(a, "to_dict") else a for a in data["accounts"]]
     try: CONFIG_FILE.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
     except Exception as e:
         try: (Path(__file__).parent/"debug.log").open("a",encoding="utf-8").write(f"[ERR] save_config: {e}\n")
