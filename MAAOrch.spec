@@ -6,23 +6,21 @@ Usage:
     pyinstaller --clean MAAOrch.spec  # clean build
 """
 
-import sys
+import sys, os
 from pathlib import Path
 
-try:
-    ROOT = Path(SPECPATH).resolve().parent
-except NameError:
-    ROOT = Path(specpath).resolve().parent if 'specpath' in dir() else Path('.').resolve()
+# PyInstaller resolves paths relative to the spec file's directory
+BASE = Path('.')
 
 a = Analysis(
-    [str(ROOT / "main.pyw")],
-    pathex=[str(ROOT)],
+    ['main.pyw'],
+    pathex=['.'],
     binaries=[],
     datas=[
-        (str(ROOT / "maa-cli"), "maa-cli"),          # bundled maa-cli + MaaCore.dll
-        (str(ROOT / "themes.py"), "."),               # QSS stylesheets
-        (str(ROOT / "task_constants.py"), "."),
-        (str(ROOT / "callbacks.py"), "."),
+        ('maa-cli', 'maa-cli'),
+        ('themes.py', '.'),
+        ('task_constants.py', '.'),
+        ('callbacks.py', '.'),
     ],
     hiddenimports=[
         "PySide6.QtCore",
@@ -96,5 +94,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(ROOT / "icon.ico") if (ROOT / "icon.ico").exists() else None,
+    icon='icon.ico' if Path('icon.ico').exists() else None,
 )
