@@ -5,6 +5,8 @@ from task_constants import find_mumu_cli
 from callbacks import ServiceContext
 
 class ConfigService:
+    """MAA config injection — writes gui.json / gui.new.json / TOML task configs."""
+
     def __init__(self, ctx: ServiceContext) -> None:
         self.ctx = ctx
 
