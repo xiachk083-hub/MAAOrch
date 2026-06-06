@@ -17,11 +17,11 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=[
-        ('maa-cli', 'maa-cli'),
         ('themes.py', '.'),
         ('task_constants.py', '.'),
         ('callbacks.py', '.'),
     ],
+    # Note: maa-cli/ is gitignored — users download it separately if needed
     hiddenimports=[
         "PySide6.QtCore",
         "PySide6.QtGui",

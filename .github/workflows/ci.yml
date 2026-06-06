@@ -43,7 +43,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install PySide6 pyinstaller
-      - run: pyinstaller MAAOrch.spec
+      - run: pyinstaller MAAOrch.spec --log-level INFO 2>&1
+      - run: dir dist\ 2>&1 || echo "No dist output"
       - uses: softprops/action-gh-release@v1
         with:
           files: dist/MAAOrch.exe
