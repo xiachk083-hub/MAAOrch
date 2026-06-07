@@ -409,7 +409,7 @@ def _enqueue_from_combo(mw: Any) -> None:
                 break
     if aid:
         mw.launch_queue.enqueue(aid, "manual", priority=0)
-        mw.launch_queue._tick()
+        mw.launch_queue.tick()
         refresh_queue_view(mw)
 
 

@@ -18,7 +18,8 @@ TAG_COLORS = [
 
 
 def _tag_color(tag: str) -> tuple[str, str]:
-    return TAG_COLORS[hash(tag) % len(TAG_COLORS)]
+    import hashlib
+    return TAG_COLORS[hashlib.md5(tag.encode()).digest()[0] % len(TAG_COLORS)]
 
 
 def _card_cols(mw: Any) -> int:
@@ -300,7 +301,7 @@ def _enqueue(mw: Any, idx: int) -> None:
     if idx < 0 or idx >= len(mw.accounts):
         return
     mw.launch_queue.enqueue(mw.accounts[idx]["id"], "manual", priority=0)
-    mw.launch_queue._tick()
+    mw.launch_queue.tick()
     _rebuild(mw)
 
 

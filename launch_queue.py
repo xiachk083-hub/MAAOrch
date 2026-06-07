@@ -169,6 +169,10 @@ class LaunchQueue(QObject):
 
     # ── Internal ──
 
+    def tick(self) -> None:
+        """Public alias for _tick."""
+        self._tick()
+
     def _tick(self) -> None:
         """Check queue and launch all eligible accounts (parallel across different emus)."""
         with self._lock:

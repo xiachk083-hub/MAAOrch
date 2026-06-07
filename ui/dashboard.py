@@ -19,10 +19,10 @@ from ui.config_cards import refresh_config_cards
 
 
 def clear_dashboard(mw: Any) -> None:
+    mw.ade.hide()
     for i in reversed(range(mw.adl.count())):
         w = mw.adl.itemAt(i).widget()
         if w and w is not mw.ade:
-            mw.ade.hide()
             w.setParent(None)
             w.deleteLater()
 

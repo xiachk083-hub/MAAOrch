@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
         self._build_ui(); self.maint.restore_geometry(); self._log("══ 启动 ══")
         self._sw("accounts")
         self.launch_queue._restore()
-        self.launch_queue._tick()
+        self.launch_queue.tick()
         self.maint.setup_tray(); self.maint.start_schedule()
         # Auto-init MAA instance pool from existing account installations
         if not self.config.get("maa_version", ""):
@@ -529,13 +529,13 @@ class MainWindow(QMainWindow):
             return
         aid = self.accounts[row]["id"]
         self.launch_queue.enqueue(aid, "manual", priority=0)
-        self.launch_queue._tick()
+        self.launch_queue.tick()
 
     def _la_all(self) -> None:
         """Batch enqueue all accounts with schedule priority."""
         self._log("══ 全部账号入队 ══")
         self.launch_queue.enqueue_batch("manual", priority=0)
-        self.launch_queue._tick()
+        self.launch_queue.tick()
 
     @Slot(str)
     def _on_account_started(self, aid: str) -> None:
@@ -556,7 +556,7 @@ class MainWindow(QMainWindow):
                 a["smart_pending"] = False
                 self._log(f"🧠 {a.get('name', aid)} 到点补跑")
                 self.launch_queue.enqueue(aid, "schedule", priority=1)
-                self.launch_queue._tick()
+                self.launch_queue.tick()
             if self._main_tab == "accounts":
                 self._sad(self.accounts.index(a))
 
@@ -716,7 +716,7 @@ class MainWindow(QMainWindow):
                     count += 1
         if count:
             self._log(f"🧠 智能调度: {count} 个账号已入队")
-            self.launch_queue._tick()
+            self.launch_queue.tick()
         else:
             self._log("🧠 智能调度: 暂无账号需要调度（体力不足/无任务到达）")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)

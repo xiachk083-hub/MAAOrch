@@ -137,7 +137,7 @@ def _estimate_current(last_current: int, max_sanity: int, report_time: str) -> i
         if report_time:
             rt = datetime.strptime(report_time[:19], "%Y-%m-%d %H:%M:%S")
             elapsed = (datetime.now() - rt).total_seconds()
-            recovered = int(elapsed / 360)  # 6min = 360s per point
+            recovered = round(elapsed / 360)  # 6min = 360s per point
             return min(max_sanity, last_current + recovered)
     except Exception: pass
     return last_current
@@ -170,7 +170,7 @@ def _save_schedule(mw: Any) -> None:
             for a in mw.accounts:
                 if a.get("id", "") in prog_ids and a.get("emu_instance_index", "") and a.get("adb_address", "").strip():
                     mw.launch_queue.enqueue(a["id"], "schedule", priority=1)
-            mw.launch_queue._tick()
+            mw.launch_queue.tick()
     elif hasattr(mw.maint.ctx, "schedule_thread") and mw.maint.ctx.schedule_thread:
         mw.maint.ctx.schedule_thread.stop_thread()
         mw.maint.ctx.schedule_thread = None
