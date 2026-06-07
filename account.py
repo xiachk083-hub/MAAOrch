@@ -80,5 +80,7 @@ class Account:
     def from_dict(cls, d: dict) -> "Account":
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
+    _TRANSIENT = {"smart_pending", "smart_last_error", "smart_plan"}
+
     def to_dict(self) -> dict:
-        return {k: getattr(self, k) for k in self.__dataclass_fields__}
+        return {k: getattr(self, k) for k in self.__dataclass_fields__ if k not in self._TRANSIENT}

@@ -213,3 +213,4 @@ class ApiServer(QThread):
             try: self._httpd.shutdown()
             except Exception:
                 pass
+            self._httpd = None

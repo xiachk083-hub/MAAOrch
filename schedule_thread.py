@@ -12,7 +12,7 @@ class ScheduleThread(QThread):
 
     def run(self) -> None:
         while self._r:
-            s=self.c.get("schedule",{})
+            s=type(self.c).copy(self.c).get("schedule",{})
             if not s.get("enabled"):
                 self.msleep(15000); continue
             n=datetime.now()

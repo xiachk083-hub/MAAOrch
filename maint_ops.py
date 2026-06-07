@@ -41,13 +41,13 @@ def ensure_maa_instances_async(ctx) -> None:
         if inst1.exists():
             return
         import shutil
-        if "accounts" in str(src):
-            shutil.move(str(src), str(inst1))
-        else:
-            shutil.copytree(str(src), str(inst1))
+                # Always copy, never move (preserve original MAA source)
+                shutil.copytree(str(src), str(inst1))
 
     def _on_finish():
         """Runs on main thread after BackgroundTask finishes."""
+        global _inst_init_task
+        _inst_init_task = None
         with _INSTANCE_LOCK:
             ctx.config["maa_instances"] = 1
             ctx.save()

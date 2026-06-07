@@ -29,17 +29,30 @@ def is_monday() -> bool:
     return datetime.now().weekday() == 0
 
 
+_infrast_fired: set = set()  # tracks "YYYY-MM-DD/04:00" fired per day
+
+
 def is_infrast_time(now: datetime | None = None, times: list[str] | None = None) -> bool:
     if times is None:
         times = ["04:00", "16:00"]
     if now is None:
         now = datetime.now()
     h, m = now.hour, now.minute
+    date_key = now.strftime("%Y-%m-%d")
     for t in times:
         try:
             th, tm = map(int, t.split(":"))
+            # Fire within 15-minute window
             if h == th and m >= tm and m < tm + 15:
+                _infrast_fired.add(f"{date_key}/{t}")
                 return True
+            # Catch-up: past the time but not yet fired today
+            run_key = f"{date_key}/{t}"
+            if run_key not in _infrast_fired:
+                target = now.replace(hour=th, minute=tm, second=0, microsecond=0)
+                if now > target and (now - target).total_seconds() < 7200:
+                    _infrast_fired.add(run_key)
+                    return True
         except Exception:
             pass
     return False

@@ -306,7 +306,9 @@ class ConfigService:
                     c.pop("TaskQueue", None)
             else:
                 c.pop("TaskQueue", None)
-            gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp = gj.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp.replace(gj)
 
         _write("gui.json", use_v6=False)
         _write("gui.new.json", use_v6=True)

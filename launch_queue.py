@@ -66,11 +66,11 @@ class LaunchQueue(QObject):
     def enqueue(self, account_id: str, source: str = "manual",
                 priority: int = 0, not_before: datetime | None = None) -> None:
         """Add an account to the launch queue. Priority: 0=manual, 1=schedule, 2=sanity."""
-        # Avoid duplicates — remove existing entry for same account
-        self._pending = [e for e in self._pending if e.account_id != account_id]
-        entry = QueueEntry.make(account_id, source, priority, not_before)
-        heapq = self._import_heapq()
-        heapq.heappush(self._pending, entry)
+        with self._lock:
+            self._pending = [e for e in self._pending if e.account_id != account_id]
+            entry = QueueEntry.make(account_id, source, priority, not_before)
+            heapq = self._import_heapq()
+            heapq.heappush(self._pending, entry)
         ac = next((a for a in self.ctx.accounts if a.id == account_id), None)
         name = ac.get("name", account_id) if ac else account_id
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
@@ -131,7 +131,7 @@ class LaunchQueue(QObject):
     def on_account_finished(self, data: tuple) -> None:
         """An account just finished — release emulator, enqueue based on deficit."""
         account_id, exit_code, tasks = data
-        emu_idx = self._get_emu_idx(account_id)
+        emu_idx = self._get_emu_key(account_id)
         with self._lock:
             self._active_emus.pop(emu_idx, None)
 
@@ -191,7 +191,7 @@ class LaunchQueue(QObject):
                     continue
 
                 # ③ Emulator occupied? Keep in queue
-                emu_idx = self._get_emu_idx(entry.account_id)
+                emu_idx = self._get_emu_key(entry.account_id)
                 if emu_idx and emu_idx in self._active_emus:
                     self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
                     remaining.append(entry)
@@ -221,7 +221,7 @@ class LaunchQueue(QObject):
                 if len(self._active_emus) >= max_parallel:
                     heapq.heappush(self._pending, entry)
                     continue
-                emu_idx = self._get_emu_idx(entry.account_id)
+                emu_idx = self._get_emu_key(entry.account_id)
                 if emu_idx and emu_idx in self._active_emus:
                     heapq.heappush(self._pending, entry)
                     continue
@@ -234,10 +234,12 @@ class LaunchQueue(QObject):
                 self.ctx._mw.runner.launch_by_id(entry.account_id)
             self.launched.emit(entry.account_id)
 
-    def _get_emu_idx(self, account_id: str) -> str:
+    def _get_emu_key(self, account_id: str) -> str:
+        """Return emu instance index, or a unique fallback for no-emu accounts."""
         for a in self.ctx.accounts:
             if a["id"] == account_id:
-                return a.get("emu_instance_index", "")
+                idx = a.get("emu_instance_index", "")
+                return idx if idx else f"__noemu_{account_id}"
         return ""
 
     def _save_queue(self) -> None:

@@ -110,10 +110,10 @@ class MainWindow(QMainWindow):
         self.maint.setup_tray(); self.maint.start_schedule()
         # Auto-init MAA instance pool from existing account installations
         if not self.config.get("maa_version", ""):
-            import glob as _glob
-            maas = list(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
+            maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
             if maas:
-                self.config["maa_version"] = "installed"
+                from utils import parse_maa_version
+                self.config["maa_version"] = parse_maa_version(str(maas[0])) or "installed"
                 self.config["maa_instances"] = 0
         from maint_ops import ensure_maa_instances_async
         ensure_maa_instances_async(self.ctx)
@@ -348,6 +348,7 @@ class MainWindow(QMainWindow):
             p=str(Path(fp))
             if p not in ex:
                 e={"id":make_id(),"path":p,"args":[],"cwd":"","env":{},"maa_type":"general","maa_version":"","account_ref":"","launch_mode":"gui","task_pipeline":"","guard_enabled":False,"guard_max_restart":3,"guard_capture_log":False}
+                v=None
                 if Path(p).stem.lower()=="maa": e["maa_type"]="maa"; v=parse_maa_version(p)
                 if v: e["maa_version"]=v
                 self.warehouse.append(e); ex.add(p)
@@ -627,6 +628,7 @@ class MainWindow(QMainWindow):
             self.pipeline_thread.finished.connect(lambda s: None)
             self.pipeline_thread.start()
         def _launch_next(i=0):
+            if not self.isVisible(): return
             if i>=len(to_launch): _start_thread(); return
             cli,emu_idx,name,wait=to_launch[i]
             self._log(f"启动模拟器 #{emu_idx} ({name})")
