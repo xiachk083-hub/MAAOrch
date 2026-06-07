@@ -96,7 +96,14 @@ class AccountRunner(QObject):
         import subprocess
         max_n = self.ctx.config.get("maa_instances", 0)
         if not max_n:
-            return None
+            ver = self.ctx.config.get("maa_version", "")
+            if ver:
+                from maint_ops import MaintService
+                ms = MaintService(self.ctx)
+                ms.ensure_maa_instances()
+                max_n = self.ctx.config.get("maa_instances", 0)
+            if not max_n:
+                return None
         pool = Path(__file__).parent / "maa" / "instances"
         for i in range(1, max_n + 1):
             inst_dir = pool / str(i)
