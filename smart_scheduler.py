@@ -65,9 +65,11 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
             tasks.append("Mall")
 
     smart_annihilation = account.get("smart_annihilation", "")
+    has_annihilation = False
     if is_monday and smart_annihilation and global_cfg.get("annihilation_enabled", True):
         if not _is_annihilation_done_this_week(account["id"]):
             tasks.append("Annihilation")
+            has_annihilation = True
 
     stage = account.get(f"smart_{today_key}", "") or account.get("smart_stage", "")
     threshold = global_cfg.get("threshold", 80)
@@ -76,12 +78,11 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
 
     material_stage = _get_material_stage(account, global_cfg) if materials_enabled else None
 
-    if material_stage:
-        if "Fight" not in tasks:
-            tasks.append("Fight")
-    elif has_sanity:
-        if stage and "Fight" not in tasks:
-            tasks.append("Fight")
+    want_fight = bool(material_stage) or bool(has_sanity and stage) or has_annihilation
+    if want_fight and "Fight" not in tasks and "Annihilation" not in tasks:
+        tasks.append("Fight")
+    elif has_annihilation and "Fight" not in tasks and stage:
+        tasks.append("Fight")
 
     tasks.append("CloseDown")
     return tasks
