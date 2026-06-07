@@ -269,6 +269,8 @@ class ConfigService:
                                 item["StagePlan"] = [anni]
                                 item["IsStageManually"] = True
                                 item["StageResetMode"] = "Current"
+                                item["UseMedicine"] = True
+                                item["MedicineCount"] = 999
                             else:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
