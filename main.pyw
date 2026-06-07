@@ -65,10 +65,24 @@ def main():
     app.setQuitOnLastWindowClosed(False)
 
     def _cleanup_threads():
-        for attr in ("_emu_monitor", "schedule_thread", "_api_server"):
+        threads = []
+        for attr in ("_emu_monitor", "_api_server"):
             t = getattr(win, attr, None)
-            if t is None:
-                continue
+            if t:
+                threads.append(t)
+        for t in (getattr(win, "pipeline_thread", None), getattr(win, "update_thread", None)):
+            if t:
+                threads.append(t)
+        if hasattr(win, "ctx") and win.ctx:
+            st = win.ctx.schedule_thread
+            if st:
+                threads.append(st)
+        if hasattr(win, "emu"):
+            for attr in ("_t", "_scan_thread", "_refresh_t", "_test_t", "_ss_t", "_stopemu_t"):
+                t = getattr(win.emu, attr, None)
+                if t and t.isRunning():
+                    threads.append(t)
+        for t in threads:
             try:
                 if hasattr(t, "stop_server"):
                     t.stop_server()
@@ -78,7 +92,7 @@ def main():
                     t.stop_monitor()
                 else:
                     t.quit()
-                t.wait(2000)
+                t.wait(5000)
             except Exception:
                 pass
 

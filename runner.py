@@ -96,7 +96,7 @@ class AccountRunner(QObject):
     def launch_by_id(self, account_id: str) -> bool:
         """Start an account by ID."""
         for i, a in enumerate(self.ctx.accounts):
-            if a.id == account_id:
+            if a["id"] == account_id:
                 return self.launch(i)
         return False
 
@@ -416,8 +416,8 @@ class AccountRunner(QObject):
             try:
                 st = RunStats(aid)
                 st.save_run(tasks, sanity, drops)
-            except Exception:
-                pass
+            except Exception as e:
+                self.log_msg.emit(f"保存统计失败: {e}")
 
         # Rotate MAA log — keep only last 3 runs
         if old_progs:

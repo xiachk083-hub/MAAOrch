@@ -111,20 +111,25 @@ class ApiServer(QThread):
                     result.append({"index":i,"account_name":a.get("name",""),"running":running,"total_runs":st.total_runs,"stats":st._data})
                 s._json({"accounts":result})
             def _handle_pipeline_start(s):
-                mw._start_pipeline(); s._json({"ok":True})
+                try: mw._start_pipeline(); s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_pipeline_stop(s):
-                mw._stop_pipeline(); s._json({"ok":True})
+                try: mw._stop_pipeline(); s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_pipeline_pause(s,body):
                 action=body.get("action","pause")
-                if hasattr(mw,'pipeline_thread') and mw.pipeline_thread and mw.pipeline_thread.isRunning():
-                    if action=="pause": mw.pipeline_thread.pause(); s._json({"ok":True,"state":"paused"})
-                    else: mw.pipeline_thread.resume(); s._json({"ok":True,"state":"running"})
-                else: s._json({"ok":False,"error":"no pipeline running"})
+                try:
+                    if hasattr(mw,'pipeline_thread') and mw.pipeline_thread and mw.pipeline_thread.isRunning():
+                        if action=="pause": mw.pipeline_thread.pause(); s._json({"ok":True,"state":"paused"})
+                        else: mw.pipeline_thread.resume(); s._json({"ok":True,"state":"running"})
+                    else: s._json({"ok":False,"error":"no pipeline running"})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_account_launch(s,p):
                 try: idx=int(p.split("/")[3])
                 except: return s._json({"error":"bad index"},400)
                 if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
-                mw._la(idx); s._json({"ok":True})
+                try: mw._la(idx); s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_logs(s,path):
                 qs=path.split("?")[-1] if "?" in path else ""
                 lines=50

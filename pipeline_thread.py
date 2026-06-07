@@ -10,10 +10,11 @@ class PipelineThread(QThread):
     finished = Signal(bool)
 
     def __init__(
-        self, groups: list[dict], warehouse: list[dict], accounts: list[dict], parent: Any = None
+        self, groups: list[dict], warehouse: list[dict], accounts: list[dict],
+        cfg: Any = None, parent: Any = None
     ) -> None:
         super().__init__(); self.groups=groups; self.warehouse={w["id"]:w for w in warehouse}
-        self.accounts={a["id"]:a for a in accounts}; self.stop_flag=False; self.pause_flag=False; self.mw=parent
+        self.accounts={a["id"]:a for a in accounts}; self.cfg=cfg; self.stop_flag=False; self.pause_flag=False; self.mw=parent
         self._running: list[subprocess.Popen] = []
     def run(self) -> None:
         for g in self.groups:
@@ -36,8 +37,8 @@ class PipelineThread(QThread):
         w=self.warehouse.get(ref.get("ref",""),{}); p=w.get("path",""); n=Path(p).stem
         try:
             ac=w.get("account_ref","")
-            if ac and ac in self.accounts and self.mw:
-                try: self.mw.cfg.inject_for_thread(w,self.accounts[ac])
+            if ac and ac in self.accounts and self.cfg:
+                try: self.cfg.inject_for_thread(w,self.accounts[ac])
                 except: pass
             proc = subprocess.Popen([p]+w.get("args",[]),shell=False,cwd=w.get("cwd","") or None)
             self._running.append(proc)
@@ -50,7 +51,7 @@ class PipelineThread(QThread):
             self._running = [p for p in self._running if p.poll() is None]
             time.sleep(0.1)
     def stop(self) -> None:
-        self.stop_flag=True
+        self.stop_flag=True; self.pause_flag=False
         for proc in self._running:
             try: proc.terminate()
             except: pass

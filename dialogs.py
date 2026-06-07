@@ -207,7 +207,8 @@ class AccountDialog(QDialog):
         p=self.pc.currentText()
         if p=="— 无 —": p=""
         pipe=",".join(t for t,cb in self.tk.items() if cb.isChecked())
-        ts=self.a.get("task_settings",{})
+        from copy import deepcopy
+        ts=deepcopy(self.a.get("task_settings",{}))
         fight_ts=ts.setdefault("Fight",{})
         if self.fs.text().strip():
             fight_ts["stage"]=self.fs.text().strip()

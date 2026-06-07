@@ -47,9 +47,9 @@ def load_config() -> dict:
                         pid=ex["id"] if ex else make_id()
                         if not ex: warehouse.append({"id":pid,"path":pth,"args":p.get("args",[]),"cwd":p.get("cwd",""),"env":{}})
                         pd=p.get("pre_delay",0); p.clear(); p["ref"]=pid; p["pre_delay"]=pd
-                data["warehouse"]=warehouse; data["version"]=4
-            if ver==4: data=migrate_v4_to_v5(data)
-            if data.get("version",0)>=5:
+                data["warehouse"]=warehouse; data["version"]=4; ver=4
+            if ver in (4,): data=migrate_v4_to_v5(data); ver=5
+            if ver>=5:
                 # Sanitize adb_address: fix encoding artifacts like "27.0.0.1" -> "127.0.0.1"
                 for a in data.get("accounts",[]):
                     raw=a.get("adb_address","")
@@ -60,18 +60,30 @@ def load_config() -> dict:
                 data["accounts"]=[Account.from_dict(a) for a in data["accounts"]]
                 return data
     except Exception as e:
-        try: (Path(__file__).parent/"debug.log").open("a",encoding="utf-8").write(f"[ERR] load_config: {e}\n")
-        except: pass
+        try:
+            with (Path(__file__).parent/"debug.log").open("a",encoding="utf-8") as f:
+                f.write(f"[ERR] load_config: {e}\n")
+        except:
+            pass
     return dict(DEFAULT_CONFIG)
 
 def save_config(data: dict) -> None:
-    # Convert Account objects back to plain dicts for JSON serialization
-    if "accounts" in data:
-        data["accounts"] = [a.to_dict() if hasattr(a, "to_dict") else a for a in data["accounts"]]
-    try: CONFIG_FILE.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
+    from copy import deepcopy
+    # Convert Account objects back to plain dicts (deepcopy to avoid mutating callers)
+    out = deepcopy(data)
+    if "accounts" in out:
+        out["accounts"] = [a.to_dict() if hasattr(a, "to_dict") else a for a in out["accounts"]]
+    # Atomic write: write to temp file in same directory then rename
+    tmp = CONFIG_FILE.with_name("config.json.tmp")
+    try:
+        tmp.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(CONFIG_FILE)
     except Exception as e:
-        try: (Path(__file__).parent/"debug.log").open("a",encoding="utf-8").write(f"[ERR] save_config: {e}\n")
-        except: pass
+        try:
+            with (Path(__file__).parent/"debug.log").open("a",encoding="utf-8") as f:
+                f.write(f"[ERR] save_config: {e}\n")
+        except:
+            pass
 
 def set_auto_start(enabled: bool) -> None:
     bp=STARTUP_DIR/"流水线启动器.bat"

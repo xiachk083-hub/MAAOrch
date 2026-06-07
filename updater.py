@@ -70,7 +70,13 @@ class DownloadThread(QThread):
                 tmpf.close()
             self.progress.emit(1,1); self.status.emit("解压...")
             tmp=tempfile.mkdtemp(prefix="maa_")
-            with zipfile.ZipFile(tmpf.name) as zf: zf.extractall(tmp)
+            with zipfile.ZipFile(tmpf.name) as zf:
+                for m in zf.infolist():
+                    p = Path(m.filename)
+                    if p.is_absolute() or ".." in p.parts:
+                        self.finished.emit(False, f"危险文件跳过: {m.filename}")
+                        return
+                    zf.extract(m, tmp)
             tgt=Path(self.t); tgt.mkdir(parents=True,exist_ok=True)
             items=list(Path(tmp).iterdir())
             src=items[0] if len(items)==1 and items[0].is_dir() else Path(tmp)
@@ -114,7 +120,13 @@ class MaacliInstallThread(QThread):
             req2=urllib.request.Request(url,headers={"User-Agent":"MAA-Launcher"})
             with urllib.request.urlopen(req2,timeout=120) as r: buf=r.read()
             tmp=tempfile.mkdtemp(prefix="cli_")
-            with zipfile.ZipFile(io.BytesIO(buf)) as zf: zf.extractall(tmp)
+            with zipfile.ZipFile(io.BytesIO(buf)) as zf:
+                for m in zf.infolist():
+                    p = Path(m.filename)
+                    if p.is_absolute() or ".." in p.parts:
+                        self.finished.emit(False, f"危险文件跳过: {m.filename}")
+                        continue
+                    zf.extract(m, tmp)
             items=list(Path(tmp).iterdir())
             src=items[0] if len(items)==1 and items[0].is_dir() else Path(tmp)
             d=Path(self.d); d.mkdir(parents=True,exist_ok=True)
@@ -128,19 +140,20 @@ class MaacliInstallThread(QThread):
         except Exception as e: self.finished.emit(False,str(e))
 
 class MaacliInstallDialog(QDialog):
-    def __init__(self, p: QDialog) -> None:
+    def __init__(self, p: QWidget) -> None:
         super().__init__(p); self.setWindowTitle("安装 maa-cli"); self.setFixedSize(380,120)
         l=QVBoxLayout(self); l.addWidget(QLabel("正在安装 maa-cli..."))
         self.s=QLabel("准备中..."); l.addWidget(self.s)
         self.b=QProgressBar(); self.b.setRange(0,0); l.addWidget(self.b)
     def start(self, d: str) -> None:
-        self.t=MaacliInstallThread(d); self.t.progress.connect(self.s.setText)
-        self.t.finished.connect(lambda ok,msg: self.accept() if ok else (QMessageBox.critical(self,"失败",msg),self.reject()))
-        self.t.start()
+        self._install_thread=MaacliInstallThread(d)
+        self._install_thread.progress.connect(self.s.setText)
+        self._install_thread.finished.connect(lambda ok,msg: self.accept() if ok else (QMessageBox.critical(self,"失败",msg),self.reject()))
+        self._install_thread.start()
 
 class UpdateDialog(QDialog):
-    def __init__(self, p: QDialog, ver: str, info: dict, tgt: str) -> None:
-        super().__init__(p); self.setWindowTitle("MAA 更新"); self.setFixedSize(420,200); self.i=info; self.t=tgt
+    def __init__(self, p: QWidget, ver: str, info: dict, tgt: str) -> None:
+        super().__init__(p); self.setWindowTitle("MAA 更新"); self.setFixedSize(420,200); self.i=info; self._tgt=tgt
         l=QVBoxLayout(self)
         l.addWidget(QLabel(f"版本: {ver}",font=QFont("Microsoft YaHei UI",13,QFont.Bold)))
         l.addWidget(QLabel(f"大小: {info['size']/1024/1024:.1f} MB"))
@@ -150,9 +163,9 @@ class UpdateDialog(QDialog):
         bl.addWidget(QPushButton("取消",clicked=self.reject)); l.addLayout(bl)
     def _dl(self) -> None:
         self.d.setEnabled(False); self.b.setVisible(True)
-        self.t=DownloadThread(self.i["url"],self.t,self.i["name"])
-        self.t.progress.connect(lambda c,t:(self.b.setMaximum(t),self.b.setValue(c)))
-        self.t.status.connect(self.s.setText)
-        self.t.finished.connect(lambda ok,msg: self.accept() if ok else (QMessageBox.critical(self,"失败",msg),self.d.setEnabled(True)))
-        self.t.start()
+        self._dl_thread=DownloadThread(self.i["url"],self._tgt,self.i["name"])
+        self._dl_thread.progress.connect(lambda c,t:(self.b.setMaximum(t),self.b.setValue(c)))
+        self._dl_thread.status.connect(self.s.setText)
+        self._dl_thread.finished.connect(lambda ok,msg: self.accept() if ok else (QMessageBox.critical(self,"失败",msg),self.d.setEnabled(True)))
+        self._dl_thread.start()
 

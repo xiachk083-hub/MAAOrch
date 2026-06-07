@@ -217,4 +217,6 @@ class EmuMonitor(QThread):
     def stop_monitor(self):
         self._stop_flag = True
         self.quit()
-        self.wait(2000)
+        if not self.wait(10000):
+            self.terminate()
+            self.wait(3000)

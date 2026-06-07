@@ -13,7 +13,7 @@ QPushButton#tabBtnActive{{background:transparent;color:#e6e6e6;border:none;paddi
 QLineEdit,QSpinBox,QComboBox{{background:#2b2b30;color:#e6e6e6;border:1px solid #3a3a3a;border-radius:5px;padding:6px 10px;min-height:24px}}
 QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border:1px solid #555}}
 QLineEdit:focus,QSpinBox:focus{{border:1px solid {A};background:#25252a}}
-QComboBox::drop-down{{background:#2b2b30;border:none}}QComboBox QAbstractItemView{{background:#2b2b30;color:#e6e6e6;selection-background-color:{A};border:1px solid #3a3a3a;border-radius:4px;outline:none}}
+QComboBox::drop-down{{background:#2b2b30;border:none}}QComboBox QAbstractItemView{{background:#2b2b30;color:#e6e6e6;selection-background-color:{A};border:1px solid #3a3a3a;border-radius:4px}}
 QTableWidget{{background:transparent;color:#ccc;border:1px solid #2b2b30;alternate-background-color:#1e1e20}}
 QTableWidget::item{{padding:4px 8px;border:none}}QTableWidget::item:selected{{background:{A}30;color:#e6e6e6}}
 QHeaderView::section{{background:transparent;color:#666;border:none;border-bottom:1px solid #2b2b30;padding:6px 10px;font-weight:bold;font-size:10px}}
@@ -46,7 +46,7 @@ QLineEdit,QSpinBox,QComboBox{{background:#fff;color:#333;border:1px solid #ccc;b
 QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border:1px solid #aaa}}
 QLineEdit:focus,QSpinBox:focus{{border:1px solid {A};background:#f8f8ff}}
 QComboBox:disabled,QSpinBox:disabled{{background:#eee;color:#888}}
-QComboBox::drop-down{{background:#eee;border:none}}QComboBox QAbstractItemView{{background:#fff;color:#333;selection-background-color:{A}30;border:1px solid #ddd;border-radius:4px;outline:none}}
+QComboBox::drop-down{{background:#eee;border:none}}QComboBox QAbstractItemView{{background:#fff;color:#333;selection-background-color:{A}30;border:1px solid #ddd;border-radius:4px}}
 QTableWidget{{background:transparent;color:#333;border:1px solid #e0e0e0;alternate-background-color:#fafafa}}
 QTableWidget::item{{padding:4px 8px;border:none}}QTableWidget::item:selected{{background:{A}20;color:#333}}
 QHeaderView::section{{background:transparent;color:#666;border:none;border-bottom:1px solid #e0e0e0;padding:6px 10px;font-weight:bold;font-size:10px}}

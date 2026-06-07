@@ -69,7 +69,7 @@ def build_accounts_panel(mw: Any) -> QWidget:
             if it and hasattr(it, "_acc_id") and it._acc_id in id_map:
                 new_order.append(id_map[it._acc_id])
         if len(new_order) == len(mw.accounts):
-            mw.accounts = new_order
+            mw.accounts[:] = new_order
             mw._save()
         mw._acc_drop_lock = False
 

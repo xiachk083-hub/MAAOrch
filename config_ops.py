@@ -19,8 +19,9 @@ class ConfigService:
         for t in ts:
             tl=t.lower()
             if tl=="startup": ls.extend(["[[tasks]]",'type="StartUp"',"[tasks.params]",f'client_type="{ac.get("game_client","Official")}"',"start_game_enabled=true"])
-            elif tl=="fight": s=ac.get("fight_stage",""); ls.extend(["[[tasks]]",'type="Fight"'])
-            if s: ls.extend(["[tasks.params]",f'stage="{s}"'])
+            elif tl=="fight":
+                s=ac.get("fight_stage",""); ls.extend(["[[tasks]]",'type="Fight"'])
+                if s: ls.extend(["[tasks.params]",f'stage="{s}"'])
             elif tl=="recruit": ls.extend(["[[tasks]]",'type="Recruit"',"[tasks.params]","refresh=true","select=[3,4,5]","confirm=[3,4,5]","times=4"])
             elif tl=="infrast": ls.extend(["[[tasks]]",'type="Infrast"',"[tasks.params]","mode=0",'facility=["Trade","Reception","Mfg","Control","Power","Office","Dorm"]',"dorm_trust_enabled=true"])
             elif tl=="mall": ls.extend(["[[tasks]]",'type="Mall"',"[tasks.params]","shopping=true"])
@@ -78,7 +79,8 @@ class ConfigService:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType","").lower()=="startup": item["AccountName"]=sw; break
             if ac.get("sync_tasks",False):
-                ts=ac.get("task_settings",{})
+                ts_raw=ac.get("task_settings",{})
+                ts={k.lower():v for k,v in ts_raw.items()}
                 if ptasks and "TaskQueue" in c:
                     tq=c["TaskQueue"]
                     for item in tq:
@@ -87,31 +89,81 @@ class ConfigService:
                             item["IsEnable"]=True
                             if tt in ts:
                                 st=ts[tt]
-                                if tt=="fight":
+                                if tt=="startup":
+                                    if "client_type" in st: item["ClientType"]=st["client_type"]
+                                elif tt=="fight":
                                     if st.get("stage"): item["StagePlan"]=[st["stage"]]; item["IsStageManually"]=True
                                     if "medicine" in st: item["UseMedicine"]=st["medicine"]>0; item["MedicineCount"]=st["medicine"]
+                                    if "times" in st: item["Times"]=st["times"]
                                     if "stage_reset_mode" in st: item["StageResetMode"]=st["stage_reset_mode"]
                                     if "use_expiring_medicine" in st: item["UseExpiringMedicine"]=st["use_expiring_medicine"]
                                     if "medicine_expire_days" in st: item["MedicineExpireDays"]=st["medicine_expire_days"]
                                     if "use_expire_medicine_for_activity" in st: item["UseExpireMedicineForActivity"]=st["use_expire_medicine_for_activity"]
+                                    if "use_stone" in st: item["UseStone"]=st["use_stone"]
+                                    if "stone" in st: item["StoneCount"]=st["stone"]
+                                    if "enable_times_limit" in st: item["EnableTimesLimit"]=st["enable_times_limit"]
+                                    if "annihilation_stage" in st: item["AnnihilationStage"]=st["annihilation_stage"]
+                                    if "use_custom_annihilation" in st: item["UseCustomAnnihilation"]=st["use_custom_annihilation"]
+                                    if "hide_unavailable_stage" in st: item["HideUnavailableStage"]=st["hide_unavailable_stage"]
                                 elif tt=="recruit":
                                     if "select" in st: item["Level3Choose"]=3 in st["select"]; item["Level4Choose"]=4 in st["select"]; item["Level5Choose"]=5 in st["select"]
                                     if "confirm" in st: item["Confirm"]=st["confirm"]
                                     if "times" in st: item["MaxTimes"]=st["times"]
+                                    if "refresh" in st: item["Refresh"]=st["refresh"]
+                                    if "force_refresh" in st: item["ForceRefresh"]=st["force_refresh"]
+                                    if "prefer_tag_enabled" in st: item["PreferTagEnabled"]=st["prefer_tag_enabled"]
+                                    if "preserve_tag_enabled" in st: item["PreserveTagEnabled"]=st["preserve_tag_enabled"]
+                                    if "preserve_tags" in st: item["PreserveTags"]=st["preserve_tags"]
+                                    if "level3_time" in st: item["Level3Time"]=st["level3_time"]
+                                    if "level4_time" in st: item["Level4Time"]=st["level4_time"]
+                                    if "level5_time" in st: item["Level5Time"]=st["level5_time"]
                                 elif tt=="infrast":
                                     if "facilities" in st: item["RoomList"]=[{"Room":f} for f in st["facilities"]]
                                     if "drones" in st: item["UsesOfDrones"]=st["drones"]
+                                    if "mode" in st: item["Mode"]=st["mode"]
+                                    if "dorm_threshold" in st: item["DormThreshold"]=st["dorm_threshold"]
+                                    if "dorm_trust_enabled" in st: item["DormTrustEnabled"]=st["dorm_trust_enabled"]
+                                    if "originium_shard_auto" in st: item["OriginiumShardAuto"]=st["originium_shard_auto"]
+                                    if "reception_clue" in st: item["ReceptionClue"]=st["reception_clue"]
+                                    if "send_clue" in st: item["SendClue"]=st["send_clue"]
+                                    if "continue_training" in st: item["ContinueTraining"]=st["continue_training"]
+                                    if "filename" in st: item["Filename"]=st["filename"]
                                 elif tt=="mall":
                                     if "shopping" in st: item["Shopping"]=st["shopping"]
                                     if "blacklist" in st: item["BlackList"]=st["blacklist"]
+                                    if "credit_fight" in st: item["CreditFight"]=st["credit_fight"]
+                                    if "visit_friends" in st: item["VisitFriends"]=st["visit_friends"]
+                                    if "first_list" in st: item["FirstList"]=st["first_list"]
+                                    if "only_buy_discount" in st: item["OnlyBuyDiscount"]=st["only_buy_discount"]
+                                    if "reserve_max_credit" in st: item["ReserveMaxCredit"]=st["reserve_max_credit"]
                                 elif tt=="award":
                                     if "award" in st: item["Award"]=st["award"]
                                     if "mail" in st: item["Mail"]=st["mail"]
+                                    if "free_gacha" in st: item["FreeGacha"]=st["free_gacha"]
+                                    if "orundum" in st: item["Orundum"]=st["orundum"]
+                                    if "mining" in st: item["Mining"]=st["mining"]
+                                    if "special_access" in st: item["SpecialAccess"]=st["special_access"]
                                 elif tt=="roguelike":
                                     if "theme" in st: item["Theme"]=st["theme"]
                                     if "mode" in st: item["Mode"]="Exp" if st["mode"]==0 else "Investment"
+                                    if "difficulty" in st: item["Difficulty"]=st["difficulty"]
+                                    if "squad" in st: item["Squad"]=st["squad"]
+                                    if "roles" in st: item["Roles"]=st["roles"]
+                                    if "core_char" in st: item["CoreChar"]=st["core_char"]
+                                    if "start_count" in st: item["StartsCount"]=st["start_count"]
+                                    if "investment" in st: item["Investment"]=st["investment"]
+                                    if "invest_count" in st: item["InvestCount"]=st["invest_count"]
+                                    if "stop_when_level_max" in st: item["StopWhenLevelMax"]=st["stop_when_level_max"]
+                                    if "stop_when_deposit_full" in st: item["StopWhenDepositFull"]=st["stop_when_deposit_full"]
+                                    if "use_support" in st: item["UseSupport"]=st["use_support"]
+                                    if "start_with_seed" in st: item["StartWithSeed"]=st["start_with_seed"]
+                                    if "seed" in st: item["Seed"]=st["seed"]
                                 elif tt=="reclamation":
                                     if "theme" in st: item["Theme"]=st["theme"]
+                                    if "mode" in st: item["Mode"]=st["mode"]
+                                    if "tool_to_craft" in st: item["ToolToCraft"]=st["tool_to_craft"]
+                                    if "max_craft_count" in st: item["MaxCraftCount"]=st["max_craft_count"]
+                                    if "clear_store" in st: item["ClearStore"]=st["clear_store"]
                         else: item["IsEnable"]=False
                     c["TaskQueue"]=tq
             # Always inject fight_stage if set (regardless of sync_tasks)

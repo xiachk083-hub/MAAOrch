@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 where python >nul 2>nul || (
     echo 未检测到 Python，请先安装 Python 3.12+
     echo 下载地址: https://www.python.org/downloads/

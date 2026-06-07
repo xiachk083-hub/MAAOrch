@@ -38,26 +38,31 @@ def cleanup_emu_threads(mw: Any) -> None:
             t.wait(200)
 
 
+_dash_building = False
+
 def build_account_dashboard(mw: Any, row: int) -> None:
-    if row < 0 or row >= len(mw.accounts):
-        mw.ade.show()
-        # Hide dashboard widgets if any
-        if hasattr(mw, "_dash_refs"):
-            for r in mw._dash_refs.values():
-                if isinstance(r, QWidget):
-                    r.hide()
+    global _dash_building
+    if _dash_building:
         return
+    _dash_building = True
+    try:
+        if row < 0 or row >= len(mw.accounts):
+            mw.ade.show()
+            if hasattr(mw, "_dash_refs"):
+                for r in mw._dash_refs.values():
+                    if isinstance(r, QWidget):
+                        r.hide()
+            return
 
-    if hasattr(mw, "_sad_row") and mw._sad_row == row:
-        return
-    mw._sad_row = row
-    progs = [w for w in mw.warehouse if w.get("account_ref") == mw.accounts[row]["id"]]
+        mw._sad_row = row
+        progs = [w for w in mw.warehouse if w.get("account_ref") == mw.accounts[row]["id"]]
 
-    # First time — build skeleton
-    cleanup_emu_threads(mw)
-    clear_dashboard(mw)
-    mw._dash_refs = {}
-    _ensure_dashboard(mw, row, progs)
+        cleanup_emu_threads(mw)
+        clear_dashboard(mw)
+        mw._dash_refs = {}
+        _ensure_dashboard(mw, row, progs)
+    finally:
+        _dash_building = False
 
 
 def _ensure_dashboard(mw: Any, row: int, progs: list[dict]) -> None:
@@ -514,7 +519,7 @@ def _batch_apply(mw: Any, src_acc: dict, src_progs: list[dict], src_row: int) ->
         for a in mw.accounts:
             if a["id"] not in selected:
                 continue
-            a["task_settings"] = dict(src_settings)
+            a["task_settings"] = deepcopy(src_settings)
             a["sync_tasks"] = src_sync
             for w in mw.warehouse:
                 if w.get("account_ref") == a["id"]:

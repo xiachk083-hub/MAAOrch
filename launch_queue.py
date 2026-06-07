@@ -9,6 +9,7 @@ Never interrupts a running MAA — only idles wait for their turn.
 from __future__ import annotations
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
+import threading
 
 from PySide6.QtCore import QObject, Signal, QTimer
 
@@ -42,6 +43,7 @@ class LaunchQueue(QObject):
     def __init__(self, ctx: ServiceContext) -> None:
         super().__init__()
         self.ctx = ctx
+        self._lock = threading.RLock()
         self._pending: list[QueueEntry] = []
         self._active_emus: dict[str, str] = {}  # emu_idx → account_id
         self._tick_timer = QTimer(self)
@@ -129,9 +131,10 @@ class LaunchQueue(QObject):
     def on_account_finished(self, account_id: str, exit_code: int, tasks: list | None = None) -> None:
         """An account just finished — release emulator, enqueue based on deficit."""
         emu_idx = self._get_emu_idx(account_id)
-        self._active_emus.pop(emu_idx, None)
+        with self._lock:
+            self._active_emus.pop(emu_idx, None)
 
-        ac = next((a for a in self.ctx.accounts if a.id == account_id), None)
+        ac = next((a for a in self.ctx.accounts if a["id"] == account_id), None)
         if not ac:
             self._tick()
             return
@@ -166,62 +169,66 @@ class LaunchQueue(QObject):
 
     def _tick(self) -> None:
         """Check queue and launch all eligible accounts (parallel across different emus)."""
-        now = datetime.now()
-        heapq = self._import_heapq()
+        with self._lock:
+            now = datetime.now()
+            heapq = self._import_heapq()
 
-        to_launch = []
-        remaining = []
+            to_launch = []
+            remaining = []
 
-        while self._pending:
-            entry = heapq.heappop(self._pending)
+            while self._pending:
+                entry = heapq.heappop(self._pending)
 
-            # ① Already running?
-            if self.is_running(entry.account_id):
-                self.skipped.emit(entry.account_id, "已在运行")
-                continue
+                # ① Already running?
+                if self.is_running(entry.account_id):
+                    self.skipped.emit(entry.account_id, "已在运行")
+                    continue
 
-            # ② Not yet time? Push back, stop checking this priority level
-            if now < entry.not_before:
-                remaining.append(entry)
-                continue
+                # ② Not yet time? Push back, stop checking this priority level
+                if now < entry.not_before:
+                    remaining.append(entry)
+                    continue
 
-            # ③ Emulator occupied? Keep in queue
-            emu_idx = self._get_emu_idx(entry.account_id)
-            if emu_idx and emu_idx in self._active_emus:
-                self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
-                remaining.append(entry)
-                continue
+                # ③ Emulator occupied? Keep in queue
+                emu_idx = self._get_emu_idx(entry.account_id)
+                if emu_idx and emu_idx in self._active_emus:
+                    self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
+                    remaining.append(entry)
+                    continue
 
-            # ④ Sanity check (sanity-driven only)
-            if entry.source == "sanity":
-                ac = next((a for a in self.ctx.accounts if a.id == entry.account_id), None)
-                if ac:
-                    st = RunStats(entry.account_id)
-                    s = st.get_last_sanity()
-                    min_s = ac.get("min_sanity", 0)
-                    if s and s.get("current", 0) < min_s:
-                        self.skipped.emit(entry.account_id, "理智不足")
-                        continue
+                # ④ Sanity check (sanity-driven only)
+                if entry.source == "sanity":
+                    ac = next((a for a in self.ctx.accounts if a.id == entry.account_id), None)
+                    if ac:
+                        st = RunStats(entry.account_id)
+                        s = st.get_last_sanity()
+                        min_s = ac.get("min_sanity", 0)
+                        if s and s.get("current", 0) < min_s:
+                            self.skipped.emit(entry.account_id, "理智不足")
+                            continue
 
-            to_launch.append(entry)
+                to_launch.append(entry)
 
-        # Push back remaining entries
-        for entry in remaining:
-            heapq.heappush(self._pending, entry)
-
-        # Launch all eligible (emu conflicts resolved: first marks emu busy, second skips)
-        for entry in to_launch:
-            # Parallel limit check
-            max_parallel = self.ctx.config.get("parallel_max", 1)
-            if len(self._active_emus) >= max_parallel:
+            # Push back remaining entries
+            for entry in remaining:
                 heapq.heappush(self._pending, entry)
-                continue
-            emu_idx = self._get_emu_idx(entry.account_id)
-            if emu_idx and emu_idx in self._active_emus:
-                # Already taken by a previous launch in this batch
-                heapq.heappush(self._pending, entry)
-                continue
-            self._active_emus[emu_idx] = entry.account_id
+
+            # Determine which entries to launch (still under lock)
+            launch_now = []
+            for entry in to_launch:
+                max_parallel = self.ctx.config.get("parallel_max", 1)
+                if len(self._active_emus) >= max_parallel:
+                    heapq.heappush(self._pending, entry)
+                    continue
+                emu_idx = self._get_emu_idx(entry.account_id)
+                if emu_idx and emu_idx in self._active_emus:
+                    heapq.heappush(self._pending, entry)
+                    continue
+                self._active_emus[emu_idx] = entry.account_id
+                launch_now.append(entry)
+
+        # Launch outside lock to avoid re-entrancy
+        for entry in launch_now:
             if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
                 self.ctx._mw.runner.launch_by_id(entry.account_id)
             self.launched.emit(entry.account_id)
@@ -239,8 +246,7 @@ class LaunchQueue(QObject):
             data.append({"account_id": e.account_id, "source": e.source,
                          "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
         self.ctx.config["queue"] = data
-        try: self.ctx.save()
-        except: pass
+        self.ctx.save()
 
     def _restore(self) -> None:
         """Restore queue from config.json on startup."""

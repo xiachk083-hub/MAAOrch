@@ -109,15 +109,15 @@ class MainWindow(QMainWindow):
         self.launch_queue._tick()
         self.maint.setup_tray(); self.maint.start_schedule()
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
-        self._emu_monitor=EmuMonitor()
-        self._emu_monitor.updated.connect(lambda r: (_safe_update_emu(r)))
-        self._emu_monitor.start()
-
         def _safe_update_emu(r):
             try:
                 for x in r: self._emu_status.update({x["index"]:x})
             except Exception:
                 pass
+
+        self._emu_monitor=EmuMonitor()
+        self._emu_monitor.updated.connect(_safe_update_emu)
+        self._emu_monitor.start()
         self._api_server=None
         self._start_api_server()
         self._log(f"账号: {len(self.accounts)} | 仓库: {len(self.warehouse)} | 分组: {len(self.groups)}")
@@ -134,29 +134,29 @@ class MainWindow(QMainWindow):
     def _sl(self, msg: str) -> None: self.sl.setText((msg[:100]+"…") if len(msg)>100 else msg)
     def _log(self, msg: str) -> None:
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
-        if hasattr(self,'log_text'): self.log_text.appendPlainText(line)
+        if hasattr(self,'log_text') and self.log_text: self.log_text.appendPlainText(line)
         try:
             lp=Path(__file__).parent/"debug.log"
             if lp.exists() and lp.stat().st_size>self.LOG_MAX_BYTES:
-                lines=lp.read_text(encoding="utf-8").split("\n")
+                lines=lp.read_text(encoding="utf-8",errors="replace").split("\n")
                 lp.write_text("\n".join(lines[-self.LOG_KEEP_LINES:])+"\n",encoding="utf-8")
             with lp.open("a",encoding="utf-8") as f: f.write(line+"\n")
         except Exception:
             try: print(line,file=__import__('sys').stderr)
             except: pass
     def _save(self) -> None:
-        # Debounce: coalesce rapid saves within 300ms
         if hasattr(self,'_save_timer') and self._save_timer:
             self._save_timer.stop()
-        self._save_timer=QTimer(self); self._save_timer.setSingleShot(True)
-        self._save_timer.timeout.connect(self._do_save)
+        else:
+            self._save_timer=QTimer(self); self._save_timer.setSingleShot(True)
+            self._save_timer.timeout.connect(self._do_save)
         self._save_timer.start(self.SAVE_DEBOUNCE_MS)
     def _do_save(self) -> None:
-        # Sanitize adb_address (fix encoding artifacts)
+        # Sanitize adb_address (fix encoding artifacts like 27.0.0.1 → 127.0.0.1)
         for a in self.accounts:
             raw=a.get("adb_address","")
-            if raw and not raw.startswith("127.0.0.1:"):
-                m=re.search(r':(\d+)$',raw)
+            if raw:
+                m=re.match(r'^2?7\.0\.0\.1:(\d+)$',raw)
                 if m: a["adb_address"]="127.0.0.1:"+m.group(1)
         # Auto backup config
         try:
@@ -201,10 +201,6 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda _, k=key: self._sw(k))
             th.addWidget(btn)
         th.addStretch()
-        self.qs = QPushButton("▶ 启动全部")
-        self.qs.setObjectName("startBtn")
-        self.qs.clicked.connect(lambda: self._la_all())
-        th.addWidget(self.qs)
         ml.addWidget(tb)
 
         # Accounts panel
@@ -225,6 +221,12 @@ class MainWindow(QMainWindow):
         build_config_cards(self)
         self.cv.hide()
         ml.addWidget(self.cv, 1)
+
+        # Groups/Warehouse panel
+        from ui.groups_panel import build_groups_panel
+        build_groups_panel(self)
+        self.gv.hide()
+        ml.addWidget(self.gv, 1)
 
         # Schedule panel
         build_schedule_panel(self)
@@ -552,14 +554,13 @@ class MainWindow(QMainWindow):
     def _start_pipeline(self) -> None:
         if not self.groups:
             if hasattr(self, 'launch_queue'):
-                prog_ids = {w.get("account_ref") for w in self.warehouse if w.get("account_ref")}
-                for a in self.accounts:
-                    if a["id"] in prog_ids and a.get("emu_instance_index", "") and a.get("adb_address", "").strip():
-                        self.launch_queue.enqueue(a["id"], "schedule", priority=1)
-                self.launch_queue._tick()
+                n = sum(1 for a in self.accounts if a.get("id", "") in {
+                    w.get("account_ref") for w in self.warehouse if w.get("account_ref")}
+                    and a.get("emu_instance_index", "") and a.get("adb_address", "").strip())
+                self._log(f"无流水线分组，跳过 {n} 个账号的自动启动" if n else "无流水线分组")
             return
         if self.pipeline_thread and self.pipeline_thread.isRunning(): return
-        self.qs.setEnabled(False); self._log("流水线启动")
+        self._log("流水线启动")
         # Collect emulators to launch
         to_launch=[]
         launched=set()
@@ -571,10 +572,10 @@ class MainWindow(QMainWindow):
                     to_launch.append((cli,emu_idx,a["name"],a.get("emu_wait", 30)))
                     launched.add(emu_idx)
         def _start_thread():
-            self.pipeline_thread=PipelineThread(self.groups,self.warehouse,self.accounts,self)
+            self.pipeline_thread=PipelineThread(self.groups,self.warehouse,self.accounts,self.cfg,self)
             self.pipeline_thread.progress.connect(lambda m:(self.sl.setText(m),self._log(m)))
             self.pipeline_thread.program_started.connect(lambda n,ok: self._log(f"启动 {n}" if ok else f"失败 {n}"))
-            self.pipeline_thread.finished.connect(lambda s: self.qs.setEnabled(True))
+            self.pipeline_thread.finished.connect(lambda s: None)
             self.pipeline_thread.start()
         def _launch_next(i=0):
             if i>=len(to_launch): _start_thread(); return
@@ -587,7 +588,8 @@ class MainWindow(QMainWindow):
         if to_launch: _launch_next()
         else: _start_thread()
     def _stop_pipeline(self) -> None:
-        if self.pipeline_thread: self.pipeline_thread.stop()
+        if self.pipeline_thread and self.pipeline_thread.isRunning():
+            self.pipeline_thread.stop()
     def _pause_pipeline(self) -> None:
         if self.pipeline_thread and self.pipeline_thread.isRunning():
             if getattr(self.pipeline_thread, "pause_flag", False):
@@ -608,7 +610,6 @@ class MainWindow(QMainWindow):
             else:
                 self._qsb.setText("")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
-    def _check_updates(self, silent: bool = False) -> None: self.maint.check_updates(silent=False)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
     def _restore_geometry(self) -> None: self.maint.restore_geometry()
     def _setup_tray(self) -> None: self.maint.setup_tray()

@@ -81,7 +81,7 @@ class LogService:
                 text = raw.decode("utf-8", errors="replace")
             except Exception:
                 return []
-            return text.strip().split("\n")
+            return text.strip().replace("\r\n", "\n").split("\n")
 
     @staticmethod
     def rotate_log(log_path: Path, keep_runs: int = 3) -> None:

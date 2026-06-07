@@ -25,28 +25,31 @@ class EmuService:
         self._refresh_t=BackgroundTask(detect_emu_instances)
         def _done(instances):
             try:
-                if not hasattr(self.ctx._mw,'_sad_row'): return  # window destroyed
+                if not hasattr(self.ctx._mw,'_sad_row'): return
                 combo.blockSignals(True)
-                combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
-                selected=-1
-                for j,ins in enumerate(instances):
-                    label=ins['name']; running=ins.get("running",False)
-                    ms=self.ctx.emu_status.get(ins.get("index",""),{})
-                    if ms.get("running"): running=True
-                    if running: label="▶ "+label
-                    if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
-                    combo.addItem(label,ins)
-                    if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
-                if saved_name and not saved_idx:
-                    pass  # saved_name handled during _sad build
-                if selected>=0: combo.setCurrentIndex(selected)
-                combo.blockSignals(False)
-                combo.setEnabled(True)
-            except RuntimeError: pass
+                try:
+                    combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
+                    selected=-1
+                    for j,ins in enumerate(instances):
+                        label=ins['name']; running=ins.get("running",False)
+                        ms=self.ctx.emu_status.get(ins.get("index",""),{})
+                        if ms.get("running"): running=True
+                        if running: label="▶ "+label
+                        if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
+                        combo.addItem(label,ins)
+                        if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
+                    if saved_name and not saved_idx:
+                        pass
+                    if selected>=0: combo.setCurrentIndex(selected)
+                finally:
+                    combo.blockSignals(False)
+                    combo.setEnabled(True)
+            except RuntimeError:
+                pass
         self._refresh_t.result.connect(_done); self._refresh_t.start()
 
     def test_adb(self, a: dict) -> None:
-        ad=a.adb_address
+        ad=a.get("adb_address","")
         if not ad: self.ctx._mw._ast.setText("输入地址"); return
         self.ctx._mw._ast.setText("测试中...")
         adb=a.get("adb_path","") or "adb"
@@ -68,7 +71,7 @@ class EmuService:
         f,_=QFileDialog.getOpenFileName(self.ctx._mw,"选择文件","","可执行文件 (*.exe);;所有文件 (*.*)")
         if f: le.setText(str(Path(f))); ac[key]=str(Path(f)); self.ctx.save()
     def screenshot(self, a: dict) -> None:
-        addr=a.adb_address; adb=a.get("adb_path","") or "adb"
+        addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
         if not addr: return
         self.ctx.log(f"截图: {addr}...")
         if hasattr(self,'_ss_t') and self._ss_t and self._ss_t.isRunning():
@@ -91,7 +94,7 @@ class EmuService:
             elif s.startswith("err|"): self.ctx.log(f"截图失败: {s[4:]}")
         self._ss_t=BackgroundTask(_fn); self._ss_t.result.connect(_on); self._ss_t.start()
     def stop_emu(self, a: dict) -> None:
-        emu_idx=a.emu_instance_index
+        emu_idx=a.get("emu_instance_index","")
         if not emu_idx: return
         cli=find_mumu_cli()
         if cli:
@@ -150,7 +153,7 @@ class EmuService:
 
     def scan_port(self, a: dict, path_edit: QLineEdit, addr_edit: QLineEdit) -> None:
         """Start emulator, wait, then scan ADB port."""
-        emu_idx=a.emu_instance_index
+        emu_idx=a.get("emu_instance_index","")
         if not emu_idx: QMessageBox.information(self.ctx._mw,"提示","请先选择模拟器实例"); return
         cli=find_mumu_cli()
         if not cli: QMessageBox.warning(self.ctx._mw,"提示","未找到 mumu-cli"); return
@@ -195,7 +198,7 @@ class EmuService:
         def _on_r(r):
             s=str(r)
             if s.startswith("__found__"):
-                addr=s[9:]; addr_edit.setText(addr); a.adb_address = addr; self.ctx.save()
+                addr=s[9:]; addr_edit.setText(addr); a.__setitem__("adb_address", addr); self.ctx.save()
                 self.ctx.log(f"端口: {addr}"); self.ctx._mw.sl.setText(f"端口: {addr}")
             elif s.startswith("__err__"):
                 self.ctx.log(s[8:]); self.ctx._mw.sl.setText("就绪")

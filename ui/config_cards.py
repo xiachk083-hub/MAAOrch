@@ -22,17 +22,16 @@ def _tag_color(tag: str) -> tuple[str, str]:
 
 
 def _card_cols(mw: Any) -> int:
-    w = mw.cv.width() - 12  # padding
-    if w < 400: return 2
-    if w < 600: return 3
-    if w < 800: return 4
-    if w < 1000: return 5
-    return 6
+    w = mw.cv.width() - 12
+    if w < 550: return 1
+    if w < 800: return 2
+    if w < 1100: return 3
+    return 4
 
 
 def _card_width(mw: Any) -> int:
     cols = max(1, _card_cols(mw))
-    return (mw.cv.width() - 12 - (cols - 1) * 6) // cols
+    return max(220, (mw.cv.width() - 12 - (cols - 1) * 6) // cols)
 
 
 def build_config_cards(mw: Any) -> QWidget:
@@ -148,7 +147,7 @@ def _rebuild_tag_row(mw: Any) -> None:
     row = mw._card_tag_row
     while row.count() > 1:
         w = row.takeAt(1).widget()
-        if w: w.deleteLater()
+        if w: w.setParent(None); w.deleteLater()
 
     all_tags: set[str] = set()
     for a in mw.accounts:

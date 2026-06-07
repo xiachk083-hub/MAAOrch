@@ -9,14 +9,16 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QTableW
 from utils import parse_maa_version, get_platform_key, _version_tuple, make_id
 from dialogs import ScheduleDialog, SettingsDialog
 from updater import UpdateCheckThread, UpdateDialog
+from ui.config_cards import refresh_config_cards
 from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 
 
 def _trigger_batch(self):
     """Daily batch: enqueue all accounts."""
-    if hasattr(self.ctx._mw, "launch_queue"):
-        self.ctx._mw.launch_queue.batch_enqueue_all()
+    lq = getattr(self.ctx._mw, "launch_queue", None)
+    if lq:
+        lq.batch_enqueue_all()
         self.ctx.log("[调度] 每日批量入队")
 
 
@@ -49,6 +51,7 @@ class MaintService:
             self.ctx.warehouse.append(e)
             self.ctx.save()
             self.ctx.show_dashboard(row)
+            refresh_config_cards(self.ctx._mw)
             self.ctx.inject_config(e, a)
 
         t = UpdateCheckThread()
@@ -66,6 +69,7 @@ class MaintService:
         self.ctx.warehouse.append(e)
         self.ctx.save()
         self.ctx.show_dashboard(row)
+        refresh_config_cards(self.ctx._mw)
         self.ctx.inject_config(e, a)
         self.ctx.launch_program(e)
 
@@ -232,7 +236,8 @@ class MaintService:
                     mw.setGeometry(x, y, w, h)
                 else:
                     wh = p[0].split("x")
-                    mw.resize(int(wh[0]), int(wh[1]))
+                    if len(wh) >= 2:
+                        mw.resize(int(wh[0]), int(wh[1]))
             except Exception:
                 mw.resize(960, 650)
         else:
@@ -384,7 +389,7 @@ class MaintService:
                 bat = root / "replace.bat"
                 bat.write_text(
                     '@echo off\r\n'
-                    'taskkill /f /im python.exe 2>nul\r\n'
+                    'taskkill /f /fi "WINDOWTITLE eq MAAOrch" /im python.exe 2>nul\r\n'
                     'timeout /t 3 /nobreak >nul\r\n'
                     'xcopy /E /Y "%~dp0_update\\*" "%~dp0" >nul\r\n'
                     'rmdir /S /Q "%~dp0_update"\r\n'

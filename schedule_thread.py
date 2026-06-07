@@ -16,8 +16,13 @@ class ScheduleThread(QThread):
             if not s.get("enabled"):
                 self.msleep(15000); continue
             n=datetime.now()
-            try: tg=dtime.fromisoformat(s.get("time","08:00"))
-            except: tg=dtime(8,0)
+            try:
+                raw=s.get("time","08:00")
+                tg=dtime.fromisoformat(raw)
+                if not (0<=tg.hour<24 and 0<=tg.minute<60):
+                    tg=dtime(8,0)
+            except:
+                tg=dtime(8,0)
             target=n.replace(hour=tg.hour,minute=tg.minute,second=0,microsecond=0)
             is_daily=s.get("type","daily")=="daily"
             if not is_daily:
@@ -54,7 +59,7 @@ class ScheduleThread(QThread):
                     if n.hour == bh and n.minute >= bm:
                         is_batch = True
                         self._last_batch_date = today
-                        self.batch_trigger.emit()
+                        self.batch_trigger.emit(); self._last_run=n
                 except Exception: pass
             if not is_batch:
                 if self._last_run and (n-self._last_run).total_seconds()<120: self.msleep(30000); continue

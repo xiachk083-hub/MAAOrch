@@ -27,24 +27,23 @@ def build_schedule_panel(mw: Any) -> QWidget:
     mw._sch_enabled_cb.setChecked(bool(mw.config.get("daily_batch_time", "")))
     bar.addWidget(mw._sch_enabled_cb)
 
-    bar.addWidget(QLabel(" 并行"))
+    bar.addWidget(QLabel(" 并行数:"))
     mw._sch_parallel_sp = QSpinBox()
     mw._sch_parallel_sp.setRange(1, 10); mw._sch_parallel_sp.setValue(mw.config.get("parallel_max", 1))
-    mw._sch_parallel_sp.setFixedWidth(40)
+    mw._sch_parallel_sp.setFixedWidth(50)
     bar.addWidget(mw._sch_parallel_sp)
 
-    bar.addWidget(QLabel(" 每日批量:"))
+    bar.addWidget(QLabel(" 定时:"))
     mw._sch_batch_time = QLineEdit(mw.config.get("daily_batch_time", ""))
     mw._sch_batch_time.setPlaceholderText("04:00")
-    mw._sch_batch_time.setFixedWidth(50)
-    mw._sch_batch_time.setStyleSheet("")
+    mw._sch_batch_time.setFixedWidth(60)
     bar.addWidget(mw._sch_batch_time)
 
-    bar.addWidget(QLabel(" 距满差"))
+    bar.addWidget(QLabel(" 剩余体力:"))
     mw._sch_deficit_sp = QSpinBox()
     mw._sch_deficit_sp.setRange(0, 999);     mw._sch_deficit_sp.setValue(mw.config.get("deficit", 0))
-    mw._sch_deficit_sp.setSuffix(" 点")
-    mw._sch_deficit_sp.setFixedWidth(60)
+    mw._sch_deficit_sp.setSuffix(" 回满")
+    mw._sch_deficit_sp.setFixedWidth(80)
     bar.addWidget(mw._sch_deficit_sp)
 
     bar.addStretch()
@@ -59,10 +58,10 @@ def build_schedule_panel(mw: Any) -> QWidget:
     tbl = QTableWidget(0, 5)
     tbl.setHorizontalHeaderLabels(["账号", "上次结束", "现在理智", "预计启动", "剩余"])
     tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-    tbl.setColumnWidth(1, 75)
-    tbl.setColumnWidth(2, 75)
-    tbl.setColumnWidth(3, 95)
-    tbl.setColumnWidth(4, 60)
+    tbl.setColumnWidth(1, 90)
+    tbl.setColumnWidth(2, 85)
+    tbl.setColumnWidth(3, 110)
+    tbl.setColumnWidth(4, 75)
     tbl.verticalHeader().setVisible(False); tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     tbl.setShowGrid(False); tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
@@ -71,8 +70,8 @@ def build_schedule_panel(mw: Any) -> QWidget:
     svl.addWidget(tbl, 1)
 
     # ── Hint ──
-    ft = QLabel(" 距满差 0 = 回满启动    |    每日批量到点全部入队    |    跑完自动算恢复时间")
-    ft.setStyleSheet("color:#666;font-size:7pt;padding:2px")
+    ft = QLabel(" 剩余体力 0 = 回满启动    |    每日批量到点全部入队    |    跑完自动算恢复时间")
+    ft.setStyleSheet("color:#666;font-size:8pt;padding:2px")
     svl.addWidget(ft)
 
     return mw.sv
@@ -162,9 +161,11 @@ def _save_schedule(mw: Any) -> None:
     if hasattr(mw, "_sch_parallel_sp"):
         mw.config["parallel_max"] = mw._sch_parallel_sp.value()
     if hasattr(mw, "_sch_deficit_sp"):
+        val = mw._sch_deficit_sp.value()
         for a in mw.accounts:
-            a["round_robin_deficit"] = mw._sch_deficit_sp.value()
-        mw.config["deficit"] = mw._sch_deficit_sp.value()
+            if "round_robin_deficit" not in a:
+                a["round_robin_deficit"] = val
+        mw.config["deficit"] = val
     mw._save()
     if enabled:
         mw.maint._start_schedule_thread()
@@ -172,7 +173,7 @@ def _save_schedule(mw: Any) -> None:
         if hasattr(mw, 'launch_queue'):
             prog_ids = {w.get("account_ref") for w in mw.warehouse if w.get("account_ref")}
             for a in mw.accounts:
-                if a["id"] in prog_ids and a.get("emu_instance_index", "") and a.get("adb_address", "").strip():
+                if a.get("id", "") in prog_ids and a.get("emu_instance_index", "") and a.get("adb_address", "").strip():
                     mw.launch_queue.enqueue(a["id"], "schedule", priority=1)
             mw.launch_queue._tick()
     elif hasattr(mw.maint.ctx, "schedule_thread") and mw.maint.ctx.schedule_thread:
