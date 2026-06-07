@@ -24,6 +24,10 @@ def build_smart_panel(mw: Any) -> QWidget:
     mw._smart_enabled_cb.setChecked(mw.config.get("smart_global", {}).get("enabled", False))
     mw._smart_enabled_cb.toggled.connect(lambda v: _toggle_smart(mw, v))
     hdr.addWidget(mw._smart_enabled_cb)
+    run_btn = QPushButton("▶ 立即调度全部")
+    run_btn.setObjectName("startBtn")
+    run_btn.clicked.connect(lambda: _run_smart_all(mw))
+    hdr.addWidget(run_btn)
     hdr.addStretch()
     vl.addLayout(hdr)
 
@@ -130,14 +134,6 @@ def build_smart_panel(mw: Any) -> QWidget:
     tbl.verticalHeader().setDefaultSectionSize(28)
     mw._smart_tbl = tbl
 
-    btn_row = QHBoxLayout()
-    run_btn = QPushButton("▶ 立即调度全部")
-    run_btn.setObjectName("startBtn")
-    run_btn.clicked.connect(lambda: _run_smart_all(mw))
-    btn_row.addWidget(run_btn)
-    btn_row.addStretch()
-    vl.addLayout(btn_row)
-
     vl.addWidget(tbl, 1)
     vl.addStretch()
 
@@ -150,12 +146,20 @@ def _set_global(mw: Any, key: str, value: Any) -> None:
 
 
 def _run_smart_all(mw: Any) -> None:
-    """Trigger immediate smart scheduling check for all accounts."""
+    """立即调度全部账号（忽略触发条件）。"""
     if not mw.config.get("smart_global", {}).get("enabled", False):
         mw._log("智能调度未启用")
         return
+    # 清除所有已有排队，避免被旧 not_before 卡住
+    if hasattr(mw, "launch_queue") and mw.launch_queue:
+        with mw.launch_queue._lock:
+            mw.launch_queue._pending.clear()
+            mw.launch_queue._active_emus.clear()
+        mw.launch_queue._save_queue()
+    mw._smart_force = True
     setattr(mw, "_last_smart_minute", "")
     mw._smart_tick()
+    mw._smart_force = False
 
 
 def _toggle_smart(mw: Any, enabled: bool) -> None:

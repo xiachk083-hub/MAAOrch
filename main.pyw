@@ -82,17 +82,18 @@ def main():
                 t = getattr(win.emu, attr, None)
                 if t and t.isRunning():
                     threads.append(t)
+        # Signal all threads to stop first, then wait in parallel
         for t in threads:
             try:
-                if hasattr(t, "stop_server"):
-                    t.stop_server()
-                elif hasattr(t, "stop_thread"):
-                    t.stop_thread()
-                elif hasattr(t, "stop_monitor"):
-                    t.stop_monitor()
-                else:
-                    t.quit()
-                t.wait(5000)
+                if hasattr(t, "stop_server"): t.stop_server()
+                elif hasattr(t, "stop_thread"): t.stop_thread()
+                elif hasattr(t, "stop_monitor"): t.stop_monitor()
+                else: t.quit()
+            except Exception:
+                pass
+        # Wait with short timeout — don't block shutdown
+        for t in threads:
+            try: t.wait(1000)
             except Exception:
                 pass
 

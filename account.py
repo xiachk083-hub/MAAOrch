@@ -51,6 +51,9 @@ class Account:
     smart_sat: str = ""
     smart_sun: str = ""
     smart_materials_enabled: bool = True
+    smart_pending: bool = False
+    smart_last_error: float = 0.0
+    smart_plan: str = ""
 
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):

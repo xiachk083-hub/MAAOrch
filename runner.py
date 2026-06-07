@@ -22,7 +22,7 @@ class AccountRunner(QObject):
     log_msg = Signal(str)
     status_msg = Signal(str)
     account_started = Signal(str)          # account_id
-    account_finished = Signal(str, int, list)  # account_id, exit_code, tasks
+    account_finished = Signal(tuple)  # (account_id, exit_code, tasks)
     account_error = Signal(str, str)       # account_id, error_msg
 
     def __init__(self, ctx: ServiceContext) -> None:
@@ -219,11 +219,15 @@ class AccountRunner(QObject):
         for w in progs:
             try:
                 if smart_enabled:
-                    from smart_scheduler import get_tasks_for_account
-                    task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
-                    plan_txt = ",".join(task_list)
+                    plan_txt = ac.get("smart_plan", "")
+                    if plan_txt:
+                        task_list = plan_txt.split(",")
+                    else:
+                        from smart_scheduler import get_tasks_for_account
+                        task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
+                        plan_txt = ",".join(task_list)
+                        ac["smart_plan"] = plan_txt
                     self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
-                    ac["smart_plan"] = plan_txt
                     self.ctx.cfg.inject_smart(task_list, ac, w)
                 else:
                     self.ctx.inject_config(w, ac)
@@ -239,17 +243,17 @@ class AccountRunner(QObject):
     def _spawn(self, w: dict, ac: dict) -> None:
         aid = ac["id"]
         args = w.get("args", [])
-        cwd = w.get("cwd", "") or None
-        env = {k: v for k, v in w.get("env", {}).items()} or None
-        exe = w["path"]
         lm = w.get("launch_mode", "gui")
+        exe = w["path"]
 
         if w.get("account_ref") and lm == "cli":
+            from task_constants import CF
+            cwd = w.get("cwd", "") or str(Path(w["path"]).parent)
+            env = {k: v for k, v in w.get("env", {}).items()} or None
             self._spawn_cli(w, ac, exe, args, cwd, env)
             return
 
-        kwargs = {"shell": False, "cwd": cwd, "env": env}
-        p = subprocess.Popen([exe] + args, **kwargs)
+        p = subprocess.Popen([exe] + args, shell=False)
         self._procs[aid] = p
         self._start_times[aid] = time.time()
         self.ctx.proc_status.add(aid)
@@ -394,14 +398,18 @@ class AccountRunner(QObject):
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             ac["smart_plan"] = ""
-            ac.pop("smart_pending", None)
+            ac["smart_pending"] = False
         # Also remove program IDs from status tracking
         if old_progs:
             for w in old_progs:
                 self.ctx.proc_status.discard(w["id"])
                 self.ctx.proc_start_times.pop(w["id"], None)
 
-        if ac and exit_code != 0 and exit_code != -9 and aid not in self._stopping:
+        # MAA 在 ExitSelf 等场景下可能返回非 0 退出码，但任务已实际完成
+        is_real_error = exit_code != 0 and exit_code != -9 and aid not in self._stopping
+        if tasks:
+            is_real_error = False
+        if is_real_error:
             self.log_msg.emit(f"{ac.get('name', aid)} 异常退出 (code={exit_code})")
             self.ctx.notify(f"进程异常退出 (code={exit_code})", True)
 
@@ -420,7 +428,7 @@ class AccountRunner(QObject):
             h, m = divmod(deficit * 6, 60)
             msg_parts.append(f"理智 {cur}/{mx}  ({h}h{m:02d}m回满)")
 
-        self.account_finished.emit(aid, exit_code, tasks)
+        self.account_finished.emit((aid, exit_code, tasks))
         if msg_parts:
             self.ctx.notify(" | ".join(msg_parts), False)
 

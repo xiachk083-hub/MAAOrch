@@ -193,7 +193,7 @@ class ConfigService:
         cd = md / "config"
         cd.mkdir(parents=True, exist_ok=True)
 
-        def _write(fn):
+        def _write(fn, use_v6=False):
             gj = cd / fn
             d = {}
             if gj.exists():
@@ -206,6 +206,16 @@ class ConfigService:
             d.setdefault("Global", {})
             c = d["Configurations"]["Default"]
             d.setdefault("Resource", {})["AutoUpdate"] = True
+            if use_v6:
+                c.setdefault("InfrastOrder", {})
+            # MAA v6 reads GUI settings from gui.json Global section
+            g = d.setdefault("Global", {})
+            g.setdefault("GUI.Localization", "zh-cn")
+            g.setdefault("GUI.MinimizeToTray", "False")
+            g.setdefault("GUI.UseTray", "True")
+
+            for stale in ("Start.Minimized", "Start.MinimizeDirectly"):
+                c.pop(stale, None)
 
             if ac.get("adb_address"):
                 c["Connect.Address"] = ac["adb_address"]
@@ -226,11 +236,11 @@ class ConfigService:
             c["Start.StartGame"] = "True"
 
             smart_cfg = self.ctx.config.get("smart_global", {})
-            post = smart_cfg.get("post_action", "ExitArknights,ExitSelf")
-            c["MainFunction.PostActions"] = f'"{post}"'
-            c["Start.RunDirectly"] = "True"
-            c["Start.StartGame"] = "True"
-            c["Start.Minimized"] = "True"
+            post = smart_cfg.get("post_action", "")
+            if post:
+                c["MainFunction.PostActions"] = f'"{post}"'
+            else:
+                c.pop("MainFunction.PostActions", None)
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx and not ac.get("emu_launch"):
@@ -242,21 +252,14 @@ class ConfigService:
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
-            tq = []
-            task_config_map = {
-                "Award": {"TaskType": "Award", "IsEnable": True, "Award": True, "Mail": False, "FreeGacha": False},
-                "Fight": {"TaskType": "Fight", "IsEnable": True},
-                "Infrast": {"TaskType": "Infrast", "IsEnable": True},
-                "Recruit": {"TaskType": "Recruit", "IsEnable": True},
-                "Mall": {"TaskType": "Mall", "IsEnable": True, "Shopping": True},
-                "Depot": {"TaskType": "Depot", "IsEnable": True},
-            }
-            for t in task_list:
-                tmpl = task_config_map.get(t)
-                if tmpl:
-                    tq.append(dict(tmpl))
-            c["TaskQueue"] = tq
+            task_type_lower = {t.lower(): t for t in task_list}
+            existing_tq = c.get("TaskQueue", [])
+            if existing_tq:
+                for item in existing_tq:
+                    tt = item.get("TaskType", "").lower()
+                    item["IsEnable"] = tt in task_type_lower
+                c["TaskQueue"] = existing_tq
             gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
 
-        _write("gui.json")
-        _write("gui.new.json")
+        _write("gui.json", use_v6=False)
+        _write("gui.new.json", use_v6=True)

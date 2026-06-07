@@ -128,8 +128,9 @@ class LaunchQueue(QObject):
 
     # ── Lifecycle hooks (called from runner signals) ──
 
-    def on_account_finished(self, account_id: str, exit_code: int, tasks: list | None = None) -> None:
+    def on_account_finished(self, data: tuple) -> None:
         """An account just finished — release emulator, enqueue based on deficit."""
+        account_id, exit_code, tasks = data
         emu_idx = self._get_emu_idx(account_id)
         with self._lock:
             self._active_emus.pop(emu_idx, None)

@@ -29,7 +29,7 @@ from ui.config_cards import build_config_cards, refresh_config_cards
 from ui.schedule_panel import build_schedule_panel, refresh_schedule_view
 
 try:
-    from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize
+    from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize,Slot
     from PySide6.QtGui import QFont,QPixmap,QPainter,QColor,QBrush,QPolygonF,QIcon
     from PySide6.QtWidgets import (
         QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,
@@ -260,6 +260,8 @@ class MainWindow(QMainWindow):
         tm.addAction("检查 MAAOrch 更新", lambda: self.maint.check_orch_update())
         tm.addAction("设置", self._settings)
         tm.addAction("日志", self._tlog)
+        tm.addSeparator()
+        tm.addAction("退出", self.maint._quit_app)
 
         from PySide6.QtGui import QShortcut, QKeySequence
         QShortcut(QKeySequence("Ctrl+Return"), self, self._start_pipeline)
@@ -513,15 +515,23 @@ class MainWindow(QMainWindow):
         self.launch_queue.enqueue_batch("manual", priority=0)
         self.launch_queue._tick()
 
+    @Slot(str)
     def _on_account_started(self, aid: str) -> None:
         a = next((x for x in self.accounts if x["id"] == aid), None)
         if a:
             self._sad(self.accounts.index(a))
 
-    def _on_account_finished(self, aid: str, exit_code: int, tasks: list[dict]) -> None:
+    def _on_account_finished(self, data: tuple) -> None:
+        aid, exit_code, tasks = data
         a = next((x for x in self.accounts if x["id"] == aid), None)
         if a:
-            if a.pop("smart_pending", False):
+            import time as _time
+            if exit_code != 0 and not tasks:
+                a["smart_last_error"] = _time.time()
+            else:
+                a["smart_last_error"] = 0
+            if a.get("smart_pending", False):
+                a["smart_pending"] = False
                 self._log(f"🧠 {a.get('name', aid)} 到点补跑")
                 self.launch_queue.enqueue(aid, "schedule", priority=1)
                 self.launch_queue._tick()
@@ -656,8 +666,11 @@ class MainWindow(QMainWindow):
                 if is_time_trigger:
                     a["smart_pending"] = True
                 continue
+            last_error = a.get("smart_last_error", 0)
+            if last_error and time.time() - last_error < 300 and not getattr(self, "_smart_force", False):
+                continue
             should_launch = False
-            if is_time_trigger:
+            if is_time_trigger or getattr(self, "_smart_force", False):
                 should_launch = True
             else:
                 threshold = sg.get("threshold", 80)
@@ -668,13 +681,20 @@ class MainWindow(QMainWindow):
                     if mat_stage:
                         should_launch = True
             if should_launch:
-                tasks = get_tasks_for_account(a, sg)
-                if len(tasks) > 2:
+                if getattr(self, "_smart_force", False):
+                    tasks = ["Award", "Fight", "Infrast", "Recruit", "Mall", "Depot", "CloseDown"]
+                else:
+                    tasks = get_tasks_for_account(a, sg)
+                if len(tasks) > 2 or getattr(self, "_smart_force", False):
+                    plan_txt = ",".join(tasks)
+                    a["smart_plan"] = plan_txt
                     self.launch_queue.enqueue(aid, "schedule", priority=1)
                     count += 1
         if count:
             self._log(f"🧠 智能调度: {count} 个账号已入队")
             self.launch_queue._tick()
+        else:
+            self._log("🧠 智能调度: 暂无账号需要调度（体力不足/无任务到达）")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
     def _restore_geometry(self) -> None: self.maint.restore_geometry()
