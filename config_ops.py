@@ -252,13 +252,18 @@ class ConfigService:
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
-            task_type_lower = {t.lower(): t for t in task_list}
-            existing_tq = c.get("TaskQueue", [])
-            if existing_tq:
-                for item in existing_tq:
-                    tt = item.get("TaskType", "").lower()
-                    item["IsEnable"] = tt in task_type_lower
-                c["TaskQueue"] = existing_tq
+            if use_v6:
+                task_type_lower = {t.lower(): t for t in task_list}
+                existing_tq = c.get("TaskQueue", [])
+                if existing_tq:
+                    for item in existing_tq:
+                        tt = item.get("TaskType", "").lower()
+                        item["IsEnable"] = tt in task_type_lower
+                    c["TaskQueue"] = existing_tq
+                else:
+                    c.pop("TaskQueue", None)
+            else:
+                c.pop("TaskQueue", None)
             gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
 
         _write("gui.json", use_v6=False)
