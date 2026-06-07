@@ -201,13 +201,16 @@ def _upd_launch(mw, a, refs):
 
 def _upd_actions(mw, row, progs, refs):
     if "action_launch_btn" in refs:
-        refs["action_launch_btn"].clicked.disconnect()
+        try: refs["action_launch_btn"].clicked.disconnect()
+        except TypeError: pass
         refs["action_launch_btn"].clicked.connect(lambda: mw._la(row))
     if "action_launch_all_btn" in refs:
-        refs["action_launch_all_btn"].clicked.disconnect()
+        try: refs["action_launch_all_btn"].clicked.disconnect()
+        except TypeError: pass
         refs["action_launch_all_btn"].clicked.connect(lambda: mw._la_all())
     if "action_update_btn" in refs and progs:
-        refs["action_update_btn"].clicked.disconnect()
+        try: refs["action_update_btn"].clicked.disconnect()
+        except TypeError: pass
         refs["action_update_btn"].clicked.connect(lambda: mw.maint.cu_single(progs[0]))
 
 
@@ -704,7 +707,7 @@ def _build_launch_card(mw: Any, row: int) -> None:
     or1.addWidget(cb_sd)
 
     cb_ad = QCheckBox("ADB 失败启模拟器")
-    cb_ad.setChecked(a.adb_fail_launch_emu)
+    cb_ad.setChecked(a.get("adb_fail_launch_emu", False))
     cb_ad.toggled.connect(lambda v: (a.__setitem__("adb_fail_launch_emu", v), mw._save()))
     or1.addWidget(cb_ad)
 

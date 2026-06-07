@@ -92,6 +92,18 @@ def load_config() -> dict:
                 f.write(f"[ERR] load_config: {e}\n")
         except:
             pass
+        # Try loading the most recent backup before giving up
+        try:
+            bp = Path(__file__).parent / "backups"
+            backups = sorted(bp.glob("config_*.json"), key=lambda x: x.stat().st_mtime, reverse=True)
+            if backups:
+                data = json.loads(backups[0].read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    data.setdefault("accounts",[])
+                    data["accounts"] = [Account.from_dict(a) for a in data["accounts"]]
+                    return data
+        except Exception:
+            pass
     return dict(DEFAULT_CONFIG)
 
 def save_config(data: dict) -> None:

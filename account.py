@@ -83,4 +83,9 @@ class Account:
     _TRANSIENT = {"smart_pending", "smart_last_error", "smart_plan"}
 
     def to_dict(self) -> dict:
-        return {k: getattr(self, k) for k in self.__dataclass_fields__ if k not in self._TRANSIENT}
+        result = {k: getattr(self, k) for k in self.__dataclass_fields__ if k not in self._TRANSIENT}
+        # Preserve any extra keys set dynamically (not in dataclass fields)
+        for k in self.__dict__:
+            if k not in self.__dataclass_fields__ and k not in self._TRANSIENT and not k.startswith("_"):
+                result[k] = self.__dict__[k]
+        return result

@@ -5,11 +5,15 @@ from pathlib import Path
 from datetime import datetime
 
 
+import re as _re
+
+
 class RunStats:
     """Read/write run history and sanity info for a single account."""
 
     def __init__(self, account_id: str) -> None:
-        self._dir = Path(__file__).parent / "accounts" / account_id
+        safe = _re.sub(r'[^\w.-]', '_', account_id) or "_"
+        self._dir = Path(__file__).parent / "accounts" / safe
         self._dir.mkdir(parents=True, exist_ok=True)
         self._path = self._dir / "stats.json"
         self._data: dict = self._load()

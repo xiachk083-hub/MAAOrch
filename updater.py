@@ -90,7 +90,7 @@ class DownloadThread(QThread):
                     except PermissionError:
                         d2=str(dest)+".new"; shutil.copy2(str(item),d2)
                         try: Path(d2).replace(dest)
-                        except: shutil.copy2(d2,str(dest)); Path(d2).unlink()
+                        except OSError: shutil.move(d2,str(dest))
             self.finished.emit(True,"完成")
         except Exception as e: self.finished.emit(False,str(e))
         finally:

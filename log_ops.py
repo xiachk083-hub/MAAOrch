@@ -74,9 +74,10 @@ class LogService:
             run_start = ver_positions[-1]
             run_end = fsize
 
-            # Read only the run section
-            f.seek(run_start)
-            raw = f.read(run_end - run_start)
+            # Read only the run section (cap at 10MB to avoid OOM)
+            read_size = min(run_end - run_start, 10 * 1024 * 1024)
+            f.seek(run_end - read_size if run_end - run_start > read_size else run_start)
+            raw = f.read(read_size)
             try:
                 text = raw.decode("utf-8", errors="replace")
             except Exception:
