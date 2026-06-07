@@ -38,3 +38,4 @@ jobs:
         run: python release.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
