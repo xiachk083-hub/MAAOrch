@@ -138,7 +138,7 @@ class LaunchQueue(QObject):
 
         # Round-robin: calculate recovery based on deficit
         deficit_cfg = self.ctx.config.get("deficit", 0) or ac.get("round_robin_deficit", 0)
-        if deficit_cfg >= 0 and self.ctx.config.get("daily_batch_time", ""):
+        if deficit_cfg >= 0:
             st = RunStats(account_id)
             s = st.get_last_sanity()
             if s:

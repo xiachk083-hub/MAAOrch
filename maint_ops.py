@@ -277,24 +277,37 @@ class MaintService:
         QApplication.quit()
 
     def start_schedule(self) -> None:
-        if self.ctx.config.get("schedule", {}).get("enabled"):
-            self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
-            self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
-            self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))
-            self.ctx.schedule_thread.start()
+        has_batch = bool(self.ctx.config.get("daily_batch_time", ""))
+        sched = self.ctx.config.get("schedule", {})
+        if sched.get("enabled") or has_batch:
+            self._ensure_schedule_config(has_batch, sched)
+            self._start_schedule_thread()
+
+    def _ensure_schedule_config(self, has_batch: bool, sched: dict) -> None:
+        if not sched.get("enabled") and has_batch:
+            bt = self.ctx.config.get("daily_batch_time", "")
+            self.ctx.config["schedule"] = {"enabled": True, "type": "daily", "time": bt, "days_of_week": []}
+
+    def _start_schedule_thread(self) -> None:
+        if self.ctx.schedule_thread:
+            return  # config changes propagate automatically via shared dict
+        self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
+        self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
+        self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))
+        self.ctx.schedule_thread.start()
 
     def sch(self) -> None:
         d = ScheduleDialog(self.ctx._mw, self.ctx.config.get("schedule", {}))
-        if d.exec() == QDialog.Accepted:
+        ok = d.exec() == QDialog.Accepted
+        if ok:
             self.ctx.config["schedule"] = d.r
             self.ctx.save()
-        if self.ctx.schedule_thread:
+        cfg = d.r if ok else self.ctx.config.get("schedule", {})
+        if cfg.get("enabled"):
+            self.ctx.config["schedule"] = cfg
+            self._start_schedule_thread()
+        elif self.ctx.schedule_thread:
             self.ctx.schedule_thread.stop_thread()
-        if d.r.get("enabled"):
-            self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
-            self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
-            self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))
-            self.ctx.schedule_thread.start()
 
     def settings(self) -> None:
         old_port = self.ctx.config.get("api_port", 19999)

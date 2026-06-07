@@ -108,6 +108,46 @@ class EmuService:
                 if s=="ok": self.ctx.log("模拟器已关闭")
                 else: self.ctx.log(f"关闭失败: {s}")
             self._stopemu_t=BackgroundTask(_fn); self._stopemu_t.result.connect(_on); self._stopemu_t.start()
+    def auto_detect_adb(self, ins: dict) -> str | None:
+        """Auto-detect ADB address from emulator instance without starting it."""
+        from task_constants import MUMU_INSTANCE_DIRS, detect_ldplayer_adb_port
+        idx = ins.get("index", "")
+        emu = ins.get("emu", "")
+        if not idx:
+            return None
+        # MuMu: read config.json directly
+        if "MuMu" in emu:
+            for vms_dir in MUMU_INSTANCE_DIRS:
+                vm = vms_dir / str(idx)
+                if vm.is_dir() and (vm / "config.json").exists():
+                    try:
+                        cfg = json.loads((vm / "config.json").read_text(encoding="utf-8"))
+                        port = cfg.get("adb_port", "")
+                        if port and port != "0":
+                            return f"127.0.0.1:{port}"
+                    except: pass
+            # Formula fallback
+            try:
+                return f"127.0.0.1:{16384 + int(idx) * 32}"
+            except: pass
+        # LDPlayer: formula
+        if "雷电" in emu:
+            cli = find_mumu_cli()
+            if cli:
+                try:
+                    r = subprocess.run([cli, "info", "-v", str(idx)], capture_output=True, text=True, timeout=8, creationflags=CF, encoding="utf-8", errors="replace")
+                    if r.stdout.strip():
+                        data = json.loads(r.stdout)
+                        host = data.get("adb_host_ip", "")
+                        port = data.get("adb_port", "")
+                        if host and port:
+                            return f"{host}:{port}"
+                except: pass
+            port = detect_ldplayer_adb_port(Path(), str(idx))
+            if port:
+                return f"127.0.0.1:{port}"
+        return None
+
     def scan_port(self, a: dict, path_edit: QLineEdit, addr_edit: QLineEdit) -> None:
         """Start emulator, wait, then scan ADB port."""
         emu_idx=a.emu_instance_index

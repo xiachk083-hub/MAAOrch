@@ -44,6 +44,7 @@ class ScheduleThread(QThread):
                 remain=(target-datetime.now()).total_seconds()
                 self.msleep(min(5000,int(remain*1000)+500))
             if not self._r: break
+            n=datetime.now()  # refresh after sleep
             # Check if this is a batch trigger
             is_batch = False
             today = n.strftime("%Y-%m-%d")

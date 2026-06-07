@@ -554,7 +554,15 @@ class MainWindow(QMainWindow):
     def _inj(self, w: dict, ac: dict) -> None: self.cfg.inject(w, ac)
     # Pipeline
     def _start_pipeline(self) -> None:
-        if not self.groups or (self.pipeline_thread and self.pipeline_thread.isRunning()): return
+        if not self.groups:
+            if hasattr(self, 'launch_queue'):
+                prog_ids = {w.get("account_ref") for w in self.warehouse if w.get("account_ref")}
+                for a in self.accounts:
+                    if a["id"] in prog_ids and a.get("emu_instance_index", "") and a.get("adb_address", "").strip():
+                        self.launch_queue.enqueue(a["id"], "schedule", priority=1)
+                self.launch_queue._tick()
+            return
+        if self.pipeline_thread and self.pipeline_thread.isRunning(): return
         self.qs.setEnabled(False); self._log("流水线启动")
         # Collect emulators to launch
         to_launch=[]

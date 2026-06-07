@@ -151,11 +151,14 @@ def _estimate_current(last_current: int, max_sanity: int, report_time: str) -> i
 
 
 def _save_schedule(mw: Any) -> None:
-    if hasattr(mw, "_sch_enabled_cb"):
-        if not mw._sch_enabled_cb.isChecked():
-            mw.config["daily_batch_time"] = ""
-        elif hasattr(mw, "_sch_batch_time"):
-            mw.config["daily_batch_time"] = mw._sch_batch_time.text().strip()
+    enabled = bool(mw._sch_enabled_cb.isChecked()) if hasattr(mw, "_sch_enabled_cb") else False
+    batch = mw._sch_batch_time.text().strip() if enabled and hasattr(mw, "_sch_batch_time") else ""
+    mw.config["daily_batch_time"] = batch
+    if enabled:
+        t = batch if batch else mw.config.get("schedule", {}).get("time", "08:00")
+        mw.config["schedule"] = {"enabled": True, "type": "daily", "time": t, "days_of_week": []}
+    else:
+        mw.config["schedule"] = {"enabled": False, "type": "daily", "time": "08:00", "days_of_week": []}
     if hasattr(mw, "_sch_parallel_sp"):
         mw.config["parallel_max"] = mw._sch_parallel_sp.value()
     if hasattr(mw, "_sch_deficit_sp"):
@@ -163,4 +166,16 @@ def _save_schedule(mw: Any) -> None:
             a["round_robin_deficit"] = mw._sch_deficit_sp.value()
         mw.config["deficit"] = mw._sch_deficit_sp.value()
     mw._save()
+    if enabled:
+        mw.maint._start_schedule_thread()
+        # Immediately enqueue runnable accounts
+        if hasattr(mw, 'launch_queue'):
+            prog_ids = {w.get("account_ref") for w in mw.warehouse if w.get("account_ref")}
+            for a in mw.accounts:
+                if a["id"] in prog_ids and a.get("emu_instance_index", "") and a.get("adb_address", "").strip():
+                    mw.launch_queue.enqueue(a["id"], "schedule", priority=1)
+            mw.launch_queue._tick()
+    elif hasattr(mw.maint.ctx, "schedule_thread") and mw.maint.ctx.schedule_thread:
+        mw.maint.ctx.schedule_thread.stop_thread()
+        mw.maint.ctx.schedule_thread = None
     refresh_schedule_view(mw)

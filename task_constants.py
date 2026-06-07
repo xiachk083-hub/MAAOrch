@@ -119,9 +119,37 @@ def detect_emu_instances() -> list[dict]:
     for base in [Path("C:/leidian/LDPlayer9/vms"),Path("D:/leidian/LDPlayer9/vms")]:
         if base.exists():
             for vm in sorted(base.iterdir()):
-                if vm.is_dir(): instances.append({"emu":"雷电 9","name":vm.name,"index":vm.name,"adb_port":"","path":str(vm)})
+                if vm.is_dir():
+                    idx=vm.name
+                    port=detect_ldplayer_adb_port(vm, idx)
+                    instances.append({"emu":"雷电 9","name":vm.name,"index":idx,"adb_port":port,"path":str(vm)})
             if instances: break
     return instances
+def detect_ldplayer_adb_port(vm_dir: Path, idx: str) -> str:
+    """Detect LDPlayer ADB port by formula or config scan."""
+    try:
+        ld_dir=vm_dir.parent.parent  # vms/../ldconsole.exe
+        ldconsole=ld_dir/"ldconsole.exe"
+        if ldconsole.exists():
+            r=subprocess.run([str(ldconsole),"list2"],capture_output=True,text=True,timeout=5,creationflags=CF,encoding="utf-8",errors="replace")
+            if r.stdout.strip():
+                for line in r.stdout.strip().splitlines():
+                    parts=line.strip().split(",")
+                    if len(parts)<7: continue
+                    if parts[0]==idx:
+                        vbox_pid=int(parts[6])
+                        try:
+                            import psutil
+                            proc=psutil.Process(vbox_pid)
+                            for conn in proc.net_connections(kind="inet"):
+                                if conn.status=="LISTEN" and conn.laddr.port!=2222:
+                                    return str(conn.laddr.port)
+                        except: pass
+                        break
+    except: pass
+    # Fallback formula
+    try: return str(5555 + int(idx)*2)
+    except: return ""
 CLIENT_TYPES={"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
 CF=subprocess.CREATE_NO_WINDOW
 
