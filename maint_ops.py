@@ -77,7 +77,14 @@ class MaintService:
         src = Path(__file__).parent / "maa" / ver
         exe = src / "MAA.exe"
         if not exe.exists():
-            return None
+            # Fallback: find MAA in any account directory
+            import glob as _glob
+            maas = list(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
+            if maas:
+                src = maas[0].parent
+                exe = maas[0]
+            else:
+                return None
         max_n = self.ctx.config.get("parallel_max", 1)
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
