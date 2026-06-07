@@ -395,7 +395,7 @@ class MaintService:
             self.ctx.config["schedule"] = {"enabled": True, "type": "daily", "time": bt, "days_of_week": []}
 
     def _start_schedule_thread(self) -> None:
-        if self.ctx.schedule_thread:
+        if self.ctx.schedule_thread and self.ctx.schedule_thread.isRunning():
             return  # config changes propagate automatically via shared dict
         self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
         self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
@@ -414,6 +414,7 @@ class MaintService:
             self._start_schedule_thread()
         elif self.ctx.schedule_thread:
             self.ctx.schedule_thread.stop_thread()
+            self.ctx.schedule_thread = None
 
     def settings(self) -> None:
         old_port = self.ctx.config.get("api_port", 19999)
