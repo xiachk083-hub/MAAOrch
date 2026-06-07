@@ -14,6 +14,53 @@ from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 
 
+def ensure_maa_instances_async(ctx) -> None:
+    """Trigger MAA instance pool creation in background if needed."""
+    if ctx.config.get("maa_instances", 0) > 0:
+        return
+    src = _find_maa_source()
+    if not src:
+        return
+    from background import BackgroundTask
+    def _init():
+        max_n = ctx.config.get("parallel_max", 1)
+        pool = Path(__file__).parent / "maa" / "instances"
+        pool.mkdir(parents=True, exist_ok=True)
+        import shutil
+        is_old = "accounts" in str(src)
+        for i in range(1, max_n + 1):
+            inst = pool / str(i)
+            if inst.exists():
+                continue
+            if i == 1 and is_old:
+                shutil.move(str(src), str(inst))
+            else:
+                s = pool / "1" if i > 1 and is_old else src
+                if s.exists():
+                    shutil.copytree(str(s), str(inst))
+        ctx.config["maa_instances"] = max_n
+        ctx.save()
+    t = BackgroundTask(_init)
+    t.start()
+
+
+def _find_maa_source() -> Path | None:
+    """Find MAA executable source for instance pool creation."""
+    root = Path(__file__).parent
+    ver = root / "maa"
+    # Check versioned download first
+    for d in sorted(ver.iterdir()) if ver.exists() else []:
+        exe = d / "MAA.exe"
+        if exe.exists():
+            return exe.parent
+    # Fallback: old account directories
+    import glob
+    maas = list(root.glob("accounts/*/MAA/MAA.exe"))
+    if maas:
+        return maas[0].parent
+    return None
+
+
 def _is_instance_running(inst_id: int) -> bool:
     """Check if an MAA instance process is currently running."""
     import subprocess
@@ -68,39 +115,6 @@ class MaintService:
             self.ctx.inject_config(self.ctx.warehouse[-1], a)
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self.ctx.update_thread = t; t.start()
-
-    def ensure_maa_instances(self) -> str | None:
-        """Ensure MAA instance pool exists, return exe path or None."""
-        ver = self.ctx.config.get("maa_version", "")
-        if not ver:
-            return None
-        src = Path(__file__).parent / "maa" / ver
-        exe = src / "MAA.exe"
-        if not exe.exists():
-            # Fallback: find MAA in any account directory
-            import glob as _glob
-            maas = list(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
-            if maas:
-                src = maas[0].parent
-                exe = maas[0]
-            else:
-                return None
-        max_n = self.ctx.config.get("parallel_max", 1)
-        pool = Path(__file__).parent / "maa" / "instances"
-        pool.mkdir(parents=True, exist_ok=True)
-        import shutil, os
-        is_old_account = "accounts" in str(src)
-        for i in range(1, max_n + 1):
-            inst = pool / str(i)
-            if not inst.exists():
-                if i == 1 and is_old_account:
-                    shutil.move(str(src), str(inst))
-                else:
-                    source = pool / "1" if i > 1 and is_old_account else src
-                    if Path(source).exists():
-                        shutil.copytree(str(source), str(inst))
-        self.ctx.config["maa_instances"] = max_n
-        return str(exe)
 
     def get_free_instance(self) -> tuple[int, str] | None:
         """Find an idle instance. Returns (instance_id, config_dir) or None."""

@@ -114,7 +114,9 @@ class MainWindow(QMainWindow):
             maas = list(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
             if maas:
                 self.config["maa_version"] = "installed"
-                self.config["maa_instances"] = 0  # Will trigger instance pool creation
+                self.config["maa_instances"] = 0
+        from maint_ops import ensure_maa_instances_async
+        ensure_maa_instances_async(self.ctx)
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         def _safe_update_emu(r):
             try:

@@ -98,31 +98,23 @@ class AccountRunner(QObject):
         if not max_n:
             ver = self.ctx.config.get("maa_version", "")
             if ver:
-                from maint_ops import MaintService
-                ms = MaintService(self.ctx)
-                ms.ensure_maa_instances()
-                max_n = self.ctx.config.get("maa_instances", 0)
-            if not max_n:
-                return None
+                from maint_ops import _find_maa_source, ensure_maa_instances_async
+                ensure_maa_instances_async(self.ctx)
+            return None
         pool = Path(__file__).parent / "maa" / "instances"
         for i in range(1, max_n + 1):
             inst_dir = pool / str(i)
             exe = inst_dir / "MAA.exe"
             if not exe.exists():
                 continue
-            # Quick check: is this instance running?
             pid_file = inst_dir / ".pid"
             running = False
             if pid_file.exists():
                 try:
                     pid = int(pid_file.read_text().strip())
-                    r = subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True, timeout=2,
-                                       creationflags=subprocess.CREATE_NO_WINDOW)
-                    # If we could kill it, it was running. We don't actually kill, just check.
-                    # Actually use tasklist to check if running
-                    r2 = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'], capture_output=True, text=True,
-                                        timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
-                    running = str(pid) in r2.stdout
+                    r = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'], capture_output=True, text=True,
+                                        timeout=2, creationflags=subprocess.CREATE_NO_WINDOW)
+                    running = str(pid) in r.stdout
                 except:
                     pid_file.unlink(missing_ok=True)
             if not running:

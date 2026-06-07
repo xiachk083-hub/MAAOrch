@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 from pathlib import Path
+from datetime import datetime
 from task_constants import find_mumu_cli
 from callbacks import ServiceContext
 
@@ -249,12 +250,32 @@ class ConfigService:
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
             if use_v6:
-                task_type_lower = {t.lower(): t for t in task_list}
+                task_set = {t.lower() for t in task_list}
+                run_annihilation = "annihilation" in task_set
+                today_key = datetime.now().strftime("%A").lower()[:3]
+                day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
+
                 existing_tq = c.get("TaskQueue", [])
                 if existing_tq:
                     for item in existing_tq:
                         tt = item.get("TaskType", "").lower()
-                        item["IsEnable"] = tt in task_type_lower
+                        item["IsEnable"] = tt in task_set or (tt == "fight" and run_annihilation)
+                        if tt == "fight":
+                            if run_annihilation:
+                                anni = ac.get("smart_annihilation", "")
+                                item["UseCustomAnnihilation"] = True
+                                item["AnnihilationStage"] = anni or "Annihilation"
+                                item["StagePlan"] = []
+                                item["IsStageManually"] = False
+                            else:
+                                item["UseCustomAnnihilation"] = False
+                                item["AnnihilationStage"] = ""
+                                if day_stage:
+                                    item["StagePlan"] = [day_stage]
+                                    item["IsStageManually"] = True
+                                else:
+                                    item["StagePlan"] = []
+                                    item["IsStageManually"] = False
                     c["TaskQueue"] = existing_tq
                 else:
                     c.pop("TaskQueue", None)

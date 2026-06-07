@@ -67,7 +67,7 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
     smart_annihilation = account.get("smart_annihilation", "")
     if is_monday and smart_annihilation and global_cfg.get("annihilation_enabled", True):
         if not _is_annihilation_done_this_week(account["id"]):
-            tasks.append("Fight")
+            tasks.append("Annihilation")
 
     stage = account.get(f"smart_{today_key}", "") or account.get("smart_stage", "")
     threshold = global_cfg.get("threshold", 80)
