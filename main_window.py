@@ -19,6 +19,7 @@ from log_ops import LogService
 from maint_ops import MaintService
 from dialogs import ScheduleDialog,SettingsDialog,AccountDialog,TaskSettingsDialog
 from api_server import ApiServer
+from pipeline_thread import PipelineThread
 from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 from account import Account
@@ -687,7 +688,7 @@ class MainWindow(QMainWindow):
             if self.launch_queue.is_queued(aid):
                 continue
             if self.launch_queue.is_running(aid):
-                if is_time_trigger:
+                if is_time_trigger and not a.get("smart_pending", False):
                     a["smart_pending"] = True
                 continue
             last_error = a.get("smart_last_error", 0)

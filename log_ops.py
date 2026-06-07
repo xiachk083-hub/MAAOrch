@@ -303,7 +303,7 @@ class LogService:
             s = st.get_last_sanity() if st else None
             if s:
                 cur, mx = s.get("current", 0), s.get("max", 1)
-            deficit = s.get("deficit", max(0, mx - cur))
+                deficit = s.get("deficit", max(0, mx - cur))
                 mins = deficit * 6
                 h, m = divmod(mins, 60)
                 l.addWidget(QLabel(f"💊 上次结束理智: {cur}/{mx}  恢复至满需 {h}h{m:02d}m"))

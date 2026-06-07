@@ -86,6 +86,7 @@ class AccountRunner(QObject):
         self.log_msg.emit(f"[启动] ADB({ac.get('adb_address','?')}) Emu({ac.get('emu_instance_index','?')}) 实例#{inst[0]}")
 
         self._active[aid] = ac
+        self._progs[aid] = [w for w in self.ctx.warehouse if w.get("account_ref") == aid]
         self.log_msg.emit(f"[启动] {ac.get('name', aid)}")
         self._track_stats(ac)
         self._do_launch(ac, inst)
