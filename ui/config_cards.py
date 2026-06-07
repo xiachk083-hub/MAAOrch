@@ -73,6 +73,8 @@ def build_config_cards(mw: Any) -> QWidget:
     scroll.setWidget(mw._card_container)
     cvl.addWidget(scroll, 1)
 
+    # Rebuild cards on resize so grid reflows
+    mw._card_container.resizeEvent = lambda e: _rebuild(mw)
     _rebuild(mw)
     return mw.cv
 
@@ -116,6 +118,7 @@ def _rebuild(mw: Any) -> None:
             frame = mw._card_widgets[aid]
             frame.setVisible(visible)
             if visible:
+                frame.setFixedWidth(cw)
                 _update_card_status(frame, aid in running_ids, aid in queued_ids)
                 new_widgets[aid] = frame
                 grid.addWidget(frame, row, col)

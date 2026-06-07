@@ -606,6 +606,8 @@ class MainWindow(QMainWindow):
     def _inj(self, w: dict, ac: dict) -> None: self.cfg.inject(w, ac)
     # Pipeline
     def _start_pipeline(self) -> None:
+        if getattr(self, "_pipeline_launching", False):
+            return
         if not self.groups:
             if hasattr(self, 'launch_queue'):
                 n = sum(1 for a in self.accounts if a.get("id", "") in {
@@ -614,18 +616,19 @@ class MainWindow(QMainWindow):
                 self._log(f"无流水线分组，跳过 {n} 个账号的自动启动" if n else "无流水线分组")
             return
         if self.pipeline_thread and self.pipeline_thread.isRunning(): return
+        self._pipeline_launching = True
         self._log("流水线启动")
         # Collect emulators to launch
         to_launch=[]
         launched=set()
+        cli=find_mumu_cli()
         for a in self.accounts:
             emu_idx=a.get("emu_instance_index","")
-            if a.get("emu_launch") and emu_idx and emu_idx not in launched:
-                cli=find_mumu_cli()
-                if cli:
-                    to_launch.append((cli,emu_idx,a["name"],a.get("emu_wait", 30)))
-                    launched.add(emu_idx)
+            if a.get("emu_launch") and emu_idx and emu_idx not in launched and cli:
+                to_launch.append((cli,emu_idx,a["name"],a.get("emu_wait", 30)))
+                launched.add(emu_idx)
         def _start_thread():
+            self._pipeline_launching = False
             old = getattr(self, "pipeline_thread", None)
             if old:
                 try: old.progress.disconnect(); old.program_started.disconnect(); old.finished.disconnect()
