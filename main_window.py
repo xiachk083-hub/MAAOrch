@@ -670,12 +670,9 @@ class MainWindow(QMainWindow):
         from smart_scheduler import get_tasks_for_account, is_infrast_time, _check_sanity_above_threshold, _get_material_stage
         infrast_times = sg.get("infrast_times", ["04:00", "16:00"])
         is_time_trigger = is_infrast_time(now, infrast_times)
-        prog_ids = {w.get("account_ref") for w in self.warehouse if w.get("account_ref")}
         count = 0
         for a in self.accounts:
             aid = a.get("id", "")
-            if aid not in prog_ids:
-                continue
             if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
                 continue
             if self.launch_queue.is_queued(aid):
