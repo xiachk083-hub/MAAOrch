@@ -89,6 +89,11 @@ def _rebuild(mw: Any) -> None:
     grid = mw._card_grid
     if not hasattr(mw, "_card_widgets"):
         mw._card_widgets = {}
+    # Clear grid layout (widgets are preserved in _card_widgets)
+    while grid.count():
+        item = grid.takeAt(0)
+        if item and item.widget():
+            grid.removeWidget(item.widget())
 
     search = mw._card_search.text().strip().lower() if hasattr(mw, "_card_search") else ""
     active_tag = getattr(mw, "_card_active_tag", "")

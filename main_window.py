@@ -564,7 +564,7 @@ class MainWindow(QMainWindow):
     # Legacy launch helpers (kept for pipeline_thread / warehouse quick-launch)
     def _ls(self, w: dict) -> None:
         try:
-            args=w.get("args",[]); cwd=w.get("cwd","") or None; env={k:v for k,v in w.get("env",{}).items()} or None; exe=w["path"]; lm=w.get("launch_mode","gui")
+            args=w.get("args",[]); cwd=w.get("cwd","") or None; env={k:v for k,v in (w.get("env") or {}).items()} or None; exe=w["path"]; lm=w.get("launch_mode","gui")
             if w.get("account_ref") and lm=="cli":
                 ac=next((a for a in self.accounts if a["id"]==w["account_ref"]),None)
                 if ac:

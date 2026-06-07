@@ -233,7 +233,7 @@ class AccountRunner(QObject):
         if w.get("account_ref") and lm == "cli":
             from task_constants import CF
             cwd = w.get("cwd", "") or str(Path(w["path"]).parent)
-            env = {k: v for k, v in w.get("env", {}).items()} or None
+            env = {k: v for k, v in (w.get("env") or {}).items()} or None
             self._spawn_cli(w, ac, exe, args, cwd, env)
             return
 

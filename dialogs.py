@@ -322,7 +322,8 @@ class TaskSettingsDialog(QDialog):
                     cb=QCheckBox(lb); cb.setChecked(ts.get(ky,False)); fl.addRow(cb); eds[ky]=cb
             elif tk=="Roguelike":
                 th=QComboBox(); themes=[("Sarkaz","萨卡兹"),("Sami","萨米"),("Mizuki","水月"),("Phantom","傀影"),("JieGarden","界园")]
-                for tv,tn in themes: th.addItem(tn,tv); th.setCurrentIndex(max(0,[i for i,(tv,tn) in enumerate(themes) if tv==ts.get("theme","Sarkaz")][0]))
+                current_theme=ts.get("theme","Sarkaz")
+                th.setCurrentIndex(next((i for i,(t,_) in enumerate(themes) if t==current_theme), 0))
                 fl.addRow("主题:",th); eds["theme"]=th
                 md=QComboBox(); md.addItems(["刷等级","刷源石锭"]); md.setCurrentIndex(ts.get("mode",0)); fl.addRow("模式:",md); eds["mode"]=md
                 sd=QSpinBox(); sd.setRange(0,15); sd.setValue(min(ts.get("difficulty",15),15)); fl.addRow("难度:",sd); eds["difficulty"]=sd
