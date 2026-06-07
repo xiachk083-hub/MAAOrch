@@ -54,10 +54,14 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
     tasks.append("Award")
 
     infrast_times = global_cfg.get("infrast_times", ["04:00", "16:00"])
+    is_afternoon = now.hour >= 15
     if is_infrast_time(now, infrast_times):
+        if not is_afternoon:
+            tasks.append("Depot")
         tasks.append("Infrast")
-        tasks.append("Recruit")
-        if global_cfg.get("mall_enabled", True):
+        if global_cfg.get("recruit_enabled", True):
+            tasks.append("Recruit")
+        if is_afternoon and global_cfg.get("mall_enabled", True):
             tasks.append("Mall")
 
     smart_annihilation = account.get("smart_annihilation", "")
@@ -68,7 +72,6 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
     stage = account.get(f"smart_{today_key}", "") or account.get("smart_stage", "")
     threshold = global_cfg.get("threshold", 80)
     has_sanity = _check_sanity_above_threshold(account["id"], threshold)
-    has_expiring_med = _has_expiring_medicine(account, global_cfg)
     materials_enabled = account.get("smart_materials_enabled", True)
 
     material_stage = _get_material_stage(account, global_cfg) if materials_enabled else None
@@ -76,12 +79,47 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
     if material_stage:
         if "Fight" not in tasks:
             tasks.append("Fight")
-    elif has_sanity or has_expiring_med:
+    elif has_sanity:
         if stage and "Fight" not in tasks:
             tasks.append("Fight")
 
     tasks.append("CloseDown")
     return tasks
+
+
+def mark_annihilation_done(account_id: str, tasks: list[dict]) -> None:
+    """Check if annihilation was completed and mark in stats.json."""
+    from pathlib import Path
+    import json, datetime
+    has_anni = any(
+        t.get("name", "").lower() in ("fight", "annihilation")
+        and t.get("status") == "完成"
+        for t in (tasks or [])
+    )
+    if not has_anni:
+        return
+    sp = Path(__file__).parent / "accounts" / account_id / "stats.json"
+    try:
+        if sp.exists():
+            data = json.loads(sp.read_text(encoding="utf-8"))
+        else:
+            data = {}
+        week = datetime.datetime.now().strftime("%Y-W%W")
+        data.setdefault("weekly_annihilation", {})
+        if data["weekly_annihilation"].get("week") != week:
+            # Check via asst.log for actual weekly total
+            runs = data.get("runs", [])
+            week_total = 0
+            for r in runs:
+                if r.get("ts", "").startswith(datetime.datetime.now().strftime("%Y")):
+                    for tn, ts in r.get("tasks", {}).items():
+                        if tn.lower() in ("fight", "annihilation") and ts == "完成":
+                            week_total += 1
+            if week_total >= 1:
+                data["weekly_annihilation"] = {"week": week, "done": True}
+                sp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def _is_annihilation_done_this_week(account_id: str) -> bool:

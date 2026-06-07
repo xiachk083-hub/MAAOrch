@@ -40,6 +40,18 @@ class Account:
     tags: str = ""  # comma-separated, for search filtering
     round_robin_deficit: int = 0  # 0=wait until full, N=launch when N points from full
 
+    # Smart scheduling fields
+    smart_stage: str = ""
+    smart_annihilation: str = ""
+    smart_mon: str = ""
+    smart_tue: str = ""
+    smart_wed: str = ""
+    smart_thu: str = ""
+    smart_fri: str = ""
+    smart_sat: str = ""
+    smart_sun: str = ""
+    smart_materials_enabled: bool = True
+
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):
         return getattr(self, key)

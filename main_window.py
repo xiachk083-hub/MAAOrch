@@ -520,8 +520,13 @@ class MainWindow(QMainWindow):
 
     def _on_account_finished(self, aid: str, exit_code: int, tasks: list[dict]) -> None:
         a = next((x for x in self.accounts if x["id"] == aid), None)
-        if a and self._main_tab == "accounts":
-            self._sad(self.accounts.index(a))
+        if a:
+            if a.pop("smart_pending", False):
+                self._log(f"🧠 {a.get('name', aid)} 到点补跑")
+                self.launch_queue.enqueue(aid, "schedule", priority=1)
+                self.launch_queue._tick()
+            if self._main_tab == "accounts":
+                self._sad(self.accounts.index(a))
 
     # Legacy launch helpers (kept for pipeline_thread / warehouse quick-launch)
     def _ls(self, w: dict) -> None:
@@ -625,6 +630,51 @@ class MainWindow(QMainWindow):
                 self._qsb.setText(f"⏳{self.launch_queue.pending_count}")
             else:
                 self._qsb.setText("")
+    def _smart_tick(self) -> None:
+        sg = self.config.get("smart_global", {})
+        if not sg.get("enabled", False) or not hasattr(self, "launch_queue"):
+            return
+        now = datetime.now()
+        minute_key = now.strftime("%H:%M")
+        if getattr(self, "_last_smart_minute", "") == minute_key:
+            return
+        self._last_smart_minute = minute_key
+        from smart_scheduler import get_tasks_for_account, is_infrast_time, _check_sanity_above_threshold, _get_material_stage
+        infrast_times = sg.get("infrast_times", ["04:00", "16:00"])
+        is_time_trigger = is_infrast_time(now, infrast_times)
+        prog_ids = {w.get("account_ref") for w in self.warehouse if w.get("account_ref")}
+        count = 0
+        for a in self.accounts:
+            aid = a.get("id", "")
+            if aid not in prog_ids:
+                continue
+            if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+                continue
+            if self.launch_queue.is_queued(aid):
+                continue
+            if self.launch_queue.is_running(aid):
+                if is_time_trigger:
+                    a["smart_pending"] = True
+                continue
+            should_launch = False
+            if is_time_trigger:
+                should_launch = True
+            else:
+                threshold = sg.get("threshold", 80)
+                if _check_sanity_above_threshold(aid, threshold):
+                    should_launch = True
+                elif a.get("smart_materials_enabled", True):
+                    mat_stage = _get_material_stage(a, sg)
+                    if mat_stage:
+                        should_launch = True
+            if should_launch:
+                tasks = get_tasks_for_account(a, sg)
+                if len(tasks) > 2:
+                    self.launch_queue.enqueue(aid, "schedule", priority=1)
+                    count += 1
+        if count:
+            self._log(f"🧠 智能调度: {count} 个账号已入队")
+            self.launch_queue._tick()
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
     def _restore_geometry(self) -> None: self.maint.restore_geometry()
@@ -645,8 +695,18 @@ class MainWindow(QMainWindow):
                     issues.append((name, "智能模式开启但未设默认关卡"))
         self._update_todo_badge(len(issues))
         if not issues:
-            QMessageBox.information(self, "📋 配置待办", "所有账号配置齐全，暂无待办项。")
-            return
+            sg = self.config.get("smart_global", {})
+            if sg.get("enabled", False):
+                for a in self.accounts:
+                    materials_enabled = a.get("smart_materials_enabled", True)
+                    if materials_enabled:
+                        from pathlib import Path
+                        dp = Path(__file__).parent / "accounts" / a.get("id", "") / "depot.json"
+                        if not dp.exists():
+                            issues.append((a.get("name", "?"), "材料监控已开启但未跑过仓库识别，等待下次 04:00 Depot"))
+            if not issues:
+                QMessageBox.information(self, "📋 配置待办", "所有账号配置齐全，暂无待办项。")
+                return
         from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
         d = QDialog(self)
         d.setWindowTitle(f"📋 配置待办 ({len(issues)})")
@@ -674,6 +734,11 @@ class MainWindow(QMainWindow):
                 for a in self.accounts:
                     if not a.get("smart_stage", ""):
                         count += 1
+                for a in self.accounts:
+                    if a.get("smart_materials_enabled", True):
+                        dp = Path(__file__).parent / "accounts" / a.get("id", "") / "depot.json"
+                        if not dp.exists():
+                            count += 1
         txt = "📋 待办" + (f" {count}" if count else "")
         self._todo_btn.setText(txt)
 

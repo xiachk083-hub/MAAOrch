@@ -249,6 +249,7 @@ class ConfigService:
                 "Infrast": {"TaskType": "Infrast", "IsEnable": True},
                 "Recruit": {"TaskType": "Recruit", "IsEnable": True},
                 "Mall": {"TaskType": "Mall", "IsEnable": True, "Shopping": True},
+                "Depot": {"TaskType": "Depot", "IsEnable": True},
             }
             for t in task_list:
                 tmpl = task_config_map.get(t)

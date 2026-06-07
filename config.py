@@ -14,7 +14,7 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[],
     "smart_global":{"threshold":80,"expiring_medicine":True,"medicine_days":2,"annihilation_enabled":True,
-        "infrast_times":["04:00","16:00"],"mall_enabled":True,"post_action":"ExitArknights,ExitSelf",
+        "infrast_times":["04:00","16:00"],"recruit_enabled":True,"mall_enabled":True,"post_action":"ExitArknights,ExitSelf",
         "materials":[
             {"name":"固源岩","min":200,"priority":1,"enabled":True},
             {"name":"龙门币","min":50000,"priority":2,"enabled":True},

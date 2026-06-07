@@ -9,7 +9,7 @@ from themes import BTN_DELETE
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QComboBox, QDialog, QGroupBox,
+    QComboBox, QDialog, QGroupBox, QSpinBox,
 )
 
 _TABLE_STYLE = "QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:1px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #2b2b30;padding:3px 6px;font-size:9pt;font-weight:bold}"
@@ -64,14 +64,26 @@ def build_queue_panel(mw: Any) -> QWidget:
     enq_row.addWidget(enq_btn)
     qvl.addLayout(enq_row)
 
-    # ── Running section ──
-    qvl.addWidget(QLabel("▶ 运行中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
-    mw._queue_running_tbl = QTableWidget(0, 4)
-    mw._queue_running_tbl.setHorizontalHeaderLabels(["账号", "当前任务", "", "👁"])
+    # ── Parallel limit ──
+    pr_row = QHBoxLayout()
+    pr_row.addWidget(QLabel("▶ 运行中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    pr_row.addStretch()
+    pr_row.addWidget(QLabel("上限并行:"))
+    mw._parallel_sp = QSpinBox()
+    mw._parallel_sp.setRange(1, 10)
+    mw._parallel_sp.setValue(mw.config.get("parallel_max", 1))
+    mw._parallel_sp.setFixedWidth(50)
+    mw._parallel_sp.valueChanged.connect(lambda v: (mw.config.update({"parallel_max": v}), mw._save()))
+    pr_row.addWidget(mw._parallel_sp)
+    qvl.addLayout(pr_row)
+
+    mw._queue_running_tbl = QTableWidget(0, 5)
+    mw._queue_running_tbl.setHorizontalHeaderLabels(["账号", "当前任务", "计划", "", "👁"])
     mw._queue_running_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
     mw._queue_running_tbl.setColumnWidth(1, 90)
-    mw._queue_running_tbl.setColumnWidth(2, 32)
-    mw._queue_running_tbl.setColumnWidth(3, 28)
+    mw._queue_running_tbl.setColumnWidth(2, 110)
+    mw._queue_running_tbl.setColumnWidth(3, 32)
+    mw._queue_running_tbl.setColumnWidth(4, 28)
     mw._queue_running_tbl.verticalHeader().setVisible(False)
     mw._queue_running_tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     mw._queue_running_tbl.setShowGrid(False)
@@ -257,13 +269,15 @@ def refresh_queue_view(mw: Any) -> None:
                 t = int(time.time() - mw.runner._start_times.get(aid, 0))
                 task = _current_task_name(mw, aid)
                 status_text = f"{task or '—'} ({t // 60}m{t % 60}s)"
-                running.append((a["name"], status_text, aid))
+                plan = a.get("smart_plan", "")
+                running.append((a["name"], status_text, plan, aid))
 
         tbl = mw._queue_running_tbl
         tbl.setRowCount(len(running))
-        for i, (name, status, aid) in enumerate(running):
+        for i, (name, status, plan, aid) in enumerate(running):
             tbl.setItem(i, 0, QTableWidgetItem(name))
             tbl.setItem(i, 1, QTableWidgetItem(status))
+            tbl.setItem(i, 2, QTableWidgetItem(plan))
             stop_btn = QPushButton("✕")
             stop_btn.setFixedSize(28, 28)
             stop_btn.setToolTip("停止")
@@ -271,7 +285,7 @@ def refresh_queue_view(mw: Any) -> None:
             stop_btn.clicked.connect(lambda c, a=aid: (_safe_stop(mw, a), refresh_queue_view(mw)))
             sw = QWidget()
             swl = QHBoxLayout(sw); swl.setContentsMargins(0,0,0,0); swl.setAlignment(Qt.AlignCenter); swl.addWidget(stop_btn)
-            tbl.setCellWidget(i, 2, sw)
+            tbl.setCellWidget(i, 3, sw)
             eye_btn = QPushButton("👁")
             eye_btn.setFixedSize(28, 28)
             eye_btn.setToolTip("查看账号详情")
@@ -279,7 +293,7 @@ def refresh_queue_view(mw: Any) -> None:
             eye_btn.clicked.connect(lambda c, a=aid: (_jump_to_account(mw, a)))
             sw2 = QWidget()
             swl2 = QHBoxLayout(sw2); swl2.setContentsMargins(0,0,0,0); swl2.setAlignment(Qt.AlignCenter); swl2.addWidget(eye_btn)
-            tbl.setCellWidget(i, 3, sw2)
+            tbl.setCellWidget(i, 4, sw2)
 
         # Waiting table
         waiting = []

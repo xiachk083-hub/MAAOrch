@@ -19,6 +19,7 @@ Windows 10/11, Python 3.12+。
 - 程序下载/更新、模拟器多实例检测
 - 任务流水线、日志统计、进程守护
 - 定时任务、循环调度、运行历史
+- 🧠 智能调度（时间/体力/材料自动决策）
 - 暗色/亮色主题、Webhook 通知
 - HTTP API、开机自启
 
@@ -58,6 +59,7 @@ accounts/               各账号 MAA 目录
 |------|------|
 | [快速上手](docs/getting-started.md) | 使用流程、仪表盘、分组、故障排除 |
 | [系统架构](docs/architecture.md) | 模块划分、数据流、线程模型 |
+| [智能调度](docs/smart-scheduling.md) | 全局配置、账号覆盖、决策逻辑、材料监控 |
 | [多账号与模拟器](docs/account-management.md) | Account 类、ADB、mumu-cli |
 | [流水线调度](docs/pipeline.md) | 队列、分组、循环调度 |
 | [任务配置注入](docs/task-config.md) | gui.json、maa-cli TOML |

@@ -27,12 +27,6 @@ def build_schedule_panel(mw: Any) -> QWidget:
     mw._sch_enabled_cb.setChecked(bool(mw.config.get("daily_batch_time", "")))
     bar.addWidget(mw._sch_enabled_cb)
 
-    bar.addWidget(QLabel(" 并行数:"))
-    mw._sch_parallel_sp = QSpinBox()
-    mw._sch_parallel_sp.setRange(1, 10); mw._sch_parallel_sp.setValue(mw.config.get("parallel_max", 1))
-    mw._sch_parallel_sp.setFixedWidth(50)
-    bar.addWidget(mw._sch_parallel_sp)
-
     bar.addWidget(QLabel(" 定时:"))
     mw._sch_batch_time = QLineEdit(mw.config.get("daily_batch_time", ""))
     mw._sch_batch_time.setPlaceholderText("04:00")
@@ -158,8 +152,7 @@ def _save_schedule(mw: Any) -> None:
         mw.config["schedule"] = {"enabled": True, "type": "daily", "time": t, "days_of_week": []}
     else:
         mw.config["schedule"] = {"enabled": False, "type": "daily", "time": "08:00", "days_of_week": []}
-    if hasattr(mw, "_sch_parallel_sp"):
-        mw.config["parallel_max"] = mw._sch_parallel_sp.value()
+    # parallel_max moved to queue panel
     if hasattr(mw, "_sch_deficit_sp"):
         val = mw._sch_deficit_sp.value()
         for a in mw.accounts:

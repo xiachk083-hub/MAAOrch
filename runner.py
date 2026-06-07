@@ -221,7 +221,9 @@ class AccountRunner(QObject):
                 if smart_enabled:
                     from smart_scheduler import get_tasks_for_account
                     task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
-                    self.log_msg.emit(f"🧠 智能调度: {','.join(task_list)}")
+                    plan_txt = ",".join(task_list)
+                    self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
+                    ac["smart_plan"] = plan_txt
                     self.ctx.cfg.inject_smart(task_list, ac, w)
                 else:
                     self.ctx.inject_config(w, ac)
@@ -388,7 +390,11 @@ class AccountRunner(QObject):
 
         if ac:
             name = ac.get("name", aid)
-            self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s")
+            plan = ac.get("smart_plan", "")
+            plan_log = f" 🧠 {plan}" if plan else ""
+            self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
+            ac["smart_plan"] = ""
+            ac.pop("smart_pending", None)
         # Also remove program IDs from status tracking
         if old_progs:
             for w in old_progs:
@@ -425,6 +431,11 @@ class AccountRunner(QObject):
                 st.save_run(tasks, sanity, drops)
             except Exception as e:
                 self.log_msg.emit(f"保存统计失败: {e}")
+            try:
+                from smart_scheduler import mark_annihilation_done
+                mark_annihilation_done(aid, tasks)
+            except Exception:
+                pass
 
         # Rotate MAA log — keep only last 3 runs
         if old_progs:

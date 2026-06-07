@@ -6,7 +6,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox,
     QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QGroupBox, QFormLayout, QLineEdit,
+    QGroupBox, QFormLayout, QLineEdit, QComboBox,
 )
 from smart_scheduler import MATERIAL_STAGES
 
@@ -74,6 +74,12 @@ def build_smart_panel(mw: Any) -> QWidget:
     infra_row.addWidget(infra_t1); infra_row.addWidget(QLabel("  ")); infra_row.addWidget(infra_t2); infra_row.addStretch()
     gf.addRow("基建班次:", infra_row)
 
+    # Recruit
+    recruit_cb = QCheckBox("公招随基建一起跑")
+    recruit_cb.setChecked(sg.get("recruit_enabled", True))
+    recruit_cb.toggled.connect(lambda v: (_set_global(mw, "recruit_enabled", v), mw._save()))
+    gf.addRow("", recruit_cb)
+
     # Mall
     mall_cb = QCheckBox("信用商店随基建一起跑")
     mall_cb.setChecked(sg.get("mall_enabled", True))
@@ -81,9 +87,25 @@ def build_smart_panel(mw: Any) -> QWidget:
     gf.addRow("", mall_cb)
 
     # Post action
-    pa = QLineEdit(sg.get("post_action", "ExitArknights,ExitSelf"))
-    pa.editingFinished.connect(lambda: (_set_global(mw, "post_action", pa.text().strip()), mw._save()))
-    gf.addRow("跑完关MAA:", pa)
+    post_row = QHBoxLayout()
+    post_opts = [("ExitArknights", "关闭游戏"), ("ExitSelf", "关闭MAA"), ("ExitEmulator", "关模拟器")]
+    post_cbs = {}
+    current_post = sg.get("post_action", "ExitArknights,ExitSelf")
+    current_set = set(current_post.split(",")) if current_post else set()
+
+    def _save_post():
+        selected = [k for k, cb in post_cbs.items() if cb.isChecked()]
+        sg["post_action"] = ",".join(selected) if selected else ""
+        mw._save()
+
+    for k, v in post_opts:
+        cb = QCheckBox(v)
+        cb.setChecked(k in current_set)
+        cb.toggled.connect(lambda: _save_post())
+        post_cbs[k] = cb
+        post_row.addWidget(cb)
+    post_row.addStretch()
+    gf.addRow("完成后:", post_row)
 
     vl.addWidget(gb)
 
@@ -92,27 +114,32 @@ def build_smart_panel(mw: Any) -> QWidget:
                         font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
     DAYS = ["一", "二", "三", "四", "五", "六", "日"]
     DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    cols = 3 + len(DAYS)
+    cols = 4 + len(DAYS)
     tbl = QTableWidget(0, cols)
-    tbl.setHorizontalHeaderLabels(["账号", "默认关卡", "剿灭关卡"] + DAYS)
+    tbl.setHorizontalHeaderLabels(["账号", "默认关卡", "剿灭关卡"] + DAYS + [""])
     tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
     tbl.setColumnWidth(1, 100)
     tbl.setColumnWidth(2, 100)
     for i in range(len(DAYS)):
         tbl.setColumnWidth(3 + i, 70)
+    tbl.setColumnWidth(3 + len(DAYS), 36)
     tbl.verticalHeader().setVisible(False)
-    tbl.setEditTriggers(QAbstractItemView.DoubleClicked)
+    tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     tbl.setShowGrid(False)
     tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
     mw._smart_tbl = tbl
 
-    save_btn = QPushButton("保存全部")
-    save_btn.setObjectName("startBtn")
-    save_btn.clicked.connect(lambda: _save_smart_overrides(mw))
+    btn_row = QHBoxLayout()
+    run_btn = QPushButton("▶ 立即调度全部")
+    run_btn.setObjectName("startBtn")
+    run_btn.clicked.connect(lambda: _run_smart_all(mw))
+    btn_row.addWidget(run_btn)
+    btn_row.addStretch()
+    vl.addLayout(btn_row)
 
     vl.addWidget(tbl, 1)
-    vl.addWidget(save_btn)
+    vl.addStretch()
 
     _rebuild_smart_table(mw)
     return mw.smart_v
@@ -122,11 +149,81 @@ def _set_global(mw: Any, key: str, value: Any) -> None:
     mw.config.setdefault("smart_global", {})[key] = value
 
 
+def _run_smart_all(mw: Any) -> None:
+    """Trigger immediate smart scheduling check for all accounts."""
+    if not mw.config.get("smart_global", {}).get("enabled", False):
+        mw._log("智能调度未启用")
+        return
+    setattr(mw, "_last_smart_minute", "")
+    mw._smart_tick()
+
+
 def _toggle_smart(mw: Any, enabled: bool) -> None:
     sg = mw.config.setdefault("smart_global", {})
     sg["enabled"] = enabled
     mw._save()
     mw._update_todo_badge()
+    if enabled:
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
+
+
+def _edit_account_smart(mw: Any, row: int) -> None:
+    if row < 0 or row >= len(mw.accounts):
+        return
+    a = mw.accounts[row]
+
+    from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout
+    d = QDialog(mw)
+    d.setWindowTitle(f"智能调度 — {a.get('name', '')}")
+    d.setMinimumSize(400, 350)
+    l = QVBoxLayout(d)
+    f = QFormLayout()
+    f.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+
+    stage_edit = QLineEdit(a.get("smart_stage", ""))
+    stage_edit.setPlaceholderText("空=MAA自行决定")
+    f.addRow("默认关卡:", stage_edit)
+
+    anni_combo = QComboBox()
+    for opt in ["自动选择", "Annihilation", "Annihilation_1", "Annihilation_2", "Annihilation_3"]:
+        anni_combo.addItem(opt, opt if opt != "自动选择" else "")
+    current_anni = a.get("smart_annihilation", "")
+    idx = anni_combo.findData(current_anni)
+    if idx >= 0:
+        anni_combo.setCurrentIndex(idx)
+    f.addRow("剿灭关卡:", anni_combo)
+
+    day_names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    day_keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    day_edits = {}
+    for dn, dk in zip(day_names, day_keys):
+        de = QLineEdit(a.get(f"smart_{dk}", ""))
+        de.setPlaceholderText("空=用默认关卡")
+        day_edits[dk] = de
+        f.addRow(dn + ":", de)
+
+    l.addLayout(f)
+
+    def _save_one():
+        a["smart_stage"] = stage_edit.text().strip()
+        a["smart_annihilation"] = anni_combo.currentData()
+        for dk in day_keys:
+            a[f"smart_{dk}"] = day_edits[dk].text().strip()
+        mw._save()
+        _rebuild_smart_table(mw)
+        d.accept()
+
+    from PySide6.QtWidgets import QPushButton as QBtn
+    save_btn = QBtn("保存")
+    save_btn.setObjectName("startBtn")
+    save_btn.clicked.connect(_save_one)
+    l.addWidget(save_btn)
+    d.exec()
+
+
+ANNIHILATION_VALUES = {"自动选择": "", "Annihilation": "Annihilation", "Annihilation_1": "Annihilation_1", "Annihilation_2": "Annihilation_2", "Annihilation_3": "Annihilation_3"}
+ANNIHILATION_NAMES = {v: k for k, v in ANNIHILATION_VALUES.items()}
 
 
 def _rebuild_smart_table(mw: Any) -> None:
@@ -134,38 +231,24 @@ def _rebuild_smart_table(mw: Any) -> None:
     if not tbl:
         return
     DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    day_names = ["一", "二", "三", "四", "五", "六", "日"]
+    btn_col = 3 + len(DAY_KEYS)
     tbl.setRowCount(len(mw.accounts))
     for i, a in enumerate(mw.accounts):
-        # Account name
         tbl.setItem(i, 0, QTableWidgetItem(a.get("name", "")))
-        # Default stage
-        item1 = QTableWidgetItem(a.get("smart_stage", ""))
-        tbl.setItem(i, 1, item1)
-        # Annihilation stage
-        item2 = QTableWidgetItem(a.get("smart_annihilation", ""))
-        tbl.setItem(i, 2, item2)
-        # Day overrides
+        tbl.setItem(i, 1, QTableWidgetItem(a.get("smart_stage", "")))
+        anni = a.get("smart_annihilation", "")
+        anni_display = ANNIHILATION_NAMES.get(anni, "")
+        tbl.setItem(i, 2, QTableWidgetItem(anni_display))
         for j, dk in enumerate(DAY_KEYS):
-            item = QTableWidgetItem(a.get(f"smart_{dk}", ""))
-            tbl.setItem(i, 3 + j, item)
-
-
-def _save_smart_overrides(mw: Any) -> None:
-    tbl = mw._smart_tbl
-    if not tbl:
-        return
-    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    for i in range(min(tbl.rowCount(), len(mw.accounts))):
-        a = mw.accounts[i]
-        it1 = tbl.item(i, 1)
-        if it1:
-            a["smart_stage"] = it1.text().strip()
-        it2 = tbl.item(i, 2)
-        if it2:
-            a["smart_annihilation"] = it2.text().strip()
-        for j, dk in enumerate(DAY_KEYS):
-            it = tbl.item(i, 3 + j)
-            if it:
-                a[f"smart_{dk}"] = it.text().strip()
-    mw._save()
-    mw._log(f"智能调度配置已保存 ({len(mw.accounts)} 个账号)")
+            tbl.setItem(i, 3 + j, QTableWidgetItem(a.get(f"smart_{dk}", "")))
+        edit_btn = QPushButton("✎")
+        edit_btn.setFixedSize(28, 28)
+        edit_btn.setToolTip("编辑")
+        edit_btn.clicked.connect(lambda _, r=i: _edit_account_smart(mw, r))
+        ew = QWidget()
+        el = QHBoxLayout(ew)
+        el.setContentsMargins(0, 0, 0, 0)
+        el.setAlignment(Qt.AlignCenter)
+        el.addWidget(edit_btn)
+        tbl.setCellWidget(i, btn_col, ew)
