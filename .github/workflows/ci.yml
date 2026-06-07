@@ -36,47 +36,7 @@ jobs:
         timeout-minutes: 15
       - run: dir dist\ 2>&1 || echo "No dist output"
       - name: Upload Release
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          Start-Transcript -Path "$env:RUNNER_TEMP\upload-debug.log" -Append
-          Write-Host "=== Debug: GITHUB_TOKEN length = $($env:GITHUB_TOKEN.Length)"
-          Write-Host "=== Debug: repo = ${{ github.repository }}, tag = ${{ github.ref_name }}"
-          $headers = @{ "Accept" = "application/vnd.github+json"; "Authorization" = "Bearer $env:GITHUB_TOKEN" }
-          $apiRoot = "https://api.github.com/repos/${{ github.repository }}"
-          try {
-            $rel = Invoke-RestMethod -Uri "$apiRoot/releases/tags/${{ github.ref_name }}" -Headers $headers -Method Get
-            Write-Host "=== Found existing release: $($rel.html_url)"
-          } catch {
-            Write-Host "=== Release not found, creating..."
-            $body = @{ tag_name = "${{ github.ref_name }}"; name = "${{ github.ref_name }}"; body = "MAAOrch ${{ github.ref_name }} release" }
-            $rel = Invoke-RestMethod -Uri "$apiRoot/releases" -Headers $headers -Method Post -Body ($body | ConvertTo-Json) -ContentType "application/json"
-          }
-          $uploadUrl = $rel.upload_url -replace '{.*', '?name=MAAOrch.exe'
-          Write-Host "=== Upload URL: $uploadUrl"
-          $exePath = Join-Path (Get-Location) "dist" "MAAOrch.exe"
-          Write-Host "=== File path: $exePath"
-          Write-Host "=== File exists: $(Test-Path $exePath)"
-          $fileBytes = [System.IO.File]::ReadAllBytes($exePath)
-          Write-Host "=== File size: $($fileBytes.Length) bytes"
-          try {
-            $response = Invoke-RestMethod -Uri $uploadUrl -Headers $headers -Method Post -Body $fileBytes -ContentType "application/octet-stream" -TimeoutSec 300
-            Write-Host "=== Uploaded OK: $($response.name)"
-            Write-Host "=== Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
-          } catch {
-            Write-Host "=== UPLOAD FAILED ==="
-            Write-Host "Exception: $_"
-            if ($_.Exception.Response) {
-              $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-              $body = $reader.ReadToEnd()
-              Write-Host "Response body: $body"
-            }
-            throw
-          }
-          Stop-Transcript
-      - name: Upload debug logs (always)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: upload-debug
-          path: ${{ runner.temp }}\upload-debug.log
+        run: python release.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

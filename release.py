@@ -1,7 +1,7 @@
 """Upload MAAOrch.exe to GitHub Release — primary: gh CLI, fallback: API."""
 import json, urllib.request, os, sys, subprocess
 
-token = os.environ.get('GITHUB_TOKEN', '')
+token = os.environ.get('GITHUB_TOKEN', '') or os.environ.get('GH_TOKEN', '')
 repo = os.environ.get('GITHUB_REPOSITORY', '')
 ref = os.environ.get('GITHUB_REF', '')
 tag = (ref.replace('refs/tags/', '') if ref.startswith('refs/tags/')
