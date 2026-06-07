@@ -73,4 +73,4 @@ accounts/               各账号 MAA 目录
 
 Python 3.12、PySide6 (Qt 6)、mumu-cli、ADB、maa-cli、GitHub Release API
 
-MAAOrch 可调用 [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)（AGPL-3.0），两者各自独立许可。
+本工具使用 [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)（AGPL-3.0）作为后端任务引擎。
