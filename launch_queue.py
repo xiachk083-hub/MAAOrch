@@ -230,6 +230,8 @@ class LaunchQueue(QObject):
 
         # Launch outside lock to avoid re-entrancy
         for entry in launch_now:
+            if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
+                continue
             if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
                 self.ctx._mw.runner.launch_by_id(entry.account_id)
             self.launched.emit(entry.account_id)

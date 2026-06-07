@@ -5,12 +5,14 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # ── Error logging ──
 CRASH_LOG = Path(__file__).parent / "debug.log"
+_LOG_LOCK = __import__('threading').Lock()
 
 def _write_crash(msg: str) -> None:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        with CRASH_LOG.open("a", encoding="utf-8") as f:
-            f.write(f"\n[{ts}] [CRASH]\n{msg}\n")
+        with _LOG_LOCK:
+            with CRASH_LOG.open("a", encoding="utf-8") as f:
+                f.write(f"\n[{ts}] [CRASH]\n{msg}\n")
     except Exception:
         pass
 
@@ -22,7 +24,7 @@ def _global_excepthook(exc_type, exc_value, exc_tb):
         from PySide6.QtWidgets import QMessageBox
         QMessageBox.critical(None, "异常崩溃", f"未捕获的异常:\n\n{exc_value}\n\n详情请查看 debug.log")
     except Exception:
-        pass
+        sys.__stderr__.write(f"[CRASH] {msg}\n")
     sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 def _qt_message_handler(mode, context, message):

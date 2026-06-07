@@ -7,6 +7,8 @@ from typing import Any
 import threading
 
 from utils import (is_admin,run_as_admin,make_id,parse_maa_version,get_platform_key,_version_tuple,_rmtree_force,_find_maa_cli,setup_proxy)
+
+_log_lock = threading.Lock()
 from config import (CONFIG_FILE,STARTUP_DIR,DEFAULT_CONFIG,migrate_v4_to_v5,load_config,save_config,set_auto_start)
 from themes import DARK_STYLE, LIGHT_STYLE, BTN_DELETE
 from updater import UpdateCheckThread,DownloadThread,MaacliInstallThread,MaacliInstallDialog,UpdateDialog
@@ -145,11 +147,12 @@ class MainWindow(QMainWindow):
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
         if hasattr(self,'log_text') and self.log_text: self.log_text.appendPlainText(line)
         try:
-            lp=Path(__file__).parent/"debug.log"
-            if lp.exists() and lp.stat().st_size>self.LOG_MAX_BYTES:
-                lines=lp.read_text(encoding="utf-8",errors="replace").split("\n")
-                lp.write_text("\n".join(lines[-self.LOG_KEEP_LINES:])+"\n",encoding="utf-8")
-            with lp.open("a",encoding="utf-8") as f: f.write(line+"\n")
+            with _log_lock:
+                lp=Path(__file__).parent/"debug.log"
+                if lp.exists() and lp.stat().st_size>self.LOG_MAX_BYTES:
+                    lines=lp.read_text(encoding="utf-8",errors="replace").split("\n")
+                    lp.write_text("\n".join(lines[-self.LOG_KEEP_LINES:])+"\n",encoding="utf-8")
+                with lp.open("a",encoding="utf-8") as f: f.write(line+"\n")
         except Exception:
             try: print(line,file=__import__('sys').stderr)
             except: pass
@@ -622,6 +625,10 @@ class MainWindow(QMainWindow):
                     to_launch.append((cli,emu_idx,a["name"],a.get("emu_wait", 30)))
                     launched.add(emu_idx)
         def _start_thread():
+            old = getattr(self, "pipeline_thread", None)
+            if old:
+                try: old.progress.disconnect(); old.program_started.disconnect(); old.finished.disconnect()
+                except: pass
             self.pipeline_thread=PipelineThread(self.groups,self.warehouse,self.accounts,self.cfg,self)
             self.pipeline_thread.progress.connect(lambda m:(self.sl.setText(m),self._log(m)))
             self.pipeline_thread.program_started.connect(lambda n,ok: self._log(f"启动 {n}" if ok else f"失败 {n}"))

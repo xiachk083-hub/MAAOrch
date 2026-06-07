@@ -108,12 +108,12 @@ def _is_instance_running(inst_id: int) -> bool:
         return False
 
 
-def _trigger_batch(self):
+def _trigger_batch(svc):
     """Daily batch: enqueue all accounts."""
-    lq = getattr(self.ctx._mw, "launch_queue", None)
+    lq = getattr(svc.ctx._mw, "launch_queue", None)
     if lq:
         lq.batch_enqueue_all()
-        self.ctx.log("[调度] 每日批量入队")
+        svc.ctx.log("[调度] 每日批量入队")
 
 
 class MaintService:
@@ -147,7 +147,7 @@ class MaintService:
             refresh_config_cards(self.ctx._mw)
             self.ctx.inject_config(self.ctx.warehouse[-1], a)
         t = UpdateCheckThread(); t.result_ready.connect(oc)
-        self.ctx.update_thread = t; t.start()
+        self._replace_update_thread(t); t.start()
 
     def get_free_instance(self) -> tuple[int, str] | None:
         """Find an idle instance. Returns (instance_id, config_dir) or None."""
@@ -189,7 +189,7 @@ class MaintService:
             ensure_maa_instances_async(self.ctx)
             self.ctx.log(f"MAA {tag} 已下载，实例池就绪 ({self.ctx.config.get('parallel_max',1)} 个)")
         t = UpdateCheckThread(); t.result_ready.connect(oc)
-        self.ctx.update_thread = t; t.start()
+        self._replace_update_thread(t); t.start()
 
     def pk_maa(self, row: int) -> None:
         a = self.ctx.accounts[row]
@@ -294,6 +294,13 @@ class MaintService:
         # Also check once after 30s on startup
         QTimer.singleShot(30000, self.auto_check_updates)
 
+    def _replace_update_thread(self, t):
+        old = getattr(self.ctx, "update_thread", None)
+        if old:
+            try: old.result_ready.disconnect()
+            except: pass
+        self.ctx.update_thread = t
+
     def check_updates(self, silent: bool = False) -> None:
         items = [w for w in self.ctx.warehouse if w.get("maa_type") != "general"]
         if not items:
@@ -327,7 +334,7 @@ class MaintService:
 
         t = UpdateCheckThread()
         t.result_ready.connect(oc)
-        self.ctx.update_thread = t
+        self._replace_update_thread(t)
         t.start()
 
     def cu_single(self, w: dict) -> None:

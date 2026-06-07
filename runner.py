@@ -384,7 +384,7 @@ class AccountRunner(QObject):
             ac["smart_pending"] = False
         # MAA 在 ExitSelf 等场景下可能返回非 0 退出码，但任务已实际完成
         is_real_error = exit_code != 0 and exit_code != -9 and aid not in self._stopping
-        if tasks:
+        if tasks and any(t.get("status") == "完成" for t in tasks):
             is_real_error = False
         if is_real_error:
             self.log_msg.emit(f"{ac.get('name', aid)} 异常退出 (code={exit_code})")

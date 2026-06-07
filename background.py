@@ -1,4 +1,5 @@
 """Reusable QThread helper — eliminates inline class _T(QThread) boilerplate."""
+import sys
 from collections.abc import Callable
 from typing import Any
 from PySide6.QtCore import QThread, Signal
@@ -17,4 +18,4 @@ class BackgroundTask(QThread):
             data = self._func()
             self.result.emit(data)
         except Exception as e:
-            self.result.emit(e)
+            sys.excepthook(type(e), e, e.__traceback__)
