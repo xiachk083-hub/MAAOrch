@@ -263,11 +263,12 @@ class ConfigService:
                         item["IsEnable"] = tt in task_set or (tt == "fight" and run_annihilation)
                         if tt == "fight":
                             if run_annihilation:
-                                anni = ac.get("smart_annihilation", "")
+                                anni = ac.get("smart_annihilation", "") or "Annihilation"
                                 item["UseCustomAnnihilation"] = True
-                                item["AnnihilationStage"] = anni or "Annihilation"
-                                item["StagePlan"] = []
-                                item["IsStageManually"] = False
+                                item["AnnihilationStage"] = anni
+                                item["StagePlan"] = [anni]
+                                item["IsStageManually"] = True
+                                item["StageResetMode"] = "Current"
                             else:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
