@@ -24,7 +24,7 @@
 - **HTTP API** — REST 接口支持外部调度：状态查询、启动/停止/暂停流水线、配置下发、统计查询
 - **daigan 联动** — 接入代肝数据管理面板，运行数据自动推送，见 [daigan-integration.md](docs/daigan-integration.md)
 - **代理自动检测** — 启动时自动探测本地代理（Clash/v2ray），确保 GitHub 访问通畅
-- **打包构建** — PyInstaller 一键打包独立 .exe，内置 maa-cli 和 MaaCore.dll
+- **源文件运行** — 需 Python 3.12+ 和 PySide6，`pip install PySide6 && python main.pyw`
 - **ADB 工具** — 内置 ADB 扫描、连接测试、截图功能
 - **配置导入/导出** — 支持导出/导入全局配置和单个账号配置
 
@@ -152,17 +152,6 @@ MAAOrch 启动后自动在 `127.0.0.1:19999` 开启 REST 服务（端口可在�
 | `HTTP_PROXY` / `HTTPS_PROXY` | HTTP(S) 代理地址，优先于自动探测 |
 | `MUMU_CLI_HOME` | 自定义 MuMu 模拟器安装目录，优先于默认搜索路径 |
 
-## 打包构建
-
-使用 PyInstaller 构建独立 `.exe`（无需安装 Python）：
-
-```bash
-pip install pyinstaller
-pyinstaller MAAOrch.spec
-```
-
-构建产物为 `dist/MAAOrch.exe`，包含 maa-cli 工具和 MaaCore.dll。`MAAOrch.spec` 已配置窗口模式（无控制台）、UPX 压缩、自定义图标（需提供 `icon.ico`）。
-
 ## 开发
 
 ```bash
@@ -265,7 +254,7 @@ MAAOrch/
 | [日志与监控](docs/monitoring.md) | asst.log v5/v6 解析、Version 定位、统计持久化、日志轮转 |
 | [下载更新与代理](docs/update-download.md) | MAA/maa-cli 下载更新、版本切换、代理自动检测 |
 | [HTTP API](docs/http-api.md) | REST 接口完整参考、安全机制、stats/queue 端点、集成示例 |
-| [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、配置迁移、测试、打包 |
+| [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、配置迁移、测试 |
 | [daigan 对接](docs/daigan-integration.md) | stats.json 格式、字段说明、统计计算示例 |
 
 ## 技术栈

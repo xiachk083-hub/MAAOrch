@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches: [main, master]
-    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -17,26 +16,3 @@ jobs:
           python-version: "3.12"
       - run: pip install PySide6 pytest
       - run: python -m pytest tests/ -v
-
-  build-release:
-    runs-on: windows-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions: write-all
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install PySide6 pyinstaller
-        timeout-minutes: 10
-      - run: pyinstaller MAAOrch.spec --log-level INFO 2>&1
-        timeout-minutes: 15
-      - run: dir dist\ 2>&1 || echo "No dist output"
-      - name: Upload Release
-        run: python release.py
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

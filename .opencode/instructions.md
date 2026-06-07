@@ -22,8 +22,7 @@
 
 - Issues 用户汇报 bug 或提需求
 - 被 `@opencode` 提及时自动分析，创建分支并提 PR
-- PR 会自动触发 CI（`github/workflows/ci.yml`）
-- 打 tag `v*` 自动构建 exe 并创建 Release
+- PR 会自动触发 CI（`github/workflows/ci.yml`），仅跑 lint-and-test
 
 ## 关键文件
 
@@ -39,20 +38,11 @@
 | `updater.py` | MAAOrch 自更新 / MAA 下载更新 |
 | `stats.py` | 运行历史持久化 |
 | `account.py` | Account 数据类 |
-| `release.py` | CI Release 上传脚本 |
 
 ## 常见问题
 
-### 1. CI build-release 上传失败
+### 1. 循环调度配置重启丢失
 
-`release.py` 负责创建 GitHub Release 并上传 `MAAOrch.exe`。
-问题排查：检查 `GITHUB_REF` 是否是 tag，检查 GITHUB_TOKEN 权限。
-
-### 2. 循环调度配置重启丢失
-
-`schedule_panel.py` 的距满差 SpinBox 初始化没读 `config.json`。
-修复：`mw._sch_deficit_sp.setValue(mw.config.get("deficit", 0))`
-
-### 3. 卡片高度不一致
+### 2. 卡片高度不一致
 
 QGridLayout 的行高等高问题。修复：`frame.setMinimumHeight(140)` + `Qt.AlignTop`。

@@ -21,27 +21,13 @@ UI 面板 (ui/):
   accounts_panel.py — 账号列表
 ```
 
-## CI/CD
+## CI
 
 ### Workflow (`.github/workflows/ci.yml`)
 
-两个 job：
-1. `lint-and-test` — pip install + pytest（push 到 main 时触发）
-2. `build-release` — pyinstaller 构建 + `release.py` 上传（tag push 时触发）
+单个 job：`lint-and-test` — pip install + pytest（push 到 main/PR 触发）
 
-### 发布流程
-
-```bash
-# 更新版本号
-# main_window.py 的 VERSION 常量
-git add -A
-git commit -m "release: v1.x.x — 说明"
-git push origin main
-git tag v1.x.x
-git push origin v1.x.x
-```
-
-CI 自动构建 exe 并上传到 Release。
+> 不打包 exe，用户自行 `pip install PySide6 && python main.pyw` 启动。
 
 ## 编码约定
 
@@ -82,12 +68,6 @@ pytest tests/ -v
 68 个测试覆盖：core/critical/emu/maint/queue/runner/stats。
 
 ## 常见修复
-
-### CI 构建问题
-
-`release.py` 上传失败 → 检查 GITHUB_TOKEN 和 GITHUB_REF。
-`pyinstaller` 构建失败 → 检查 `MAAOrch.spec` 的 hiddenimports。
-文件大小超限 → 更新 `ci.yml` 的 `LIMITS`。
 
 ### 账户相关问题
 
