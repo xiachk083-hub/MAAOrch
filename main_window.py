@@ -1,7 +1,7 @@
 from __future__ import annotations
 import sys,json,os,ctypes,time,subprocess,re,shutil,io
 from pathlib import Path
-from datetime import datetime,time as dtime
+from datetime import datetime
 from collections import defaultdict
 from typing import Any
 import threading
@@ -170,7 +170,8 @@ class MainWindow(QMainWindow):
             if raw:
                 m=re.match(r'^2?7\.0\.0\.1:(\d+)$',raw)
                 if m: a["adb_address"]="127.0.0.1:"+m.group(1)
-        # Auto backup config
+        self.config["groups"]=self.groups; self.config["warehouse"]=self.warehouse; self.config["accounts"]=self.accounts; save_config(self.config)
+        # Auto backup AFTER save so backup captures the new state
         try:
             bp=Path(__file__).parent/"backups"; bp.mkdir(exist_ok=True)
             src=Path(__file__).parent/"config.json"
@@ -182,7 +183,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             try: self._log(f"备份失败: {e}")
             except: pass
-        self.config["groups"]=self.groups; self.config["warehouse"]=self.warehouse; self.config["accounts"]=self.accounts; save_config(self.config)
 
     def _build_ui(self) -> None:
         c = QWidget()
@@ -787,7 +787,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, e) -> None:
         if not self.isMinimized():
-            self.config["window_geometry"]=f"{self.width()}x{self.height()}+{self.x()}+{self.y()}"
+            g=self.geometry(); self.config["window_geometry"]=f"{g.width()}x{g.height()}+{g.x()}+{g.y()}"
         if self.config.get("minimize_to_tray",True) and hasattr(self,'tray_icon') and self.tray_icon:
             self.hide(); e.ignore()
         else:

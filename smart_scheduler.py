@@ -25,10 +25,6 @@ def get_today_key() -> str:
     return ["mon","tue","wed","thu","fri","sat","sun"][datetime.now().weekday()]
 
 
-def is_monday() -> bool:
-    return datetime.now().weekday() == 0
-
-
 _infrast_fired: set = set()  # tracks "YYYY-MM-DD/04:00" fired per day
 
 

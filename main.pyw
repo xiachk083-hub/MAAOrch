@@ -79,9 +79,10 @@ def main():
             st = win.ctx.schedule_thread
             if st:
                 threads.append(st)
-        if hasattr(win, "emu"):
+        emu = getattr(win, "emu", None)
+        if emu:
             for attr in ("_t", "_scan_thread", "_refresh_t", "_test_t", "_ss_t", "_stopemu_t"):
-                t = getattr(win.emu, attr, None)
+                t = getattr(emu, attr, None)
                 if t and t.isRunning():
                     threads.append(t)
         # Signal all threads to stop first, then wait in parallel

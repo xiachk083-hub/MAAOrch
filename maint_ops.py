@@ -94,20 +94,6 @@ def _find_maa_source() -> Path | None:
     return None
 
 
-def _is_instance_running(inst_id: int) -> bool:
-    """Check if an MAA instance process is currently running."""
-    import subprocess
-    try:
-        r = subprocess.run(
-            ['tasklist', '/FI', f'WindowTitle eq MAA*', '/NH'],
-            capture_output=True, text=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW
-        )
-        # Rough check: count any MAA processes running from instances directory
-        return False  # Simplified: assume not running, rely on PID file
-    except:
-        return False
-
-
 def _trigger_batch(svc):
     """Daily batch: enqueue all accounts."""
     lq = getattr(svc.ctx._mw, "launch_queue", None)
@@ -148,29 +134,6 @@ class MaintService:
             self.ctx.inject_config(self.ctx.warehouse[-1], a)
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self._replace_update_thread(t); t.start()
-
-    def get_free_instance(self) -> tuple[int, str] | None:
-        """Find an idle instance. Returns (instance_id, config_dir) or None."""
-        import subprocess, os
-        pool = Path(__file__).parent / "maa" / "instances"
-        max_n = self.ctx.config.get("maa_instances", 0)
-        for i in range(1, max_n + 1):
-            inst = pool / str(i)
-            exe = inst / "MAA.exe"
-            if not exe.exists():
-                continue
-            # Check if this instance is running
-            try:
-                proc = subprocess.run(
-                    ['tasklist', '/FI', f'PID eq {inst.stem}', '/NH'],
-                    capture_output=True, text=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW
-                )
-            except:
-                pass
-            # If no running process, this instance is free
-            if not _is_instance_running(i):
-                return (i, str(inst))
-        return None
 
     def dl_maa_all(self) -> None:
         """Download MAA once, create instance pool."""
