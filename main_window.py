@@ -682,7 +682,7 @@ class MainWindow(QMainWindow):
                         should_launch = True
             if should_launch:
                 if getattr(self, "_smart_force", False):
-                    tasks = ["Award", "Fight", "Infrast", "Recruit", "Mall", "Depot", "CloseDown"]
+                    tasks = ["StartUp", "Award", "Fight", "Infrast", "Recruit", "Mall", "Depot", "CloseDown"]
                 else:
                     tasks = get_tasks_for_account(a, sg)
                 if len(tasks) > 2 or getattr(self, "_smart_force", False):
