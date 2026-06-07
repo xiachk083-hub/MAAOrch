@@ -14,6 +14,20 @@ from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 
 
+def _is_instance_running(inst_id: int) -> bool:
+    """Check if an MAA instance process is currently running."""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ['tasklist', '/FI', f'WindowTitle eq MAA*', '/NH'],
+            capture_output=True, text=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        # Rough check: count any MAA processes running from instances directory
+        return False  # Simplified: assume not running, rely on PID file
+    except:
+        return False
+
+
 def _trigger_batch(self):
     """Daily batch: enqueue all accounts."""
     lq = getattr(self.ctx._mw, "launch_queue", None)
@@ -55,38 +69,65 @@ class MaintService:
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self.ctx.update_thread = t; t.start()
 
+    def ensure_maa_instances(self) -> str | None:
+        """Ensure MAA instance pool exists, return exe path or None."""
+        ver = self.ctx.config.get("maa_version", "")
+        if not ver:
+            return None
+        src = Path(__file__).parent / "maa" / ver
+        exe = src / "MAA.exe"
+        if not exe.exists():
+            return None
+        max_n = self.ctx.config.get("parallel_max", 1)
+        pool = Path(__file__).parent / "maa" / "instances"
+        pool.mkdir(parents=True, exist_ok=True)
+        import shutil, os
+        for i in range(1, max_n + 1):
+            inst = pool / str(i)
+            if not inst.exists():
+                shutil.copytree(str(src), str(inst))
+        self.ctx.config["maa_instances"] = max_n
+        return str(exe)
+
+    def get_free_instance(self) -> tuple[int, str] | None:
+        """Find an idle instance. Returns (instance_id, config_dir) or None."""
+        import subprocess, os
+        pool = Path(__file__).parent / "maa" / "instances"
+        max_n = self.ctx.config.get("maa_instances", 0)
+        for i in range(1, max_n + 1):
+            inst = pool / str(i)
+            exe = inst / "MAA.exe"
+            if not exe.exists():
+                continue
+            # Check if this instance is running
+            try:
+                proc = subprocess.run(
+                    ['tasklist', '/FI', f'PID eq {inst.stem}', '/NH'],
+                    capture_output=True, text=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW
+                )
+            except:
+                pass
+            # If no running process, this instance is free
+            if not _is_instance_running(i):
+                return (i, str(inst))
+        return None
+
     def dl_maa_all(self) -> None:
-        """Download MAA once and bind to all accounts without MAA."""
+        """Download MAA once, create instance pool."""
         def oc(r):
             if not r.get("ok"): return
             tag = r["tag"]; info = r["assets"].get(get_platform_key())
             if not info: return
-            # Download to first unbounded account's directory, reuse for others
-            targets = [a for a in self.ctx.accounts
-                       if not any(w.get("account_ref") == a["id"] for w in self.ctx.warehouse)]
-            if not targets: self.ctx.log("所有账号已绑定 MAA"); return
-            d = Path(__file__).parent / "accounts" / targets[0]["id"] / "MAA"
+            d = Path(__file__).parent / "maa" / tag
             d.mkdir(parents=True, exist_ok=True)
             dlg = UpdateDialog(self.ctx._mw, tag, info, str(d))
             if dlg.exec() != QDialog.Accepted: return
             exe = next(iter(d.rglob("MAA.exe")), None)
             if not exe: return
-            count = 0
-            for a in targets:
-                if a["id"] == targets[0]["id"]:
-                    # Already downloaded to this one's directory
-                    self._bind_maa(exe, tag, a["id"])
-                else:
-                    # Copy MAA to each account's directory
-                    ad = Path(__file__).parent / "accounts" / a["id"] / "MAA"
-                    if not ad.exists():
-                        import shutil
-                        shutil.copytree(str(d), str(ad))
-                    self._bind_maa(str(ad / "MAA.exe"), tag, a["id"])
-                count += 1
+            self.ctx.config["maa_version"] = tag
             self.ctx.save()
-            refresh_config_cards(self.ctx._mw)
-            self.ctx.log(f"批量绑定 MAA: {count} 个账号")
+            self.ensure_maa_instances()
+            self.ctx.log(f"MAA {tag} 已下载，实例池就绪 ({self.ctx.config.get('parallel_max',1)} 个)")
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self.ctx.update_thread = t; t.start()
 

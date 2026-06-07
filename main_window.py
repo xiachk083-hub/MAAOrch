@@ -702,14 +702,13 @@ class MainWindow(QMainWindow):
     def _show_tray(self) -> None: self.maint.show_tray()
     def _show_todo(self) -> None:
         issues = []
+        if not self.config.get("maa_version", ""):
+            issues.append(("系统", "未下载 MAA，请点击账号页的 ⬇ 批量MAA 下载"))
         for a in self.accounts:
             aid = a.get("id", "")
             name = a.get("name", "").strip() or aid[:6]
             if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
                 issues.append((name, "未配置 ADB 地址或模拟器实例"))
-            progs = [w for w in self.warehouse if w.get("account_ref") == aid]
-            if not progs:
-                issues.append((name, "未绑定 MAA 程序"))
             if self.config.get("smart_global", {}).get("enabled", False):
                 if not a.get("smart_stage", ""):
                     issues.append((name, "智能模式开启但未设默认关卡"))

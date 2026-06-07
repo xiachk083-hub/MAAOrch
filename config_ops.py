@@ -184,13 +184,9 @@ class ConfigService:
         """Called from PipelineThread (no MainWindow ref needed)."""
         self.inject(w, ac)
 
-    def inject_smart(self, task_list: list[str], ac: dict, w: dict) -> None:
-        """Inject smart-generated task list into MAA config."""
-        p = w.get("path", "")
-        md = Path(p).parent if p else None
-        if not md or not md.exists():
-            return
-        cd = md / "config"
+    def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
+        """Inject smart-generated task list into MAA config directory."""
+        cd = Path(config_dir)
         cd.mkdir(parents=True, exist_ok=True)
 
         def _write(fn, use_v6=False):

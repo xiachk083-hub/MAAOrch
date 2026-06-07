@@ -13,6 +13,7 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
     "parallel_max":1,"daily_batch_time":"",
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[],
+    "maa_version":"","maa_instances":0,
     "smart_global":{"threshold":80,"expiring_medicine":True,"medicine_days":2,"annihilation_enabled":True,
         "infrast_times":["04:00","16:00"],"recruit_enabled":True,"mall_enabled":True,"post_action":"ExitArknights,ExitSelf",
         "materials":[
@@ -71,6 +72,8 @@ def load_config() -> dict:
                 data["warehouse"]=warehouse; data["version"]=4; ver=4
             if ver in (4,): data=migrate_v4_to_v5(data); ver=5
             if ver>=5:
+                data.setdefault("maa_version", "")
+                data.setdefault("maa_instances", 0)
                 data.setdefault("smart_global", dict(DEFAULT_CONFIG["smart_global"]))
                 for a in data.get("accounts",[]):
                     raw=a.get("adb_address","")

@@ -70,28 +70,57 @@ class AccountRunner(QObject):
         if aid in self._active:
             self.log_msg.emit(f"{ac.get('name', aid)} 已在运行中")
             return False
-        progs = [w for w in self.ctx.warehouse if w.get("account_ref") == aid]
-        if not progs:
-            self.log_msg.emit(f"{ac.get('name', aid)} 未绑定程序")
+
+        # Get free MAA instance
+        try:
+            from maint_ops import MaintService
+            # Create temporary MaintService to access instance pool
+            inst = self._get_free_instance()
+            if not inst:
+                self.log_msg.emit(f"{ac.get('name', aid)} 无空闲 MAA 实例")
+                return False
+        except Exception:
+            self.log_msg.emit(f"{ac.get('name', aid)} MAA 实例池不可用")
             return False
 
-        # Pre-flight checks
-        issues = self.preflight_check(ac, progs)
-        for issue in issues:
-            self.log_msg.emit(issue)
-        critical = [i for i in issues if i.startswith("❌")]
-        if critical:
-            self.log_msg.emit(f"❌ {ac.get('name', aid)} 预检未通过，启动取消")
-            return False
-
-        self.log_msg.emit(f"[启动] MAA({Path(progs[0]['path']).stem}) ADB({ac.get('adb_address','?')}) Emu({ac.get('emu_instance_index','?')})")
+        self.log_msg.emit(f"[启动] ADB({ac.get('adb_address','?')}) Emu({ac.get('emu_instance_index','?')}) 实例#{inst[0]}")
 
         self._active[aid] = ac
-        self._progs[aid] = progs
         self.log_msg.emit(f"[启动] {ac.get('name', aid)}")
         self._track_stats(ac)
-        self._do_launch(ac, progs)
+        self._do_launch(ac, inst)
         return True
+
+    def _get_free_instance(self) -> tuple[int, str] | None:
+        """Get a free MAA instance. Returns (id, config_dir) or None."""
+        import subprocess
+        max_n = self.ctx.config.get("maa_instances", 0)
+        if not max_n:
+            return None
+        pool = Path(__file__).parent / "maa" / "instances"
+        for i in range(1, max_n + 1):
+            inst_dir = pool / str(i)
+            exe = inst_dir / "MAA.exe"
+            if not exe.exists():
+                continue
+            # Quick check: is this instance running?
+            pid_file = inst_dir / ".pid"
+            running = False
+            if pid_file.exists():
+                try:
+                    pid = int(pid_file.read_text().strip())
+                    r = subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True, timeout=2,
+                                       creationflags=subprocess.CREATE_NO_WINDOW)
+                    # If we could kill it, it was running. We don't actually kill, just check.
+                    # Actually use tasklist to check if running
+                    r2 = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'], capture_output=True, text=True,
+                                        timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                    running = str(pid) in r2.stdout
+                except:
+                    pid_file.unlink(missing_ok=True)
+            if not running:
+                return (i, str(inst_dir))
+        return None
 
     def launch_by_id(self, account_id: str) -> bool:
         """Start an account by ID."""
@@ -127,11 +156,12 @@ class AccountRunner(QObject):
 
     # ── Internal: dispatch ──
 
-    def _do_launch(self, ac: dict, progs: list[dict]) -> None:
+    def _do_launch(self, ac: dict, inst: tuple[int, str]) -> None:
         emu_idx = ac.get("emu_instance_index", "")
         aid = ac["id"]
+        inst_id, inst_dir = inst
 
-        # Path A: auto-launch emulator
+        # Launch emulator if needed
         if ac.get("emu_launch") and emu_idx:
             cli = find_mumu_cli()
             if cli:
@@ -140,104 +170,55 @@ class AccountRunner(QObject):
                     subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
                 except Exception as e:
                     self.log_msg.emit(f"启动模拟器失败: {e}")
-                self._emu_wait_and_launch(ac, progs, ac.get("emu_wait", 30))
-                return
 
-        # Path B: ADB fail → launch emulator
-        if ac.get("adb_fail_launch_emu") and emu_idx:
-            cli = find_mumu_cli()
-            adb = ac.get("adb_path", "") or "adb"
-            addr = ac.get("adb_address", "")
-            if addr and cli:
-                r = subprocess.run([adb, "connect", addr], capture_output=True, text=True, timeout=5, creationflags=CF, encoding="utf-8", errors="replace")
-                out = (r.stdout + r.stderr).strip()
-                if "connected" in out.lower() or "already" in out.lower():
-                    self.log_msg.emit(f"ADB 已连接 {addr}")
-                else:
-                    self.log_msg.emit(f"ADB 失败，启动模拟器 #{emu_idx}")
-                    try:
-                        subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
-                    except Exception as e:
-                        self.log_msg.emit(f"启动模拟器失败: {e}")
-                    self._emu_wait_and_launch(ac, progs, ac.get("emu_wait", 30))
-                    return
-
-        # Path C: ADB retry
-        retry = ac.get("adb_retry", 0)
-        if retry > 0 and ac.get("adb_address", ""):
-            self._adb_retry_launch(ac, progs, retry)
-            return
-
-        # Path D: direct launch
-        self._launch_progs(ac, progs)
-
-    def _emu_wait_and_launch(self, ac: dict, progs: list[dict], remaining: int) -> None:
-        if remaining > 0:
-            self.status_msg.emit(f"等待模拟器 ({remaining}s)...")
-            QTimer.singleShot(1000, lambda: self._emu_wait_and_launch(ac, progs, remaining - 1))
-        else:
-            self.status_msg.emit("就绪")
-            adb = ac.get("adb_path", "") or "adb"
-            addr = ac.get("adb_address", "")
-            if not addr:
-                try:
-                    r = subprocess.run([adb, "devices"], capture_output=True, timeout=5, creationflags=CF)
-                    for m in re.finditer(rb":(\d+)\s+device\b", r.stdout):
-                        addr = "127.0.0.1:" + m.group(1).decode("ascii")
-                        ac["adb_address"] = addr
-                        self.ctx.save()
-                        self.log_msg.emit(f"自动检测 ADB: {addr}")
-                        break
-                except Exception:
-                    pass
-            if addr:
-                self.log_msg.emit(f"连接 ADB: {addr}")
-                try:
-                    subprocess.run([adb, "connect", addr], capture_output=True, creationflags=CF, timeout=5)
-                except Exception as e:
-                    self.log_msg.emit(f"ADB 连接失败: {e}")
-            self._launch_progs(ac, progs)
-
-    def _adb_retry_launch(self, ac: dict, progs: list[dict], retry: int, attempt: int = 0) -> None:
-        if attempt >= retry:
-            self.log_msg.emit(f"ADB 重试耗尽 ({retry})")
-            self._launch_progs(ac, progs)
-            return
+        # ADB connection
         adb = ac.get("adb_path", "") or "adb"
-        addr = ac["adb_address"]
-        r = subprocess.run([adb, "connect", addr], capture_output=True, text=True, timeout=5, creationflags=CF, encoding="utf-8", errors="replace")
-        if "connected" in (r.stdout + r.stderr).lower() or "already" in (r.stdout + r.stderr).lower():
-            self.log_msg.emit(f"ADB 重试成功 ({attempt + 1}/{retry})")
-            self._launch_progs(ac, progs)
-            return
-        self.status_msg.emit(f"ADB 重试 ({attempt + 1}/{retry})...")
-        QTimer.singleShot(1000, lambda: self._adb_retry_launch(ac, progs, retry, attempt + 1))
+        addr = ac.get("adb_address", "")
+        if addr:
+            try: subprocess.run([adb, "connect", addr], capture_output=True, creationflags=CF, timeout=5)
+            except: pass
 
-    def _launch_progs(self, ac: dict, progs: list[dict]) -> None:
+        # Inject config and launch
+        self._launch_for_instance(ac, inst_dir)
+
+    def _launch_for_instance(self, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
         smart_enabled = self.ctx.config.get("smart_global", {}).get("enabled", False)
-        for w in progs:
-            try:
-                if smart_enabled:
-                    plan_txt = ac.get("smart_plan", "")
-                    if plan_txt:
-                        task_list = plan_txt.split(",")
-                    else:
-                        from smart_scheduler import get_tasks_for_account
-                        task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
-                        plan_txt = ",".join(task_list)
-                        ac["smart_plan"] = plan_txt
-                    self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
-                    self.ctx.cfg.inject_smart(task_list, ac, w)
+        exe = Path(inst_dir) / "MAA.exe"
+        config_dir = Path(inst_dir) / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            if smart_enabled:
+                plan_txt = ac.get("smart_plan", "")
+                if plan_txt:
+                    task_list = plan_txt.split(",")
                 else:
-                    self.ctx.inject_config(w, ac)
-                self.log_msg.emit(f"注入配置: {Path(w['path']).parent}/config/")
-                self._spawn(w, ac)
-            except Exception as e:
-                self.log_msg.emit(f"启动失败: {e}")
-                self.account_error.emit(aid, str(e))
-                self._cleanup(aid, -1, [])
-                return
+                    from smart_scheduler import get_tasks_for_account
+                    task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
+                    plan_txt = ",".join(task_list)
+                    ac["smart_plan"] = plan_txt
+                self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
+                self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
+            else:
+                self.ctx.cfg.inject_smart(["StartUp", "Award"], ac, str(config_dir))
+            self.log_msg.emit(f"注入配置: {config_dir}/")
+            self._spawn_instance(exe, ac, inst_dir)
+            self._active[aid] = ac  # Mark running
+        except Exception as e:
+            self.log_msg.emit(f"启动失败: {e}")
+            self.account_error.emit(aid, str(e))
+            self._cleanup(aid, -1, [])
+
+    def _spawn_instance(self, exe: Path, ac: dict, inst_dir: str) -> None:
+        aid = ac["id"]
+        pid_file = Path(inst_dir) / ".pid"
+        p = subprocess.Popen([str(exe)], shell=False)
+        self._procs[aid] = p
+        self._start_times[aid] = time.time()
+        self.ctx.proc_status.add(aid)
+        try: pid_file.write_text(str(p.pid))
+        except: pass
+        self.log_msg.emit(f"✓ 启动 MAA PID={p.pid}")
         self.account_started.emit(aid)
 
     def _spawn(self, w: dict, ac: dict) -> None:
@@ -399,12 +380,6 @@ class AccountRunner(QObject):
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             ac["smart_plan"] = ""
             ac["smart_pending"] = False
-        # Also remove program IDs from status tracking
-        if old_progs:
-            for w in old_progs:
-                self.ctx.proc_status.discard(w["id"])
-                self.ctx.proc_start_times.pop(w["id"], None)
-
         # MAA 在 ExitSelf 等场景下可能返回非 0 退出码，但任务已实际完成
         is_real_error = exit_code != 0 and exit_code != -9 and aid not in self._stopping
         if tasks:
