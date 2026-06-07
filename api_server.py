@@ -73,7 +73,7 @@ class ApiServer(QThread):
                 for i,a in enumerate(mw.accounts):
                     progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
                     pid=progs[0]["id"] if progs else ""
-                    running=pid in mw._proc_status
+                    running=pid in getattr(mw,"_proc_status",set())
                     elapsed=0
                     if running and pid in mw._proc_start_times: elapsed=int(time.time()-mw._proc_start_times[pid])
                     accts.append({"name":a.get("name",""),"index":i,"running":running,"elapsed":elapsed,"adb":a.get("adb_address",""),"emu_index":a.get("emu_instance_index","")})

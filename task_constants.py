@@ -212,7 +212,7 @@ class EmuMonitor(QThread):
             for _ in range(30):
                 if self._stop_flag:
                     break
-                time.sleep(1)
+                self.msleep(1000)
 
     def stop_monitor(self):
         self._stop_flag = True

@@ -15,6 +15,16 @@ class EmuService:
         self._cached_instances: list[dict] | None = None
         self._cache_time: float = 0
 
+    @staticmethod
+    def _stop_bg(t):
+        """Stop a BackgroundTask gracefully: flag + wait, terminate as last resort."""
+        if not t or not t.isRunning():
+            return
+        t._stop_flag = True
+        if not t.wait(3000):
+            t.terminate()
+            t.wait(500)
+
     def refresh_instance_list(
         self, combo: QComboBox, saved_idx: str | None = None, saved_name: str | None = None,
         force: bool = False
@@ -30,7 +40,7 @@ class EmuService:
         if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
             try: self._refresh_t.result.disconnect()
             except: pass
-            self._refresh_t.terminate(); self._refresh_t.wait(200)
+            self._stop_bg(self._refresh_t)
         self._refresh_t=BackgroundTask(detect_emu_instances)
         def _done(instances):
             try:
@@ -73,7 +83,7 @@ class EmuService:
         if hasattr(self,'_test_t') and self._test_t and self._test_t.isRunning():
             try: self._test_t.result.disconnect()
             except: pass
-            self._test_t.terminate(); self._test_t.wait(200)
+            self._stop_bg(self._test_t)
         def _fn():
             try:
                 r=subprocess.run([adb,"connect",ad],capture_output=True,timeout=10,creationflags=CF)
@@ -94,7 +104,7 @@ class EmuService:
         if hasattr(self,'_ss_t') and self._ss_t and self._ss_t.isRunning():
             try: self._ss_t.result.disconnect()
             except: pass
-            self._ss_t.terminate(); self._ss_t.wait(200)
+            self._stop_bg(self._ss_t)
         def _fn():
             try:
                 r=subprocess.run([adb,"-s",addr,"exec-out","screencap","-p"],capture_output=True,timeout=10,creationflags=CF)
@@ -119,7 +129,7 @@ class EmuService:
             if hasattr(self,'_stopemu_t') and self._stopemu_t and self._stopemu_t.isRunning():
                 try: self._stopemu_t.result.disconnect()
                 except: pass
-                self._stopemu_t.terminate(); self._stopemu_t.wait(200)
+                self._stop_bg(self._stopemu_t)
             def _fn():
                 try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"shutdown"],creationflags=CF,timeout=15); return "ok"
                 except Exception as e: return str(e)
@@ -177,7 +187,7 @@ class EmuService:
         if hasattr(self,'_t') and self._t and self._t.isRunning():
             try: self._t.result.disconnect()
             except: pass
-            self._t.terminate(); self._t.wait(200)
+            self._stop_bg(self._t)
         self.ctx.log(f"扫描端口: 实例 #{emu_idx}")
         self.ctx._mw.sl.setText("启动模拟器...")
         adb=a.get("adb_path","") or "adb"
@@ -249,7 +259,7 @@ class EmuService:
                 results.append(("__err__",str(e)))
             return results
         if hasattr(self,'_scan_thread') and self._scan_thread.isRunning():
-            self._scan_thread.result.disconnect(); self._scan_thread.terminate(); self._scan_thread.wait(200)
+            self._scan_thread.result.disconnect(); self._stop_bg(self._scan_thread)
         def _on_results(results):
             cb.clear(); cb.addItem("— 在线设备 —","")
             if not results: cb.addItem("未发现在线设备","")

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import time,subprocess
+import time,subprocess,copy
 from pathlib import Path
 from typing import Any
 from PySide6.QtCore import QThread, Signal
@@ -13,9 +13,12 @@ class PipelineThread(QThread):
         self, groups: list[dict], warehouse: list[dict], accounts: list[dict],
         cfg: Any = None, parent: Any = None
     ) -> None:
-        super().__init__(); self.groups=groups; self.warehouse={w["id"]:w for w in warehouse}
-        self.accounts={a["id"]:a for a in accounts}; self.cfg=cfg; self.stop_flag=False; self.pause_flag=False; self.mw=parent
+        super().__init__(); self.cfg=cfg; self.stop_flag=False; self.pause_flag=False; self.mw=parent
         self._running: list[subprocess.Popen] = []
+        # Deep-copy to avoid reading mutable shared state from background thread
+        self.groups = copy.deepcopy(groups)
+        self.warehouse = {w["id"]: w for w in copy.deepcopy(warehouse)}
+        self.accounts = {a["id"]: a for a in copy.deepcopy(accounts)}
     def run(self) -> None:
         for g in self.groups:
             if self.stop_flag: break
