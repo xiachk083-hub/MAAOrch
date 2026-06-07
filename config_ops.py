@@ -283,7 +283,7 @@ class ConfigService:
                                     anni_item["StageResetMode"] = "Current"
                                     anni_item["UseMedicine"] = True
                                     anni_item["MedicineCount"] = 999
-                                    existing_tq.insert(existing_tq.index(item) + 1, anni_item)
+                                    existing_tq.insert(existing_tq.index(item), anni_item)
                                     anni_appended = True
                                 elif not anni_appended:
                                     # No farm Fight, replace this one with annihilation
