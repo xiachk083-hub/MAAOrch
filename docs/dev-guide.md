@@ -124,33 +124,38 @@ pytest tests/ -v
 - 完整配置迁移路径（v3 → v4 → v5）
 - 默认字段完整性
 
-## 打包构建
+### test_queue.py
 
-```bash
-pip install pyinstaller
-pyinstaller MAAOrch.spec
-```
+测试范围：
+- 启动队列入队/出队
+- 优先级排序
+- 模拟器冲突检测
+- 并行启动控制
 
-### spec 关键配置
+### test_runner.py
 
-| 选项 | 值 | 说明 |
-|------|----|------|
-| 入口 | `main.pyw` | 窗口模式（无控制台） |
-| 打包数据 | `maa-cli/`, `themes.py`, `task_constants.py`, `callbacks.py` | 运行时必需 |
-| 压缩 | UPX | 减小体积 |
-| 排除模块 | tkinter, unittest, email, http, xml, pydoc | 减小体积 |
-| 图标 | `icon.ico`（若存在） | 自定义图标 |
+测试范围：
+- AccountRunner 启动/停止
+- 进程跟踪
+- 统计记录
+- 信号（Signal）发射
 
-产物路径：`dist/MAAOrch.exe`
+### test_stats.py
 
-## CI/CD
+测试范围：
+- RunStats 持久化
+- 理智查询
+- 每日汇总
+- 上限截断
+
+## CI
 
 GitHub Actions 工作流（`.github/workflows/ci.yml`）：
 
 | 触发 | push / PR 到 main 或 master |
 |------|-----------------------------|
 | 环境 | `windows-latest`, Python 3.12 |
-| 步骤 | pip install → ruff check → pytest |
+| 步骤 | pip install → pytest |
 
 ## 主题系统
 
