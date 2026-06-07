@@ -190,6 +190,7 @@ class MainWindow(QMainWindow):
         self.tc = QPushButton("⚡  配置")
         self.ts = QPushButton("⚙  调度")
         self.ti = QPushButton("🧠  智能")
+        self.tm = QPushButton("📦  MAA")
         for btn, key in [
             (self.tg, "accounts"),
             (self.ta, "queue"),
@@ -197,6 +198,7 @@ class MainWindow(QMainWindow):
             (self.tc, "config"),
             (self.ts, "schedule"),
             (self.ti, "smart"),
+            (self.tm, "maa"),
         ]:
             btn.setObjectName("tabBtn")
             btn.setFlat(True)
@@ -245,6 +247,12 @@ class MainWindow(QMainWindow):
         self.smart_v.hide()
         ml.addWidget(self.smart_v, 1)
 
+        # MAA instance panel
+        from ui.maa_panel import build_maa_panel
+        build_maa_panel(self)
+        self.maa_v.hide()
+        ml.addWidget(self.maa_v, 1)
+
         # Status bar
         sb2 = self.statusBar()
         self.sl = QLabel(" 就绪")
@@ -275,7 +283,8 @@ class MainWindow(QMainWindow):
         self.cv.setVisible(tab == "config")
         self.sv.setVisible(tab == "schedule")
         self.smart_v.setVisible(tab == "smart")
-        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config"), (self.ts, "schedule"), (self.ti, "smart")]:
+        self.maa_v.setVisible(tab == "maa")
+        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config"), (self.ts, "schedule"), (self.ti, "smart"), (self.tm, "maa")]:
             btn.setObjectName("tabBtnActive" if tab == key else "tabBtn")
             try:
                 btn.style().unpolish(btn); btn.style().polish(btn)
