@@ -537,10 +537,21 @@ def _batch_apply(mw: Any, src_acc: dict, src_progs: list[dict], src_row: int) ->
 def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     a = mw.accounts[row]
 
+    smart_enabled = mw.config.get("smart_global", {}).get("enabled", False)
+
     tc = QFrame()
     tc.setObjectName("card")
     tcl = QVBoxLayout(tc)
     tcl.setSpacing(5)
+
+    if smart_enabled:
+        tcl.addWidget(QLabel("🧠 智能调度已启用", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+        tcl.addWidget(QLabel("任务由程序按时间/体力/材料自动决策", styleSheet="color:#888;font-size:9pt"))
+        stage = a.get("smart_stage", "") or "（MAA自行决定）"
+        tcl.addWidget(QLabel(f"默认关卡: {stage}", styleSheet="color:#888;font-size:9pt"))
+        mw.adl.insertWidget(4, tc)
+        return
+
     tcl.addWidget(QLabel("⚙ 流水线", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
 
     pt = progs[0].get("task_pipeline", "startup,fight,recruit,infrast,mall,award") if progs else "startup,fight,recruit,infrast,mall,award"
@@ -596,7 +607,24 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
     mr2.addWidget(cfg_btn)
 
     tmpl_btn = QPushButton("💾 模板")
-    tm = QMenu()
+
+    def _show_tmpl_menu():
+        tm = QMenu(tmpl_btn)
+        for n in a.get("task_templates", {}):
+            act = tm.addAction(f"📂 {n}")
+            act.triggered.connect(lambda _, name=n: _ld_tmpl(name))
+            act2 = tm.addAction(f"✕ 删{n}")
+            act2.triggered.connect(lambda _, name=n: (a["task_templates"].pop(name, None), a.get("pipe_templates", {}).pop(name, None), mw._save(), build_account_dashboard(mw, row)))
+        if a.get("task_templates", {}):
+            tm.addSeparator()
+        act = tm.addAction("💾 保存当前...")
+        act.triggered.connect(lambda: _sv_tmpl())
+        tm.addSeparator()
+        act = tm.addAction("📋 批量应用当前配置到...")
+        act.triggered.connect(lambda: _batch_apply(mw, a, progs, row))
+        tm.exec(tmpl_btn.mapToGlobal(tmpl_btn.rect().bottomLeft()))
+
+    tmpl_btn.clicked.connect(lambda: _show_tmpl_menu())
 
     def _sv_tmpl():
         name, ok = QInputDialog.getText(mw, "保存模板", "名称:", text="日常模式")
@@ -608,22 +636,12 @@ def _build_pipeline_card(mw: Any, row: int, progs: list[dict]) -> None:
 
     def _ld_tmpl(name):
         if name in a.get("task_templates", {}):
-            ts.clear()
-            ts.update(a["task_templates"][name])
+            a["task_settings"] = dict(a["task_templates"][name])
             for p in progs:
                 p["task_pipeline"] = a.get("pipe_templates", {}).get(name, "")
             mw._save()
             build_account_dashboard(mw, row)
 
-    for n in a.get("task_templates", {}):
-        tm.addAction(f"📂 {n}", lambda n=n: _ld_tmpl(n))
-        tm.addAction(f"✕ 删{n}", lambda n=n: (a["task_templates"].pop(n, None), a.get("pipe_templates", {}).pop(n, None), mw._save(), build_account_dashboard(mw, row)))
-    if a.get("task_templates", {}):
-        tm.addSeparator()
-    tm.addAction("💾 保存当前...", _sv_tmpl)
-    tm.addSeparator()
-    tm.addAction("📋 批量应用当前配置到...", lambda: _batch_apply(mw, a, progs, row))
-    tmpl_btn.setMenu(tm)
     mr2.addWidget(tmpl_btn)
 
     sc = QCheckBox("启动时同步")

@@ -189,18 +189,24 @@ class MainWindow(QMainWindow):
         self.tl = QPushButton("📋  日志")
         self.tc = QPushButton("⚡  配置")
         self.ts = QPushButton("⚙  调度")
+        self.ti = QPushButton("🧠  智能")
         for btn, key in [
             (self.tg, "accounts"),
             (self.ta, "queue"),
             (self.tl, "logs"),
             (self.tc, "config"),
             (self.ts, "schedule"),
+            (self.ti, "smart"),
         ]:
             btn.setObjectName("tabBtn")
             btn.setFlat(True)
             btn.clicked.connect(lambda _, k=key: self._sw(k))
             th.addWidget(btn)
         th.addStretch()
+        self._todo_btn = QPushButton("📋 待办")
+        self._todo_btn.setObjectName("tabBtn")
+        self._todo_btn.clicked.connect(self._show_todo)
+        th.addWidget(self._todo_btn)
         ml.addWidget(tb)
 
         # Accounts panel
@@ -233,6 +239,12 @@ class MainWindow(QMainWindow):
         self.sv.hide()
         ml.addWidget(self.sv, 1)
 
+        # Smart scheduling panel
+        from ui.smart_panel import build_smart_panel
+        build_smart_panel(self)
+        self.smart_v.hide()
+        ml.addWidget(self.smart_v, 1)
+
         # Status bar
         sb2 = self.statusBar()
         self.sl = QLabel(" 就绪")
@@ -260,9 +272,13 @@ class MainWindow(QMainWindow):
         self.lv.setVisible(tab == "logs")
         self.cv.setVisible(tab == "config")
         self.sv.setVisible(tab == "schedule")
-        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config"), (self.ts, "schedule")]:
+        self.smart_v.setVisible(tab == "smart")
+        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config"), (self.ts, "schedule"), (self.ti, "smart")]:
             btn.setObjectName("tabBtnActive" if tab == key else "tabBtn")
-            btn.style().unpolish(btn); btn.style().polish(btn)
+            try:
+                btn.style().unpolish(btn); btn.style().polish(btn)
+            except Exception:
+                pass
         if tab == "accounts":
             self._ra()
             if self.accounts: self.at.setCurrentCell(0, 0)
@@ -614,6 +630,53 @@ class MainWindow(QMainWindow):
     def _restore_geometry(self) -> None: self.maint.restore_geometry()
     def _setup_tray(self) -> None: self.maint.setup_tray()
     def _show_tray(self) -> None: self.maint.show_tray()
+    def _show_todo(self) -> None:
+        issues = []
+        for a in self.accounts:
+            aid = a.get("id", "")
+            name = a.get("name", "").strip() or aid[:6]
+            if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+                issues.append((name, "未配置 ADB 地址或模拟器实例"))
+            progs = [w for w in self.warehouse if w.get("account_ref") == aid]
+            if not progs:
+                issues.append((name, "未绑定 MAA 程序"))
+            if self.config.get("smart_global", {}).get("enabled", False):
+                if not a.get("smart_stage", ""):
+                    issues.append((name, "智能模式开启但未设默认关卡"))
+        self._update_todo_badge(len(issues))
+        if not issues:
+            QMessageBox.information(self, "📋 配置待办", "所有账号配置齐全，暂无待办项。")
+            return
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
+        d = QDialog(self)
+        d.setWindowTitle(f"📋 配置待办 ({len(issues)})")
+        d.setMinimumSize(500, 350)
+        l = QVBoxLayout(d)
+        l.addWidget(QLabel("以下账号存在未完成的配置项："))
+        for acct, issue in issues:
+            l.addWidget(QLabel(f"  ⚠ {acct} — {issue}"))
+        btn = QPushButton("知道了")
+        btn.clicked.connect(d.accept)
+        l.addWidget(btn)
+        d.exec()
+
+    def _update_todo_badge(self, count: int = -1) -> None:
+        if count < 0:
+            count = 0
+            for a in self.accounts:
+                if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+                    count += 1
+                    continue
+                progs = [w for w in self.warehouse if w.get("account_ref") == a.get("id", "")]
+                if not progs:
+                    count += 1
+            if self.config.get("smart_global", {}).get("enabled", False):
+                for a in self.accounts:
+                    if not a.get("smart_stage", ""):
+                        count += 1
+        txt = "📋 待办" + (f" {count}" if count else "")
+        self._todo_btn.setText(txt)
+
     def closeEvent(self, e) -> None:
         if not self.isMinimized():
             self.config["window_geometry"]=f"{self.width()}x{self.height()}+{self.x()}+{self.y()}"

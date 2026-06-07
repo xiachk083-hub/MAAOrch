@@ -183,3 +183,79 @@ class ConfigService:
     def inject_for_thread(self, w: dict, ac: dict) -> None:
         """Called from PipelineThread (no MainWindow ref needed)."""
         self.inject(w, ac)
+
+    def inject_smart(self, task_list: list[str], ac: dict, w: dict) -> None:
+        """Inject smart-generated task list into MAA config."""
+        p = w.get("path", "")
+        md = Path(p).parent if p else None
+        if not md or not md.exists():
+            return
+        cd = md / "config"
+        cd.mkdir(parents=True, exist_ok=True)
+
+        def _write(fn):
+            gj = cd / fn
+            d = {}
+            if gj.exists():
+                try:
+                    d = json.loads(gj.read_text(encoding="utf-8"))
+                except Exception:
+                    d = {}
+            d.setdefault("Configurations", {}).setdefault("Default", {})
+            d.setdefault("Current", "Default")
+            d.setdefault("Global", {})
+            c = d["Configurations"]["Default"]
+            d.setdefault("Resource", {})["AutoUpdate"] = True
+
+            if ac.get("adb_address"):
+                c["Connect.Address"] = ac["adb_address"]
+            if ac.get("adb_path"):
+                c["Connect.AdbPath"] = ac["adb_path"]
+            pr = ac.get("connection_preset", "")
+            to = ac.get("touch_mode", "")
+            if pr:
+                c["Connect.ConnectConfig"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
+            if to:
+                c["Connect.TouchMode"] = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}.get(to, "minitouch")
+            c["Connect.AdbReplaced"] = "True"
+            c["Connect.AutoDetect"] = "False"
+            c["Connect.AlwaysAutoDetect"] = "False"
+            if ac.get("game_client"):
+                c["Start.ClientType"] = ac["game_client"]
+            c["Start.RunDirectly"] = "True"
+            c["Start.StartGame"] = "True"
+
+            smart_cfg = self.ctx.config.get("smart_global", {})
+            post = smart_cfg.get("post_action", "ExitArknights,ExitSelf")
+            c["MainFunction.PostActions"] = f'"{post}"'
+            c["Start.RunDirectly"] = "True"
+            c["Start.StartGame"] = "True"
+            c["Start.Minimized"] = "True"
+
+            emu_idx = ac.get("emu_instance_index", "")
+            if emu_idx and not ac.get("emu_launch"):
+                cli = find_mumu_cli()
+                if cli:
+                    c["Start.EmulatorPath"] = str(cli)
+                    c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
+                    c["Start.OpenEmulatorAfterLaunch"] = "True"
+                    if ac.get("emu_wait"):
+                        c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
+
+            tq = []
+            task_config_map = {
+                "Award": {"TaskType": "Award", "IsEnable": True, "Award": True, "Mail": False, "FreeGacha": False},
+                "Fight": {"TaskType": "Fight", "IsEnable": True},
+                "Infrast": {"TaskType": "Infrast", "IsEnable": True},
+                "Recruit": {"TaskType": "Recruit", "IsEnable": True},
+                "Mall": {"TaskType": "Mall", "IsEnable": True, "Shopping": True},
+            }
+            for t in task_list:
+                tmpl = task_config_map.get(t)
+                if tmpl:
+                    tq.append(dict(tmpl))
+            c["TaskQueue"] = tq
+            gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        _write("gui.json")
+        _write("gui.new.json")

@@ -215,9 +215,16 @@ class AccountRunner(QObject):
 
     def _launch_progs(self, ac: dict, progs: list[dict]) -> None:
         aid = ac["id"]
+        smart_enabled = self.ctx.config.get("smart_global", {}).get("enabled", False)
         for w in progs:
             try:
-                self.ctx.inject_config(w, ac)
+                if smart_enabled:
+                    from smart_scheduler import get_tasks_for_account
+                    task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
+                    self.log_msg.emit(f"🧠 智能调度: {','.join(task_list)}")
+                    self.ctx.cfg.inject_smart(task_list, ac, w)
+                else:
+                    self.ctx.inject_config(w, ac)
                 self.log_msg.emit(f"注入配置: {Path(w['path']).parent}/config/")
                 self._spawn(w, ac)
             except Exception as e:

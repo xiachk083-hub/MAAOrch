@@ -12,10 +12,19 @@ class EmuService:
     """ADB / emulator operations."""
     def __init__(self, ctx: ServiceContext) -> None:
         self.ctx = ctx
+        self._cached_instances: list[dict] | None = None
+        self._cache_time: float = 0
 
     def refresh_instance_list(
-        self, combo: QComboBox, saved_idx: str | None = None, saved_name: str | None = None
+        self, combo: QComboBox, saved_idx: str | None = None, saved_name: str | None = None,
+        force: bool = False
     ) -> None:
+        import time as _time
+        now = _time.time()
+        # Use cached results if less than 30s old and not forced
+        if not force and self._cached_instances and now - self._cache_time < 30:
+            self._populate_combo(combo, self._cached_instances, saved_idx, saved_name)
+            return
         combo.setEnabled(False)
         combo.addItem("⏳ 检测中...","")
         if hasattr(self,'_refresh_t') and self._refresh_t and self._refresh_t.isRunning():
@@ -26,27 +35,35 @@ class EmuService:
         def _done(instances):
             try:
                 if not hasattr(self.ctx._mw,'_sad_row'): return
-                combo.blockSignals(True)
-                try:
-                    combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
-                    selected=-1
-                    for j,ins in enumerate(instances):
-                        label=ins['name']; running=ins.get("running",False)
-                        ms=self.ctx.emu_status.get(ins.get("index",""),{})
-                        if ms.get("running"): running=True
-                        if running: label="▶ "+label
-                        if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
-                        combo.addItem(label,ins)
-                        if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
-                    if saved_name and not saved_idx:
-                        pass
-                    if selected>=0: combo.setCurrentIndex(selected)
-                finally:
-                    combo.blockSignals(False)
-                    combo.setEnabled(True)
+                self._cached_instances = instances
+                self._cache_time = _time.time()
+                self._populate_combo(combo, instances, saved_idx, saved_name)
             except RuntimeError:
                 pass
         self._refresh_t.result.connect(_done); self._refresh_t.start()
+
+    def _populate_combo(
+        self, combo: QComboBox, instances: list[dict],
+        saved_idx: str | None, saved_name: str | None
+    ) -> None:
+        combo.blockSignals(True)
+        try:
+            combo.clear(); combo.addItem(f"— 检测到 {len(instances)} 个实例 —","")
+            selected=-1
+            for j,ins in enumerate(instances):
+                label=ins['name']; running=ins.get("running",False)
+                ms=self.ctx.emu_status.get(ins.get("index",""),{})
+                if ms.get("running"): running=True
+                if running: label="▶ "+label
+                if ins.get("adb_port"): label+=f" (:{ins['adb_port']})"
+                combo.addItem(label,ins)
+                if saved_idx and str(ins.get("index",""))==str(saved_idx): selected=j+1
+            if saved_name and not saved_idx:
+                pass
+            if selected>=0: combo.setCurrentIndex(selected)
+        finally:
+            combo.blockSignals(False)
+            combo.setEnabled(True)
 
     def test_adb(self, a: dict) -> None:
         ad=a.get("adb_address","")
