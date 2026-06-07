@@ -267,14 +267,12 @@ class ConfigService:
                         if tt == "fight":
                             if run_annihilation:
                                 if has_fight and not anni_appended:
-                                    # Enable first Fight for regular farming
                                     item["UseCustomAnnihilation"] = False
                                     item["AnnihilationStage"] = ""
                                     item["UseMedicine"] = False
                                     farm_stage = day_stage or (item.get("StagePlan") or [None])[0] or ""
                                     item["StagePlan"] = [farm_stage] if farm_stage else item.get("StagePlan", [])
                                     item["IsStageManually"] = bool(farm_stage)
-                                    # Append second Fight for annihilation
                                     anni_item = dict(item)
                                     anni_item["IsEnable"] = True
                                     anni_item["UseCustomAnnihilation"] = True
@@ -287,7 +285,6 @@ class ConfigService:
                                     existing_tq.insert(existing_tq.index(item), anni_item)
                                     anni_appended = True
                                 elif not anni_appended:
-                                    # No farm Fight, replace this one with annihilation
                                     item["IsEnable"] = True
                                     item["UseCustomAnnihilation"] = True
                                     item["AnnihilationStage"] = anni
@@ -297,9 +294,6 @@ class ConfigService:
                                     item["UseMedicine"] = True
                                     item["MedicineCount"] = 999
                                     anni_appended = True
-                                elif anni_appended:
-                                    # Already appended, keep disabled
-                                    item["IsEnable"] = False
                             else:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
