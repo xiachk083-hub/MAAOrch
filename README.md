@@ -1,6 +1,6 @@
 # MAAOrch
 
-一键按顺序跑完多个号的配置。支持多账号独立配置、程序多实例检测、任务流水线调度。
+一键按顺序运行完成多个配置。支持多账号独立配置、模拟器管理、MAA 调度。
 
 ---
 
@@ -15,7 +15,12 @@ Windows 10/11, Python 3.12+。
 
 ## 功能一览
 
-分组管理、多账号独立配置、程序下载/更新、模拟器多实例检测、任务流水线、日志统计、进程守护、定时任务、循环调度、运行历史、暗色/亮色主题、Webhook 通知、HTTP API、开机自启。
+- 分组管理、多账号独立配置
+- 程序下载/更新、模拟器多实例检测
+- 任务流水线、日志统计、进程守护
+- 定时任务、循环调度、运行历史
+- 暗色/亮色主题、Webhook 通知
+- HTTP API、开机自启
 
 ## 目录结构
 
@@ -68,9 +73,10 @@ accounts/               各账号 MAA 目录
 | `Ctrl+Enter` | 启动流水线 |
 | `Esc` | 停止流水线 |
 
-
 ## 技术栈
 
-Python 3.12、PySide6 (Qt 6)、mumu-cli、ADB、maa-cli、GitHub Release API
+- Python 3.12、PySide6 (Qt 6)
+- mumu-cli、ADB、maa-cli
+- GitHub Release API
 
 本工具基于 [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)（AGPL-3.0）开发。
