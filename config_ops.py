@@ -261,46 +261,46 @@ class ConfigService:
                 anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
                 if existing_tq:
                     anni_appended = False
-                    for item in existing_tq:
+                    clean_tq = [item for item in existing_tq if not item.pop("_smart_inserted", None)]
+                    for item in clean_tq:
                         tt = item.get("TaskType", "").lower()
                         item["IsEnable"] = tt in task_set
-                        if tt == "fight":
-                            if run_annihilation:
-                                if has_fight and not anni_appended:
-                                    item["UseCustomAnnihilation"] = False
-                                    item["AnnihilationStage"] = ""
-                                    item["UseMedicine"] = False
-                                    farm_stage = day_stage or (item.get("StagePlan") or [None])[0] or ""
-                                    item["StagePlan"] = [farm_stage] if farm_stage else item.get("StagePlan", [])
-                                    item["IsStageManually"] = bool(farm_stage)
-                                    anni_item = dict(item)
-                                    anni_item["IsEnable"] = True
-                                    anni_item["UseCustomAnnihilation"] = True
-                                    anni_item["AnnihilationStage"] = anni
-                                    anni_item["StagePlan"] = [anni]
-                                    anni_item["IsStageManually"] = True
-                                    anni_item["StageResetMode"] = "Current"
-                                    anni_item["UseMedicine"] = True
-                                    anni_item["MedicineCount"] = 999
-                                    existing_tq.insert(existing_tq.index(item), anni_item)
-                                    anni_appended = True
-                                elif not anni_appended:
-                                    item["IsEnable"] = True
-                                    item["UseCustomAnnihilation"] = True
-                                    item["AnnihilationStage"] = anni
-                                    item["StagePlan"] = [anni]
-                                    item["IsStageManually"] = True
-                                    item["StageResetMode"] = "Current"
-                                    item["UseMedicine"] = True
-                                    item["MedicineCount"] = 999
-                                    anni_appended = True
-                            else:
+                        if tt == "fight" and run_annihilation:
+                            if has_fight and not anni_appended:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
                                 item["UseMedicine"] = False
-                                item["StagePlan"] = [day_stage] if day_stage else []
-                                item["IsStageManually"] = bool(day_stage)
-                    c["TaskQueue"] = existing_tq
+                                farm_stage = day_stage or (item.get("StagePlan") or [None])[0] or ""
+                                item["StagePlan"] = [farm_stage] if farm_stage else item.get("StagePlan", [])
+                                item["IsStageManually"] = bool(farm_stage)
+                                anni_item = dict(item)
+                                anni_item["IsEnable"] = True
+                                anni_item["_smart_inserted"] = True
+                                anni_item["UseCustomAnnihilation"] = True
+                                anni_item["AnnihilationStage"] = anni
+                                anni_item["StagePlan"] = [anni]
+                                anni_item["IsStageManually"] = True
+                                anni_item["StageResetMode"] = "Current"
+                                anni_item["UseMedicine"] = True
+                                anni_item["MedicineCount"] = 999
+                                clean_tq.insert(clean_tq.index(item), anni_item)
+                                anni_appended = True
+                            elif not anni_appended:
+                                item["UseCustomAnnihilation"] = True
+                                item["AnnihilationStage"] = anni
+                                item["StagePlan"] = [anni]
+                                item["IsStageManually"] = True
+                                item["StageResetMode"] = "Current"
+                                item["UseMedicine"] = True
+                                item["MedicineCount"] = 999
+                                anni_appended = True
+                        elif tt == "fight":
+                            item["UseCustomAnnihilation"] = False
+                            item["AnnihilationStage"] = ""
+                            item["UseMedicine"] = False
+                            item["StagePlan"] = [day_stage] if day_stage else []
+                            item["IsStageManually"] = bool(day_stage)
+                    c["TaskQueue"] = clean_tq
                 else:
                     c.pop("TaskQueue", None)
             else:
