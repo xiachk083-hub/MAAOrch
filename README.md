@@ -1,8 +1,8 @@
 # MAAOrch
 
-一键按顺序运行完成多个配置。支持多账号独立配置、模拟器管理、MAA 调度。
+MAAOrch 是一个轻量级的 MAA 多实例调度工具。你可以在一个界面上配置多套独立的运行环境，然后按顺序跑完。从模拟器启动、ADB 连接到 MAA 运行、任务完成，全流程自动处理。
 
----
+核心诉求很简单：不用再手动切换配置、一个个开 MAA。配置一次，之后点一下就好。
 
 ## 快速上手
 
@@ -70,13 +70,11 @@ accounts/               各账号 MAA 目录
 
 | 按键 | 功能 |
 |------|------|
-| `Ctrl+Enter` | 启动流水线 |
-| `Esc` | 停止流水线 |
+| `Ctrl+Enter` | 启动 |
+| `Esc` | 停止 |
 
 ## 技术栈
 
 - Python 3.12、PySide6 (Qt 6)
 - mumu-cli、ADB、maa-cli
 - GitHub Release API
-
-本工具基于 [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)（AGPL-3.0）开发。
