@@ -116,6 +116,7 @@ def _rebuild(mw: Any) -> None:
             frame = mw._card_widgets[aid]
             frame.setVisible(visible)
             if visible:
+                _update_card_status(frame, aid in running_ids, aid in queued_ids)
                 new_widgets[aid] = frame
                 grid.addWidget(frame, row, col)
                 col += 1
@@ -184,6 +185,25 @@ def _rebuild_tag_row(mw: Any) -> None:
 def _filter_tag(mw: Any, tag: str) -> None:
     mw._card_active_tag = tag
     _rebuild(mw)
+
+
+def _update_card_status(frame: QFrame, running: bool, queued: bool) -> None:
+    """Update existing card's visual state without recreating widgets."""
+    accent = A if running or queued else "transparent"
+    frame.setStyleSheet(frame.styleSheet().replace("border:2px solid #326cf3",
+        f"border:2px solid {accent}").replace("border:2px solid transparent",
+        f"border:2px solid {accent}"))
+    btn = getattr(frame, "_action_btn", None)
+    if btn:
+        if running:
+            btn.setText(" 运行中 "); btn.setEnabled(False)
+            btn.setStyleSheet(f"QPushButton{{background:transparent;color:{A};border:1px solid {A};border-radius:5px;font-size:9pt;padding:2px 8px;min-height:24px}}")
+        elif queued:
+            btn.setText(" 已排队 "); btn.setEnabled(False)
+            btn.setStyleSheet(f"QPushButton{{background:transparent;color:{A};border:1px solid {A};border-radius:5px;font-size:9pt;padding:2px 8px;min-height:24px}}")
+        else:
+            btn.setText("  ▶ 入队  "); btn.setEnabled(True)
+            btn.setStyleSheet(f"QPushButton{{background:{A};color:#fff;border:none;border-radius:5px;font-size:9pt;padding:4px 12px;min-height:24px}}QPushButton:hover{{background:#4070f5}}")
 
 
 def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool = False, queued: bool = False) -> QFrame:
@@ -290,6 +310,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool = False, qu
         btn.setToolTip("加入队列")
         btn.setStyleSheet(f"QPushButton{{background:{A};color:#fff;border:none;border-radius:5px;font-size:9pt;padding:4px 12px;min-height:24px}}QPushButton:hover{{background:#4070f5}}")
         btn.clicked.connect(lambda c, aid=a["id"]: _enqueue_by_id(mw, aid))
+    frame._action_btn = btn
     btn_row.addWidget(btn)
     btn_row.addStretch()
     fl.addLayout(btn_row)

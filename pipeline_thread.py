@@ -29,11 +29,14 @@ class PipelineThread(QThread):
             self.progress.emit(f"执行: {g.get('name','')}")
             if g.get("mode")=="parallel":
                 for ref in refs:
-                    if self.stop_flag: break; self._l(ref)
+                    if self.stop_flag: break
+                    self._l(ref)
             else:
                 for ref in refs:
-                    if self.stop_flag: break; self._sleep(ref.get("pre_delay",0))
-                    if self.stop_flag: break; self._l(ref)
+                    if self.stop_flag: break
+                    self._sleep(ref.get("pre_delay",0))
+                    if self.stop_flag: break
+                    self._l(ref)
             self._sleep(g.get("post_delay",3))
         self.finished.emit(self.stop_flag)
     def _l(self, ref: dict) -> None:

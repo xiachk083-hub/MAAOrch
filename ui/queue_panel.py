@@ -380,7 +380,8 @@ def _rebuild_queue_combo(mw: Any) -> None:
 
 def _on_search(mw: Any, text: str) -> None:
     combo = mw._queue_combo
-    combo.blockSignals(True)
+    le = combo.lineEdit()
+    le.blockSignals(True)
     combo.clear()
     ft = text.strip().lower()
     for a in mw.accounts:
@@ -395,7 +396,7 @@ def _on_search(mw: Any, text: str) -> None:
         combo.addItem(f"{status} {a.get('name', '')}  [{a.get('game_client', '')}]", a["id"])
     if combo.count() > 0:
         combo.showPopup()
-    combo.blockSignals(False)
+    le.blockSignals(False)
 
 
 def _enqueue_from_combo(mw: Any) -> None:

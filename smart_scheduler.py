@@ -162,7 +162,7 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
                 if (cur / mx) * 100 >= threshold:
                     return True
                 # Data older than 30 min → stamina likely recovered
-                ts = r.get("timestamp", "")
+                ts = r.get("ts", "")
                 if ts:
                     from datetime import datetime
                     try:
