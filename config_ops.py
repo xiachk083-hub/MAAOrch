@@ -252,7 +252,8 @@ class ConfigService:
             if use_v6:
                 task_set = {t.lower() for t in task_list}
                 run_annihilation = "annihilation" in task_set
-                today_key = datetime.now().strftime("%A").lower()[:3]
+                weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
+                today_key = weekday_names[datetime.now().weekday()]
                 day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
 
                 existing_tq = c.get("TaskQueue", [])
