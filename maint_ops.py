@@ -15,16 +15,25 @@ from callbacks import ServiceContext
 
 
 _INSTANCE_LOCK = threading.Lock()
+_inst_init_task = None  # prevent GC of BackgroundTask
+
 
 def ensure_maa_instances_async(ctx) -> None:
     """Create instance #1 only. The rest are created lazily on demand."""
+    global _inst_init_task
     with _INSTANCE_LOCK:
         if ctx.config.get("maa_instances", 0) > 0:
+            return
+        # Also check if instance 1 already exists on disk (e.g. from previous run)
+        if (Path(__file__).parent / "maa" / "instances" / "1" / "MAA.exe").exists():
+            ctx.config["maa_instances"] = 1
+            ctx.save()
             return
         src = _find_maa_source()
         if not src:
             return
     from background import BackgroundTask
+
     def _init():
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
@@ -36,11 +45,17 @@ def ensure_maa_instances_async(ctx) -> None:
             shutil.move(str(src), str(inst1))
         else:
             shutil.copytree(str(src), str(inst1))
+
+    def _on_finish():
+        """Runs on main thread after BackgroundTask finishes."""
         with _INSTANCE_LOCK:
             ctx.config["maa_instances"] = 1
             ctx.save()
+
     with _INSTANCE_LOCK:
         t = BackgroundTask(_init)
+        t.finished.connect(_on_finish)
+        _inst_init_task = t
         t.start()
 
 
