@@ -5,13 +5,14 @@ from datetime import datetime
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
+from themes import BTN_DELETE
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QComboBox,
+    QComboBox, QDialog, QGroupBox,
 )
 
-_TABLE_STYLE = "QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:1px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #333;padding:3px 6px;font-size:9pt;font-weight:bold}"
+_TABLE_STYLE = "QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:1px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #2b2b30;padding:3px 6px;font-size:9pt;font-weight:bold}"
 
 
 def build_queue_panel(mw: Any) -> QWidget:
@@ -21,9 +22,9 @@ def build_queue_panel(mw: Any) -> QWidget:
     qvl.setContentsMargins(6, 6, 6, 6)
     qvl.setSpacing(8)
 
-    # ── Quick enqueue bar ──
+    # ── Quick enqueue bar (no card) ──
     enq_row = QHBoxLayout()
-    enq_row.addWidget(QLabel("快速入队:", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    enq_row.addWidget(QLabel("⚡ 快速入队", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
     mw._queue_combo = QComboBox()
     mw._queue_combo.setEditable(True)
     mw._queue_combo.setMinimumWidth(160)
@@ -38,8 +39,7 @@ def build_queue_panel(mw: Any) -> QWidget:
     qvl.addLayout(enq_row)
 
     # ── Running section ──
-    running_lbl = QLabel("▶ 运行中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold))
-    qvl.addWidget(running_lbl)
+    qvl.addWidget(QLabel("▶ 运行中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
     mw._queue_running_tbl = QTableWidget(0, 4)
     mw._queue_running_tbl.setHorizontalHeaderLabels(["账号", "当前任务", "", "👁"])
     mw._queue_running_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -55,14 +55,14 @@ def build_queue_panel(mw: Any) -> QWidget:
     qvl.addWidget(mw._queue_running_tbl)
 
     # ── Waiting section ──
-    wait_row = QHBoxLayout()
-    wait_row.addWidget(QLabel("⏳ 等待中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
-    wait_row.addStretch()
+    wr = QHBoxLayout()
+    wr.addWidget(QLabel("⏳ 等待中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    wr.addStretch()
     clear_btn = QPushButton("清空")
-    clear_btn.setStyleSheet("QPushButton{color:#888;border:1px solid #555;border-radius:4px;padding:2px 8px;font-size:8pt}QPushButton:hover{color:#d32f2f;border-color:#d32f2f}")
+    clear_btn.setStyleSheet("QPushButton{color:#888;border:1px solid #2b2b30;border-radius:4px;padding:4px 12px;font-size:9pt}QPushButton:hover{color:#e6e6e6;border-color:#555}")
     clear_btn.clicked.connect(lambda: _clear_queue(mw))
-    wait_row.addWidget(clear_btn)
-    qvl.addLayout(wait_row)
+    wr.addWidget(clear_btn)
+    qvl.addLayout(wr)
     mw._queue_waiting_tbl = QTableWidget(0, 5)
     mw._queue_waiting_tbl.setHorizontalHeaderLabels(["账号", "来源", "预计", "位置", ""])
     mw._queue_waiting_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -97,6 +97,110 @@ def build_queue_panel(mw: Any) -> QWidget:
     return mw.qv
 
 
+def build_queue_dialog(mw: Any) -> None:
+    """Show a popup dialog with running/queued account status."""
+    from PySide6.QtCore import QTimer
+    d = QDialog(mw)
+    d.setWindowTitle("队列状态")
+    d.setMinimumSize(400, 280)
+    l = QVBoxLayout(d)
+
+    running_grp = QGroupBox("▶ 运行中")
+    rl = QVBoxLayout(running_grp)
+    running_tbl = QTableWidget(0, 3)
+    running_tbl.setHorizontalHeaderLabels(["账号", "状态", "时长"])
+    running_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+    running_tbl.setColumnWidth(1, 100)
+    running_tbl.setColumnWidth(2, 70)
+    running_tbl.verticalHeader().setVisible(False)
+    running_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
+    rl.addWidget(running_tbl)
+    l.addWidget(running_grp)
+
+    queue_grp = QGroupBox("⏳ 排队中")
+    ql = QVBoxLayout(queue_grp)
+    queue_tbl = QTableWidget(0, 5)
+    queue_tbl.setHorizontalHeaderLabels(["账号", "来源", "优先级", "预计启动", ""])
+    queue_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+    queue_tbl.setColumnWidth(1, 60)
+    queue_tbl.setColumnWidth(2, 50)
+    queue_tbl.setColumnWidth(3, 100)
+    queue_tbl.setColumnWidth(4, 50)
+    queue_tbl.verticalHeader().setVisible(False)
+    queue_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
+    ql.addWidget(queue_tbl)
+    l.addWidget(queue_grp)
+
+    def _refresh():
+        import time
+        running = []
+        if hasattr(mw, "runner"):
+            for aid in mw.runner.active_ids():
+                a = next((x for x in mw.accounts if x["id"] == aid), None)
+                name = a["name"] if a else aid[:8]
+                t = int(time.time() - mw.runner._start_times.get(aid, 0))
+                running.append((name, f"运行中 {t//60}m{t%60}s", ""))
+            for pid in list(getattr(mw, "_running_procs", {}).keys()):
+                p = mw._running_procs[pid]
+                if p.poll() is None:
+                    w = next((x for x in mw.warehouse if x["id"] == pid), None)
+                    ac = next((x for x in mw.accounts if x["id"] == w.get("account_ref", "")), None) if w else None
+                    name = ac["name"] if ac else (__import__("pathlib").Path(w["path"]).stem if w else pid[:8])
+                    t = int(time.time() - mw._proc_start_times.get(pid, 0))
+                    running.append((name, f"运行中 {t//60}m{t%60}s", ""))
+        running_tbl.setRowCount(max(1, len(running)) if running else 1)
+        if running:
+            for i, (name, status, _) in enumerate(running):
+                running_tbl.setItem(i, 0, QTableWidgetItem(name))
+                running_tbl.setItem(i, 1, QTableWidgetItem(status))
+        else:
+            running_tbl.setItem(0, 0, QTableWidgetItem("—"))
+            running_tbl.setItem(0, 1, QTableWidgetItem("无"))
+
+        queue = []
+        if hasattr(mw, "launch_queue"):
+            src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
+            now = __import__("datetime").datetime.now()
+            for e in sorted(mw.launch_queue._pending, key=lambda x: x.sort_key):
+                a = next((x for x in mw.accounts if x["id"] == e.account_id), None)
+                name = a["name"] if a else e.account_id[:8]
+                when = ""
+                if e.not_before > now:
+                    diff = int((e.not_before - now).total_seconds() / 60)
+                    when = e.not_before.strftime("%m-%d %H:%M") if diff > 60 else f"{diff}分钟后"
+                else:
+                    when = "等待空闲"
+                queue.append((name, src_map.get(e.source, e.source), str(e.sort_key[0]), when, e.account_id))
+        queue_tbl.setRowCount(max(1, len(queue)) if queue else 1)
+        if queue:
+            for i, (name, src, pri, when, aid) in enumerate(queue):
+                queue_tbl.setItem(i, 0, QTableWidgetItem(name))
+                queue_tbl.setItem(i, 1, QTableWidgetItem(src))
+                queue_tbl.setItem(i, 2, QTableWidgetItem(pri))
+                queue_tbl.setItem(i, 3, QTableWidgetItem(when))
+                cancel_btn = QPushButton("✕")
+                cancel_btn.setFixedSize(mw._btn_lg, mw._btn_lg)
+                cancel_btn.setStyleSheet(BTN_DELETE.format(r=mw._btn_lg // 2))
+                cancel_btn.setToolTip("取消排队")
+                cancel_btn.clicked.connect(lambda c, a=aid: (mw.launch_queue.dequeue(a), _refresh()))
+                cw = QWidget()
+                cwl = QHBoxLayout(cw)
+                cwl.setContentsMargins(0, 0, 0, 0)
+                cwl.setAlignment(Qt.AlignCenter)
+                cwl.addWidget(cancel_btn)
+                queue_tbl.setCellWidget(i, 4, cw)
+        else:
+            queue_tbl.setItem(0, 0, QTableWidgetItem("—"))
+            queue_tbl.setItem(0, 1, QTableWidgetItem("无"))
+
+    _refresh()
+    timer = QTimer(d)
+    timer.timeout.connect(_refresh)
+    timer.start(2000)
+    d.finished.connect(timer.stop)
+    d.exec()
+
+
 def refresh_queue_view(mw: Any) -> None:
     """Update the queue panel with current state."""
     if not hasattr(mw, "_queue_running_tbl"):
@@ -105,7 +209,6 @@ def refresh_queue_view(mw: Any) -> None:
     import time
     now = datetime.now()
 
-    # Rebuild combo on refresh (account list may have changed)
     if hasattr(mw, "_queue_combo") and not mw._queue_combo.hasFocus():
         _rebuild_queue_combo(mw)
 
@@ -127,18 +230,16 @@ def refresh_queue_view(mw: Any) -> None:
     for i, (name, status, aid, acc_idx) in enumerate(running):
         tbl.setItem(i, 0, QTableWidgetItem(name))
         tbl.setItem(i, 1, QTableWidgetItem(status))
-        # Stop button
         stop_btn = QPushButton("✕")
-        stop_btn.setFixedSize(24, 24)
+        stop_btn.setFixedSize(28, 28)
         stop_btn.setToolTip("停止")
-        stop_btn.setStyleSheet("QPushButton{background:transparent;color:#d32f2f;border:none;font-weight:bold}QPushButton:hover{background:#d32f2f;color:#fff;border-radius:12px}")
+        stop_btn.setStyleSheet(BTN_DELETE.format(r=14))
         stop_btn.clicked.connect(lambda c, a=aid: (mw.runner.stop(a), refresh_queue_view(mw)))
         sw = QWidget()
         swl = QHBoxLayout(sw); swl.setContentsMargins(0,0,0,0); swl.setAlignment(Qt.AlignCenter); swl.addWidget(stop_btn)
         tbl.setCellWidget(i, 2, sw)
-        # Jump to account button
         eye_btn = QPushButton("👁")
-        eye_btn.setFixedSize(20, 20)
+        eye_btn.setFixedSize(28, 28)
         eye_btn.setToolTip("查看账号详情")
         eye_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none;font-size:8pt}QPushButton:hover{color:#fff}")
         eye_btn.clicked.connect(lambda c, r=acc_idx: (_jump_to_account(mw, r)))
@@ -161,7 +262,6 @@ def refresh_queue_view(mw: Any) -> None:
                 when = f"{diff}分钟后" if diff < 60 else e.not_before.strftime("%H:%M")
             else:
                 when = "等待空闲"
-            # Estimated wait: positions ahead × avg run time (~20min)
             est = f"#{pos + 1}"
             if active_count > 0:
                 est += f" (~{20 * pos}min)"
@@ -175,9 +275,9 @@ def refresh_queue_view(mw: Any) -> None:
         wt.setItem(i, 2, QTableWidgetItem(when))
         wt.setItem(i, 3, QTableWidgetItem(pos))
         cancel_btn = QPushButton("✕")
-        cancel_btn.setFixedSize(24, 24)
+        cancel_btn.setFixedSize(28, 28)
         cancel_btn.setToolTip("取消排队")
-        cancel_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none}QPushButton:hover{background:#d32f2f;color:#fff;border-radius:12px}")
+        cancel_btn.setStyleSheet(BTN_DELETE.format(r=14))
         cancel_btn.clicked.connect(lambda c, a=aid: (mw.launch_queue.dequeue(a), refresh_queue_view(mw)))
         sw = QWidget()
         swl = QHBoxLayout(sw); swl.setContentsMargins(0,0,0,0); swl.setAlignment(Qt.AlignCenter); swl.addWidget(cancel_btn)
@@ -190,7 +290,7 @@ def refresh_queue_view(mw: Any) -> None:
         for a in mw.accounts:
             st = RunStats(a["id"])
             runs = st._data.get("runs", [])
-            for r in runs[-3:]:  # last 3 per account
+            for r in runs[-3:]:
                 tasks_str = ",".join(r.get("tasks", {}).keys())
                 done = sum(1 for v in r.get("tasks", {}).values() if v == "完成")
                 total = len(r.get("tasks", {}))
@@ -209,7 +309,6 @@ def refresh_queue_view(mw: Any) -> None:
 
 
 def _rebuild_queue_combo(mw: Any) -> None:
-    """Rebuild the search combo with all account names."""
     if not hasattr(mw, "_queue_combo"):
         return
     cur = mw._queue_combo.currentText()
@@ -228,7 +327,6 @@ def _rebuild_queue_combo(mw: Any) -> None:
 
 
 def _on_search(mw: Any, text: str) -> None:
-    """Filter the combo dropdown based on search text."""
     combo = mw._queue_combo
     combo.blockSignals(True)
     combo.clear()
@@ -249,11 +347,9 @@ def _on_search(mw: Any, text: str) -> None:
 
 
 def _enqueue_from_combo(mw: Any) -> None:
-    """Enqueue the selected account from the search combo."""
     combo = mw._queue_combo
     aid = combo.currentData()
     if not aid:
-        # Try by name
         text = combo.currentText().strip()
         for a in mw.accounts:
             if a.get("name", "") == text:
@@ -266,7 +362,6 @@ def _enqueue_from_combo(mw: Any) -> None:
 
 
 def _current_task_name(mw: Any, aid: str) -> str | None:
-    """Read asst.log tail for current task name."""
     try:
         progs = mw.runner._progs.get(aid, [])
         if progs:
@@ -289,7 +384,6 @@ def _current_task_name(mw: Any, aid: str) -> str | None:
 
 
 def _jump_to_account(mw: Any, idx: int) -> None:
-    """Switch to accounts tab and select the account."""
     mw._sw("accounts")
     if 0 <= idx < len(mw.accounts):
         for i in range(mw.at.rowCount()):
@@ -300,7 +394,6 @@ def _jump_to_account(mw: Any, idx: int) -> None:
 
 
 def _clear_queue(mw: Any) -> None:
-    """Clear all pending queue entries."""
     if hasattr(mw, "launch_queue"):
         mw.launch_queue._pending.clear()
         mw.launch_queue._save_queue()

@@ -77,6 +77,41 @@ def find_mumu_cli() -> str | None:
         except Exception: pass
     return None
 
+def find_adb() -> str | None:
+    """Find adb.exe near mumu-cli or by scanning drives."""
+    # 1. Next to mumu-cli or common relative paths
+    cli = find_mumu_cli()
+    if cli:
+        cli_p = Path(cli).parent
+        mumu_p = cli_p.parent  # MuMuPlayer root
+        for cand in [cli_p/"adb.exe",
+                     cli_p.parent/"shell"/"adb.exe",
+                     cli_p.parent.parent/"shell"/"adb.exe",
+                     mumu_p/"nx_device"/"12.0"/"shell"/"adb.exe",
+                     mumu_p/"nx_device"/"11.0"/"shell"/"adb.exe",
+                     mumu_p/"shell"/"adb.exe"]:
+            try:
+                if cand.exists(): return str(cand)
+            except: pass
+    # 2. Drive-wide search for MuMuPlayer directories
+    import os as _os
+    ADB_CANDIDATES = ["shell\\adb.exe", "nx_device\\12.0\\shell\\adb.exe",
+                      "nx_device\\11.0\\shell\\adb.exe"]
+    for drv in "CDEFGH":
+        try:
+            root = Path(f"{drv}:\\")
+            if not root.exists(): continue
+            for d in root.iterdir():
+                if not d.is_dir(): continue
+                if "mumu" not in d.name.lower(): continue
+                for sub in ADB_CANDIDATES:
+                    p = d / sub
+                    try:
+                        if p.exists(): return str(p)
+                    except: pass
+        except: pass
+    return None
+
 def detect_emu_instances() -> list[dict]:
     """Detect all emulator instances via mumu-cli or directory scan"""
     instances=[]

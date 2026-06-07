@@ -37,7 +37,7 @@ def build_schedule_panel(mw: Any) -> QWidget:
     mw._sch_batch_time = QLineEdit(mw.config.get("daily_batch_time", ""))
     mw._sch_batch_time.setPlaceholderText("04:00")
     mw._sch_batch_time.setFixedWidth(50)
-    mw._sch_batch_time.setStyleSheet("QLineEdit{color:#ccc;background:transparent;border:1px solid #555;border-radius:3px;padding:2px 4px;font-size:9pt}")
+    mw._sch_batch_time.setStyleSheet("")
     bar.addWidget(mw._sch_batch_time)
 
     bar.addWidget(QLabel(" 距满差"))
@@ -50,7 +50,7 @@ def build_schedule_panel(mw: Any) -> QWidget:
     bar.addStretch()
 
     save_btn = QPushButton("保存")
-    save_btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:4px;padding:2px 10px;font-size:9pt}QPushButton:hover{background:#1e5a28}")
+    save_btn.setObjectName("startBtn")
     save_btn.clicked.connect(lambda: _save_schedule(mw))
     bar.addWidget(save_btn)
     svl.addLayout(bar)
@@ -66,13 +66,13 @@ def build_schedule_panel(mw: Any) -> QWidget:
     tbl.verticalHeader().setVisible(False); tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     tbl.setShowGrid(False); tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
-    tbl.setStyleSheet("QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:1px 6px} QHeaderView::section{color:#777;background:transparent;border:none;border-bottom:1px solid #333;padding:3px 6px;font-size:8pt}")
+    tbl.setStyleSheet("QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:1px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #2b2b30;padding:3px 6px;font-size:8pt}")
     mw._sch_tbl = tbl
     svl.addWidget(tbl, 1)
 
     # ── Hint ──
     ft = QLabel(" 距满差 0 = 回满启动    |    每日批量到点全部入队    |    跑完自动算恢复时间")
-    ft.setStyleSheet("color:#555;font-size:7pt;padding:2px")
+    ft.setStyleSheet("color:#666;font-size:7pt;padding:2px")
     svl.addWidget(ft)
 
     return mw.sv

@@ -8,13 +8,12 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QScrollArea, QFrame, QGridLayout, QSizePolicy,
 )
+from themes import A
 from dialogs import AccountDialog
-
-# Tag colors (cycling)
 TAG_COLORS = [
-    ("#1976d2", "#e3f2fd"), ("#388e3c", "#e8f5e9"), ("#f57c00", "#fff3e0"),
-    ("#7b1fa2", "#f3e5f5"), ("#c62828", "#ffebee"), ("#00838f", "#e0f7fa"),
-    ("#5d4037", "#efebe9"), ("#4527a0", "#ede7f6"),
+    (A, "#e0e8ff"), ("#4a8abf", "#e0f0ff"), ("#5a7aaa", "#e8eef5"),
+    (A, "#e0e8ff"), ("#4a8abf", "#e0f0ff"), ("#5a7aaa", "#e8eef5"),
+    (A, "#e0e8ff"), ("#4a8abf", "#e0f0ff"),
 ]
 
 
@@ -86,9 +85,8 @@ def _rebuild(mw: Any) -> None:
     if not hasattr(mw, "_card_grid"):
         return
     grid = mw._card_grid
-    while grid.count():
-        w = grid.takeAt(0).widget()
-        if w: w.setParent(None)
+    if not hasattr(mw, "_card_widgets"):
+        mw._card_widgets = {}
 
     search = mw._card_search.text().strip().lower() if hasattr(mw, "_card_search") else ""
     active_tag = getattr(mw, "_card_active_tag", "")
@@ -104,21 +102,42 @@ def _rebuild(mw: Any) -> None:
         running_ids = set(mw.launch_queue._active_emus.values())
         queued_ids = set(e.account_id for e in mw.launch_queue._pending)
 
+    new_widgets = {}
+    account_ids = {a["id"] for a in mw.accounts}
+
     for i, a in enumerate(mw.accounts):
+        aid = a["id"]
         name = a.get("name", "").lower()
         tags = a.get("tags", "").lower()
-        if search and search not in name and search not in tags:
-            continue
-        if active_tag and active_tag not in tags:
-            continue
-        is_running = a["id"] in running_ids
-        is_queued = a["id"] in queued_ids
-        frame = _make_card(mw, a, i, cw, is_running, is_queued)
-        grid.addWidget(frame, row, col)
-        col += 1
-        if col >= col_count:
-            col = 0; row += 1
-        shown += 1
+        visible = not (search and search not in name and search not in tags)
+        visible = visible and not (active_tag and active_tag not in tags)
+
+        if aid in mw._card_widgets:
+            frame = mw._card_widgets[aid]
+            frame.setVisible(visible)
+            if visible:
+                new_widgets[aid] = frame
+                grid.addWidget(frame, row, col)
+                col += 1
+                if col >= col_count:
+                    col = 0; row += 1
+                shown += 1
+        elif visible:
+            is_running = aid in running_ids
+            is_queued = aid in queued_ids
+            frame = _make_card(mw, a, i, cw, running=is_running, queued=is_queued)
+            new_widgets[aid] = frame
+            grid.addWidget(frame, row, col)
+            col += 1
+            if col >= col_count:
+                col = 0; row += 1
+            shown += 1
+
+    # Remove cards for deleted accounts
+    for aid, frame in mw._card_widgets.items():
+        if aid not in account_ids:
+            frame.deleteLater()
+    mw._card_widgets = new_widgets
 
     if hasattr(mw, "_card_count"):
         total = len(mw.accounts)
@@ -129,7 +148,7 @@ def _rebuild_tag_row(mw: Any) -> None:
     row = mw._card_tag_row
     while row.count() > 1:
         w = row.takeAt(1).widget()
-        if w: w.setParent(None)
+        if w: w.deleteLater()
 
     all_tags: set[str] = set()
     for a in mw.accounts:
@@ -145,7 +164,7 @@ def _rebuild_tag_row(mw: Any) -> None:
     active = getattr(mw, "_card_active_tag", "")
     all_btn = QPushButton("全部")
     all_btn.setFlat(True)
-    base = "QPushButton{padding:1px 6px;font-size:9pt}"
+    base = "QPushButton{padding:2px 10px;font-size:9pt;min-height:22px}"
     all_btn.setStyleSheet(f"{base}QPushButton{{color:#fff;background:#555;border-radius:4px}}" if not active else f"{base}QPushButton{{color:#888;border:none}}QPushButton:hover{{color:#fff}}")
     all_btn.clicked.connect(lambda: _filter_tag(mw, ""))
     row.addWidget(all_btn)
@@ -155,9 +174,9 @@ def _rebuild_tag_row(mw: Any) -> None:
         btn = QPushButton(tag)
         btn.setFlat(True)
         if tag == active:
-            btn.setStyleSheet(f"QPushButton{{color:#fff;background:{bg};border-radius:4px;padding:1px 6px;font-size:9pt}}")
+            btn.setStyleSheet(f"QPushButton{{color:#fff;background:{bg};border-radius:4px;padding:2px 10px;font-size:9pt;min-height:22px}}")
         else:
-            btn.setStyleSheet(f"QPushButton{{color:{bg};border:1px solid {bg};border-radius:4px;padding:1px 6px;font-size:9pt}}QPushButton:hover{{background:{bg};color:#fff}}")
+            btn.setStyleSheet(f"QPushButton{{color:{bg};border:1px solid {bg};border-radius:4px;padding:2px 10px;font-size:9pt;min-height:22px}}QPushButton:hover{{background:{bg};color:#fff}}")
         btn.clicked.connect(lambda c, t=tag: _filter_tag(mw, t))
         row.addWidget(btn)
 
@@ -167,23 +186,21 @@ def _filter_tag(mw: Any, tag: str) -> None:
     _rebuild(mw)
 
 
-def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bool) -> QFrame:
+def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool = False, queued: bool = False) -> QFrame:
     frame = QFrame()
     frame.setObjectName("configCard")
     frame.setFixedWidth(width)
     frame.setMinimumHeight(140)
 
-    # Border color for run status
-    accent = "#4a4" if running else ("#c90" if queued else "#444")
+    accent = A if running or queued else "transparent"
     frame.setStyleSheet(f"""
         QFrame#configCard{{
             border:2px solid {accent};
             border-radius:8px;
-            background:rgba(255,255,255,0.04);
+            background:transparent;
         }}
         QFrame#configCard:hover{{
-            border-color:#888;
-            background:rgba(255,255,255,0.07);
+            border-color:{A};
         }}
     """)
 
@@ -196,7 +213,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     name_row.setSpacing(5)
     name_lbl = QLabel(a.get("name", ""))
     name_lbl.setFont(QFont("Microsoft YaHei UI", 9, QFont.Bold))
-    name_lbl.setStyleSheet("color:#ddd")
+    name_lbl.setStyleSheet("color:#e6e6e6")
     name_row.addWidget(name_lbl, 1)
     fl.addLayout(name_row)
 
@@ -216,7 +233,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
         dev_parts.append("🖥 自启")
     if dev_parts:
         dev_lbl = QLabel(" · ".join(dev_parts))
-        dev_lbl.setStyleSheet("color:#999;font-size:8pt")
+        dev_lbl.setStyleSheet("color:#888;font-size:8pt")
         fl.addWidget(dev_lbl)
 
     # ── Pipeline ──
@@ -226,7 +243,7 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
         name_map = {"startup":"唤醒","fight":"刷关","recruit":"公招","infrast":"基建","mall":"信用","award":"奖励","roguelike":"肉鸽","reclamation":"生息","closedown":"关闭"}
         tasks = [name_map.get(t.strip().lower(), t.strip()) for t in pipe.split(",") if t.strip()][:4]
         pipe_lbl = QLabel(f"⚙ {','.join(tasks)}")
-        pipe_lbl.setStyleSheet("color:#aaa;font-size:8pt")
+        pipe_lbl.setStyleSheet("color:#888;font-size:8pt")
         fl.addWidget(pipe_lbl)
 
     # ── Badges row: sanity + tags ──
@@ -255,29 +272,51 @@ def _make_card(mw: Any, a: dict, idx: int, width: int, running: bool, queued: bo
     btn_row.addStretch()
     edit_btn = QPushButton("  ✏️  ")
     edit_btn.setToolTip("编辑")
-    edit_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none;font-size:9pt;padding:2px 6px}QPushButton:hover{color:#fff;background:rgba(255,255,255,0.1);border-radius:4px}")
-    edit_btn.clicked.connect(lambda c, i=idx: _edit(mw, i))
+    edit_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none;font-size:9pt;padding:2px 8px;min-height:24px}QPushButton:hover{color:#e6e6e6;background:#333;border-radius:4px}")
+    edit_btn.clicked.connect(lambda c, aid=a["id"]: _edit_by_id(mw, aid))
     btn_row.addWidget(edit_btn)
 
     # State-aware launch button
     if running:
         btn = QPushButton(" 运行中 ")
         btn.setEnabled(False)
-        btn.setStyleSheet("QPushButton{background:transparent;color:#4a4;border:1px solid #4a4;border-radius:5px;font-size:9pt;padding:2px 6px}")
+        btn.setStyleSheet(f"QPushButton{{background:transparent;color:{A};border:1px solid {A};border-radius:5px;font-size:9pt;padding:2px 8px;min-height:24px}}")
     elif queued:
         btn = QPushButton(" 已排队 ")
         btn.setEnabled(False)
-        btn.setStyleSheet("QPushButton{background:transparent;color:#c90;border:1px solid #c90;border-radius:5px;font-size:9pt;padding:2px 6px}")
+        btn.setStyleSheet(f"QPushButton{{background:transparent;color:{A};border:1px solid {A};border-radius:5px;font-size:9pt;padding:2px 8px;min-height:24px}}")
     else:
         btn = QPushButton("  ▶ 入队  ")
         btn.setToolTip("加入队列")
-        btn.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:5px;font-size:9pt;padding:2px 8px}QPushButton:hover{background:#1e5a28}")
-        btn.clicked.connect(lambda c, i=idx: _enqueue(mw, i))
+        btn.setStyleSheet(f"QPushButton{{background:{A};color:#fff;border:none;border-radius:5px;font-size:9pt;padding:4px 12px;min-height:24px}}QPushButton:hover{{background:#4070f5}}")
+        btn.clicked.connect(lambda c, aid=a["id"]: _enqueue_by_id(mw, aid))
     btn_row.addWidget(btn)
     btn_row.addStretch()
     fl.addLayout(btn_row)
 
     return frame
+
+
+def _enqueue(mw: Any, idx: int) -> None:
+    if idx < 0 or idx >= len(mw.accounts):
+        return
+    mw.launch_queue.enqueue(mw.accounts[idx]["id"], "manual", priority=0)
+    mw.launch_queue._tick()
+    _rebuild(mw)
+
+
+def _enqueue_by_id(mw: Any, aid: str) -> None:
+    for i, a in enumerate(mw.accounts):
+        if a["id"] == aid:
+            _enqueue(mw, i)
+            return
+
+
+def _edit_by_id(mw: Any, aid: str) -> None:
+    for i, a in enumerate(mw.accounts):
+        if a["id"] == aid:
+            _edit(mw, i)
+            return
 
 
 def _edit(mw: Any, idx: int) -> None:
@@ -298,9 +337,4 @@ def _edit(mw: Any, idx: int) -> None:
         _rebuild(mw)
 
 
-def _enqueue(mw: Any, idx: int) -> None:
-    if idx < 0 or idx >= len(mw.accounts):
-        return
-    mw.launch_queue.enqueue(mw.accounts[idx]["id"], "manual", priority=0)
-    mw.launch_queue._tick()
-    _rebuild(mw)
+

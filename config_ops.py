@@ -34,7 +34,7 @@ class ConfigService:
         if ac.get("adb_address"): pls.append(f'address="{ac["adb_address"]}"')
         if ac.get("adb_path"): pls.append(f'adb_path="{ac["adb_path"].replace(chr(92),chr(92)+chr(92))}"')
         if ac.get("connection_preset"): pls.append(f'preset="{ac["connection_preset"]}"')
-        pls.extend(["[instance_options]",f'touch_mode="{ac.get("touch_mode","ADB")}"']); (pd/"default.toml").write_text("\n".join(pls)+"\n",encoding="utf-8")
+        pls.extend(["[instance_options]",f'touch_mode="{ac.get("touch_mode","MiniTouch")}"']); (pd/"default.toml").write_text("\n".join(pls)+"\n",encoding="utf-8")
         return "daily"
 
     def inject(self, w: dict, ac: dict) -> None:
@@ -53,7 +53,7 @@ class ConfigService:
             if ac.get("adb_path"): c["Connect.AdbPath"]=ac["adb_path"]
             pr=ac.get("connection_preset",""); to=ac.get("touch_mode","")
             if pr: c["Connect.ConnectConfig"]={"MuMuPro":"MuMuEmulator12"}.get(pr,pr)
-            if to: c["Connect.TouchMode"]={"MiniTouch":"minitouch","MaaTouch":"maatouch","ADB":"adb"}.get(to,"adb")
+            if to: c["Connect.TouchMode"]={"MiniTouch":"minitouch","MaaTouch":"maatouch","ADB":"adb"}.get(to,"minitouch")
             c["Connect.AdbReplaced"]="True"; c["Connect.AutoDetect"]="False"; c["Connect.AlwaysAutoDetect"]="False"
             if ac.get("game_client"): c["Start.ClientType"]=ac["game_client"]
             sw=ac.get("account_switch","")

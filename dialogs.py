@@ -117,7 +117,7 @@ class AccountDialog(QDialog):
         self.adr=QLineEdit(self.a.get("adb_address","")); self.adr.setPlaceholderText("例如: 127.0.0.1:7555"); f.addRow(_lbl("ADB 地址"),self.adr)
         self.adb=QLineEdit(self.a.get("adb_path","")); self.adb.setPlaceholderText("留空使用默认 ADB"); f.addRow(_lbl("ADB 路径"),self.adb)
         self.pc=QComboBox(); self.pc.addItems(["— 无 —","MuMuPro","PlayCover","Waydroid"]); self.pc.setCurrentText(self.a.get("connection_preset") or "— 无 —"); f.addRow(_lbl("预设"),self.pc)
-        self.tc=QComboBox(); self.tc.addItems(["ADB","MiniTouch","MaaTouch"]); self.tc.setCurrentText(self.a.get("touch_mode","ADB")); f.addRow(_lbl("触控"),self.tc)
+        self.tc=QComboBox(); self.tc.addItems(["ADB","MiniTouch","MaaTouch"]); self.tc.setCurrentText(self.a.get("touch_mode","MiniTouch")); f.addRow(_lbl("触控"),self.tc)
         self.sw_an=QLineEdit(self.a.get("account_switch","")); self.sw_an.setPlaceholderText("如 手机号或邮箱，留空不切换"); f.addRow(_lbl("账号切换"),self.sw_an)
 
         # ── 模拟器 ──
@@ -201,7 +201,7 @@ class AccountDialog(QDialog):
 
         scroll.setWidget(sw); l.addWidget(scroll,1)
         b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._save); b.rejected.connect(self.reject); l.addWidget(b)
-        self.setStyleSheet("QScrollArea{background:transparent} QDialog{background:rgba(30,30,30,240)}")
+        self.setStyleSheet("QScrollArea{background:transparent}")
 
     def _save(self):
         p=self.pc.currentText()
@@ -244,12 +244,12 @@ def _bind_local_maa(mw):
 
 
 def _sec(title: str) -> QLabel:
-    s=QLabel(title); s.setStyleSheet("font-weight:bold;color:#aaa;border-bottom:1px solid #444;margin-top:8px;padding-bottom:2px")
+    s=QLabel(title); s.setStyleSheet("font-weight:bold;color:#888;border-bottom:1px solid #2b2b30;margin-top:8px;padding-bottom:2px")
     return s
 
 def _lbl(text: str) -> QLabel:
     l=QLabel(text); l.setFixedWidth(60); l.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
-    l.setStyleSheet("color:#aaa")
+    l.setStyleSheet("color:#888")
     return l
 
 class TaskSettingsDialog(QDialog):

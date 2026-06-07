@@ -19,7 +19,7 @@ class TestConfigInjection:
         (md / "config").mkdir()
         w = {"path": str(md / "MAA.exe"), "task_pipeline": "startup,fight", "sync_tasks": False}
         ac = {"adb_address": "127.0.0.1:16384", "adb_path": "adb", "game_client": "Official",
-              "connection_preset": "MuMuEmulator12", "touch_mode": "ADB",
+              "connection_preset": "MuMuEmulator12", "touch_mode": "MiniTouch",
               "account_switch": "", "emu_instance_index": "", "emu_launch": False,
               "start_minimized": False, "start_directly": False, "post_action": "",
               "adb_retry": 0, "task_settings": {}, "sync_tasks": False}

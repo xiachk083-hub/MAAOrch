@@ -50,7 +50,6 @@ class MaintService:
             self.ctx.save()
             self.ctx.show_dashboard(row)
             self.ctx.inject_config(e, a)
-            self.ctx.launch_program(e)
 
         t = UpdateCheckThread()
         t.result_ready.connect(oc)

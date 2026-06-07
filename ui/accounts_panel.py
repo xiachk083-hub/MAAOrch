@@ -23,11 +23,18 @@ def build_accounts_panel(mw: Any) -> QWidget:
     al = QWidget()
     al.setMinimumWidth(240)
     al_ = QVBoxLayout(al)
-    al_.setContentsMargins(0, 0, 0, 0)
-    al_.addWidget(QLabel("账号", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
+    al_.setContentsMargins(4, 6, 4, 4)
+    al_.setSpacing(6)
+
+    th = QHBoxLayout()
+    th.addWidget(QLabel("👤 账号", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
+    th.addStretch()
+    th.addWidget(QPushButton("＋", clicked=mw._add_acc, objectName="addProgBtn"))
+    th.addWidget(QPushButton("✕", clicked=mw._del_acc, objectName="stopBtn"))
+    al_.addLayout(th)
 
     mw.asrch = QLineEdit()
-    mw.asrch.setPlaceholderText("搜索账号...")
+    mw.asrch.setPlaceholderText("🔍 搜索账号...")
     mw.asrch.setClearButtonEnabled(True)
     mw.asrch.textChanged.connect(lambda: mw._ra())
     al_.addWidget(mw.asrch)
@@ -47,7 +54,7 @@ def build_accounts_panel(mw: Any) -> QWidget:
     mw.at.setDropIndicatorShown(True)
     mw.at.setShowGrid(False)
     mw.at.setAlternatingRowColors(True)
-    mw.at.setStyleSheet("QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:2px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #333;padding:3px 6px;font-size:9pt;font-weight:bold}")
+    mw.at.setStyleSheet("QTableWidget{background:transparent;border:none;font-size:9pt} QTableWidget::item{color:#ccc;padding:2px 6px} QHeaderView::section{color:#888;background:transparent;border:none;border-bottom:1px solid #2b2b30;padding:3px 6px;font-size:9pt;font-weight:bold}")
 
     mw._acc_drop_lock = False
 
@@ -72,10 +79,6 @@ def build_accounts_panel(mw: Any) -> QWidget:
     mw.at.itemSelectionChanged.connect(mw._on_acc_sel)
     al_.addWidget(mw.at)
 
-    ab = QHBoxLayout()
-    ab.addWidget(QPushButton("＋", clicked=mw._add_acc, objectName="addProgBtn"))
-    ab.addWidget(QPushButton("✕", clicked=mw._del_acc, objectName="stopBtn"))
-    al_.addLayout(ab)
     asp.addWidget(al)
 
     # ── Right: dashboard area ──

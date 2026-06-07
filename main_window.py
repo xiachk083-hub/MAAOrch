@@ -8,7 +8,7 @@ import threading
 
 from utils import (is_admin,run_as_admin,make_id,parse_maa_version,get_platform_key,_version_tuple,_rmtree_force,_find_maa_cli,setup_proxy)
 from config import (CONFIG_FILE,STARTUP_DIR,DEFAULT_CONFIG,migrate_v4_to_v5,load_config,save_config,set_auto_start)
-from themes import DARK_STYLE, LIGHT_STYLE
+from themes import DARK_STYLE, LIGHT_STYLE, BTN_DELETE
 from updater import UpdateCheckThread,DownloadThread,MaacliInstallThread,MaacliInstallDialog,UpdateDialog
 from task_constants import (TASK_NAMES,TASK_DEFAULTS,EMU_PRESETS,MUMU_INSTANCE_DIRS,MUMU_CLI_CANDIDATES,CLIENT_TYPES,CF,find_mumu_cli,detect_emu_instances,EmuMonitor)
 from emu_ops import EmuService
@@ -179,17 +179,16 @@ class MainWindow(QMainWindow):
         ml.setContentsMargins(8, 8, 8, 4)
         ml.setSpacing(4)
 
-        # Top tab bar — modern flat tabs with bottom indicator
+        # Top tab bar
         tb = QFrame()
-        tb.setStyleSheet("QFrame{background:rgba(255,255,255,0.02);border-bottom:1px solid #333}")
         th = QHBoxLayout(tb)
-        th.setContentsMargins(8, 2, 4, 0)
+        th.setContentsMargins(4, 0, 4, 0)
         th.setSpacing(0)
-        self.tg = QPushButton("  👤 账号  ")
-        self.ta = QPushButton("  ⏳ 队列  ")
-        self.tl = QPushButton("  📋 日志  ")
-        self.tc = QPushButton("  ⚡ 配置  ")
-        self.ts = QPushButton("  ⚙ 调度  ")
+        self.tg = QPushButton("👤  账号")
+        self.ta = QPushButton("⏳  队列")
+        self.tl = QPushButton("📋  日志")
+        self.tc = QPushButton("⚡  配置")
+        self.ts = QPushButton("⚙  调度")
         for btn, key in [
             (self.tg, "accounts"),
             (self.ta, "queue"),
@@ -199,7 +198,6 @@ class MainWindow(QMainWindow):
         ]:
             btn.setObjectName("tabBtn")
             btn.setFlat(True)
-            btn.setStyleSheet("QPushButton{color:#888;border:none;padding:6px 10px;font-size:10pt;border-bottom:2px solid transparent}QPushButton:hover{color:#ddd;background:rgba(255,255,255,0.03)}QPushButton#tabBtnActive{color:#fff;border-bottom:2px solid #5a9}")
             btn.clicked.connect(lambda _, k=key: self._sw(k))
             th.addWidget(btn)
         th.addStretch()
@@ -219,22 +217,9 @@ class MainWindow(QMainWindow):
         self.qv.hide()
         ml.addWidget(self.qv, 1)
 
-        # Log panel (full tab)
-        self.lv = QWidget()
-        lvl = QVBoxLayout(self.lv)
-        lvl.setContentsMargins(4, 4, 4, 4)
-        self.log_text = QPlainTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setMaximumBlockCount(2000)
-        lvl.addWidget(self.log_text)
-        log_btn_row = QHBoxLayout()
-        clear_btn = QPushButton("清空")
-        clear_btn.clicked.connect(lambda: self.log_text.clear())
-        log_btn_row.addWidget(clear_btn)
-        log_btn_row.addStretch()
-        lvl.addLayout(log_btn_row)
-        self.lv.hide()
-        ml.addWidget(self.lv, 1)
+        # Log panel
+        from ui.log_panel import build_log_panel
+        ml.addWidget(build_log_panel(self), 1)
 
         # Config cards panel
         build_config_cards(self)
@@ -246,15 +231,11 @@ class MainWindow(QMainWindow):
         self.sv.hide()
         ml.addWidget(self.sv, 1)
 
-        # Status bar — clean single line
+        # Status bar
         sb2 = self.statusBar()
-        sb2.setStyleSheet("QStatusBar{background:#111;border-top:1px solid #333;padding:1px 8px;font-size:9pt}")
         self.sl = QLabel(" 就绪")
-        self.sl.setStyleSheet("color:#aaa")
         sb2.addWidget(self.sl)
-        # Queue summary on right
         self._qsb = QLabel("")
-        self._qsb.setStyleSheet("color:#666")
         sb2.addPermanentWidget(self._qsb)
 
         # Menu bar
@@ -313,7 +294,7 @@ class MainWindow(QMainWindow):
             self.wt.setItem(i,1,QTableWidgetItem(Path(w["path"]).stem))
             self.wt.setItem(i,2,QTableWidgetItem(f"{w.get('maa_type','general')} {w.get('maa_version','')}".strip()))
             db=QPushButton("✕"); db.setFixedSize(self._btn_lg,self._btn_lg)
-            db.setStyleSheet("QPushButton{background:transparent;color:#888;border:none}QPushButton:hover{background:#d32f2f;color:#fff;border-radius:"+str(self._btn_lg//2)+"px}")
+            db.setStyleSheet(BTN_DELETE.format(r=self._btn_lg // 2))
             ri=i; db.clicked.connect(lambda c,r=ri: self._rm_wh(r))
             dw=QWidget(); dwl2=QHBoxLayout(dw); dwl2.setContentsMargins(0,0,0,0); dwl2.setAlignment(Qt.AlignCenter); dwl2.addWidget(db); self.wt.setCellWidget(i,3,dw)
     def _tw(self, wid: str, c: bool) -> None:
@@ -375,7 +356,7 @@ class MainWindow(QMainWindow):
             sp=QSpinBox(); sp.setRange(0,999); sp.setValue(int(ref.get("pre_delay",0))); ri=i; sp.valueChanged.connect(lambda v,r=ri: self._sv_pd(r,v))
             sw=QWidget(); swl2=QHBoxLayout(sw); swl2.setContentsMargins(0,0,0,0); swl2.setAlignment(Qt.AlignCenter); swl2.addWidget(sp); self.gt.setCellWidget(i,1,sw)
             db=QPushButton("✕"); db.setFixedSize(self._btn_lg,self._btn_lg)
-            db.setStyleSheet("QPushButton{background:transparent;color:#888;border:none}QPushButton:hover{background:#d32f2f;color:#fff;border-radius:"+str(self._btn_lg//2)+"px}")
+            db.setStyleSheet("QPushButton{background:transparent;color:#888;border:none}QPushButton:hover{background:#326cf3;color:#fff;border-radius:"+str(self._btn_lg//2)+"px}")
             ri2=i; db.clicked.connect(lambda c,r=ri2: self._rm_pg(r)); dw=QWidget(); dwl2=QHBoxLayout(dw); dwl2.setContentsMargins(0,0,0,0); dwl2.setAlignment(Qt.AlignCenter); dwl2.addWidget(db); self.gt.setCellWidget(i,2,dw)
     def _sv_pd(self, r: int, v: int) -> None:
         sel=self.selected_group_idx
@@ -438,8 +419,6 @@ class MainWindow(QMainWindow):
         self.at.setRowCount(len(visible))
         for i,a in enumerate(visible):
             ni=QTableWidgetItem(a.get("name", "")); ni._acc_id=a["id"]; self.at.setItem(i,0,ni); self.at.setItem(i,1,QTableWidgetItem(a.get("game_client","")))
-            lb=QPushButton("▶"); lb.setFixedSize(self._btn_sm,self._btn_sm); lb.setStyleSheet("QPushButton{background:#2b7a3a;color:#fff;border:none;border-radius:3px}QPushButton:hover{background:#1e5a28}")
-            orig_idx=self.accounts.index(a); lb.clicked.connect(lambda c,idx=orig_idx: self._la(idx)); lw=QWidget(); lwl2=QHBoxLayout(lw); lwl2.setContentsMargins(0,0,0,0); lwl2.setAlignment(Qt.AlignCenter); lwl2.addWidget(lb); self.at.setCellWidget(i,2,lw)
     def _on_acc_sel(self) -> None:
         sel=self.at.currentRow()
         if sel>=0:
@@ -550,6 +529,23 @@ class MainWindow(QMainWindow):
             else: self._running_procs[w["id"]]=p
             self._log(f"✓ 启动 {Path(w['path']).stem} PID={p.pid}")
         except Exception as e: self._log(f"❌ 失败: {e}"); QMessageBox.critical(self,"失败",str(e))
+    def _launch_raw(self, w: dict) -> None:
+        """Launch MAA GUI (no auto-run) for manual config."""
+        exe=w.get("path","")
+        if not exe: return
+        md=Path(exe).parent/"config"; gj=md/"gui.json"
+        if gj.exists():
+            try:
+                d=json.loads(gj.read_text(encoding="utf-8"))
+                cfg=d.setdefault("Configurations",{}).setdefault("Default",{}).setdefault("Start",{})
+                if cfg.get("RunDirectly","")=="True":
+                    cfg["RunDirectly"]="False"
+                    gj.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
+            except: pass
+        try:
+            subprocess.Popen([exe],creationflags=CF)
+            self._log("已启动 MAA 主程序")
+        except Exception as e: self._log(f"❌ 启动失败: {e}")
     def _gtc(self, ac: dict, w: dict) -> str | None: return self.cfg.gtc(ac, w)
     def _inj(self, w: dict, ac: dict) -> None: self.cfg.inject(w, ac)
     # Pipeline
@@ -629,115 +625,8 @@ class MainWindow(QMainWindow):
     def _sch(self) -> None: self.maint.sch()
     def _settings(self) -> None: self.maint.settings()
     def _show_queue_panel(self) -> None:
-        """Show a popup panel displaying running/queued account status."""
-        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QGroupBox
-        from PySide6.QtCore import QTimer
-        d = QDialog(self)
-        d.setWindowTitle("队列状态")
-        d.setMinimumSize(400, 280)
-        l = QVBoxLayout(d)
-
-        running_grp = QGroupBox("▶ 运行中")
-        rl = QVBoxLayout(running_grp)
-        running_tbl = QTableWidget(0, 3)
-        running_tbl.setHorizontalHeaderLabels(["账号", "状态", "时长"])
-        running_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        running_tbl.setColumnWidth(1, 100)
-        running_tbl.setColumnWidth(2, 70)
-        running_tbl.verticalHeader().setVisible(False)
-        running_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
-        rl.addWidget(running_tbl)
-        l.addWidget(running_grp)
-
-        queue_grp = QGroupBox("⏳ 排队中")
-        ql = QVBoxLayout(queue_grp)
-        queue_tbl = QTableWidget(0, 5)
-        queue_tbl.setHorizontalHeaderLabels(["账号", "来源", "优先级", "预计启动", ""])
-        queue_tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        queue_tbl.setColumnWidth(1, 60)
-        queue_tbl.setColumnWidth(2, 50)
-        queue_tbl.setColumnWidth(3, 100)
-        queue_tbl.setColumnWidth(4, 50)
-        queue_tbl.verticalHeader().setVisible(False)
-        queue_tbl.setEditTriggers(QTableWidget.NoEditTriggers)
-        ql.addWidget(queue_tbl)
-        l.addWidget(queue_grp)
-
-        def _refresh():
-            import time
-            # Running
-            running = []
-            if hasattr(self, "runner"):
-                for aid in self.runner.active_ids():
-                    a = next((x for x in self.accounts if x["id"] == aid), None)
-                    name = a["name"] if a else aid[:8]
-                    t = int(time.time() - self.runner._start_times.get(aid, 0))
-                    status = f"运行中 {t//60}m{t%60}s"
-                    running.append((name, status, ""))
-                # Also check pipeline procs
-                for pid in list(getattr(self, "_running_procs", {}).keys()):
-                    p = self._running_procs[pid]
-                    if p.poll() is None:
-                        w = next((x for x in self.warehouse if x["id"] == pid), None)
-                        ac = next((x for x in self.accounts if x["id"] == w.get("account_ref", "")), None) if w else None
-                        name = ac["name"] if ac else (Path(w["path"]).stem if w else pid[:8])
-                        t = int(time.time() - self._proc_start_times.get(pid, 0))
-                        running.append((name, f"运行中 {t//60}m{t%60}s", ""))
-            running_tbl.setRowCount(max(1, len(running)) if running else 1)
-            if running:
-                for i, (name, status, _) in enumerate(running):
-                    running_tbl.setItem(i, 0, QTableWidgetItem(name))
-                    running_tbl.setItem(i, 1, QTableWidgetItem(status))
-            else:
-                running_tbl.setItem(0, 0, QTableWidgetItem("—"))
-                running_tbl.setItem(0, 1, QTableWidgetItem("无"))
-
-            # Queue
-            queue = []
-            if hasattr(self, "launch_queue"):
-                src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
-                now = __import__("datetime").datetime.now()
-                for e in sorted(self.launch_queue._pending, key=lambda x: x.sort_key):
-                    a = next((x for x in self.accounts if x["id"] == e.account_id), None)
-                    name = a["name"] if a else e.account_id[:8]
-                    when = ""
-                    if e.not_before > now:
-                        diff = int((e.not_before - now).total_seconds() / 60)
-                        if diff > 60:
-                            when = e.not_before.strftime("%m-%d %H:%M")
-                        else:
-                            when = f"{diff}分钟后"
-                    else:
-                        when = "等待空闲"
-                    queue.append((name, src_map.get(e.source, e.source), str(e.sort_key[0]), when, e.account_id))
-            queue_tbl.setRowCount(max(1, len(queue)) if queue else 1)
-            if queue:
-                for i, (name, src, pri, when, aid) in enumerate(queue):
-                    queue_tbl.setItem(i, 0, QTableWidgetItem(name))
-                    queue_tbl.setItem(i, 1, QTableWidgetItem(src))
-                    queue_tbl.setItem(i, 2, QTableWidgetItem(pri))
-                    queue_tbl.setItem(i, 3, QTableWidgetItem(when))
-                    cancel_btn = QPushButton("✕")
-                    cancel_btn.setFixedSize(self._btn_lg, self._btn_lg)
-                    cancel_btn.setStyleSheet("QPushButton{background:transparent;color:#888;border:none}QPushButton:hover{background:#d32f2f;color:#fff;border-radius:" + str(self._btn_lg // 2) + "px}")
-                    cancel_btn.setToolTip("取消排队")
-                    cancel_btn.clicked.connect(lambda c, a=aid: (self.launch_queue.dequeue(a), _refresh()))
-                    cw = QWidget()
-                    cwl = QHBoxLayout(cw)
-                    cwl.setContentsMargins(0, 0, 0, 0)
-                    cwl.setAlignment(Qt.AlignCenter)
-                    cwl.addWidget(cancel_btn)
-                    queue_tbl.setCellWidget(i, 4, cw)
-            else:
-                queue_tbl.setItem(0, 0, QTableWidgetItem("—"))
-                queue_tbl.setItem(0, 1, QTableWidgetItem("无"))
-
-        _refresh()
-        timer = QTimer(d)
-        timer.timeout.connect(_refresh)
-        timer.start(2000)
-        d.finished.connect(timer.stop)
-        d.exec()
+        from ui.queue_panel import build_queue_dialog
+        build_queue_dialog(self)
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin(); sys.exit(0)

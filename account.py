@@ -11,7 +11,7 @@ class Account:
     adb_path: str = ""
     adb_address: str = ""
     connection_preset: str = ""
-    touch_mode: str = "ADB"
+    touch_mode: str = "MiniTouch"
     account_switch: str = ""
     emu_path: str = ""
     emu_instance_index: str = ""
