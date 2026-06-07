@@ -37,23 +37,41 @@ jobs:
       - name: Upload Release
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          Write-Host "=== Debug: GITHUB_TOKEN length = $($env:GITHUB_TOKEN.Length)"
+          Write-Host "=== Debug: repo = ${{ github.repository }}, tag = ${{ github.ref_name }}"
           $headers = @{ "Accept" = "application/vnd.github+json"; "Authorization" = "Bearer $env:GITHUB_TOKEN" }
           $apiRoot = "https://api.github.com/repos/${{ github.repository }}"
           # Check if release exists
           try {
             $rel = Invoke-RestMethod -Uri "$apiRoot/releases/tags/${{ github.ref_name }}" -Headers $headers -Method Get
-            Write-Host "Found existing release: $($rel.html_url)"
+            Write-Host "=== Found existing release: $($rel.html_url)"
           } catch {
-            Write-Host "Release not found, creating..."
+            Write-Host "=== Release not found, creating..."
             $body = @{ tag_name = "${{ github.ref_name }}"; name = "${{ github.ref_name }}"; body = "MAAOrch ${{ github.ref_name }} release" }
             $rel = Invoke-RestMethod -Uri "$apiRoot/releases" -Headers $headers -Method Post -Body ($body | ConvertTo-Json) -ContentType "application/json"
           }
-          # Upload file
-          $uploadUrl = ($rel.upload_url -replace '\{[?]?name,label\}', '?name=MAAOrch.exe')
-          Write-Host "Uploading to: $uploadUrl"
-          $headers["Content-Type"] = "application/octet-stream"
-          $fileBytes = [System.IO.File]::ReadAllBytes("dist/MAAOrch.exe")
-          Write-Host "File size: $($fileBytes.Length) bytes"
-          $response = Invoke-RestMethod -Uri $uploadUrl -Headers $headers -Method Post -Body $fileBytes -ContentType "application/octet-stream"
-          Write-Host "Uploaded OK: $($response.name)"
-          Write-Host "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          # Get upload URL
+          $uploadUrl = $rel.upload_url -replace '{.*', '?name=MAAOrch.exe'
+          Write-Host "=== Upload URL: $uploadUrl"
+          # Read file
+          $exePath = Join-Path (Get-Location) "dist" "MAAOrch.exe"
+          Write-Host "=== File path: $exePath"
+          Write-Host "=== File exists: $(Test-Path $exePath)"
+          $fileBytes = [System.IO.File]::ReadAllBytes($exePath)
+          Write-Host "=== File size: $($fileBytes.Length) bytes"
+          # Upload
+          try {
+            $response = Invoke-RestMethod -Uri $uploadUrl -Headers $headers -Method Post -Body $fileBytes -ContentType "application/octet-stream" -TimeoutSec 300
+            Write-Host "=== Uploaded OK: $($response.name)"
+            Write-Host "=== Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          } catch {
+            Write-Host "=== UPLOAD FAILED ==="
+            Write-Host "Exception: $_"
+            if ($_.Exception.Response) {
+              $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+              $body = $reader.ReadToEnd()
+              Write-Host "Response body: $body"
+            }
+            throw
+          }
