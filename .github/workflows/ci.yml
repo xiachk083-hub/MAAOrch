@@ -35,13 +35,25 @@ jobs:
         timeout-minutes: 15
       - run: dir dist\ 2>&1 || echo "No dist output"
       - name: Upload Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
         run: |
-          gh auth status
-          echo "Uploading dist/MAAOrch.exe to ${{ github.ref_name }}..."
-          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" 2> $null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --notes "MAAOrch ${{ github.ref_name }} release" --repo "${{ github.repository }}"
+          $headers = @{ "Accept" = "application/vnd.github+json"; "Authorization" = "Bearer $env:GITHUB_TOKEN" }
+          $apiRoot = "https://api.github.com/repos/${{ github.repository }}"
+          # Check if release exists
+          try {
+            $rel = Invoke-RestMethod -Uri "$apiRoot/releases/tags/${{ github.ref_name }}" -Headers $headers -Method Get
+            Write-Host "Found existing release: $($rel.html_url)"
+          } catch {
+            Write-Host "Release not found, creating..."
+            $body = @{ tag_name = "${{ github.ref_name }}"; name = "${{ github.ref_name }}"; body = "MAAOrch ${{ github.ref_name }} release" }
+            $rel = Invoke-RestMethod -Uri "$apiRoot/releases" -Headers $headers -Method Post -Body ($body | ConvertTo-Json) -ContentType "application/json"
           }
-          gh release upload "${{ github.ref_name }}" dist/MAAOrch.exe --clobber --repo "${{ github.repository }}"
+          # Upload file
+          $uploadUrl = ($rel.upload_url -replace '\{[?]?name,label\}', '?name=MAAOrch.exe')
+          Write-Host "Uploading to: $uploadUrl"
+          $headers["Content-Type"] = "application/octet-stream"
+          $fileBytes = [System.IO.File]::ReadAllBytes("dist/MAAOrch.exe")
+          Write-Host "File size: $($fileBytes.Length) bytes"
+          $response = Invoke-RestMethod -Uri $uploadUrl -Headers $headers -Method Post -Body $fileBytes -ContentType "application/octet-stream"
+          Write-Host "Uploaded OK: $($response.name)"
+          Write-Host "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
