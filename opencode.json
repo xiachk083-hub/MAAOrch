@@ -1,5 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "deepseek/deepseek-v4-pro",
-  "instructions": ["README.md"]
+  "instructions": ["README.md", ".opencode/instructions.md"],
+  "skills": [
+    {
+      "name": "maaorch-dev",
+      "description": "MAAOrch development guide — architecture, conventions, common fixes",
+      "location": ".opencode/skills/maaorch-dev.md"
+    }
+  ]
 }
