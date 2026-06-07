@@ -26,38 +26,69 @@ class MaintService:
     def __init__(self, ctx: ServiceContext) -> None:
         self.ctx = ctx
 
+    def _bind_maa(self, exe: str, version: str, account_id: str) -> None:
+        """Create a warehouse entry binding an account to an MAA exe."""
+        e = {"id": make_id(), "path": str(exe), "args": [], "cwd": "", "env": {},
+             "maa_type": "maa", "maa_version": version, "account_ref": account_id,
+             "launch_mode": "gui", "task_pipeline": "startup,fight,recruit,infrast,mall,award",
+             "guard_enabled": True, "guard_max_restart": 3, "guard_capture_log": False}
+        # Replace existing binding for this account
+        self.ctx.warehouse[:] = [w for w in self.ctx.warehouse if w.get("account_ref") != account_id]
+        self.ctx.warehouse.append(e)
+
     def dl_maa(self, row: int) -> None:
         a = self.ctx.accounts[row]
-
         def oc(r):
-            if not r.get("ok"):
-                return
-            tag = r["tag"]
-            info = r["assets"].get(get_platform_key())
-            if not info:
-                return
+            if not r.get("ok"): return
+            tag = r["tag"]; info = r["assets"].get(get_platform_key())
+            if not info: return
             d = Path(__file__).parent / "accounts" / a["id"] / "MAA"
             d.mkdir(parents=True, exist_ok=True)
             dlg = UpdateDialog(self.ctx._mw, tag, info, str(d))
-            if dlg.exec() != QDialog.Accepted:
-                return
-            exe = None
-            for p in d.rglob("MAA.exe"):
-                exe = p
-                break
-            if not exe:
-                return
-            e = {"id": make_id(), "path": str(exe), "args": [], "cwd": "", "env": {}, "maa_type": "maa", "maa_version": tag, "account_ref": a["id"], "launch_mode": "gui", "task_pipeline": "startup,fight,recruit,infrast,mall,award", "guard_enabled": True, "guard_max_restart": 3, "guard_capture_log": False}
-            self.ctx.warehouse.append(e)
-            self.ctx.save()
-            self.ctx.show_dashboard(row)
+            if dlg.exec() != QDialog.Accepted: return
+            exe = next(iter(d.rglob("MAA.exe")), None)
+            if not exe: return
+            self._bind_maa(exe, tag, a["id"])
+            self.ctx.save(); self.ctx.show_dashboard(row)
             refresh_config_cards(self.ctx._mw)
-            self.ctx.inject_config(e, a)
+            self.ctx.inject_config(self.ctx.warehouse[-1], a)
+        t = UpdateCheckThread(); t.result_ready.connect(oc)
+        self.ctx.update_thread = t; t.start()
 
-        t = UpdateCheckThread()
-        t.result_ready.connect(oc)
-        self.ctx.update_thread = t
-        t.start()
+    def dl_maa_all(self) -> None:
+        """Download MAA once and bind to all accounts without MAA."""
+        def oc(r):
+            if not r.get("ok"): return
+            tag = r["tag"]; info = r["assets"].get(get_platform_key())
+            if not info: return
+            # Download to first unbounded account's directory, reuse for others
+            targets = [a for a in self.ctx.accounts
+                       if not any(w.get("account_ref") == a["id"] for w in self.ctx.warehouse)]
+            if not targets: self.ctx.log("所有账号已绑定 MAA"); return
+            d = Path(__file__).parent / "accounts" / targets[0]["id"] / "MAA"
+            d.mkdir(parents=True, exist_ok=True)
+            dlg = UpdateDialog(self.ctx._mw, tag, info, str(d))
+            if dlg.exec() != QDialog.Accepted: return
+            exe = next(iter(d.rglob("MAA.exe")), None)
+            if not exe: return
+            count = 0
+            for a in targets:
+                if a["id"] == targets[0]["id"]:
+                    # Already downloaded to this one's directory
+                    self._bind_maa(exe, tag, a["id"])
+                else:
+                    # Copy MAA to each account's directory
+                    ad = Path(__file__).parent / "accounts" / a["id"] / "MAA"
+                    if not ad.exists():
+                        import shutil
+                        shutil.copytree(str(d), str(ad))
+                    self._bind_maa(str(ad / "MAA.exe"), tag, a["id"])
+                count += 1
+            self.ctx.save()
+            refresh_config_cards(self.ctx._mw)
+            self.ctx.log(f"批量绑定 MAA: {count} 个账号")
+        t = UpdateCheckThread(); t.result_ready.connect(oc)
+        self.ctx.update_thread = t; t.start()
 
     def pk_maa(self, row: int) -> None:
         a = self.ctx.accounts[row]

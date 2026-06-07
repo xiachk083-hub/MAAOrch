@@ -29,6 +29,7 @@ def build_accounts_panel(mw: Any) -> QWidget:
     th = QHBoxLayout()
     th.addWidget(QLabel("👤 账号", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
     th.addStretch()
+    th.addWidget(QPushButton("⬇ 批量MAA", clicked=mw.maint.dl_maa_all, objectName="addProgBtn"))
     th.addWidget(QPushButton("＋", clicked=mw._add_acc, objectName="addProgBtn"))
     th.addWidget(QPushButton("✕", clicked=mw._del_acc, objectName="stopBtn"))
     al_.addLayout(th)
