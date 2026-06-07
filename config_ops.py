@@ -257,29 +257,54 @@ class ConfigService:
                 day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
 
                 existing_tq = c.get("TaskQueue", [])
+                has_fight = "fight" in task_set
+                anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
                 if existing_tq:
+                    anni_appended = False
                     for item in existing_tq:
                         tt = item.get("TaskType", "").lower()
-                        item["IsEnable"] = tt in task_set or (tt == "fight" and run_annihilation)
+                        item["IsEnable"] = tt in task_set
                         if tt == "fight":
                             if run_annihilation:
-                                anni = ac.get("smart_annihilation", "") or "Annihilation"
-                                item["UseCustomAnnihilation"] = True
-                                item["AnnihilationStage"] = anni
-                                item["StagePlan"] = [anni]
-                                item["IsStageManually"] = True
-                                item["StageResetMode"] = "Current"
-                                item["UseMedicine"] = True
-                                item["MedicineCount"] = 999
+                                if has_fight and not anni_appended:
+                                    # Enable first Fight for regular farming
+                                    item["UseCustomAnnihilation"] = False
+                                    item["AnnihilationStage"] = ""
+                                    item["UseMedicine"] = False
+                                    item["StagePlan"] = [day_stage] if day_stage else []
+                                    item["IsStageManually"] = bool(day_stage)
+                                    # Append second Fight for annihilation
+                                    anni_item = dict(item)
+                                    anni_item["IsEnable"] = True
+                                    anni_item["UseCustomAnnihilation"] = True
+                                    anni_item["AnnihilationStage"] = anni
+                                    anni_item["StagePlan"] = [anni]
+                                    anni_item["IsStageManually"] = True
+                                    anni_item["StageResetMode"] = "Current"
+                                    anni_item["UseMedicine"] = True
+                                    anni_item["MedicineCount"] = 999
+                                    existing_tq.insert(existing_tq.index(item) + 1, anni_item)
+                                    anni_appended = True
+                                elif not anni_appended:
+                                    # No farm Fight, replace this one with annihilation
+                                    item["IsEnable"] = True
+                                    item["UseCustomAnnihilation"] = True
+                                    item["AnnihilationStage"] = anni
+                                    item["StagePlan"] = [anni]
+                                    item["IsStageManually"] = True
+                                    item["StageResetMode"] = "Current"
+                                    item["UseMedicine"] = True
+                                    item["MedicineCount"] = 999
+                                    anni_appended = True
+                                elif anni_appended:
+                                    # Already appended, keep disabled
+                                    item["IsEnable"] = False
                             else:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
-                                if day_stage:
-                                    item["StagePlan"] = [day_stage]
-                                    item["IsStageManually"] = True
-                                else:
-                                    item["StagePlan"] = []
-                                    item["IsStageManually"] = False
+                                item["UseMedicine"] = False
+                                item["StagePlan"] = [day_stage] if day_stage else []
+                                item["IsStageManually"] = bool(day_stage)
                     c["TaskQueue"] = existing_tq
                 else:
                     c.pop("TaskQueue", None)
