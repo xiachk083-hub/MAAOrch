@@ -271,8 +271,9 @@ class ConfigService:
                                     item["UseCustomAnnihilation"] = False
                                     item["AnnihilationStage"] = ""
                                     item["UseMedicine"] = False
-                                    item["StagePlan"] = [day_stage] if day_stage else []
-                                    item["IsStageManually"] = bool(day_stage)
+                                    farm_stage = day_stage or (item.get("StagePlan") or [None])[0] or ""
+                                    item["StagePlan"] = [farm_stage] if farm_stage else item.get("StagePlan", [])
+                                    item["IsStageManually"] = bool(farm_stage)
                                     # Append second Fight for annihilation
                                     anni_item = dict(item)
                                     anni_item["IsEnable"] = True
