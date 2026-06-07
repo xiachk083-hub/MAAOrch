@@ -60,7 +60,6 @@ accounts/               各账号 MAA 目录
 | [下载更新与代理](docs/update-download.md) | 下载、版本切换、代理检测 |
 | [HTTP API](docs/http-api.md) | REST 接口完整参考 |
 | [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、测试 |
-| [daigan 对接](docs/daigan-integration.md) | 数据推送 |
 
 ## 快捷键
 
@@ -69,11 +68,6 @@ accounts/               各账号 MAA 目录
 | `Ctrl+Enter` | 启动流水线 |
 | `Esc` | 停止流水线 |
 
-## ⚠️
-
-MAAOrch 是我为了自己管理多个号写的工具。分享出来是因为可能有类似需求的玩家——不多，刚刚好那种。
-
-如果哪天觉得人太多了，我会把它藏起来。
 
 ## 技术栈
 
