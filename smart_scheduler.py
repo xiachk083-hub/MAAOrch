@@ -51,6 +51,7 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
     today_key = get_today_key()
     is_monday = now.weekday() == 0
 
+    tasks.append("StartUp")
     tasks.append("Award")
 
     infrast_times = global_cfg.get("infrast_times", ["04:00", "16:00"])
