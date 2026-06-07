@@ -1,5 +1,5 @@
 from __future__ import annotations
-import time, json, urllib.request
+import time, json, urllib.request, threading
 from pathlib import Path
 from datetime import datetime
 from typing import Any
@@ -14,34 +14,52 @@ from schedule_thread import ScheduleThread
 from callbacks import ServiceContext
 
 
+_INSTANCE_LOCK = threading.Lock()
+
 def ensure_maa_instances_async(ctx) -> None:
-    """Trigger MAA instance pool creation in background if needed."""
-    if ctx.config.get("maa_instances", 0) > 0:
-        return
-    src = _find_maa_source()
-    if not src:
-        return
+    """Create instance #1 only. The rest are created lazily on demand."""
+    with _INSTANCE_LOCK:
+        if ctx.config.get("maa_instances", 0) > 0:
+            return
+        src = _find_maa_source()
+        if not src:
+            return
     from background import BackgroundTask
     def _init():
-        max_n = ctx.config.get("parallel_max", 1)
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
+        inst1 = pool / "1"
+        if inst1.exists():
+            return
         import shutil
-        is_old = "accounts" in str(src)
-        for i in range(1, max_n + 1):
-            inst = pool / str(i)
-            if inst.exists():
-                continue
-            if i == 1 and is_old:
-                shutil.move(str(src), str(inst))
-            else:
-                s = pool / "1" if i > 1 and is_old else src
-                if s.exists():
-                    shutil.copytree(str(s), str(inst))
-        ctx.config["maa_instances"] = max_n
-        ctx.save()
-    t = BackgroundTask(_init)
-    t.start()
+        if "accounts" in str(src):
+            shutil.move(str(src), str(inst1))
+        else:
+            shutil.copytree(str(src), str(inst1))
+        with _INSTANCE_LOCK:
+            ctx.config["maa_instances"] = 1
+            ctx.save()
+    with _INSTANCE_LOCK:
+        t = BackgroundTask(_init)
+        t.start()
+
+
+def _ensure_instance_n(ctx, n: int) -> bool:
+    """Lazily create instance #n (n >= 2) if it doesn't exist yet."""
+    pool = Path(__file__).parent / "maa" / "instances"
+    inst = pool / str(n)
+    if inst.exists():
+        return True
+    # Source is always instance #1 (guaranteed to exist if we get here)
+    src = pool / "1"
+    if not src.exists():
+        return False
+    import shutil
+    try:
+        shutil.copytree(str(src), str(inst))
+        return True
+    except:
+        return False
 
 
 def _find_maa_source() -> Path | None:
@@ -153,7 +171,7 @@ class MaintService:
             if not exe: return
             self.ctx.config["maa_version"] = tag
             self.ctx.save()
-            self.ensure_maa_instances()
+            ensure_maa_instances_async(self.ctx)
             self.ctx.log(f"MAA {tag} 已下载，实例池就绪 ({self.ctx.config.get('parallel_max',1)} 个)")
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self.ctx.update_thread = t; t.start()

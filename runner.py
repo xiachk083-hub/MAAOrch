@@ -92,17 +92,12 @@ class AccountRunner(QObject):
         return True
 
     def _get_free_instance(self) -> tuple[int, str] | None:
-        """Get a free MAA instance. Returns (id, config_dir) or None."""
+        """Get a free MAA instance. Lazily creates new ones up to parallel_max."""
         import subprocess
-        max_n = self.ctx.config.get("maa_instances", 0)
-        if not max_n:
-            ver = self.ctx.config.get("maa_version", "")
-            if ver:
-                from maint_ops import _find_maa_source, ensure_maa_instances_async
-                ensure_maa_instances_async(self.ctx)
-            return None
+        max_created = self.ctx.config.get("maa_instances", 0)
+        parallel_max = self.ctx.config.get("parallel_max", 1)
         pool = Path(__file__).parent / "maa" / "instances"
-        for i in range(1, max_n + 1):
+        for i in range(1, max_created + 1):
             inst_dir = pool / str(i)
             exe = inst_dir / "MAA.exe"
             if not exe.exists():
@@ -119,6 +114,14 @@ class AccountRunner(QObject):
                     pid_file.unlink(missing_ok=True)
             if not running:
                 return (i, str(inst_dir))
+        # All busy — try to create a new instance lazily
+        if max_created < parallel_max:
+            from maint_ops import _ensure_instance_n
+            new_n = max_created + 1
+            if _ensure_instance_n(self.ctx, new_n):
+                self.ctx.config["maa_instances"] = new_n
+                self.ctx.save()
+                return (new_n, str(pool / str(new_n)))
         return None
 
     def launch_by_id(self, account_id: str) -> bool:

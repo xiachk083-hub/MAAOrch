@@ -76,7 +76,8 @@ def refresh_maa_panel(mw: Any) -> None:
     # Update version label
     mw._maa_version_lbl.setText(mw.config.get("maa_version", "未安装"))
     ver = mw.config.get("maa_version", "")
-    max_n = mw.config.get("maa_instances", 0) or mw.config.get("parallel_max", 1)
+    max_created = mw.config.get("maa_instances", 0)
+    max_n = mw.config.get("parallel_max", 1)
     pool = Path(__file__).parent.parent / "maa" / "instances"
     tbl = mw._maa_tbl
     tbl.setRowCount(max_n)
@@ -105,12 +106,14 @@ def refresh_maa_panel(mw: Any) -> None:
                 pid_file.unlink(missing_ok=True)
 
         tbl.setItem(i - 1, 0, QTableWidgetItem(f"#{i}"))
-        if not exists:
+        if not exists and i <= max_created:
             tbl.setItem(i - 1, 1, QTableWidgetItem("未创建"))
+        elif not exists:
+            tbl.setItem(i - 1, 1, QTableWidgetItem("按需创建"))
         elif running:
             tbl.setItem(i - 1, 1, QTableWidgetItem("▶ 运行中"))
         else:
             tbl.setItem(i - 1, 1, QTableWidgetItem("⏸ 空闲"))
-        tbl.setItem(i - 1, 2, QTableWidgetItem(pid))
+        tbl.setItem(i - 1, 2, QTableWidgetItem(pid if exists else ""))
         cfg = str(inst / "config") if exists else ""
         tbl.setItem(i - 1, 3, QTableWidgetItem(cfg))

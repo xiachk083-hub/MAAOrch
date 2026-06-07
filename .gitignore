@@ -15,5 +15,6 @@ Thumbs.db
 .ruff_cache/
 batch_launcher.pyw
 
-# MAA instance pool
+# MAA binaries (downloaded), instance pool
+maa/v*/
 maa/instances/

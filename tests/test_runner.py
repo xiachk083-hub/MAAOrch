@@ -19,10 +19,11 @@ def _make_ctx():
 
 
 class TestAccountRunner:
-    def test_launch_no_prog(self):
+    def test_launch_no_instance(self):
         from runner import AccountRunner
         ctx = _make_ctx()
-        ctx.warehouse = []  # no programs
+        ctx.config["maa_instances"] = 0
+        ctx.config["parallel_max"] = 0  # don't create any
         r = AccountRunner(ctx)
         ok = r.launch(0)
         assert not ok
