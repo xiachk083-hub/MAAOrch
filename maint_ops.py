@@ -41,8 +41,8 @@ def ensure_maa_instances_async(ctx) -> None:
         if inst1.exists():
             return
         import shutil
-                # Always copy, never move (preserve original MAA source)
-                shutil.copytree(str(src), str(inst1))
+        # Always copy, never move (preserve original MAA source)
+        shutil.copytree(str(src), str(inst1))
 
     def _on_finish():
         """Runs on main thread after BackgroundTask finishes."""

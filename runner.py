@@ -178,7 +178,7 @@ class AccountRunner(QObject):
         addr = ac.get("adb_address", "")
         if addr:
             try: subprocess.run([adb, "connect", addr], capture_output=True, creationflags=CF, timeout=5)
-            except: pass
+            except Exception as e: self.log_msg.emit(f"ADB 连接失败 {addr}: {e}")
 
         # Inject config and launch
         self._launch_for_instance(ac, inst_dir)
@@ -381,7 +381,7 @@ class AccountRunner(QObject):
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             ac["smart_plan"] = ""
-            ac["smart_pending"] = False
+        # smart_pending is not cleared here — _on_account_finished checks it
         # MAA 在 ExitSelf 等场景下可能返回非 0 退出码，但任务已实际完成
         is_real_error = exit_code != 0 and exit_code != -9 and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):

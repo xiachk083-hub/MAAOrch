@@ -117,6 +117,18 @@ def save_config(data: dict) -> None:
     try:
         tmp.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(CONFIG_FILE)
+        # Create backup copy after successful save
+        try:
+            bp = CONFIG_FILE.parent / "backups"
+            bp.mkdir(exist_ok=True)
+            dst = bp / f"config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            if not dst.exists():
+                import shutil as _su
+                _su.copy2(str(CONFIG_FILE), str(dst))
+            for f in sorted(bp.glob("config_*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[5:]:
+                f.unlink()
+        except Exception:
+            pass
     except Exception as e:
         try:
             with (Path(__file__).parent/"debug.log").open("a",encoding="utf-8") as f:

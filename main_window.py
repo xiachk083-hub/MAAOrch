@@ -709,7 +709,7 @@ class MainWindow(QMainWindow):
                     tasks = ["StartUp", "Award", "Annihilation", "Fight", "Infrast", "Recruit", "Mall", "Depot", "CloseDown"]
                 else:
                     tasks = get_tasks_for_account(a, sg)
-                if len(tasks) > 2 or getattr(self, "_smart_force", False):
+                if tasks:
                     plan_txt = ",".join(tasks)
                     a["smart_plan"] = plan_txt
                     self.launch_queue.enqueue(aid, "schedule", priority=1)

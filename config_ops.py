@@ -178,7 +178,9 @@ class ConfigService:
                         break
             elif fs:
                 self.ctx.log(f"inject关卡: {fs} 但TaskQueue不存在于 {fn}")
-            gj.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
+            tmp = gj.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
+            tmp.replace(gj)
         _wcfg("gui.json"); _wcfg("gui.new.json")
 
     def inject_for_thread(self, w: dict, ac: dict) -> None:

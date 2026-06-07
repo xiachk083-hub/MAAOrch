@@ -171,7 +171,7 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
                             return True
                     except Exception:
                         pass
-                return False
+                break  # recent low sanity, keep checking older records
     except Exception:
         pass
     return True  # on error, launch anyway to collect fresh data

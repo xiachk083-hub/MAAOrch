@@ -7,6 +7,7 @@ whose conditions are met (emu free, not already running, sufficient sanity).
 Never interrupts a running MAA — only idles wait for their turn.
 """
 from __future__ import annotations
+import heapq
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 import threading
@@ -52,7 +53,6 @@ class LaunchQueue(QObject):
 
     @staticmethod
     def _import_heapq():
-        import heapq
         return heapq
 
     def start(self, interval_sec: int = 30) -> None:
@@ -71,12 +71,12 @@ class LaunchQueue(QObject):
             entry = QueueEntry.make(account_id, source, priority, not_before)
             heapq = self._import_heapq()
             heapq.heappush(self._pending, entry)
+            self._save_queue()
         ac = next((a for a in self.ctx.accounts if a.id == account_id), None)
         name = ac.get("name", account_id) if ac else account_id
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
         nb_str = f" → {entry.not_before.strftime('%H:%M')}" if entry.not_before > datetime.now() else ""
         self.log_msg.emit(f"[队列] {name} 入队 ({src_map.get(source, source)}){nb_str}")
-        self._save_queue()
 
     def enqueue_batch(self, source: str = "schedule", priority: int = 1,
                       accounts: list[str] | None = None) -> None:
@@ -88,8 +88,9 @@ class LaunchQueue(QObject):
 
     def dequeue(self, account_id: str) -> None:
         """Remove an account from the queue."""
-        self._pending = [e for e in self._pending if e.account_id != account_id]
-        self._save_queue()
+        with self._lock:
+            self._pending = [e for e in self._pending if e.account_id != account_id]
+            self._save_queue()
 
     @property
     def pending_count(self) -> int:
@@ -141,7 +142,7 @@ class LaunchQueue(QObject):
             return
 
         # Round-robin: calculate recovery based on deficit
-        deficit_cfg = self.ctx.config.get("deficit", 0) or ac.get("round_robin_deficit", 0)
+        deficit_cfg = self.ctx.config.get("deficit") if self.ctx.config.get("deficit") is not None else ac.get("round_robin_deficit", 0)
         if deficit_cfg >= 0:
             st = RunStats(account_id)
             s = st.get_last_sanity()
@@ -242,7 +243,7 @@ class LaunchQueue(QObject):
             if a["id"] == account_id:
                 idx = a.get("emu_instance_index", "")
                 return idx if idx else f"__noemu_{account_id}"
-        return ""
+        return f"__unknown_{account_id}"
 
     def _save_queue(self) -> None:
         """Persist queue to config.json."""
