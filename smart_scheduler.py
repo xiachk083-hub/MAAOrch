@@ -141,7 +141,7 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
     try:
         sp = Path(__file__).parent / "accounts" / account_id / "stats.json"
         if not sp.exists():
-            return False
+            return True  # no data yet → assume sufficient, will collect on first run
         import json
         data = json.loads(sp.read_text(encoding="utf-8"))
         runs = data.get("runs", [])
@@ -152,7 +152,7 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
                 return (cur / mx) * 100 >= threshold
     except Exception:
         pass
-    return False
+    return True  # on error, launch anyway to collect fresh data
 
 
 def _has_expiring_medicine(account: dict, global_cfg: dict) -> bool:
