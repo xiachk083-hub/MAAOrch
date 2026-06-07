@@ -13,7 +13,8 @@ def setup_proxy() -> None:
             return
     for port in [7890,7891,1080,10809,8080]:
         try:
-            s=socket.socket(); s.settimeout(0.3); s.connect(("127.0.0.1",port)); s.close()
+            with socket.socket() as s:
+                s.settimeout(0.3); s.connect(("127.0.0.1",port))
             p=f"http://127.0.0.1:{port}"
             urllib.request.install_opener(urllib.request.build_opener(
                 urllib.request.ProxyHandler({"http":p,"https":p})))
@@ -25,7 +26,8 @@ def is_admin() -> bool:
     try: return ctypes.windll.shell32.IsUserAnAdmin()!=0
     except: return False
 def run_as_admin() -> None:
-    ctypes.windll.shell32.ShellExecuteW(None,"runas",sys.executable,'"'+'" "'.join(sys.argv)+'"',None,1)
+    import subprocess as _sp
+    ctypes.windll.shell32.ShellExecuteW(None,"runas",sys.executable,_sp.list2cmdline(sys.argv),None,1)
 def make_id() -> str:
     import uuid; return uuid.uuid4().hex[:8]
 def parse_maa_version(path: Path) -> str | None:
@@ -47,7 +49,7 @@ def _rmtree_force(path: str | Path) -> None:
     shutil.rmtree(path,onerror=on_error)
 def _find_maa_cli() -> str | None:
     import shutil as _s
-    for n in ("maa","maa-cli","maa.exe","maa-cli.exe"):
+    for n in ("maa-cli","maa-cli.exe","maa","maa.exe"):
         if _s.which(n): return _s.which(n)
     for d in (Path(os.environ.get("LOCALAPPDATA",""))/"maa-cli",Path(__file__).parent/"maa-cli",Path("C:/Program Files/maa-cli")):
         for n in ("maa.exe","maa-cli.exe"):

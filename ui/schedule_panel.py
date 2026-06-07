@@ -156,11 +156,13 @@ def _save_schedule(mw: Any) -> None:
     if hasattr(mw, "_sch_deficit_sp"):
         val = mw._sch_deficit_sp.value()
         for a in mw.accounts:
-            if "round_robin_deficit" not in a:
-                a["round_robin_deficit"] = val
+            a["round_robin_deficit"] = val
         mw.config["deficit"] = val
     mw._save()
     if enabled:
+        if mw.maint.ctx.schedule_thread:
+            mw.maint.ctx.schedule_thread.stop_thread()
+            mw.maint.ctx.schedule_thread = None
         mw.maint._start_schedule_thread()
         # Immediately enqueue runnable accounts
         if hasattr(mw, 'launch_queue'):

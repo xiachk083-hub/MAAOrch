@@ -71,12 +71,16 @@ class SettingsDialog(QDialog):
         b=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel); b.accepted.connect(self._sv); b.rejected.connect(self.reject); l.addWidget(b)
     def _ex(self):
         fp,_=QFileDialog.getSaveFileName(self,"导出","config.json","JSON (*.json)")
-        if fp: Path(fp).write_text(json.dumps({k:v for k,v in self.c.items() if k!="window_geometry"},ensure_ascii=False,indent=2),encoding="utf-8")
+        if fp:
+            try: Path(fp).write_text(json.dumps({k:v for k,v in self.c.items() if k!="window_geometry"},ensure_ascii=False,indent=2),encoding="utf-8")
+            except Exception as e: QMessageBox.critical(self,"导出失败",str(e))
     def _im(self):
         fp,_=QFileDialog.getOpenFileName(self,"导入","","JSON (*.json)")
         if fp:
-            d=json.loads(Path(fp).read_text(encoding="utf-8"))
-            if isinstance(d.get("groups"),list): self.c.update(d); self.c["version"]=5
+            try:
+                d=json.loads(Path(fp).read_text(encoding="utf-8"))
+                if isinstance(d.get("groups"),list): self.c.update(d); self.c["version"]=5
+            except Exception as e: QMessageBox.critical(self,"导入失败",f"文件格式错误:\n{e}")
     def _test_webhook(self,url):
         if not url: QMessageBox.warning(self,"提示","请先输入 Webhook URL"); return
         try:
@@ -216,8 +220,7 @@ class AccountDialog(QDialog):
         fight_ts["medicine_expire_days"]=self.expire_days_sp.value()
         fight_ts["use_expire_medicine_for_activity"]=self.use_activity_med_cb.isChecked()
         fight_ts["stage_reset_mode"]={"当前":"Current","上次":"Last","忽略":"Ignore"}.get(self.stage_reset_cb.currentText(),"Current")
-        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
-        # MAA binding
+        # MAA binding (before accept)
         if hasattr(self, "maa_cb") and self.maa_cb.currentData():
             aid = self.a.get("id", "")
             wid = self.maa_cb.currentData()
@@ -228,20 +231,27 @@ class AccountDialog(QDialog):
                         w["account_ref"] = aid
                     elif w.get("account_ref") == aid:
                         w["account_ref"] = ""  # unbind old
+        self.r={"id":self.a.get("id",make_id()),"name":self.n.text().strip() or "未命名","game_client":self.c.currentData(),"adb_path":self.adb.text().strip(),"adb_address":self.adr.text().strip(),"connection_preset":p,"touch_mode":self.tc.currentText(),"task_pipeline":pipe,"fight_stage":self.fs.text().strip(),"task_settings":ts,"sync_tasks":self.sync_cb.isChecked(),"account_switch":self.sw_an.text().strip(),"emu_path":self.emu_path.text().strip(),"emu_launch":self.emu_launch_cb.isChecked(),"emu_wait":self.emu_wait_sp.value(),"start_minimized":self.sm_cb.isChecked(),"start_directly":self.sd_cb.isChecked(),"adb_fail_launch_emu":self.adb_fail_cb.isChecked(),"tags":self.tags.text().strip()}; self.accept()
 
 
 def _download_maa(mw):
     """Trigger MAA download from AccountDialog."""
-    if hasattr(mw, "maint"):
-        row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == mw.accounts[mw.at.currentRow()].get("id", "")), 0)
-        mw.maint.dl_maa(row) if row >= 0 else None
+    if not hasattr(mw, "maint") or mw.at.currentRow() < 0:
+        return
+    aid = mw.accounts[mw.at.currentRow()].get("id", "")
+    row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == aid), -1)
+    if row >= 0:
+        mw.maint.dl_maa(row)
 
 
 def _bind_local_maa(mw):
     """Trigger local MAA binding from AccountDialog."""
-    if hasattr(mw, "maint"):
-        row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == mw.accounts[mw.at.currentRow()].get("id", "")), 0)
-        mw.maint.pk_maa(row) if row >= 0 else None
+    if not hasattr(mw, "maint") or mw.at.currentRow() < 0:
+        return
+    aid = mw.accounts[mw.at.currentRow()].get("id", "")
+    row = next((i for i, a in enumerate(mw.accounts) if a.get("id") == aid), -1)
+    if row >= 0:
+        mw.maint.pk_maa(row)
 
 
 def _sec(title: str) -> QLabel:

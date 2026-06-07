@@ -73,9 +73,10 @@ class DownloadThread(QThread):
             with zipfile.ZipFile(tmpf.name) as zf:
                 for m in zf.infolist():
                     p = Path(m.filename)
-                    if p.is_absolute() or ".." in p.parts:
+                    if p.is_absolute() or any(part == ".." for part in p.parts):
                         self.finished.emit(False, f"危险文件跳过: {m.filename}")
                         return
+                for m in zf.infolist():
                     zf.extract(m, tmp)
             tgt=Path(self.t); tgt.mkdir(parents=True,exist_ok=True)
             items=list(Path(tmp).iterdir())
@@ -136,8 +137,10 @@ class MaacliInstallThread(QThread):
                     if dest.exists(): _rmtree_force(str(dest))
                     shutil.copytree(str(item),str(dest))
                 else: shutil.copy2(str(item),str(dest))
-            _rmtree_force(tmp); self.finished.emit(True,"完成")
+            self.finished.emit(True,"完成")
         except Exception as e: self.finished.emit(False,str(e))
+        finally:
+            if tmp: _rmtree_force(tmp)
 
 class MaacliInstallDialog(QDialog):
     def __init__(self, p: QWidget) -> None:

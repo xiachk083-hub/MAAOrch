@@ -47,12 +47,12 @@ class RunStats:
         run = {
             "ts": start_ts or now.strftime("%Y-%m-%d %H:%M:%S"),
             "tasks": {t["name"]: t["status"] for t in tasks},
-            "drops": drops or {},
+            "drops": dict(drops or {}),
         }
         if sanity:
             cur = sanity["current"]
             mx = sanity["max"]
-            deficit = mx - cur
+            deficit = max(0, mx - cur)
             run["sanity"] = {
                 "current": cur,
                 "max": mx,
