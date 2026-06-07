@@ -286,6 +286,7 @@ class ConfigService:
                                 clean_tq.insert(clean_tq.index(item), anni_item)
                                 anni_appended = True
                             elif not anni_appended:
+                                item["IsEnable"] = True
                                 item["UseCustomAnnihilation"] = True
                                 item["AnnihilationStage"] = anni
                                 item["StagePlan"] = [anni]
