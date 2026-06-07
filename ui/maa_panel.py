@@ -59,6 +59,7 @@ def build_maa_panel(mw: Any) -> QWidget:
     tbl.setShowGrid(False)
     tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
+    tbl.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     mw._maa_tbl = tbl
     vl.addWidget(tbl, 1)
 

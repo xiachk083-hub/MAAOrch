@@ -132,10 +132,10 @@ def build_smart_panel(mw: Any) -> QWidget:
     tbl.setShowGrid(False)
     tbl.setAlternatingRowColors(True)
     tbl.verticalHeader().setDefaultSectionSize(28)
+    tbl.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     mw._smart_tbl = tbl
 
     vl.addWidget(tbl, 1)
-    vl.addStretch()
 
     _rebuild_smart_table(mw)
     return mw.smart_v
