@@ -89,10 +89,16 @@ class MaintService:
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
         import shutil, os
+        is_old_account = "accounts" in str(src)
         for i in range(1, max_n + 1):
             inst = pool / str(i)
             if not inst.exists():
-                shutil.copytree(str(src), str(inst))
+                if i == 1 and is_old_account:
+                    shutil.move(str(src), str(inst))
+                else:
+                    source = pool / "1" if i > 1 and is_old_account else src
+                    if Path(source).exists():
+                        shutil.copytree(str(source), str(inst))
         self.ctx.config["maa_instances"] = max_n
         return str(exe)
 
