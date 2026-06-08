@@ -17,52 +17,6 @@ from callbacks import ServiceContext
 _INSTANCE_LOCK = threading.Lock()
 _inst_init_task = None  # prevent GC of BackgroundTask
 
-# MAA v6 required files and directories for integrity verification
-MAA_MANIFEST = {
-    "files": [
-        "MAA.exe", "MAA.dll", "MAA.deps.json", "MAA.runtimeconfig.json",
-        "MaaCore.dll", "MaaUtils.dll", "MaaAdbControlUnit.dll",
-        "MaaWin32ControlUnit.dll", "DirectML.dll",
-        "hostfxr.dll", "hostpolicy.dll",
-        "onnxruntime_maa.dll", "opencv_world4_maa.dll",
-        "fastdeploy_ppocr_maa.dll",
-    ],
-    "dirs": ["resource", "externals", "Python"],
-    "optional": ["MAA.Updater.exe"],
-}
-
-MAA_INSTANCE_MANIFEST = {
-    "files": [
-        "MAA.exe", "MAA.dll", "MAA.deps.json", "MAA.runtimeconfig.json",
-        "MaaCore.dll", "MaaUtils.dll",
-    ],
-    "dirs": ["config", "resource", "externals", "Python"],
-}
-
-
-def _verify_maa_root(root: Path) -> list[str]:
-    """Check source MAA integrity. Returns list of missing items (empty = OK)."""
-    missing = []
-    for f in MAA_MANIFEST["files"]:
-        if not (root / f).exists():
-            missing.append(f)
-    for d in MAA_MANIFEST["dirs"]:
-        if not (root / d).is_dir():
-            missing.append(d + "/")
-    return missing
-
-
-def _verify_instance(path: Path) -> list[str]:
-    """Check instance integrity. Returns list of missing items (empty = OK)."""
-    missing = []
-    for f in MAA_INSTANCE_MANIFEST["files"]:
-        if not (path / f).exists():
-            missing.append(f)
-    for d in MAA_INSTANCE_MANIFEST["dirs"]:
-        if not (path / d).is_dir():
-            missing.append(d + "/")
-    return missing
-
 
 def _create_instance(inst: Path, source: Path) -> bool:
     """Create a single MAA instance using junctions for large dirs (fast, no full copy)."""
@@ -95,10 +49,6 @@ def _create_instance(inst: Path, source: Path) -> bool:
             dst_config.mkdir(exist_ok=True)
         for sub in ("cache", "data", "debug"):
             (inst / sub).mkdir(exist_ok=True)
-        # Verify integrity
-        missing = _verify_instance(inst)
-        if missing:
-            return False
         return True
     except Exception:
         return False

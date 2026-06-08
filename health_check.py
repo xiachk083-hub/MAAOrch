@@ -108,22 +108,6 @@ def run_health_check(ctx: Any) -> HealthReport:
             return "无法下载"
         items.append(HealthItem("MAA 版本", "warn", "未下载 MAA", _fix_maa, "下载 MAA"))
 
-    # 5. MAA source integrity
-    ver = cfg.get("maa_version", "")
-    if ver and ver != "installed":
-        src = Path(__file__).parent / "maa" / ver
-        if src.exists():
-            from maint_ops import _verify_maa_root
-            missing = _verify_maa_root(src)
-            if missing:
-                def _fix_maa_redl():
-                    if mw and hasattr(mw, "maint"):
-                        mw.maint.dl_maa_all()
-                        return "已启动重新下载"
-                    return "无法下载"
-                items.append(HealthItem("MAA 源完整性", "error", f"缺失 {', '.join(missing[:5])}", _fix_maa_redl, "重新下载"))
-            else:
-                items.append(HealthItem("MAA 源完整性", "ok", f"{ver} 完整"))
 
     # 6. MAA source config initialization
     ver = cfg.get("maa_version", "")
