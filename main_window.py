@@ -112,14 +112,19 @@ class MainWindow(QMainWindow):
         self.launch_queue.tick()
         self.maint.setup_tray(); self.maint.start_schedule()
         # Auto-init MAA instance pool from existing account installations
-        if not self.config.get("maa_version", ""):
-            maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
+        raw_ver = self.config.get("maa_version", "")
+        if not raw_ver or raw_ver == "installed":
+            maas = sorted(Path(__file__).parent.glob("maa/*/MAA.exe"))
+            if not maas:
+                maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
             if maas:
                 from utils import parse_maa_version
                 v = parse_maa_version(str(maas[0]))
                 if v:
                     self.config["maa_version"] = v
-                self.config["maa_instances"] = 0
+            if not self.config.get("maa_version", "") or self.config.get("maa_version", "") == "installed":
+                self.config["maa_version"] = ""
+            self.config["maa_instances"] = 0
         from maint_ops import ensure_maa_instances_async
         ensure_maa_instances_async(self.ctx)
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
