@@ -159,8 +159,14 @@ class MainWindow(QMainWindow):
             with _log_lock:
                 lp=Path(__file__).parent/"debug.log"
                 if lp.exists() and lp.stat().st_size>self.LOG_MAX_BYTES:
-                    lines=lp.read_text(encoding="utf-8",errors="replace").split("\n")
-                    lp.write_text("\n".join(lines[-self.LOG_KEEP_LINES:])+"\n",encoding="utf-8")
+                    # Truncate efficiently: seek near end, find newline, truncate
+                    data=lp.read_bytes()
+                    mid=len(data)//2
+                    idx=data.find(b"\n", mid)
+                    if idx>0:
+                        lp.write_bytes(data[idx+1:])
+                    else:
+                        lp.write_text("", encoding="utf-8")
                 with lp.open("a",encoding="utf-8") as f: f.write(line+"\n")
         except Exception:
             try: print(line,file=__import__('sys').stderr)

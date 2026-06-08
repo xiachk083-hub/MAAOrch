@@ -383,8 +383,14 @@ class AccountRunner(QObject):
         name = ac.get("name", aid)
         if lp and lp.exists():
             try:
-                last = lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-5:]
-                for line in last:
+                # Read last 400 bytes instead of 5 lines (faster for large logs)
+                with lp.open("rb") as f:
+                    f.seek(0, 2)
+                    size = f.tell()
+                    read_size = min(400, size)
+                    f.seek(size - read_size)
+                    tail = f.read(read_size).decode("utf-8", errors="replace")
+                for line in tail.split("\n"):
                     if "append_callback" in line and "SubTaskStart" in line:
                         jm = re.search(r"\{.*\}", line)
                         if jm:

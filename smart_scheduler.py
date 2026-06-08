@@ -1,7 +1,28 @@
 from __future__ import annotations
+import time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+# Simple TTL cache for file I/O (30s)
+_io_cache: dict[str, tuple[float, Any]] = {}
+_IO_CACHE_TTL = 30
+
+
+def _cached_read_json(path: Path) -> Any:
+    """Read JSON file with 30s TTL cache."""
+    key = str(path.resolve())
+    now = _time.time()
+    entry = _io_cache.get(key)
+    if entry and now - entry[0] < _IO_CACHE_TTL:
+        return entry[1]
+    try:
+        import json
+        data = json.loads(path.read_text(encoding="utf-8"))
+        _io_cache[key] = (now, data)
+        return data
+    except Exception:
+        return None
 
 MATERIAL_STAGES: dict[str, dict[str, str]] = {
     "固源岩": {"stage": "1-7", "fallback": "1-7"},
@@ -138,8 +159,9 @@ def _is_annihilation_done_this_week(account_id: str) -> bool:
         sp = Path(__file__).parent / "accounts" / account_id / "stats.json"
         if not sp.exists():
             return False
-        import json
-        data = json.loads(sp.read_text(encoding="utf-8"))
+        data = _cached_read_json(sp)
+        if data is None:
+            return False
         weekly = data.get("weekly_annihilation", {})
         week = datetime.now().strftime("%Y-W%W")
         return weekly.get("week") == week and weekly.get("done", False)
@@ -151,9 +173,10 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
     try:
         sp = Path(__file__).parent / "accounts" / account_id / "stats.json"
         if not sp.exists():
-            return True  # no data yet → assume sufficient, will collect on first run
-        import json
-        data = json.loads(sp.read_text(encoding="utf-8"))
+            return True
+        data = _cached_read_json(sp)
+        if data is None:
+            return True
         runs = data.get("runs", [])
         for r in reversed(runs):
             s = r.get("sanity")
@@ -188,8 +211,9 @@ def _get_material_stage(account: dict, global_cfg: dict) -> str | None:
         sp = Path(__file__).parent / "accounts" / account["id"] / "depot.json"
         if not sp.exists():
             return None
-        import json
-        depot = json.loads(sp.read_text(encoding="utf-8"))
+        depot = _cached_read_json(sp)
+        if depot is None:
+            return None
         items = depot.get("items", {})
         materials = global_cfg.get("materials", [])
         sorted_mats = sorted(materials, key=lambda m: m.get("priority", 99))
