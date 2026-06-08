@@ -26,6 +26,10 @@ def build_maa_panel(mw: Any) -> QWidget:
     dl_btn.setObjectName("startBtn")
     dl_btn.clicked.connect(lambda: mw.maint.dl_maa_all())
     hdr.addWidget(dl_btn)
+    rebuild_btn = QPushButton("🔄 重建实例")
+    rebuild_btn.setObjectName("startBtn")
+    rebuild_btn.clicked.connect(lambda: _rebuild_instances(mw))
+    hdr.addWidget(rebuild_btn)
     hdr.addStretch()
     vl.addLayout(hdr)
 
@@ -148,3 +152,41 @@ def refresh_maa_panel(mw: Any) -> None:
         tbl.setItem(i - 1, 3, QTableWidgetItem(pid if exists else ""))
         cfg = str(inst / "config") if exists else ""
         tbl.setItem(i - 1, 4, QTableWidgetItem(cfg))
+
+
+def _rebuild_instances(mw: Any) -> None:
+    """Rebuild all MAA instances with progress dialog."""
+    from maint_ops import ensure_maa_instances_async
+    desired = mw.config.get("parallel_max", 1) + 1
+    dlg = __import__("ui.rebuild_dialog", fromlist=["RebuildDialog"]).RebuildDialog(mw, desired)
+    dlg.show()
+
+    # Thread-safe progress tracking
+    progress = {"current": 0, "total": desired}
+    from PySide6.QtCore import QTimer
+
+    def _poll():
+        dlg.update(progress["current"], progress["total"])
+
+    poll_timer = QTimer()
+    poll_timer.timeout.connect(_poll)
+    poll_timer.start(200)
+
+    def progress_cb(current, total):
+        progress["current"] = current
+        progress["total"] = total
+
+    from background import BackgroundTask
+
+    def _rebuild():
+        ensure_maa_instances_async(mw.ctx, force=True, progress_cb=progress_cb)
+
+    def _done():
+        poll_timer.stop()
+        dlg.update(progress["current"], progress["total"])
+        dlg.close()
+        refresh_maa_panel(mw)
+
+    t = BackgroundTask(_rebuild)
+    t.finished.connect(_done)
+    t.start()

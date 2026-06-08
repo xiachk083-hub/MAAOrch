@@ -122,9 +122,14 @@ def _delete_instances(pool: Path) -> None:
             pass
 
 
-def ensure_maa_instances_async(ctx) -> None:
+def ensure_maa_instances_async(ctx, force=False, progress_cb=None) -> None:
     """Pre-create all MAA instances up to parallel_max + 1 in background.
-    Auto-initializes source MAA and handles version changes."""
+    Auto-initializes source MAA and handles version changes.
+    
+    Args:
+        force: If True, delete and recreate all instances even if up-to-date.
+        progress_cb: Optional callback(current, total) for progress UI.
+    """
     global _inst_init_task
     src = _find_maa_source()
     if not src:
@@ -137,10 +142,24 @@ def ensure_maa_instances_async(ctx) -> None:
     built_ver = ctx.config.get("maa_instances_version", "")
     ver_changed = current_ver and built_ver and current_ver != built_ver
 
-    if ver_changed:
+    if force or ver_changed:
         _delete_instances(pool)
         with _INSTANCE_LOCK:
             ctx.config["maa_instances"] = 0
+
+    # Check if source MAA.exe differs from instance 1 (user updated source/)
+    src_exe = src / "MAA.exe"
+    inst1_exe = pool / "1" / "MAA.exe"
+    if not force and not ver_changed and inst1_exe.exists():
+        try:
+            s_stat = src_exe.stat()
+            i_stat = inst1_exe.stat()
+            if s_stat.st_mtime != i_stat.st_mtime or s_stat.st_size != i_stat.st_size:
+                _delete_instances(pool)
+                with _INSTANCE_LOCK:
+                    ctx.config["maa_instances"] = 0
+        except Exception:
+            pass
 
     # Ensure source MAA config is initialized (outside lock, may take up to 120s)
     if not _check_source_ready(src):
@@ -151,7 +170,7 @@ def ensure_maa_instances_async(ctx) -> None:
 
     with _INSTANCE_LOCK:
         existing_ok = sum(1 for i in range(1, desired + 1) if (pool / str(i) / "MAA.exe").exists())
-        if existing_ok >= desired and not ver_changed:
+        if existing_ok >= desired and not ver_changed and not force:
             ctx.config["maa_instances"] = desired
             ctx.save()
             return
@@ -168,6 +187,8 @@ def ensure_maa_instances_async(ctx) -> None:
                 created = i
             else:
                 break
+            if progress_cb:
+                progress_cb(created, desired)
         return created
 
     def _on_init_result(actual):
