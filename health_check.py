@@ -87,8 +87,19 @@ def run_health_check(ctx: Any) -> HealthReport:
 
     # 4. MAA version
     ver = cfg.get("maa_version", "")
-    if ver:
+    if ver and ver != "installed":
         items.append(HealthItem("MAA 版本", "ok", ver))
+    elif ver == "installed":
+        items.append(HealthItem("MAA 版本", "warn", "版本号未识别（旧版遗留），请点击修复"))
+        def _fix_maa_ver():
+            from utils import parse_maa_version
+            for d in sorted(Path(__file__).parent.glob("maa/*/MAA.exe")):
+                v = parse_maa_version(str(d.parent))
+                if v:
+                    cfg["maa_version"] = v
+                    return f"已更新为 {v}"
+            return "未找到 MAA 版本号"
+        items.append(HealthItem("MAA 版本", "warn", "installed", _fix_maa_ver, "修复"))
     else:
         def _fix_maa():
             if mw and hasattr(mw, "maint"):
@@ -99,7 +110,7 @@ def run_health_check(ctx: Any) -> HealthReport:
 
     # 5. MAA source config initialization
     ver = cfg.get("maa_version", "")
-    if ver:
+    if ver and ver != "installed":
         from maint_ops import _check_source_ready, _init_maa_source
         src = Path(__file__).parent / "maa" / ver
         if src.exists() and (src / "MAA.exe").exists():
@@ -112,6 +123,8 @@ def run_health_check(ctx: Any) -> HealthReport:
                 items.append(HealthItem("MAA 源配置", "warn", "需初始化", _fix_source_init, "初始化"))
         else:
             items.append(HealthItem("MAA 源配置", "warn", f"目录 {ver} 不存在"))
+    elif ver == "installed":
+        items.append(HealthItem("MAA 源配置", "warn", "版本号未识别，无法检测配置"))
 
     # 6. MAA instances
     pool = Path(__file__).parent / "maa" / "instances"
