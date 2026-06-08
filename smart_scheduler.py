@@ -4,6 +4,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+
+def _arknights_now() -> datetime:
+    """Return current time aligned to Arknights daily reset (04:00).
+    Game resets at 4am, so before 4am the game date is still 'yesterday'."""
+    return datetime.now() - timedelta(hours=4)
+
 # Simple TTL cache for file I/O (30s)
 _io_cache: dict[str, tuple[float, Any]] = {}
 _IO_CACHE_TTL = 30
@@ -37,13 +43,13 @@ MATERIAL_STAGES: dict[str, dict[str, str]] = {
     "研磨石": {"stage": "7-12", "fallback": "1-7"},
     "RMA70":  {"stage": "7-10", "fallback": "1-7"},
     "固源岩组":{"stage": "2-4",  "fallback": "1-7"},
-    "龙门币": {"stage": "CE-6", "fallback": "CE-5"},
-    "作战记录":{"stage": "LS-6", "fallback": "LS-5"},
+    "龙门币": {"stage": "CE-6", "fallback": "CE-5", "days": ["wed","sat","sun"], "fallback_days": ["mon","tue","thu","fri"]},
+    "作战记录":{"stage": "LS-6", "fallback": "LS-5", "days": ["mon","thu","fri","sun"], "fallback_days": ["tue","wed","sat"]},
 }
 
 
 def get_today_key() -> str:
-    return ["mon","tue","wed","thu","fri","sat","sun"][datetime.now().weekday()]
+    return ["mon","tue","wed","thu","fri","sat","sun"][_arknights_now().weekday()]
 
 
 _infrast_fired: set = set()  # tracks "YYYY-MM-DD/04:00" fired per day
@@ -78,8 +84,9 @@ def is_infrast_time(now: datetime | None = None, times: list[str] | None = None)
 def decide(account: dict, global_cfg: dict) -> list[str]:
     tasks: list[str] = []
     now = datetime.now()
+    ak_now = _arknights_now()
     today_key = get_today_key()
-    is_monday = now.weekday() == 0
+    is_monday = ak_now.weekday() == 0
 
     tasks.append("StartUp")
     tasks.append("Award")
@@ -217,6 +224,7 @@ def _get_material_stage(account: dict, global_cfg: dict) -> str | None:
         items = depot.get("items", {})
         materials = global_cfg.get("materials", [])
         sorted_mats = sorted(materials, key=lambda m: m.get("priority", 99))
+        today_day = get_today_key()
         for mat in sorted_mats:
             if not mat.get("enabled", False):
                 continue
@@ -224,8 +232,15 @@ def _get_material_stage(account: dict, global_cfg: dict) -> str | None:
             cur = items.get(name, 0)
             if cur < mat.get("min", 0):
                 ms = MATERIAL_STAGES.get(name)
-                if ms:
-                    return ms["stage"]
+                if not ms:
+                    continue
+                days = ms.get("days")
+                if days and today_day not in days:
+                    fb_days = ms.get("fallback_days")
+                    if fb_days and today_day in fb_days and ms.get("fallback"):
+                        return ms["fallback"]
+                    continue
+                return ms["stage"]
         return None
     except Exception:
         return None
