@@ -18,6 +18,34 @@ _INSTANCE_LOCK = threading.Lock()
 _inst_init_task = None  # prevent GC of BackgroundTask
 
 
+def _create_instance(inst: Path, source: Path) -> bool:
+    """Create a single MAA instance using junctions for large dirs (fast, no full copy)."""
+    import shutil, subprocess as _sp
+    if (inst / "MAA.exe").exists():
+        return True
+    if inst.exists():
+        try:
+            shutil.rmtree(str(inst))
+        except PermissionError:
+            return False  # directory locked by another process, skip
+    inst.mkdir(parents=True, exist_ok=True)
+    try:
+        for item in source.iterdir():
+            if item.is_file():
+                shutil.copy2(str(item), str(inst / item.name))
+        for sub in ("resource", "externals", "Python"):
+            src_sub = source / sub
+            dst_sub = inst / sub
+            if src_sub.exists() and not dst_sub.exists():
+                _sp.run(["cmd", "/c", "mklink", "/J", str(dst_sub), str(src_sub)],
+                        capture_output=True, timeout=5)
+        for sub in ("config", "cache", "data", "debug"):
+            (inst / sub).mkdir(exist_ok=True)
+        return True
+    except Exception:
+        return False
+
+
 def ensure_maa_instances_async(ctx) -> None:
     """Pre-create all MAA instances up to parallel_max + 1 in background."""
     global _inst_init_task
@@ -27,7 +55,6 @@ def ensure_maa_instances_async(ctx) -> None:
             return
         desired = ctx.config.get("parallel_max", 1) + 1
         pool = Path(__file__).parent / "maa" / "instances"
-        # Check how many instances already exist with MAA.exe on disk
         existing_ok = sum(1 for i in range(1, desired + 1) if (pool / str(i) / "MAA.exe").exists())
         if existing_ok >= desired:
             ctx.config["maa_instances"] = desired
@@ -39,27 +66,16 @@ def ensure_maa_instances_async(ctx) -> None:
     def _init():
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
-        import shutil
         created = 0
         for i in range(1, desired + 1):
-            try:
-                inst = pool / str(i)
-                if (inst / "MAA.exe").exists():
-                    created = i
-                    continue
-                if inst.exists():
-                    shutil.rmtree(str(inst))
-                copy_src = src if i == 1 else str(pool / "1")
-                if not Path(copy_src).exists():
-                    break
-                shutil.copytree(str(copy_src), str(inst))
+            source = src if i == 1 else (pool / "1")
+            if _create_instance(pool / str(i), source):
                 created = i
-            except Exception:
+            else:
                 break
         return created
 
     def _on_init_result(actual):
-        """Runs on main thread after BackgroundTask finishes."""
         global _inst_init_task
         _inst_init_task = None
         with _INSTANCE_LOCK:
@@ -80,18 +96,10 @@ def _ensure_instance_n(ctx, n: int) -> bool:
     inst = pool / str(n)
     if (inst / "MAA.exe").exists():
         return True
-    # Source is always instance #1
     src = pool / "1"
     if not (src / "MAA.exe").exists():
         return False
-    import shutil
-    try:
-        if inst.exists():
-            shutil.rmtree(str(inst))
-        shutil.copytree(str(src), str(inst))
-        return True
-    except:
-        return False
+    return _create_instance(inst, src)
 
 
 def _find_maa_source() -> Path | None:
