@@ -116,7 +116,9 @@ class MainWindow(QMainWindow):
             maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
             if maas:
                 from utils import parse_maa_version
-                self.config["maa_version"] = parse_maa_version(str(maas[0])) or "installed"
+                v = parse_maa_version(str(maas[0]))
+                if v:
+                    self.config["maa_version"] = v
                 self.config["maa_instances"] = 0
         from maint_ops import ensure_maa_instances_async
         ensure_maa_instances_async(self.ctx)

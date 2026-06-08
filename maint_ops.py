@@ -76,7 +76,7 @@ def _init_maa_source(source: Path) -> bool:
     try:
         proc = subprocess.Popen([str(exe)], creationflags=subprocess.CREATE_NO_WINDOW)
         gj = source / "config" / "gui.new.json"
-        for _ in range(60):
+        for _ in range(120):
             if gj.exists():
                 try:
                     data = json.loads(gj.read_text(encoding="utf-8"))
@@ -96,45 +96,65 @@ def _init_maa_source(source: Path) -> bool:
         return False
 
 
+def _delete_instances(pool: Path) -> None:
+    """Delete all instance directories, skipping running ones."""
+    import subprocess as _sp
+    for inst_dir in pool.glob("*"):
+        if not inst_dir.is_dir():
+            continue
+        pid_file = inst_dir / ".pid"
+        running = False
+        if pid_file.exists():
+            try:
+                pid = int(pid_file.read_text().strip())
+                r = _sp.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                            capture_output=True, text=True, timeout=2,
+                            creationflags=_sp.CREATE_NO_WINDOW)
+                running = str(pid) in r.stdout
+            except Exception:
+                pass
+        if running:
+            continue
+        try:
+            import shutil as _su
+            _su.rmtree(str(inst_dir))
+        except Exception:
+            pass
+
+
 def ensure_maa_instances_async(ctx) -> None:
     """Pre-create all MAA instances up to parallel_max + 1 in background.
     Auto-initializes source MAA and handles version changes."""
     global _inst_init_task
-    with _INSTANCE_LOCK:
-        src = _find_maa_source()
-        if not src:
-            return
-        desired = ctx.config.get("parallel_max", 1) + 1
-        pool = Path(__file__).parent / "maa" / "instances"
+    src = _find_maa_source()
+    if not src:
+        return
+    desired = ctx.config.get("parallel_max", 1) + 1
+    pool = Path(__file__).parent / "maa" / "instances"
 
-        # Version check — rebuild if MAA version changed
-        current_ver = ctx.config.get("maa_version", "")
-        built_ver = ctx.config.get("maa_instances_version", "")
-        ver_changed = current_ver and built_ver and current_ver != built_ver
+    # Version check — rebuild if MAA version changed
+    current_ver = ctx.config.get("maa_version", "")
+    built_ver = ctx.config.get("maa_instances_version", "")
+    ver_changed = current_ver and built_ver and current_ver != built_ver
 
-        if ver_changed:
-            # Version changed — delete all instances, re-create from new source
-            for inst_dir in pool.glob("*"):
-                if inst_dir.is_dir():
-                    try:
-                        import shutil as _su
-                        _su.rmtree(str(inst_dir))
-                    except Exception:
-                        pass
+    if ver_changed:
+        _delete_instances(pool)
+        with _INSTANCE_LOCK:
             ctx.config["maa_instances"] = 0
 
+    # Ensure source MAA config is initialized (outside lock, may take up to 120s)
+    if not _check_source_ready(src):
+        ctx.log("[MAA] 正在初始化 MAA 默认配置...")
+        if not _init_maa_source(src):
+            ctx.log("[MAA] MAA 初始化失败，部分功能可能不可用")
+            return
+
+    with _INSTANCE_LOCK:
         existing_ok = sum(1 for i in range(1, desired + 1) if (pool / str(i) / "MAA.exe").exists())
         if existing_ok >= desired and not ver_changed:
             ctx.config["maa_instances"] = desired
             ctx.save()
             return
-
-        # Ensure source MAA config is initialized ($type present)
-        if not _check_source_ready(src):
-            ctx.log("[MAA] 正在初始化 MAA 默认配置...")
-            if not _init_maa_source(src):
-                ctx.log("[MAA] MAA 初始化失败，部分功能可能不可用")
-                return
 
     from background import BackgroundTask
 

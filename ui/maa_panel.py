@@ -83,12 +83,22 @@ def refresh_maa_panel(mw: Any) -> None:
     pool = Path(__file__).parent.parent / "maa" / "instances"
     tbl = mw._maa_tbl
     tbl.setRowCount(max_n)
-    import subprocess, os
+    import subprocess, os, time
 
-    # Check if source MAA has config ready
-    from maint_ops import _check_source_ready
+    # Check if source MAA has config ready (cached, max once per 10s)
+    source_ok = False
     src = Path(__file__).parent.parent / "maa" / ver if ver else None
-    source_ok = _check_source_ready(src) if src and src.exists() else False
+    if src and src.exists():
+        cache_key = "_maa_source_ok_cache"
+        cache_ts = "_maa_source_cache_time"
+        now = time.time()
+        if getattr(mw, cache_ts, 0) + 10 > now:
+            source_ok = getattr(mw, cache_key, False)
+        else:
+            from maint_ops import _check_source_ready
+            source_ok = _check_source_ready(src)
+            setattr(mw, cache_key, source_ok)
+            setattr(mw, cache_ts, now)
 
     for i in range(1, max_n + 1):
         inst = pool / str(i)
