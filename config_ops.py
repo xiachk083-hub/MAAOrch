@@ -202,9 +202,14 @@ class ConfigService:
                     d = {}
             d.setdefault("Configurations", {}).setdefault("Default", {})
             d.setdefault("Current", "Default")
-            d.setdefault("Global", {})
             c = d["Configurations"]["Default"]
+            d.setdefault("Global", {})
             d.setdefault("Resource", {})["AutoUpdate"] = True
+            # Clean up v5 flat keys that may linger from old inject_smart runs
+            if use_v6:
+                for k in list(c.keys()):
+                    if '.' in k and k not in ("InfrastOrder",):
+                        del c[k]
             if use_v6:
                 c.setdefault("InfrastOrder", {})
             # MAA v6 reads GUI settings from gui.json Global section
