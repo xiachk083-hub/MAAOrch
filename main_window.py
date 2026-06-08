@@ -742,7 +742,8 @@ class MainWindow(QMainWindow):
                 continue
             if self.launch_queue.is_queued(aid):
                 continue
-            if self.launch_queue.is_running(aid):
+            running = self.launch_queue.is_running(aid) or (getattr(self, "runner", None) and self.runner.is_running(aid))
+            if running:
                 if is_time_trigger and not a.get("smart_pending", False):
                     a["smart_pending"] = True
                 continue
