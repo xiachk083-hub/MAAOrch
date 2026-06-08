@@ -1,0 +1,84 @@
+{
+    "stage_name": "有教无类",
+    "replacement_home": [
+        {
+            "location": [7, 4],
+            "direction": "up"
+        }
+    ],
+    "blacklist_location": [],
+    "deploy_plan": [
+        {
+            "groups": ["召唤", "益达", "提丰", "焰苇", "高台输出"],
+            "location": [7, 5],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面远程", "地面阻挡", "其他地面"],
+            "location": [7, 4],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面远程", "地面阻挡", "其他地面"],
+            "location": [8, 4],
+            "direction": "up"
+        },
+        {
+            "groups": ["炮灰", "其他地面", "地面阻挡"],
+            "location": [1, 3],
+            "direction": "up",
+            "condition": [3, 5]
+        },
+        {
+            "groups": ["高台输出"],
+            "location": [8, 5],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面阻挡", "玛恩纳", "其他地面"],
+            "location": [6, 4],
+            "direction": "right"
+        },
+        {
+            "groups": ["单奶", "群奶"],
+            "location": [5, 5],
+            "direction": "right"
+        },
+        {
+            "groups": ["处决者"],
+            "location": [7, 1],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面阻挡", "玛恩纳", "其他地面"],
+            "location": [7, 3],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面阻挡", "玛恩纳", "其他地面"],
+            "location": [8, 3],
+            "direction": "up"
+        },
+        {
+            "groups": ["鱼"],
+            "location": [7, 2],
+            "direction": "up"
+        },
+        {
+            "groups": ["鱼"],
+            "location": [8, 2],
+            "direction": "up"
+        },
+        {
+            "groups": ["补给站"],
+            "location": [6, 3],
+            "direction": "down"
+        }
+    ],
+    "retreat_plan": [
+        {
+            "location": [1, 3],
+            "condition": [5, 8]
+        }
+    ]
+}

@@ -216,30 +216,30 @@ class ConfigService:
             for stale in ("Start.Minimized", "Start.MinimizeDirectly"):
                 c.pop(stale, None)
 
-            if ac.get("adb_address"):
-                c["Connect.Address"] = ac["adb_address"]
-            if ac.get("adb_path"):
-                c["Connect.AdbPath"] = ac["adb_path"]
-            pr = ac.get("connection_preset", "")
-            to = ac.get("touch_mode", "")
-            if pr:
-                c["Connect.ConnectConfig"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
-            if to:
-                c["Connect.TouchMode"] = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}.get(to, "minitouch")
-            c["Connect.AdbReplaced"] = "True"
-            c["Connect.AutoDetect"] = "False"
-            c["Connect.AlwaysAutoDetect"] = "False"
-            if ac.get("game_client"):
-                c["Start.ClientType"] = ac["game_client"]
-            c["Start.RunDirectly"] = "True"
-            c["Start.StartGame"] = "True"
-
-            smart_cfg = self.ctx.config.get("smart_global", {})
-            post = smart_cfg.get("post_action", "")
-            if post:
-                c["MainFunction.PostActions"] = post
-            else:
-                c.pop("MainFunction.PostActions", None)
+            if not use_v6:
+                if ac.get("adb_address"):
+                    c["Connect.Address"] = ac["adb_address"]
+                if ac.get("adb_path"):
+                    c["Connect.AdbPath"] = ac["adb_path"]
+                pr = ac.get("connection_preset", "")
+                to = ac.get("touch_mode", "")
+                if pr:
+                    c["Connect.ConnectConfig"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
+                if to:
+                    c["Connect.TouchMode"] = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}.get(to, "minitouch")
+                c["Connect.AdbReplaced"] = "True"
+                c["Connect.AutoDetect"] = "False"
+                c["Connect.AlwaysAutoDetect"] = "False"
+                if ac.get("game_client"):
+                    c["Start.ClientType"] = ac["game_client"]
+                c["Start.RunDirectly"] = "True"
+                c["Start.StartGame"] = "True"
+                smart_cfg = self.ctx.config.get("smart_global", {})
+                post = smart_cfg.get("post_action", "")
+                if post:
+                    c["MainFunction.PostActions"] = post
+                else:
+                    c.pop("MainFunction.PostActions", None)
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx and not ac.get("emu_launch"):
