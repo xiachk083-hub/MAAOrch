@@ -213,8 +213,6 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
             if created >= desired:
                 ctx.config["maa_instances_version"] = ctx.config.get("maa_version", "")
             ctx.save()
-        global _inst_init_task
-        _inst_init_task = None
 
     if sync:
         _run_init()
@@ -323,7 +321,7 @@ class MaintService:
             self.ctx.config["maa_version"] = tag
             self.ctx.save()
             ensure_maa_instances_async(self.ctx)
-            self.ctx.log(f"MAA {tag} 已下载，实例池就绪 ({self.ctx.config.get('parallel_max',1)} 个)")
+            self.ctx.log(f"MAA {tag} 已下载，正在创建实例...")
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self._replace_update_thread(t); t.start()
 
