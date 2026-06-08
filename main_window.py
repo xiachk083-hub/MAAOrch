@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         self._log(f"账号: {len(self.accounts)} | 仓库: {len(self.warehouse)} | 分组: {len(self.groups)}")
         if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self.maint.check_updates(True))
         self.maint.start_auto_update_timer()
+        QTimer.singleShot(5000, self._health_check)
 
     def _set_theme(self, m: str) -> None: self.setStyleSheet(DARK_STYLE if m=="Dark" else LIGHT_STYLE)
     def _start_api_server(self) -> None:
@@ -272,6 +273,10 @@ class MainWindow(QMainWindow):
         sb2.addWidget(self.sl)
         self._qsb = QLabel("")
         sb2.addPermanentWidget(self._qsb)
+        self._health_indicator = QLabel("")
+        self._health_indicator.setToolTip("点击查看环境检测详情")
+        self._health_indicator.mousePressEvent = lambda e: self._health_dialog()
+        sb2.addPermanentWidget(self._health_indicator)
 
         # Menu bar
         mb = self.menuBar()
@@ -279,6 +284,8 @@ class MainWindow(QMainWindow):
         tm.addAction("定时", self._sch)
         tm.addAction("检查更新", lambda: self.maint.check_updates())
         tm.addAction("检查 MAAOrch 更新", lambda: self.maint.check_orch_update())
+        tm.addSeparator()
+        tm.addAction("🔍 环境检测与修复", lambda: self._health_dialog())
         tm.addAction("设置", self._settings)
         tm.addAction("日志", self._tlog)
         tm.addSeparator()
@@ -766,6 +773,28 @@ class MainWindow(QMainWindow):
         btn.clicked.connect(d.accept)
         l.addWidget(btn)
         d.exec()
+
+    def _health_check(self) -> None:
+        """Background health check on startup. Updates status bar indicator only."""
+        try:
+            from health_check import run_health_check
+            report = run_health_check(self.ctx)
+            n = report.error_count + report.warn_count
+            if n:
+                self._health_indicator.setText(f"⚠ {n}")
+                self._health_indicator.setStyleSheet("color:#e8a000;font-weight:bold")
+                self._log(f"环境检测: {report.error_count} 个错误, {report.warn_count} 个警告")
+            else:
+                self._health_indicator.setText("✅")
+                self._health_indicator.setStyleSheet("color:#0a0")
+        except Exception as e:
+            self._log(f"环境检测失败: {e}")
+
+    def _health_dialog(self) -> None:
+        """Open health check dialog."""
+        from health_check import run_health_check, show_health_dialog
+        report = run_health_check(self.ctx)
+        show_health_dialog(self, report)
 
     def _update_todo_badge(self, count: int = -1) -> None:
         if count < 0:
