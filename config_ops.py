@@ -260,9 +260,15 @@ class ConfigService:
             if use_v6:
                 task_set = {t.lower() for t in task_list}
                 run_annihilation = "annihilation" in task_set
+                from smart_scheduler import _arknights_now, _get_material_stage
                 weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
-                today_key = weekday_names[datetime.now().weekday()]
+                today_key = weekday_names[_arknights_now().weekday()]
                 day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
+                # If materials tracking is enabled, prefer material stage over user's default
+                if ac.get("smart_materials_enabled", True):
+                    mat_stage = _get_material_stage(ac, self.ctx.config.get("smart_global", {}))
+                    if mat_stage:
+                        day_stage = mat_stage
                 # Sanitize: only allow valid stage names
                 day_stage = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff_\-]', '', day_stage) if day_stage else ""
 
