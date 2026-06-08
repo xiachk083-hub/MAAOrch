@@ -13,7 +13,7 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
     "parallel_max":1,"daily_batch_time":"",
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[],
-    "maa_version":"","maa_instances":0,
+    "maa_version":"","maa_instances":0,"maa_instances_version":"",
     "smart_global":{"threshold":80,"expiring_medicine":True,"medicine_days":2,"annihilation_enabled":True,
         "infrast_times":["04:00","16:00"],"recruit_enabled":True,"mall_enabled":True,"post_action":"ExitArknights,ExitSelf",
         "materials":[

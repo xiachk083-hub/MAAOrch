@@ -97,7 +97,23 @@ def run_health_check(ctx: Any) -> HealthReport:
             return "无法下载"
         items.append(HealthItem("MAA 版本", "warn", "未下载 MAA", _fix_maa, "下载 MAA"))
 
-    # 5. MAA instances
+    # 5. MAA source config initialization
+    ver = cfg.get("maa_version", "")
+    if ver:
+        from maint_ops import _check_source_ready, _init_maa_source
+        src = Path(__file__).parent / "maa" / ver
+        if src.exists() and (src / "MAA.exe").exists():
+            if _check_source_ready(src):
+                items.append(HealthItem("MAA 源配置", "ok", "已初始化"))
+            else:
+                def _fix_source_init():
+                    ok = _init_maa_source(src)
+                    return "初始化成功" if ok else "初始化失败"
+                items.append(HealthItem("MAA 源配置", "warn", "需初始化", _fix_source_init, "初始化"))
+        else:
+            items.append(HealthItem("MAA 源配置", "warn", f"目录 {ver} 不存在"))
+
+    # 6. MAA instances
     pool = Path(__file__).parent / "maa" / "instances"
     instances = list(pool.glob("*/MAA.exe")) if pool.exists() else []
     if instances:

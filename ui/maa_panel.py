@@ -1,5 +1,6 @@
 """MAA instance pool management tab."""
 from __future__ import annotations
+import json
 from pathlib import Path
 from typing import Any
 
@@ -48,12 +49,13 @@ def build_maa_panel(mw: Any) -> QWidget:
 
     # Instance table
     vl.addWidget(QLabel("实例状态", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
-    tbl = QTableWidget(0, 4)
-    tbl.setHorizontalHeaderLabels(["实例#", "状态", "PID", "配置文件"])
-    tbl.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+    tbl = QTableWidget(0, 5)
+    tbl.setHorizontalHeaderLabels(["实例#", "状态", "配置", "PID", "配置文件"])
+    tbl.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
     tbl.setColumnWidth(0, 60)
     tbl.setColumnWidth(1, 70)
-    tbl.setColumnWidth(2, 80)
+    tbl.setColumnWidth(2, 50)
+    tbl.setColumnWidth(3, 80)
     tbl.verticalHeader().setVisible(False)
     tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
     tbl.setShowGrid(False)
@@ -74,7 +76,6 @@ def build_maa_panel(mw: Any) -> QWidget:
 def refresh_maa_panel(mw: Any) -> None:
     if not hasattr(mw, "_maa_tbl"):
         return
-    # Update version label
     mw._maa_version_lbl.setText(mw.config.get("maa_version", "未安装"))
     ver = mw.config.get("maa_version", "")
     max_created = mw.config.get("maa_instances", 0)
@@ -83,6 +84,11 @@ def refresh_maa_panel(mw: Any) -> None:
     tbl = mw._maa_tbl
     tbl.setRowCount(max_n)
     import subprocess, os
+
+    # Check if source MAA has config ready
+    from maint_ops import _check_source_ready
+    src = Path(__file__).parent.parent / "maa" / ver if ver else None
+    source_ok = _check_source_ready(src) if src and src.exists() else False
 
     for i in range(1, max_n + 1):
         inst = pool / str(i)
@@ -115,6 +121,23 @@ def refresh_maa_panel(mw: Any) -> None:
             tbl.setItem(i - 1, 1, QTableWidgetItem("▶ 运行中"))
         else:
             tbl.setItem(i - 1, 1, QTableWidgetItem("⏸ 空闲"))
-        tbl.setItem(i - 1, 2, QTableWidgetItem(pid if exists else ""))
+
+        # Config status
+        if exists:
+            gj = inst / "config" / "gui.new.json"
+            if gj.exists():
+                try:
+                    d = json.loads(gj.read_text(encoding="utf-8"))
+                    tq = d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
+                    cfg_ok = any("$type" in item for item in tq)
+                except Exception:
+                    cfg_ok = False
+            else:
+                cfg_ok = False
+            tbl.setItem(i - 1, 2, QTableWidgetItem("✅" if cfg_ok else "⚠"))
+        else:
+            tbl.setItem(i - 1, 2, QTableWidgetItem(""))
+
+        tbl.setItem(i - 1, 3, QTableWidgetItem(pid if exists else ""))
         cfg = str(inst / "config") if exists else ""
-        tbl.setItem(i - 1, 3, QTableWidgetItem(cfg))
+        tbl.setItem(i - 1, 4, QTableWidgetItem(cfg))
