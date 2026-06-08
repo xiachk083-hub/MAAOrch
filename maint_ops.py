@@ -222,13 +222,8 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
 
     from background import BackgroundTask
 
-    def _on_finished():
-        global _inst_init_task
-        _inst_init_task = None
-
     with _INSTANCE_LOCK:
         t = BackgroundTask(_run_init)
-        t.finished.connect(_on_finished)
         _inst_init_task = t
         t.start()
 
