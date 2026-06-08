@@ -122,13 +122,13 @@ def _delete_instances(pool: Path) -> None:
             pass
 
 
-def ensure_maa_instances_async(ctx, force=False, progress_cb=None) -> None:
-    """Pre-create all MAA instances up to parallel_max + 1 in background.
-    Auto-initializes source MAA and handles version changes.
+def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -> None:
+    """Pre-create all MAA instances up to parallel_max + 1.
     
     Args:
         force: If True, delete and recreate all instances even if up-to-date.
         progress_cb: Optional callback(current, total) for progress UI.
+        sync: If True, run init synchronously in current thread (caller must handle threading).
     """
     global _inst_init_task
     src = _find_maa_source()
@@ -161,7 +161,7 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None) -> None:
         except Exception:
             pass
 
-    # Ensure source MAA config is initialized (outside lock, may take up to 120s)
+    # Ensure source MAA config is initialized
     if not _check_source_ready(src):
         ctx.log("[MAA] 正在初始化 MAA 默认配置...")
         if not _init_maa_source(src):
@@ -175,9 +175,7 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None) -> None:
             ctx.save()
             return
 
-    from background import BackgroundTask
-
-    def _init():
+    def _run_init():
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
         created = 0
@@ -189,22 +187,26 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None) -> None:
                 break
             if progress_cb:
                 progress_cb(created, desired)
-        return created
-
-    def _on_init_result(actual):
         with _INSTANCE_LOCK:
-            ctx.config["maa_instances"] = max(actual, ctx.config.get("maa_instances", 0))
-            if actual >= desired:
+            ctx.config["maa_instances"] = max(created, ctx.config.get("maa_instances", 0))
+            if created >= desired:
                 ctx.config["maa_instances_version"] = ctx.config.get("maa_version", "")
             ctx.save()
+        global _inst_init_task
+        _inst_init_task = None
+
+    if sync:
+        _run_init()
+        return
+
+    from background import BackgroundTask
 
     def _on_finished():
         global _inst_init_task
         _inst_init_task = None
 
     with _INSTANCE_LOCK:
-        t = BackgroundTask(_init)
-        t.result.connect(_on_init_result)
+        t = BackgroundTask(_run_init)
         t.finished.connect(_on_finished)
         _inst_init_task = t
         t.start()

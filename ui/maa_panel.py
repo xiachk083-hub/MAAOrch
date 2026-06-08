@@ -163,7 +163,6 @@ def _rebuild_instances(mw: Any) -> None:
     dlg = RebuildDialog(mw, desired)
     dlg.show()
 
-    # Thread-safe progress tracking
     progress = {"current": 0, "total": desired}
     poll_timer = QTimer()
     poll_timer.timeout.connect(lambda: dlg.update(progress["current"], progress["total"]))
@@ -176,7 +175,7 @@ def _rebuild_instances(mw: Any) -> None:
     from background import BackgroundTask
 
     def _rebuild():
-        ensure_maa_instances_async(mw.ctx, force=True, progress_cb=progress_cb)
+        ensure_maa_instances_async(mw.ctx, force=True, progress_cb=progress_cb, sync=True)
 
     def _done():
         poll_timer.stop()
