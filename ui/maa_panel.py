@@ -4,13 +4,15 @@ import json
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QGroupBox, QFormLayout, QSpinBox,
 )
+
+from ui.rebuild_dialog import RebuildDialog
 
 
 def build_maa_panel(mw: Any) -> QWidget:
@@ -158,18 +160,13 @@ def _rebuild_instances(mw: Any) -> None:
     """Rebuild all MAA instances with progress dialog."""
     from maint_ops import ensure_maa_instances_async
     desired = mw.config.get("parallel_max", 1) + 1
-    dlg = __import__("ui.rebuild_dialog", fromlist=["RebuildDialog"]).RebuildDialog(mw, desired)
+    dlg = RebuildDialog(mw, desired)
     dlg.show()
 
     # Thread-safe progress tracking
     progress = {"current": 0, "total": desired}
-    from PySide6.QtCore import QTimer
-
-    def _poll():
-        dlg.update(progress["current"], progress["total"])
-
     poll_timer = QTimer()
-    poll_timer.timeout.connect(_poll)
+    poll_timer.timeout.connect(lambda: dlg.update(progress["current"], progress["total"]))
     poll_timer.start(200)
 
     def progress_cb(current, total):
