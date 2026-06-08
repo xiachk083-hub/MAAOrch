@@ -19,41 +19,44 @@ _inst_init_task = None  # prevent GC of BackgroundTask
 
 
 def ensure_maa_instances_async(ctx) -> None:
-    """Create instance #1 only. The rest are created lazily on demand."""
+    """Pre-create all MAA instances up to parallel_max + 1 in background."""
     global _inst_init_task
     with _INSTANCE_LOCK:
-        instances_ok = ctx.config.get("maa_instances", 0) > 0
-        if instances_ok and (Path(__file__).parent / "maa" / "instances" / "1" / "MAA.exe").exists():
-            return
-        # Also check if instance 1 already exists on disk (e.g. from previous run)
-        if (Path(__file__).parent / "maa" / "instances" / "1" / "MAA.exe").exists():
-            ctx.config["maa_instances"] = 1
-            ctx.save()
-            return
         src = _find_maa_source()
         if not src:
             return
+        desired = ctx.config.get("parallel_max", 1) + 1
+        existing = ctx.config.get("maa_instances", 0)
+        # If enough instances already exist on disk, just update config
+        if existing >= desired:
+            return
+        pool = Path(__file__).parent / "maa" / "instances"
+        existing_ok = sum(1 for i in range(1, desired + 1) if (pool / str(i) / "MAA.exe").exists())
+
     from background import BackgroundTask
 
     def _init():
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
-        inst1 = pool / "1"
-        exe1 = inst1 / "MAA.exe"
-        if exe1.exists():
-            return
         import shutil
-        if inst1.exists():
-            shutil.rmtree(str(inst1))
-        # Always copy, never move (preserve original MAA source)
-        shutil.copytree(str(src), str(inst1))
+        for i in range(1, desired + 1):
+            inst = pool / str(i)
+            if (inst / "MAA.exe").exists():
+                continue
+            if inst.exists():
+                shutil.rmtree(str(inst))
+            # Use original source for instance 1, copy from instance 1 for the rest
+            copy_src = src if i == 1 else str(pool / "1")
+            if not Path(copy_src).exists():
+                break
+            shutil.copytree(str(copy_src), str(inst))
+        return desired
 
     def _on_finish():
-        """Runs on main thread after BackgroundTask finishes."""
         global _inst_init_task
         _inst_init_task = None
         with _INSTANCE_LOCK:
-            ctx.config["maa_instances"] = 1
+            ctx.config["maa_instances"] = desired
             ctx.save()
 
     with _INSTANCE_LOCK:
@@ -64,7 +67,8 @@ def ensure_maa_instances_async(ctx) -> None:
 
 
 def _ensure_instance_n(ctx, n: int) -> bool:
-    """Lazily create instance #n (n >= 2) if it doesn't exist yet."""
+    """Lazily create instance #n (n >= 2) if it doesn't exist yet.
+    Called when parallel_max is increased at runtime beyond existing instances."""
     pool = Path(__file__).parent / "maa" / "instances"
     inst = pool / str(n)
     if (inst / "MAA.exe").exists():

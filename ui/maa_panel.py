@@ -38,7 +38,7 @@ def build_maa_panel(mw: Any) -> QWidget:
     mw._maa_parallel_sp = QSpinBox()
     mw._maa_parallel_sp.setRange(1, 10)
     mw._maa_parallel_sp.setValue(mw.config.get("parallel_max", 1))
-    mw._maa_parallel_sp.valueChanged.connect(lambda v: (mw.config.update({"parallel_max": v}), mw._save()))
+    mw._maa_parallel_sp.valueChanged.connect(lambda v: (mw.config.update({"parallel_max": v}), mw._save(), refresh_maa_panel(mw)))
     parallel_row.addWidget(mw._maa_parallel_sp)
     parallel_row.addWidget(QLabel(" 个并行实例"))
     parallel_row.addStretch()
@@ -78,7 +78,7 @@ def refresh_maa_panel(mw: Any) -> None:
     mw._maa_version_lbl.setText(mw.config.get("maa_version", "未安装"))
     ver = mw.config.get("maa_version", "")
     max_created = mw.config.get("maa_instances", 0)
-    max_n = mw.config.get("parallel_max", 1)
+    max_n = mw.config.get("parallel_max", 1) + 1
     pool = Path(__file__).parent.parent / "maa" / "instances"
     tbl = mw._maa_tbl
     tbl.setRowCount(max_n)
