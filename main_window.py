@@ -25,11 +25,7 @@ from callbacks import ServiceContext
 from account import Account
 from runner import AccountRunner
 from launch_queue import LaunchQueue
-from ui.dashboard import build_account_dashboard, clear_dashboard, cleanup_emu_threads
-from ui.accounts_panel import build_accounts_panel
-from ui.queue_panel import build_queue_panel, refresh_queue_view
-from ui.config_cards import build_config_cards, refresh_config_cards
-from ui.schedule_panel import build_schedule_panel, refresh_schedule_view
+from ui.dashboard import clear_dashboard, cleanup_emu_threads
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize,Slot
@@ -207,82 +203,13 @@ class MainWindow(QMainWindow):
         c = QWidget()
         self.setCentralWidget(c)
         ml = QVBoxLayout(c)
-        ml.setContentsMargins(8, 8, 8, 4)
+        ml.setContentsMargins(8, 6, 8, 4)
         ml.setSpacing(4)
 
-        # Top tab bar
-        tb = QFrame()
-        th = QHBoxLayout(tb)
-        th.setContentsMargins(4, 0, 4, 0)
-        th.setSpacing(0)
-        self.tg = QPushButton("👤  账号")
-        self.ta = QPushButton("⏳  队列")
-        self.tl = QPushButton("📋  日志")
-        self.tc = QPushButton("⚡  配置")
-        self.ts = QPushButton("⚙  调度")
-        self.ti = QPushButton("🧠  智能")
-        self.tm = QPushButton("📦  MAA")
-        for btn, key in [
-            (self.tg, "accounts"),
-            (self.ta, "queue"),
-            (self.tl, "logs"),
-            (self.tc, "config"),
-            (self.ts, "schedule"),
-            (self.ti, "smart"),
-            (self.tm, "maa"),
-        ]:
-            btn.setObjectName("tabBtn")
-            btn.setFlat(True)
-            btn.clicked.connect(lambda _, k=key: self._sw(k))
-            th.addWidget(btn)
-        th.addStretch()
-        self._todo_btn = QPushButton("📋 待办")
-        self._todo_btn.setObjectName("tabBtn")
-        self._todo_btn.clicked.connect(self._show_todo)
-        th.addWidget(self._todo_btn)
-        ml.addWidget(tb)
-
-        # Accounts panel
-        build_accounts_panel(self)
-        self.av.hide()
-        ml.addWidget(self.av, 1)
-
-        # Queue panel
-        build_queue_panel(self)
-        self.qv.hide()
-        ml.addWidget(self.qv, 1)
-
-        # Log panel
-        from ui.log_panel import build_log_panel
-        ml.addWidget(build_log_panel(self), 1)
-
-        # Config cards panel
-        build_config_cards(self)
-        self.cv.hide()
-        ml.addWidget(self.cv, 1)
-
-        # Groups/Warehouse panel
-        from ui.groups_panel import build_groups_panel
-        build_groups_panel(self)
-        self.gv.hide()
-        ml.addWidget(self.gv, 1)
-
-        # Schedule panel
-        build_schedule_panel(self)
-        self.sv.hide()
-        ml.addWidget(self.sv, 1)
-
-        # Smart scheduling panel
+        # Smart scheduling panel (main view)
         from ui.smart_panel import build_smart_panel
         build_smart_panel(self)
-        self.smart_v.hide()
         ml.addWidget(self.smart_v, 1)
-
-        # MAA instance panel
-        from ui.maa_panel import build_maa_panel
-        build_maa_panel(self)
-        self.maa_v.hide()
-        ml.addWidget(self.maa_v, 1)
 
         # Status bar
         sb2 = self.statusBar()
@@ -301,13 +228,12 @@ class MainWindow(QMainWindow):
         # Menu bar
         mb = self.menuBar()
         tm = mb.addMenu("工具")
-        tm.addAction("定时", self._sch)
         tm.addAction("检查更新", lambda: self.maint.check_updates())
         tm.addAction("检查 MAAOrch 更新", lambda: self.maint.check_orch_update())
         tm.addSeparator()
         tm.addAction("🔍 环境检测与修复", lambda: self._health_dialog())
-        tm.addAction("设置", self._settings)
-        tm.addAction("日志", self._tlog)
+        tm.addAction("设置", lambda: (from ui.settings_window import open_settings; open_settings(self)))
+        tm.addAction("日志", lambda: (from ui.log_window import show_log_window; show_log_window(self)))
         tm.addSeparator()
         tm.addAction("退出", self.maint._quit_app)
 
@@ -317,30 +243,6 @@ class MainWindow(QMainWindow):
 
     def _sw(self, tab: str) -> None:
         self._main_tab = tab
-        self.av.setVisible(tab == "accounts")
-        self.qv.setVisible(tab == "queue")
-        self.lv.setVisible(tab == "logs")
-        self.cv.setVisible(tab == "config")
-        self.sv.setVisible(tab == "schedule")
-        self.smart_v.setVisible(tab == "smart")
-        self.maa_v.setVisible(tab == "maa")
-        for btn, key in [(self.tg, "accounts"), (self.ta, "queue"), (self.tl, "logs"), (self.tc, "config"), (self.ts, "schedule"), (self.ti, "smart"), (self.tm, "maa")]:
-            btn.setObjectName("tabBtnActive" if tab == key else "tabBtn")
-            try:
-                btn.style().unpolish(btn); btn.style().polish(btn)
-            except Exception:
-                pass
-        if tab == "accounts":
-            self._ra()
-            if self.accounts: self.at.setCurrentCell(0, 0)
-        elif tab == "queue":
-            refresh_queue_view(self)
-        elif tab == "logs":
-            self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
-        elif tab == "config":
-            refresh_config_cards(self)
-        elif tab == "schedule":
-            refresh_schedule_view(self)
     def _st(self, tab: str) -> None:
         self._view_tab=tab; is_w=tab=="warehouse"; self.wv.setVisible(is_w); self.gv2.setVisible(not is_w)
         if is_w:
@@ -513,7 +415,8 @@ class MainWindow(QMainWindow):
         cleanup_emu_threads(self)
 
     def _sad(self, row: int) -> None:
-        build_account_dashboard(self, row)
+        from ui.account_detail import open_account_detail
+        open_account_detail(self, row)
 
     def _refresh_instance_list_async(self, combo, saved_idx: str | None = None, saved_name: str | None = None) -> None:
         self.emu.refresh_instance_list(combo, saved_idx, saved_name)
@@ -698,7 +601,6 @@ class MainWindow(QMainWindow):
 
     def _poll(self) -> None:
         self.maint.poll()
-        refresh_queue_view(self)
         if hasattr(self, "launch_queue"):
             lq = self.launch_queue
             ac = lq.active_count
@@ -878,13 +780,8 @@ class MainWindow(QMainWindow):
             self.hide(); e.ignore()
         else:
             self._do_save(); e.accept(); QApplication.quit()
-    def _tlog(self) -> None: self._sw("logs")
-    def _start_schedule(self) -> None: self.maint.start_schedule()
-    def _sch(self) -> None: self.maint.sch()
-    def _settings(self) -> None: self.maint.settings()
-    def _show_queue_panel(self) -> None:
-        from ui.queue_panel import build_queue_dialog
-        build_queue_dialog(self)
+    def _tlog(self) -> None: from ui.log_window import show_log_window; show_log_window(self)
+    def _settings(self) -> None: from ui.settings_window import open_settings; open_settings(self)
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin(); sys.exit(0)
