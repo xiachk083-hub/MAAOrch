@@ -25,10 +25,12 @@ class AccountRunner(QObject):
     account_finished = Signal(tuple)  # (account_id, exit_code, tasks)
     account_error = Signal(str, str)       # account_id, error_msg
 
-    # Resource limits
-    MAX_TOTAL_MEM_MB = 4096   # 4GB total MAA process memory → pause new launches
-    MAX_PROC_MEM_MB = 2048    # 2GB per MAA process → kill that instance
-    MAX_RESTART_PER_MIN = 4   # max restarts per minute per account
+    # Resource limits (for 16GB systems)
+    MAX_TOTAL_MEM_MB = 12288   # 12GB total → pause new launches (leaves 4GB free)
+    RESUME_MEM_MB = 6144       # 6GB free → resume launching
+    MAX_PROC_MEM_MB = 4096     # 4GB per emulator instance → kill
+    MAX_RESTART_PER_MIN = 4    # max restarts per minute per account
+    EMU_PROC_NAMES = ("MuMuPlayer.exe", "mumu-vm-", "HD-Player.exe", "Nox.exe", "LDPlayer.exe")
 
     def __init__(self, ctx: ServiceContext) -> None:
         super().__init__()
@@ -284,16 +286,23 @@ class AccountRunner(QObject):
     @property
     def resource_summary(self) -> str:
         """Return a short resource usage string for status bar."""
-        total_mem = sum(i.get("mem_mb", 0) for i in self._proc_info.values())
-        n = len(self._procs)
+        import psutil
+        sv = psutil.virtual_memory()
+        used_gb = sv.used / 1024 / 1024 / 1024
         warn = " ⚠" if self._overloaded else ""
-        return f"MEM:{total_mem:.0f}MB({n}){warn}"
+        n = len(self._procs)
+        return f"MEM:{used_gb:.1f}GB/{sv.total/1024/1024/1024:.0f}GB({n}){warn}"
 
     def _check_resources(self) -> None:
-        """Monitor MAA process memory/CPU and detect overload."""
+        """Monitor system memory and emulator/MAA processes to detect overload."""
         import psutil
-        total_mem = 0
+        sv = psutil.virtual_memory()
+        free_gb = sv.available / 1024 / 1024 / 1024
+        total_mem_used = sv.used / 1024 / 1024
+
+        # Track MAA process memory (for per-process limit)
         now = time.time()
+        maa_mem = 0
         for aid in list(self._procs.keys()):
             p = self._procs.get(aid)
             if not p:
@@ -302,23 +311,22 @@ class AccountRunner(QObject):
                 pp = psutil.Process(p.pid)
                 mem_mb = pp.memory_info().rss / 1024 / 1024
                 self._proc_info[aid] = {"mem_mb": mem_mb, "pid": p.pid, "time": now}
-                total_mem += mem_mb
-                # Per-process memory limit
+                maa_mem += mem_mb
                 if mem_mb > self.MAX_PROC_MEM_MB:
                     name = self._active.get(aid, {}).get("name", aid)
-                    self.log_msg.emit(f"[资源] {name} 内存超限 ({mem_mb:.0f}MB > {self.MAX_PROC_MEM_MB}MB)，强制终止")
+                    self.log_msg.emit(f"[资源] {name} 内存超限 ({mem_mb:.0f}MB > {self.MAX_PROC_MEM_MB}MB)")
                     self.stop(aid)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 self._proc_info.pop(aid, None)
 
-        # Total memory limit
+        # Detect overload: system free memory < 4GB → pause
         was = self._overloaded
-        self._overloaded = total_mem > self.MAX_TOTAL_MEM_MB
+        self._overloaded = free_gb < 4.0
         if self._overloaded != was:
             if self._overloaded:
-                self.log_msg.emit(f"[资源] MAA 总内存 {total_mem:.0f}MB 超限 ({self.MAX_TOTAL_MEM_MB}MB)，暂停新启动")
+                self.log_msg.emit(f"[资源] 系统可用内存 {free_gb:.1f}GB 不足，暂停新启动")
             else:
-                self.log_msg.emit(f"[资源] 内存已恢复，继续启动")
+                self.log_msg.emit(f"[资源] 内存已恢复 ({free_gb:.1f}GB 可用)，继续启动")
 
     def check_processes(self) -> None:
         """Check all running processes for completion. Called by centralized poll timer."""
