@@ -26,12 +26,13 @@ def ensure_maa_instances_async(ctx) -> None:
         if not src:
             return
         desired = ctx.config.get("parallel_max", 1) + 1
-        existing = ctx.config.get("maa_instances", 0)
-        # If enough instances already exist on disk, just update config
-        if existing >= desired:
-            return
         pool = Path(__file__).parent / "maa" / "instances"
+        # Check how many instances already exist with MAA.exe on disk
         existing_ok = sum(1 for i in range(1, desired + 1) if (pool / str(i) / "MAA.exe").exists())
+        if existing_ok >= desired:
+            ctx.config["maa_instances"] = desired
+            ctx.save()
+            return
 
     from background import BackgroundTask
 
@@ -39,29 +40,35 @@ def ensure_maa_instances_async(ctx) -> None:
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
         import shutil
+        created = 0
         for i in range(1, desired + 1):
-            inst = pool / str(i)
-            if (inst / "MAA.exe").exists():
-                continue
-            if inst.exists():
-                shutil.rmtree(str(inst))
-            # Use original source for instance 1, copy from instance 1 for the rest
-            copy_src = src if i == 1 else str(pool / "1")
-            if not Path(copy_src).exists():
+            try:
+                inst = pool / str(i)
+                if (inst / "MAA.exe").exists():
+                    created = i
+                    continue
+                if inst.exists():
+                    shutil.rmtree(str(inst))
+                copy_src = src if i == 1 else str(pool / "1")
+                if not Path(copy_src).exists():
+                    break
+                shutil.copytree(str(copy_src), str(inst))
+                created = i
+            except Exception:
                 break
-            shutil.copytree(str(copy_src), str(inst))
-        return desired
+        return created
 
-    def _on_finish():
+    def _on_init_result(actual):
+        """Runs on main thread after BackgroundTask finishes."""
         global _inst_init_task
         _inst_init_task = None
         with _INSTANCE_LOCK:
-            ctx.config["maa_instances"] = desired
+            ctx.config["maa_instances"] = max(actual, ctx.config.get("maa_instances", 0))
             ctx.save()
 
     with _INSTANCE_LOCK:
         t = BackgroundTask(_init)
-        t.finished.connect(_on_finish)
+        t.result.connect(_on_init_result)
         _inst_init_task = t
         t.start()
 
