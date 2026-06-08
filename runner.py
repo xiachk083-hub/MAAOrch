@@ -112,6 +112,10 @@ class AccountRunner(QObject):
             exe = inst_dir / "MAA.exe"
             if not exe.exists():
                 continue
+            # Verify instance integrity
+            from maint_ops import _verify_instance
+            if _verify_instance(inst_dir):
+                continue
             # Check if this instance is already assigned to a running account
             inst_path = str(inst_dir)
             already_used = any(
