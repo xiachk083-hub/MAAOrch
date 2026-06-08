@@ -68,14 +68,28 @@ def _check_source_ready(source: Path) -> bool:
 
 
 def _init_maa_source(source: Path) -> bool:
-    """Silently launch MAA to generate default config ($type etc.), then kill it."""
-    import subprocess, time as _time
+    """Silently launch MAA to generate default config ($type etc.), then kill it.
+    Writes minimize-to-tray config before launch to prevent window flashing."""
+    import subprocess, time as _time, json
     exe = source / "MAA.exe"
     if not exe.exists():
         return False
+    # Write minimze config before launching to prevent window flash
+    gj = source / "config" / "gui.new.json"
+    try:
+        if gj.exists():
+            d = json.loads(gj.read_text(encoding="utf-8"))
+        else:
+            d = {}
+        gj.parent.mkdir(parents=True, exist_ok=True)
+        d.setdefault("GUI", {})["MinimizeToTray"] = "True"
+        d.setdefault("GUI", {})["UseTray"] = "True"
+        d.setdefault("Global", {})["Start.MinimizeDirectly"] = "True"
+        gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
     try:
         proc = subprocess.Popen([str(exe)], creationflags=subprocess.CREATE_NO_WINDOW)
-        gj = source / "config" / "gui.new.json"
         for _ in range(120):
             if gj.exists():
                 try:

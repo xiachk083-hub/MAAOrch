@@ -215,10 +215,11 @@ class ConfigService:
             # MAA v6 reads GUI settings from gui.json Global section
             g = d.setdefault("Global", {})
             g.setdefault("GUI.Localization", "zh-cn")
-            g.setdefault("GUI.MinimizeToTray", "False")
+            g.setdefault("GUI.MinimizeToTray", "True")
             g.setdefault("GUI.UseTray", "True")
+            g.setdefault("Start.MinimizeDirectly", "True")
 
-            for stale in ("Start.Minimized", "Start.MinimizeDirectly"):
+            for stale in ("Start.Minimized",):
                 c.pop(stale, None)
 
             if not use_v6:
