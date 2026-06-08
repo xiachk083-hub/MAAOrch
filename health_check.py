@@ -242,7 +242,7 @@ def show_health_dialog(mw: Any, report: HealthReport | None = None) -> None:
             btn = QPushButton(item.fix_label)
             btn.setFixedHeight(26)
 
-            def _do_fix(item=item, btn=btn, row=i):
+            def _do_fix(_, item=item, btn=btn, row=i):
                 btn.setEnabled(False)
                 btn.setText("修复中...")
                 from PySide6.QtCore import QTimer
