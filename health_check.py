@@ -108,6 +108,13 @@ def run_health_check(ctx: Any) -> HealthReport:
             return "无法下载"
         items.append(HealthItem("MAA 版本", "warn", "未下载 MAA", _fix_maa, "下载 MAA"))
 
+    # 5. User MAA source directory
+    src_dir = Path(__file__).parent / "maa" / "source"
+    if (src_dir / "MAA.exe").exists():
+        items.append(HealthItem("MAA 源目录", "ok", "maa/source/ 已就绪"))
+    else:
+        items.append(HealthItem("MAA 源目录", "warn",
+            "请将 MAA 完整目录复制到 maa/source/（含 MAA.exe 及 resource/ 等）"))
 
     # 6. MAA source config initialization
     ver = cfg.get("maa_version", "")
