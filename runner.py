@@ -105,7 +105,6 @@ class AccountRunner(QObject):
 
     def _get_free_instance(self) -> tuple[int, str] | None:
         """Get a free MAA instance. Checks PID file + already assigned instances."""
-        import psutil
         max_n = self.ctx.config.get("maa_instances", 0)
         pool = Path(__file__).parent / "maa" / "instances"
         for i in range(1, max_n + 1):
@@ -126,7 +125,11 @@ class AccountRunner(QObject):
             if pid_file.exists():
                 try:
                     pid = int(pid_file.read_text().strip())
-                    running = psutil.pid_exists(pid)
+                    import subprocess
+                    r = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                                       capture_output=True, text=True, timeout=2,
+                                       creationflags=subprocess.CREATE_NO_WINDOW)
+                    running = str(pid) in r.stdout
                 except:
                     pid_file.unlink(missing_ok=True)
             if not running:
@@ -294,16 +297,22 @@ class AccountRunner(QObject):
     @property
     def resource_summary(self) -> str:
         """Return a short resource usage string for status bar."""
-        import psutil
-        sv = psutil.virtual_memory()
-        used_gb = sv.used / 1024 / 1024 / 1024
-        warn = " ⚠" if self._overloaded else ""
-        n = len(self._procs)
-        return f"MEM:{used_gb:.1f}GB/{sv.total/1024/1024/1024:.0f}GB({n}){warn}"
+        try:
+            import psutil
+            sv = psutil.virtual_memory()
+            used_gb = sv.used / 1024 / 1024 / 1024
+            warn = " ⚠" if self._overloaded else ""
+            n = len(self._procs)
+            return f"MEM:{used_gb:.1f}GB/{sv.total/1024/1024/1024:.0f}GB({n}){warn}"
+        except ImportError:
+            return ""
 
     def _check_resources(self) -> None:
         """Monitor system memory and emulator/MAA processes to detect overload."""
-        import psutil
+        try:
+            import psutil  # noqa: F811
+        except ImportError:
+            return
         sv = psutil.virtual_memory()
         free_gb = sv.available / 1024 / 1024 / 1024
         total_mem_used = sv.used / 1024 / 1024
