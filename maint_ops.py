@@ -22,7 +22,8 @@ def ensure_maa_instances_async(ctx) -> None:
     """Create instance #1 only. The rest are created lazily on demand."""
     global _inst_init_task
     with _INSTANCE_LOCK:
-        if ctx.config.get("maa_instances", 0) > 0:
+        instances_ok = ctx.config.get("maa_instances", 0) > 0
+        if instances_ok and (Path(__file__).parent / "maa" / "instances" / "1" / "MAA.exe").exists():
             return
         # Also check if instance 1 already exists on disk (e.g. from previous run)
         if (Path(__file__).parent / "maa" / "instances" / "1" / "MAA.exe").exists():
