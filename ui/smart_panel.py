@@ -190,8 +190,8 @@ def _edit_account_smart(mw: Any, row: int) -> None:
     f.addRow("默认关卡:", stage_edit)
 
     anni_combo = QComboBox()
-    ANNI_LABELS = [("自动选择", ""), ("当期剿灭", "Annihilation"), ("切尔诺伯格", "Annihilation_1"),
-                   ("龙门外环", "Annihilation_2"), ("龙门市区", "Annihilation_3")]
+    ANNI_LABELS = [("自动选择", ""), ("当期剿灭", "Annihilation"), ("切尔诺伯格", "Chernobog@Annihilation"),
+                   ("龙门外环", "LungmenOutskirts@Annihilation"), ("龙门市区", "LungmenDowntown@Annihilation")]
     for label, val in ANNI_LABELS:
         anni_combo.addItem(label, val)
     current_anni = a.get("smart_annihilation", "")
@@ -228,8 +228,8 @@ def _edit_account_smart(mw: Any, row: int) -> None:
     d.exec()
 
 
-ANNIHILATION_VALUES = {"自动选择": "", "当期剿灭": "Annihilation", "切尔诺伯格": "Annihilation_1",
-                       "龙门外环": "Annihilation_2", "龙门市区": "Annihilation_3"}
+ANNIHILATION_VALUES = {"自动选择": "", "当期剿灭": "Annihilation", "切尔诺伯格": "Chernobog@Annihilation",
+                       "龙门外环": "LungmenOutskirts@Annihilation", "龙门市区": "LungmenDowntown@Annihilation"}
 ANNIHILATION_NAMES = {v: k for k, v in ANNIHILATION_VALUES.items()}
 
 

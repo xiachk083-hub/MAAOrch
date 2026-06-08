@@ -263,8 +263,6 @@ class ConfigService:
                 existing_tq = c.get("TaskQueue", [])
                 has_fight = "fight" in task_set
                 anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
-                # MAA v6 only supports "Annihilation" for current rotation, not legacy Annihilation_1/2/3
-                anni_v6 = "Annihilation" if anni else ""
                 if existing_tq:
                     anni_appended = False
                     clean_tq = [item for item in existing_tq if not item.pop("_smart_inserted", None)]
@@ -294,8 +292,8 @@ class ConfigService:
                                 anni_item["IsEnable"] = True
                                 anni_item["_smart_inserted"] = True
                                 anni_item["UseCustomAnnihilation"] = True
-                                anni_item["AnnihilationStage"] = anni_v6
-                                anni_item["StagePlan"] = [anni_v6]
+                                anni_item["AnnihilationStage"] = anni
+                                anni_item["StagePlan"] = [anni]
                                 anni_item["IsStageManually"] = True
                                 anni_item["StageResetMode"] = "Current"
                                 anni_item["UseMedicine"] = True
@@ -305,8 +303,8 @@ class ConfigService:
                             elif not anni_appended:
                                 item["IsEnable"] = True
                                 item["UseCustomAnnihilation"] = True
-                                item["AnnihilationStage"] = anni_v6
-                                item["StagePlan"] = [anni_v6]
+                                item["AnnihilationStage"] = anni
+                                item["StagePlan"] = [anni]
                                 item["IsStageManually"] = True
                                 item["StageResetMode"] = "Current"
                                 item["UseMedicine"] = True
@@ -336,8 +334,8 @@ class ConfigService:
                                 anni_item["IsEnable"] = True
                                 anni_item["_smart_inserted"] = True
                                 anni_item["UseCustomAnnihilation"] = True
-                                anni_item["AnnihilationStage"] = anni_v6
-                                anni_item["StagePlan"] = [anni_v6]
+                                anni_item["AnnihilationStage"] = anni
+                                anni_item["StagePlan"] = [anni]
                                 anni_item["IsStageManually"] = True
                                 anni_item["StageResetMode"] = "Current"
                                 anni_item["UseMedicine"] = True
