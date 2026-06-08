@@ -350,7 +350,14 @@ class MainWindow(QMainWindow):
     # Warehouse
     def _rw(self) -> None:
         ft=self.whs.text().lower(); items=[w for w in self.warehouse if ft in Path(w.get("path","")).stem.lower() or not ft]
-        self.wt.setRowCount(0); self.wt.setRowCount(len(items))
+        # Check if actually changed to avoid unnecessary rebuild
+        cache_key = (ft, len(items), tuple(w["id"] for w in items))
+        if getattr(self, "_rw_cache", None) == cache_key:
+            return
+        self._rw_cache = cache_key
+        old = self.wt.rowCount()
+        if old != len(items):
+            self.wt.setRowCount(len(items))
         sel=self.selected_group_idx; sg=self.groups[sel] if sel is not None and sel<len(self.groups) else None
         assigned=set(r["ref"] for r in sg.get("programs",[])) if sg else set()
         for i,w in enumerate(items):
@@ -414,9 +421,11 @@ class MainWindow(QMainWindow):
         sel=self.selected_group_idx
         if sel is None or sel>=len(self.groups): self.gt.hide(); self.ph.show(); return
         g=self.groups[sel]; wh={w["id"]:w for w in self.warehouse}; refs=g.get("programs",[])
-        self.gt.setRowCount(0)
+        old = self.gt.rowCount()
+        if old != len(refs):
+            self.gt.setRowCount(len(refs))
         if not refs: self.gt.hide(); self.ph.setText("暂无"); self.ph.show(); return
-        self.ph.hide(); self.gt.show(); self.gt.setRowCount(len(refs))
+        self.ph.hide(); self.gt.show()
         for i,ref in enumerate(refs):
             w=wh.get(ref["ref"],{}); self.gt.setItem(i,0,QTableWidgetItem(Path(w.get("path","?")).stem))
             sp=QSpinBox(); sp.setRange(0,999); sp.setValue(int(ref.get("pre_delay",0))); ri=i; sp.valueChanged.connect(lambda v,r=ri: self._sv_pd(r,v))
@@ -477,12 +486,13 @@ class MainWindow(QMainWindow):
 
     # Accounts
     def _ra(self) -> None:
-        self.at.setRowCount(0)
         if not self.accounts: self.ad.setVisible(False); return
         self.ad.setVisible(True)
         search=getattr(self,'asrch',None); filter_text=search.text().strip().lower() if search and search.text() else ""
         visible=[a for a in self.accounts if not filter_text or filter_text in a.get("name", "").lower()]
-        self.at.setRowCount(len(visible))
+        old = self.at.rowCount()
+        if old != len(visible):
+            self.at.setRowCount(len(visible))
         for i,a in enumerate(visible):
             ni=QTableWidgetItem(a.get("name", "")); ni._acc_id=a["id"]; self.at.setItem(i,0,ni); self.at.setItem(i,1,QTableWidgetItem(a.get("game_client","")))
     def _on_acc_sel(self) -> None:
