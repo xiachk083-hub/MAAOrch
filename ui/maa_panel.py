@@ -162,9 +162,10 @@ def _rebuild_instances(mw: Any) -> None:
     desired = mw.config.get("parallel_max", 1) + 1
     dlg = RebuildDialog(mw, desired)
     dlg.show()
+    mw._rebuild_dialog = dlg  # prevent GC
 
     progress = {"current": 0, "total": desired}
-    poll_timer = QTimer()
+    poll_timer = QTimer(dlg)
     poll_timer.timeout.connect(lambda: dlg.update(progress["current"], progress["total"]))
     poll_timer.start(200)
 
@@ -179,8 +180,8 @@ def _rebuild_instances(mw: Any) -> None:
 
     def _done():
         poll_timer.stop()
-        dlg.update(progress["current"], progress["total"])
         dlg.close()
+        mw._rebuild_dialog = None
         refresh_maa_panel(mw)
 
     t = BackgroundTask(_rebuild)
