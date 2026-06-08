@@ -1,0 +1,815 @@
+{
+    "minimum_required": "v5.15.0",
+    "stage_name": "Shangshu Night Market",
+    "actions": [],
+    "doc": {
+        "title": "*TASK ONLY* - SSS-Shangshu Night Market - Ascalon_Ethan - Adaptive_Supply_Component",
+        "title_color": "dark",
+        "details": "Task-only: do NOT start on Emergency difficulty.\nThis job can complete two Adaptive Supply Component tasks plus recruit 8 Casters and recruit 8 Specialists.\nIf the last two tasks progress slowly, remove operators from this job’s blacklist; even if later stages fail, the recruitment tasks will still complete.\nOne-life clear video uploaded — please like/share/subscribe!!!\n═══════════════════════════════════\nRun Code: maa://50505\nManual squad only. For helpers, prefer low-cost units; recommended E2, minimum E1 level max.\nDo NOT choose one-time skills (e.g., Mountain S2) or skills that can only trigger on contact (e.g., Qi S3), or MAA will keep trying to cast. Also avoid unusual attack ranges (e.g., Schwarz S3).\nConfirm Energetic Device: Adaptive Supply Component; set Tactical Equipment to Specialist B, others A. After manual squad and lineup confirmation, press Start.\nAuthor (route): Saratoga\nVideo: [MAA SSS – Adaptive Supply Component tasks + 8× Caster/8× Specialist recruit] https://www.bilibili.com/video/BV1nJ5kz6E31/?share_source=copy_web&vd_source=3fd5040fe25f6a00e19e6072bcccfa4e\nJSON: Saratoga\n═══════════════════════════════════\nAdditional non-core helpers:\nDefenders ×6 (e.g., Saria, Beeswax-like, Nian, Eunectes, or other strong shields)\nMedics ×2 (strong healers: e.g., Nightingale, Mulberry M3, Shining)\nSupporters ×3 (e.g., Ling, Corroserum (Czerny-like), Warfarin, Sucrose, or other low-cost supporters)\nSpecialists ×7 (prefer ground-control like Trappers/Pushers/Pullers; absolutely do NOT choose Wandering Merchants, Trappers (trap branch), Alchemists, or Mavericks)\n═══════════════════════════════════\nFeedback: join group 545928846; comments may not be answered promptly.\nYou may locally modify core choices for personal needs, but do NOT upload modified scripts to job hubs. Using this script implies agreement.",
+        "details_color": "dark"
+    },
+    "groups": [],
+    "opers": [
+        {
+            "name": "阿斯卡纶",
+            "skill": 1,
+            "skill_usage": 0
+        },
+        {
+            "name": "伊桑",
+            "skill": 1,
+            "skill_usage": 0
+        }
+    ],
+    "type": "SSS",
+    "buff": "自适应补给元件",
+    "equipment": ["A", "A", "A", "A", "A", "A", "A", "B"],
+    "strategy": "优选策略",
+    "tool_men": {
+        "vanguard": 0,
+        "guard": 0,
+        "defender": 6,
+        "sniper": 0,
+        "caster": 0,
+        "medic": 2,
+        "supporter": 3,
+        "special": 7
+    },
+    "drops": ["特种", "术师", "辅助", "无需增调干员", "定向部署支援系统"],
+    "blacklist": [
+        "罗比菈塔",
+        "新约能天使",
+        "掠风",
+        "白铁",
+        "伺夜",
+        "豆苗",
+        "夜半",
+        "缪尔赛思",
+        "森蚺",
+        "极光",
+        "迷迭香",
+        "早露",
+        "菲亚梅塔",
+        "承曦格雷伊",
+        "莫斯提马",
+        "死芒",
+        "凯尔希",
+        "艾拉",
+        "多萝西",
+        "引星棘刺",
+        "锡人",
+        "阿",
+        "钼铅",
+        "裁度",
+        "琳琅诗怀雅",
+        "空构",
+        "老鲤",
+        "霜华",
+        "乌有",
+        "罗宾",
+        "孑",
+        "玛露西尔",
+        "阿罗玛",
+        "戴菲恩",
+        "林",
+        "和弦",
+        "卡涅利安",
+        "深靛",
+        "夕",
+        "爱丽丝",
+        "薄绿",
+        "蜜蜡",
+        "阿兰娜",
+        "凯瑟琳",
+        "PhonoR-0",
+        "Friston-3",
+        "THRM-EX",
+        "异客",
+        "伊芙利特",
+        "寒檀",
+        "莱恩哈特",
+        "惊蛰",
+        "蚀清",
+        "天火",
+        "星源",
+        "炎狱炎熔",
+        "布丁",
+        "格雷伊",
+        "远山",
+        "炎熔",
+        "假日威龙陈",
+        "埃拉托",
+        "奥斯塔",
+        "截云",
+        "熔泉",
+        "慑砂",
+        "送葬人",
+        "陨星",
+        "白雪",
+        "铅踝",
+        "松果",
+        "泰拉大陆调查团",
+        "正义骑士号",
+        "黑",
+        "洋灰",
+        "火哨",
+        "斥罪",
+        "号角",
+        "火神",
+        "灰毫",
+        "泥岩",
+        "车尔尼",
+        "暮落",
+        "石棉",
+        "坚雷",
+        "阿米娅",
+        "风笛",
+        "黑键",
+        "伊内丝",
+        "晓歌",
+        "格拉尼",
+        "苇草",
+        "野鬃",
+        "历阵锐枪芬",
+        "谜图",
+        "红豆",
+        "翎羽",
+        "W",
+        "U-Official",
+        "12F",
+        "Lancet-2"
+    ],
+    "stages": [
+        {
+            "stage_name": "巷道里",
+            "strategies": [
+                {
+                    "core": "自适应补给元件",
+                    "tool_men": {},
+                    "location": [3, 2],
+                    "direction": "none"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [5, 2],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [4, 2],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 1
+                    },
+                    "location": [5, 3],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [5, 1],
+                    "direction": "Down"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [5, 2],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [4, 2],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 1
+                    },
+                    "location": [5, 3],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [5, 1],
+                    "direction": "Down"
+                },
+                {
+                    "tool_men": {
+                        "special": 2
+                    },
+                    "location": [4, 2],
+                    "direction": "Left"
+                },
+                {
+                    "core": "阿斯卡纶",
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [4, 2],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 99
+                    },
+                    "location": [5, 3],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "defender": 99
+                    },
+                    "location": [5, 2],
+                    "direction": "Left"
+                },
+                {
+                    "core": "丛林用示踪信标",
+                    "tool_men": {
+                        "medic": 99
+                    },
+                    "location": [5, 1],
+                    "direction": "Down"
+                }
+            ],
+            "draw_as_possible": true,
+            "actions": [
+                {
+                    "type": "二倍速"
+                }
+            ],
+            "retry_times": 99
+        },
+        {
+            "stage_name": "楼台边",
+            "strategies": [
+                {
+                    "core": "自适应补给元件",
+                    "tool_men": {},
+                    "location": [5, 3],
+                    "direction": "none"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [3, 3],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 1
+                    },
+                    "location": [2, 2],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [1, 2],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [3, 3],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 1
+                    },
+                    "location": [2, 2],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [1, 2],
+                    "direction": "Right"
+                },
+                {
+                    "core": "阿斯卡纶",
+                    "tool_men": {
+                        "special": 3
+                    },
+                    "location": [3, 3],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "special": 2
+                    },
+                    "location": [1, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "defender": 3
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "core": "伊桑",
+                    "tool_men": {
+                        "special": 3
+                    },
+                    "location": [1, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 99
+                    },
+                    "location": [2, 2],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "caster": 99
+                    },
+                    "location": [2, 2],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "defender": 99
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "core": "丛林用示踪信标",
+                    "tool_men": {
+                        "medic": 99
+                    },
+                    "location": [1, 2],
+                    "direction": "Right"
+                }
+            ],
+            "draw_as_possible": true,
+            "actions": [
+                {
+                    "type": "二倍速"
+                }
+            ],
+            "retry_times": 99
+        },
+        {
+            "stage_name": "墓地旁",
+            "strategies": [
+                {
+                    "core": "自适应补给元件",
+                    "tool_men": {},
+                    "location": [5, 2],
+                    "direction": "none"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [3, 4],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 1
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [2, 5],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [1, 4],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [3, 4],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [2, 5],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "core": "阿斯卡纶",
+                    "tool_men": {
+                        "special": 3
+                    },
+                    "location": [3, 4],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "defender": 2
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "core": "伊桑",
+                    "tool_men": {
+                        "special": 4
+                    },
+                    "location": [1, 4],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 2
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "defender": 1
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 99
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "caster": 99
+                    },
+                    "location": [2, 3],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "defender": 99
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "core": "丛林用示踪信标",
+                    "tool_men": {
+                        "medic": 99
+                    },
+                    "location": [2, 5],
+                    "direction": "Up"
+                }
+            ],
+            "draw_as_possible": true,
+            "actions": [
+                {
+                    "type": "二倍速"
+                }
+            ],
+            "retry_times": 99
+        },
+        {
+            "stage_name": "舞台上",
+            "strategies": [
+                {
+                    "core": "自适应补给元件",
+                    "tool_men": {},
+                    "location": [1, 2],
+                    "direction": "none"
+                },
+                {
+                    "tool_men": {
+                        "defender": 6
+                    },
+                    "location": [3, 4],
+                    "direction": "Up"
+                },
+                {
+                    "core": "阿斯卡纶",
+                    "tool_men": {
+                        "special": 5
+                    },
+                    "location": [3, 3],
+                    "direction": "Right"
+                },
+                {
+                    "core": "伊桑",
+                    "tool_men": {
+                        "special": 5
+                    },
+                    "location": [3, 5],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [4, 4],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 99
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "medic": 4
+                    },
+                    "location": [4, 4],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "special": 99
+                    },
+                    "location": [3, 6],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "defender": 99
+                    },
+                    "location": [3, 4],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "caster": 99
+                    },
+                    "location": [2, 4],
+                    "direction": "Right"
+                },
+                {
+                    "core": "丛林用示踪信标",
+                    "tool_men": {
+                        "medic": 99
+                    },
+                    "location": [4, 4],
+                    "direction": "Left"
+                }
+            ],
+            "draw_as_possible": true,
+            "actions": [
+                {
+                    "type": "二倍速"
+                }
+            ],
+            "retry_times": 99
+        },
+        {
+            "stage_name": "城门下",
+            "strategies": [
+                {
+                    "core": "自适应补给元件",
+                    "tool_men": {},
+                    "location": [2, 3],
+                    "direction": "none"
+                },
+                {
+                    "tool_men": {
+                        "defender": 6
+                    },
+                    "location": [6, 5],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "special": 4
+                    },
+                    "location": [5, 4],
+                    "direction": "Right"
+                },
+                {
+                    "core": "阿斯卡纶",
+                    "tool_men": {
+                        "special": 1
+                    },
+                    "location": [5, 4],
+                    "direction": "Up"
+                },
+                {
+                    "core": "伊桑",
+                    "tool_men": {
+                        "special": 5
+                    },
+                    "location": [7, 5],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [6, 6],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 99
+                    },
+                    "location": [7, 4],
+                    "direction": "Left"
+                },
+                {
+                    "tool_men": {
+                        "medic": 4
+                    },
+                    "location": [6, 6],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "special": 99
+                    },
+                    "location": [6, 4],
+                    "direction": "Down"
+                },
+                {
+                    "tool_men": {
+                        "defender": 99
+                    },
+                    "location": [6, 5],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "caster": 99
+                    },
+                    "location": [7, 4],
+                    "direction": "Left"
+                },
+                {
+                    "core": "丛林用示踪信标",
+                    "tool_men": {
+                        "medic": 99
+                    },
+                    "location": [6, 6],
+                    "direction": "Up"
+                }
+            ],
+            "draw_as_possible": true,
+            "actions": [
+                {
+                    "type": "二倍速"
+                }
+            ],
+            "retry_times": 99
+        },
+        {
+            "stage_name": "天地间",
+            "strategies": [
+                {
+                    "core": "自适应补给元件",
+                    "tool_men": {},
+                    "location": [1, 3],
+                    "direction": "none"
+                },
+                {
+                    "tool_men": {
+                        "defender": 6
+                    },
+                    "location": [2, 5],
+                    "direction": "Right"
+                },
+                {
+                    "core": "阿斯卡纶",
+                    "tool_men": {
+                        "special": 5
+                    },
+                    "location": [3, 5],
+                    "direction": "Up"
+                },
+                {
+                    "core": "伊桑",
+                    "tool_men": {
+                        "special": 5
+                    },
+                    "location": [2, 4],
+                    "direction": "Down"
+                },
+                {
+                    "tool_men": {
+                        "medic": 1
+                    },
+                    "location": [2, 6],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "supporter": 99
+                    },
+                    "location": [1, 6],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "medic": 4
+                    },
+                    "location": [2, 6],
+                    "direction": "Up"
+                },
+                {
+                    "tool_men": {
+                        "special": 99
+                    },
+                    "location": [3, 4],
+                    "direction": "Down"
+                },
+                {
+                    "tool_men": {
+                        "defender": 6
+                    },
+                    "location": [1, 5],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "defender": 99
+                    },
+                    "location": [2, 5],
+                    "direction": "Right"
+                },
+                {
+                    "tool_men": {
+                        "caster": 99
+                    },
+                    "location": [1, 6],
+                    "direction": "Right"
+                },
+                {
+                    "core": "丛林用示踪信标",
+                    "tool_men": {
+                        "medic": 99
+                    },
+                    "location": [2, 6],
+                    "direction": "Up"
+                }
+            ],
+            "draw_as_possible": true,
+            "actions": [
+                {
+                    "type": "二倍速"
+                }
+            ],
+            "retry_times": 99
+        }
+    ]
+}
