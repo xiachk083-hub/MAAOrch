@@ -26,6 +26,8 @@ from account import Account
 from runner import AccountRunner
 from launch_queue import LaunchQueue
 from ui.dashboard import clear_dashboard, cleanup_emu_threads
+from ui.log_window import show_log_window
+from ui.settings_window import open_settings
 
 try:
     from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize,Slot
@@ -232,8 +234,8 @@ class MainWindow(QMainWindow):
         tm.addAction("检查 MAAOrch 更新", lambda: self.maint.check_orch_update())
         tm.addSeparator()
         tm.addAction("🔍 环境检测与修复", lambda: self._health_dialog())
-        tm.addAction("设置", lambda: (from ui.settings_window import open_settings; open_settings(self)))
-        tm.addAction("日志", lambda: (from ui.log_window import show_log_window; show_log_window(self)))
+        tm.addAction("设置", lambda: open_settings(self))
+        tm.addAction("日志", lambda: show_log_window(self))
         tm.addSeparator()
         tm.addAction("退出", self.maint._quit_app)
 
@@ -780,8 +782,8 @@ class MainWindow(QMainWindow):
             self.hide(); e.ignore()
         else:
             self._do_save(); e.accept(); QApplication.quit()
-    def _tlog(self) -> None: from ui.log_window import show_log_window; show_log_window(self)
-    def _settings(self) -> None: from ui.settings_window import open_settings; open_settings(self)
+    def _tlog(self) -> None: show_log_window(self)
+    def _settings(self) -> None: open_settings(self)
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin(); sys.exit(0)
