@@ -39,7 +39,7 @@ def _create_instance(inst: Path, source: Path) -> bool:
             dst_sub = inst / sub
             if src_sub.exists() and not dst_sub.exists():
                 _sp.run(["cmd", "/c", "mklink", "/J", str(dst_sub), str(src_sub)],
-                        capture_output=True, timeout=5)
+                        capture_output=True, timeout=5, creationflags=_sp.CREATE_NO_WINDOW)
         # Copy config from source (MAA must have been opened at least once to generate defaults)
         src_config = source / "config"
         dst_config = inst / "config"
