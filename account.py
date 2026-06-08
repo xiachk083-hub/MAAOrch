@@ -36,7 +36,7 @@ class Account:
     loop_max_rounds: int = 10
     sanity_driven: bool = False
     min_sanity: int = 0
-    stuck_timeout_min: int = 0  # 0=disabled
+    stuck_timeout_min: int = 10  # minutes without task progress → auto restart
     tags: str = ""  # comma-separated, for search filtering
     round_robin_deficit: int = 0  # 0=wait until full, N=launch when N points from full
 

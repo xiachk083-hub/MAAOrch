@@ -379,8 +379,16 @@ class AccountRunner(QObject):
         if tasks and any(t.get("status") == "完成" for t in tasks):
             is_real_error = False
         if is_real_error:
-            self.log_msg.emit(f"{ac.get('name', aid)} 异常退出 (code={exit_code})")
+            self.log_msg.emit(f"{ac.get('name', aid)} 异常退出 (code={exit_code})，60秒后自动重试")
             self.ctx.notify(f"进程异常退出 (code={exit_code})", True)
+            # Auto re-enqueue after 60s delay for unattended recovery
+            if ac:
+                from PySide6.QtCore import QTimer
+                from datetime import timedelta
+                q = getattr(self.ctx._mw, "launch_queue", None)
+                if q:
+                    QTimer.singleShot(60000, lambda a=ac["id"]: q.enqueue(a, "schedule", priority=1,
+                                        not_before=datetime.now() + timedelta(seconds=60)))
 
         # Build notification with sanity info
         msg_parts = []

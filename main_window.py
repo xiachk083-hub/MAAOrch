@@ -693,9 +693,11 @@ class MainWindow(QMainWindow):
         infrast_times = sg.get("infrast_times", ["04:00", "16:00"])
         is_time_trigger = is_infrast_time(now, infrast_times)
         count = 0
+        skipped_no_cfg = 0
         for a in self.accounts:
             aid = a.get("id", "")
             if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+                skipped_no_cfg += 1
                 continue
             if self.launch_queue.is_queued(aid):
                 continue
@@ -728,10 +730,14 @@ class MainWindow(QMainWindow):
                     self.launch_queue.enqueue(aid, "schedule", priority=1)
                     count += 1
         if count:
-            self._log(f"🧠 智能调度: {count} 个账号已入队")
+            self._log(f"🧠 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg}个缺配置跳过)" if skipped_no_cfg else ""))
             self.launch_queue.tick()
         else:
-            self._log("🧠 智能调度: 暂无账号需要调度（体力不足/无任务到达）")
+            reasons = []
+            if skipped_no_cfg:
+                reasons.append(f"{skipped_no_cfg}个缺配置")
+            reasons.append("体力不足/无任务到达")
+            self._log("🧠 智能调度: 暂无账号需要调度（" + "，".join(reasons) + "）")
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
     def _restore_geometry(self) -> None: self.maint.restore_geometry()
