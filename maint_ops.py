@@ -27,7 +27,8 @@ def _create_instance(inst: Path, source: Path) -> bool:
         try:
             shutil.rmtree(str(inst))
         except PermissionError:
-            return False  # directory locked by another process, skip
+            # Directory locked — try to work with it as-is
+            pass
     inst.mkdir(parents=True, exist_ok=True)
     try:
         for item in source.iterdir():
