@@ -87,8 +87,6 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
     infrast_times = global_cfg.get("infrast_times", ["04:00", "16:00"])
     is_afternoon = now.hour >= 15
     if is_infrast_time(now, infrast_times):
-        if not is_afternoon:
-            tasks.append("UserDataUpdate")
         tasks.append("Infrast")
         if global_cfg.get("recruit_enabled", True):
             tasks.append("Recruit")
