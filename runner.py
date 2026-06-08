@@ -103,7 +103,7 @@ class AccountRunner(QObject):
         return True
 
     def _get_free_instance(self) -> tuple[int, str] | None:
-        """Get a free MAA instance. Instances are pre-created at startup."""
+        """Get a free MAA instance. Checks PID file + already assigned instances."""
         import subprocess
         max_n = self.ctx.config.get("maa_instances", 0)
         pool = Path(__file__).parent / "maa" / "instances"
@@ -111,6 +111,14 @@ class AccountRunner(QObject):
             inst_dir = pool / str(i)
             exe = inst_dir / "MAA.exe"
             if not exe.exists():
+                continue
+            # Check if this instance is already assigned to a running account
+            inst_path = str(inst_dir)
+            already_used = any(
+                getattr(p, "_inst_path", None) == inst_path
+                for p in self._procs.values()
+            )
+            if already_used:
                 continue
             pid_file = inst_dir / ".pid"
             running = False
@@ -217,6 +225,7 @@ class AccountRunner(QObject):
         aid = ac["id"]
         pid_file = Path(inst_dir) / ".pid"
         p = subprocess.Popen([str(exe)], shell=False)
+        p._inst_path = str(Path(inst_dir).resolve())  # track instance for _get_free_instance
         self._procs[aid] = p
         self._start_times[aid] = time.time()
         self.ctx.proc_status.add(aid)
