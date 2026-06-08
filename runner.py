@@ -442,6 +442,13 @@ class AccountRunner(QObject):
                     elif "[ERR]" in line:
                         err = line.split("[ERR]")[-1].strip()[:80]
                         self.log_msg.emit(f"[MAA] {name} 错误: {err}")
+                        if "运行终止" in err or ("重启" in err and "安卓" in err):
+                            self.log_msg.emit(f"[MAA] {name} 检测到致命错误，强行终止进程以便重试")
+                            p = self._procs.get(aid)
+                            if p:
+                                try: p.kill()
+                                except: pass
+                            return
                     elif "TaskSwitched" in line or "TaskChainCompleted" in line:
                         self.status_msg.emit("MAA: 切换任务...")
             except Exception:
