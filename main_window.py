@@ -763,7 +763,8 @@ class MainWindow(QMainWindow):
             if should_launch:
                 if getattr(self, "_smart_force", False):
                     tasks = ["StartUp", "Award", "Fight", "Infrast", "Recruit", "Mall", "UserDataUpdate", "CloseDown"]
-                    if a.get("smart_annihilation_enabled", True) and a.get("smart_annihilation", ""):
+                    if (hasattr(self, "_smart_anni_cb") and self._smart_anni_cb.isChecked()
+                        and a.get("smart_annihilation_enabled", True) and a.get("smart_annihilation", "")):
                         tasks.insert(2, "Annihilation")
                 else:
                     tasks = get_tasks_for_account(a, sg)
