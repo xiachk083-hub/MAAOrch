@@ -187,6 +187,7 @@
   │   │  └─ diagnostics/{name}_{ts}/                │
   │   │     ├─ screenshot.png (ADB 截屏)            │
   │   │     ├─ asst.log (最后 100 行)               │
+  │   │     ├─ asst_tail.log (运行中持续采集 200 行) │
   │   │     └─ info.txt (aid/exit_code/失败次数)    │
   │   │                                              │
   │   ├─ 指数退避重试                                │
@@ -352,6 +353,7 @@ ServiceContext (callbacks.py)
 | `emu_ops.py` | ADB 测试/截图、模拟器列表/刷新 | `EmuService`, `test_adb`, `refresh_instance_list` |
 | `stats.py` | 运行统计读写 | `RunStats`, `save_run`, `get_last_sanity` |
 | `dialogs.py` | 设置/定时/账号编辑/任务配置对话框 | `ScheduleDialog`, `SettingsDialog`, `AccountDialog`, `TaskSettingsDialog` |
+| `ui/rebuild_dialog.py` | 重建实例进度对话框 | `RebuildDialog` |
 | `background.py` | QThread 包装工具 | `BackgroundTask` |
 | `api_server.py` | HTTP REST API（15+ 端点） | `ApiServer` |
 | `callbacks.py` | 服务上下文（依赖注入） | `ServiceContext` |
@@ -476,3 +478,22 @@ asst.log (MAA 运行日志)
 ──────────────────────────
 在 maa/instances/{N}/debug/asst.log
 由 MAA 自身写入，MAAOrch 定期读取尾部
+
+---
+
+## 状态栏
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 就绪                                     ▶2  ⚠ 1  MEM:6.2GB   │
+│                                              /16GB(2)          │
+│ ← self.sl(左侧)         ← _qsb  ← _health  ← _resource_lbl   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| 指示器 | 变量 | 格式 | 说明 |
+|--------|------|------|------|
+| 左侧文本 | `self.sl` | `就绪` / `MAA: 刷关...` | 当前操作状态或 MAA 任务名 |
+| 运行/队列 | `self._qsb` | `▶8` / `▶8 ⏳5` / `⏳5` | 运行中账号数 / 排队等待数 |
+| 健康状态 | `self._health_indicator` | `✅` / `⚠ 2` | 环境检测结果，绿色=正常、黄色=N个问题，点击打开检测面板 |
+| 资源监控 | `self._resource_lbl` | `MEM:6.2GB/16GB(2)` | 系统已用内存/总内存(MAA进程数)，后附 `⚠` 表示内存不足新启动已暂停 |
