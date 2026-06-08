@@ -273,7 +273,7 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
     if progs:
         v = progs[0].get("maa_version", "")
         vl = QLabel(f"已安装 {v}" if v else "已绑定")
-        if progs[0]["id"] in mw._proc_status:
+        if progs[0].get("id") in mw._proc_status:
             t = int(__import__("time").time() - mw._proc_start_times.get(progs[0]["id"], 0))
             vl.setText(f"🟢 运行中 ({t // 60}m{t % 60}s)  {v}" if v else f"🟢 运行中 ({t // 60}m{t % 60}s)")
             vl.setStyleSheet("color:#326cf3;font-weight:bold")
@@ -283,7 +283,7 @@ def _build_maa_card(mw: Any, row: int, progs: list[dict]) -> None:
         mcl.addLayout(mh)
 
         for p in progs:
-            mcl.addWidget(QLabel(f"  ▶ {p['path']}"))
+            mcl.addWidget(QLabel(f"  ▶ {p.get('path', '?')}"))
 
         vr = QHBoxLayout()
         vr.addWidget(QLabel("通道:"))

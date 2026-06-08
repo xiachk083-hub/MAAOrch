@@ -183,7 +183,7 @@ def build_queue_dialog(mw: Any) -> None:
                 if p.poll() is None:
                     w = next((x for x in mw.warehouse if x["id"] == pid), None)
                     ac = next((x for x in mw.accounts if x["id"] == w.get("account_ref", "")), None) if w else None
-                    name = ac["name"] if ac else (__import__("pathlib").Path(w["path"]).stem if w else pid[:8])
+                    name = ac["name"] if ac else (__import__("pathlib").Path(w.get("path", "")).stem if w else pid[:8])
                     t = int(time.time() - mw._proc_start_times.get(pid, 0))
                     running.append((name, f"运行中 {t//60}m{t%60}s", ""))
         running_tbl.setRowCount(max(1, len(running)) if running else 1)

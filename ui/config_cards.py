@@ -73,8 +73,13 @@ def build_config_cards(mw: Any) -> QWidget:
     scroll.setWidget(mw._card_container)
     cvl.addWidget(scroll, 1)
 
-    # Rebuild cards on resize so grid reflows
-    mw._card_container.resizeEvent = lambda e: _rebuild(mw)
+    # Rebuild cards on resize so grid reflows (guarded against recursion)
+    def _on_resize(e):
+        if not getattr(mw, "_card_rebuilding", False):
+            mw._card_rebuilding = True
+            _rebuild(mw)
+            mw._card_rebuilding = False
+    mw._card_container.resizeEvent = _on_resize
     _rebuild(mw)
     return mw.cv
 
