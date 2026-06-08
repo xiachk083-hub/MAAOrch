@@ -158,16 +158,27 @@ def refresh_maa_panel(mw: Any) -> None:
 
 def _rebuild_instances(mw: Any) -> None:
     """Rebuild all MAA instances with progress dialog."""
+    # Clean up old references
+    for attr in ("_rebuild_dlg", "_rebuild_timer", "_rebuild_task"):
+        old = getattr(mw, attr, None)
+        if old is not None:
+            try:
+                if hasattr(old, "stop"):
+                    old.stop()
+            except Exception:
+                pass
+
     from maint_ops import ensure_maa_instances_async
     desired = mw.config.get("parallel_max", 1) + 1
     dlg = RebuildDialog(mw, desired)
     dlg.show()
-    mw._rebuild_dialog = dlg  # prevent GC
+    mw._rebuild_dlg = dlg
 
     progress = {"current": 0, "total": desired}
-    poll_timer = QTimer(dlg)
-    poll_timer.timeout.connect(lambda: dlg.update(progress["current"], progress["total"]))
-    poll_timer.start(200)
+    timer = QTimer(dlg)
+    timer.timeout.connect(lambda: dlg.update(progress["current"], progress["total"]))
+    timer.start(200)
+    mw._rebuild_timer = timer
 
     def progress_cb(current, total):
         progress["current"] = current
@@ -179,11 +190,14 @@ def _rebuild_instances(mw: Any) -> None:
         ensure_maa_instances_async(mw.ctx, force=True, progress_cb=progress_cb, sync=True)
 
     def _done():
-        poll_timer.stop()
+        timer.stop()
         dlg.close()
-        mw._rebuild_dialog = None
+        mw._rebuild_dlg = None
+        mw._rebuild_timer = None
+        mw._rebuild_task = None
         refresh_maa_panel(mw)
 
     t = BackgroundTask(_rebuild)
     t.finished.connect(_done)
+    mw._rebuild_task = t
     t.start()
