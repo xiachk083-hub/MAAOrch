@@ -64,7 +64,7 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            if ac.get("post_action"): c["MainFunction.PostActions"]='"'+ac["post_action"]+'"'
+            if ac.get("post_action"): c["MainFunction.PostActions"]=ac["post_action"]
             if ac.get("adb_retry",0)>0: c["Connect.RetryOnDisconnected"]="True"
             # Emulator: unchecked = MAA handles, checked = we handle
             if ac.get("emu_instance_index","") and not ac.get("emu_launch"):
@@ -237,7 +237,7 @@ class ConfigService:
             smart_cfg = self.ctx.config.get("smart_global", {})
             post = smart_cfg.get("post_action", "")
             if post:
-                c["MainFunction.PostActions"] = f'"{post}"'
+                c["MainFunction.PostActions"] = post
             else:
                 c.pop("MainFunction.PostActions", None)
 
