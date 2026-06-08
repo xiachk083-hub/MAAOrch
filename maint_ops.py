@@ -39,9 +39,12 @@ def ensure_maa_instances_async(ctx) -> None:
         pool = Path(__file__).parent / "maa" / "instances"
         pool.mkdir(parents=True, exist_ok=True)
         inst1 = pool / "1"
-        if inst1.exists():
+        exe1 = inst1 / "MAA.exe"
+        if exe1.exists():
             return
         import shutil
+        if inst1.exists():
+            shutil.rmtree(str(inst1))
         # Always copy, never move (preserve original MAA source)
         shutil.copytree(str(src), str(inst1))
 
@@ -64,14 +67,16 @@ def _ensure_instance_n(ctx, n: int) -> bool:
     """Lazily create instance #n (n >= 2) if it doesn't exist yet."""
     pool = Path(__file__).parent / "maa" / "instances"
     inst = pool / str(n)
-    if inst.exists():
+    if (inst / "MAA.exe").exists():
         return True
-    # Source is always instance #1 (guaranteed to exist if we get here)
+    # Source is always instance #1
     src = pool / "1"
-    if not src.exists():
+    if not (src / "MAA.exe").exists():
         return False
     import shutil
     try:
+        if inst.exists():
+            shutil.rmtree(str(inst))
         shutil.copytree(str(src), str(inst))
         return True
     except:
