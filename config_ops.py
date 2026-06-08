@@ -266,16 +266,14 @@ class ConfigService:
                 if existing_tq:
                     anni_appended = False
                     clean_tq = [item for item in existing_tq if not item.pop("_smart_inserted", None)]
-                    # Deduplicate Fight-type items — keep only the ones we need
+                    # Deduplicate Fight-type items
                     fight_items = [(i, item) for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "fight"]
                     if len(fight_items) > 1:
-                        # Keep last Fight item, remove earlier duplicates
                         keep_idx = fight_items[-1][0]
                         clean_tq = [item for i, item in enumerate(clean_tq)
                                     if not (item.get("TaskType", "").lower() == "fight" and i != keep_idx)]
                     for item in clean_tq:
                         tt = item.get("TaskType", "").lower()
-                        # Sanitize StagePlan — remove junk entries
                         sp = item.get("StagePlan", [])
                         if sp:
                             item["StagePlan"] = [s for s in sp if isinstance(s, str) and re.match(r'^[a-zA-Z0-9\u4e00-\u9fff_\-]+$', s)]
@@ -285,9 +283,11 @@ class ConfigService:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
                                 item["UseMedicine"] = False
-                                farm_stage = day_stage or (item.get("StagePlan") or [None])[0] or ""
-                                item["StagePlan"] = [farm_stage] if farm_stage else item.get("StagePlan", [])
-                                item["IsStageManually"] = bool(farm_stage)
+                                if day_stage:
+                                    item["StagePlan"] = [day_stage]
+                                    item["IsStageManually"] = True
+                                else:
+                                    item["IsStageManually"] = False
                                 anni_item = dict(item)
                                 anni_item["IsEnable"] = True
                                 anni_item["_smart_inserted"] = True
@@ -318,7 +318,30 @@ class ConfigService:
                             item["IsStageManually"] = bool(day_stage)
                     c["TaskQueue"] = clean_tq
                 else:
-                    c.pop("TaskQueue", None)
+                    # No existing TaskQueue — build one with all standard task types
+                    c["TaskQueue"] = []
+                    for task_type in ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award", "Roguelike", "Reclamation", "Depot"]:
+                        item = {"TaskType": task_type, "IsEnable": task_type.lower() in task_set}
+                        if task_type.lower() == "fight" and run_annihilation:
+                            item["UseCustomAnnihilation"] = False
+                            item["AnnihilationStage"] = ""
+                            item["UseMedicine"] = False
+                            if day_stage:
+                                item["StagePlan"] = [day_stage]
+                                item["IsStageManually"] = True
+                            if has_fight and "annihilation" in task_set:
+                                anni_item = dict(item)
+                                anni_item["IsEnable"] = True
+                                anni_item["_smart_inserted"] = True
+                                anni_item["UseCustomAnnihilation"] = True
+                                anni_item["AnnihilationStage"] = anni or "Annihilation"
+                                anni_item["StagePlan"] = [anni or "Annihilation"]
+                                anni_item["IsStageManually"] = True
+                                anni_item["StageResetMode"] = "Current"
+                                anni_item["UseMedicine"] = True
+                                anni_item["MedicineCount"] = 999
+                                c["TaskQueue"].append(anni_item)
+                        c["TaskQueue"].append(item)
             else:
                 c.pop("TaskQueue", None)
             tmp = gj.with_suffix(".json.tmp")
