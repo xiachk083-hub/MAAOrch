@@ -315,11 +315,11 @@ class AccountRunner(QObject):
         if not progs:
             return
         lp = self.ctx.logs.asst_log_path(progs[0]) if self.ctx.logs else None
+        name = ac.get("name", aid)
         if lp and lp.exists():
             try:
                 last = lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-5:]
                 for line in last:
-                    # v6: append_callback SubTaskStart
                     if "append_callback" in line and "SubTaskStart" in line:
                         jm = re.search(r"\{.*\}", line)
                         if jm:
@@ -328,20 +328,28 @@ class AccountRunner(QObject):
                                 tc = data.get("taskchain", "")
                                 st_map = {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息", "CloseDown": "关闭"}
                                 if tc in st_map:
+                                    task_name = st_map[tc]
+                                    prev = ac.get("_last_task", "")
+                                    if task_name != prev:
+                                        ac["_last_task"] = task_name
+                                        self.log_msg.emit(f"[MAA] {name} 当前任务: {task_name}")
                                     self._task_start_times[aid] = time.time()
-                                    self.status_msg.emit(f"MAA: {st_map[tc]}...")
+                                    self.status_msg.emit(f"MAA: {task_name}...")
                                     return
                             except Exception:
                                 pass
-                    # v5 fallback: append_task
                     elif "append_task" in line:
                         for k, v in {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息"}.items():
                             if k in line:
+                                prev = ac.get("_last_task", "")
+                                if v != prev:
+                                    ac["_last_task"] = v
+                                    self.log_msg.emit(f"[MAA] {name} 当前任务: {v}")
                                 self.status_msg.emit(f"MAA: {v}...")
                                 return
                     elif "[ERR]" in line:
                         err = line.split("[ERR]")[-1].strip()[:80]
-                        self.log_msg.emit(f"MAA错误: {err}")
+                        self.log_msg.emit(f"[MAA] {name} 错误: {err}")
                     elif "TaskSwitched" in line or "TaskChainCompleted" in line:
                         self.status_msg.emit("MAA: 切换任务...")
             except Exception:
@@ -367,28 +375,51 @@ class AccountRunner(QObject):
         self._stopping.discard(aid)
         self.ctx.proc_status.discard(aid)
 
+        name = ac.get("name", aid) if ac else aid
         if ac:
-            name = ac.get("name", aid)
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             ac["smart_plan"] = ""
-        # smart_pending is not cleared here — _on_account_finished checks it
-        # MAA 在 ExitSelf 等场景下可能返回非 0 退出码，但任务已实际完成
+
         is_real_error = exit_code != 0 and exit_code != -9 and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):
             is_real_error = False
+
+        # Track consecutive failures
+        failures = ac.get("consecutive_failures", 0) if ac else 0
         if is_real_error:
-            self.log_msg.emit(f"{ac.get('name', aid)} 异常退出 (code={exit_code})，60秒后自动重试")
-            self.ctx.notify(f"进程异常退出 (code={exit_code})", True)
-            # Auto re-enqueue after 60s delay for unattended recovery
+            failures += 1
             if ac:
+                ac["consecutive_failures"] = failures
+            self.log_msg.emit(f"[账号] {name} 状态: error (exit={exit_code}) 连续失败={failures}")
+            self.ctx.notify(f"进程异常退出 (code={exit_code})", True)
+
+            # Collect diagnostic
+            self._collect_diagnostic(aid, ac, exit_code)
+
+            # Restart emulator to clear all state
+            emu_idx = ac.get("emu_instance_index", "") if ac else ""
+            if emu_idx:
+                self._restart_emulator(emu_idx, name)
+
+            # Auto re-enqueue or pause
+            if failures >= 6:
+                self.log_msg.emit(f"[暂停] {name} 连续失败 {failures} 次，暂停30分钟")
+                self.ctx.notify(f"{name} 连续失败暂停", True)
+            else:
+                delay = max(5, 15 - failures * 2)  # 5-15s decreasing with more failures
+                self.log_msg.emit(f"[重试] {name} {delay}s后重新入队")
                 from PySide6.QtCore import QTimer
-                from datetime import timedelta
                 q = getattr(self.ctx._mw, "launch_queue", None)
-                if q:
-                    QTimer.singleShot(60000, lambda a=ac["id"]: q.enqueue(a, "schedule", priority=1,
-                                        not_before=datetime.now() + timedelta(seconds=60)))
+                if q and ac:
+                    QTimer.singleShot(delay * 1000, lambda a=aid: q.enqueue(a, "schedule", priority=1))
+
+        else:
+            if ac:
+                ac["consecutive_failures"] = 0
+            if exit_code == 0 or exit_code == -9:
+                self.log_msg.emit(f"[账号] {name} 状态: completed (exit={exit_code})")
 
         # Build notification with sanity info
         msg_parts = []
@@ -422,7 +453,7 @@ class AccountRunner(QObject):
             except Exception:
                 pass
 
-        # Rotate MAA log — keep only last 3 runs
+        # Rotate MAA log
         if old_progs:
             try:
                 from log_ops import LogService
@@ -431,7 +462,7 @@ class AccountRunner(QObject):
             except Exception:
                 pass
 
-        # Push to daigan if configured
+        # Push to daigan
         if tasks and ac:
             daigan_url = self.ctx.config.get("daigan_url", "").strip()
             if daigan_url:
@@ -451,6 +482,57 @@ class AccountRunner(QObject):
                     self.log_msg.emit(f"[daigan] 推送成功 → {daigan_url}")
                 except Exception as e:
                     self.log_msg.emit(f"[daigan] 推送失败: {e}")
+
+    def _collect_diagnostic(self, aid: str, ac: dict | None, exit_code: int) -> None:
+        """Save diagnostic info (log tail + screenshot) on error."""
+        try:
+            from datetime import datetime as _dt
+            ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+            name = ac.get("name", aid) if ac else aid
+            diag_dir = Path(__file__).parent / "diagnostics" / f"{name}_{ts}"
+            diag_dir.mkdir(parents=True, exist_ok=True)
+            # asst.log tail
+            if ac:
+                addr = ac.get("adb_address", "")
+                if addr:
+                    try:
+                        r = subprocess.run(["adb", "-s", addr, "exec-out", "screencap", "-p"],
+                                           capture_output=True, timeout=10, creationflags=CF)
+                        (diag_dir / "screenshot.png").write_bytes(r.stdout)
+                    except Exception:
+                        pass
+                progs = [w for w in self.ctx.warehouse if w.get("account_ref") == aid]
+                if progs:
+                    lp = Path(progs[0].get("path", "")).parent / "debug" / "asst.log"
+                    if lp.exists():
+                        lines = lp.read_text(encoding="utf-8", errors="replace").split("\n")[-100:]
+                        (diag_dir / "asst.log").write_text("\n".join(lines), encoding="utf-8")
+            (diag_dir / "info.txt").write_text(
+                f"aid={aid}\nexit_code={exit_code}\nts={ts}\nconsecutive_failures={ac.get('consecutive_failures', 0) if ac else 0}",
+                encoding="utf-8")
+            self.log_msg.emit(f"[诊断] {name} 已保存到 {diag_dir}")
+        except Exception as e:
+            self.log_msg.emit(f"[诊断] 保存失败: {e}")
+
+    def _restart_emulator(self, emu_idx: str, name: str) -> None:
+        """Restart a MuMu emulator instance."""
+        from task_constants import find_mumu_cli
+        cli = find_mumu_cli()
+        if not cli:
+            self.log_msg.emit(f"[模拟器] #{emu_idx} 未找到 mumu-cli")
+            return
+        try:
+            self.log_msg.emit(f"[模拟器] #{emu_idx} 正在关闭...")
+            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                           timeout=15, creationflags=CF, capture_output=True)
+            import time as _t
+            _t.sleep(3)
+            self.log_msg.emit(f"[模拟器] #{emu_idx} 正在启动...")
+            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"],
+                           timeout=15, creationflags=CF, capture_output=True)
+            self.log_msg.emit(f"[模拟器] #{emu_idx} 启动指令已发送")
+        except Exception as e:
+            self.log_msg.emit(f"[模拟器] #{emu_idx} 操作失败: {e}")
 
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")

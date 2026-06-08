@@ -672,14 +672,22 @@ class MainWindow(QMainWindow):
         self.maint.poll()
         refresh_queue_view(self)
         if hasattr(self, "launch_queue"):
-            if self.launch_queue.active_count:
-                ac = self.launch_queue.active_count
-                qc = self.launch_queue.pending_count
+            lq = self.launch_queue
+            ac = lq.active_count
+            qc = lq.pending_count
+            if ac:
                 self._qsb.setText(f"▶{ac}" + (f"  ⏳{qc}" if qc else ""))
-            elif self.launch_queue.pending_count:
-                self._qsb.setText(f"⏳{self.launch_queue.pending_count}")
+            elif qc:
+                self._qsb.setText(f"⏳{qc}")
             else:
                 self._qsb.setText("")
+            # Status overview log (every 30 seconds)
+            now = int(__import__("time").time())
+            if now % 30 == 0:
+                total = len(self.accounts)
+                errors = sum(1 for a in self.accounts if a.get("consecutive_failures", 0) >= 6)
+                paused = sum(1 for a in self.accounts if a.get("consecutive_failures", 0) >= 6)
+                self._log(f"[状态] 运行中: {ac}/{total} | 队列: {qc} | 错误: {errors}" + (f" | 暂停: {paused}" if paused else ""))
     def _smart_tick(self) -> None:
         sg = self.config.get("smart_global", {})
         if not sg.get("enabled", False) or not hasattr(self, "launch_queue"):

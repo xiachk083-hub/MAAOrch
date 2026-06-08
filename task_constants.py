@@ -220,3 +220,44 @@ class EmuMonitor(QThread):
         if not self.wait(10000):
             self.terminate()
             self.wait(3000)
+
+
+# ── Emulator state detection ──
+
+EMU_STATE_STOPPED = 0
+EMU_STATE_STARTING = 1
+EMU_STATE_RUNNING = 2
+
+
+def get_emu_state(emu_idx: str) -> int:
+    """Check MuMu emulator state: STOPPED / STARTING / RUNNING via mumu-cli."""
+    cli = find_mumu_cli()
+    if not cli:
+        return EMU_STATE_STOPPED
+    try:
+        r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
+                           capture_output=True, text=True, timeout=5,
+                           creationflags=subprocess.CREATE_NO_WINDOW,
+                           encoding="utf-8", errors="replace")
+        if not r.stdout.strip():
+            return EMU_STATE_STOPPED
+        data = json.loads(r.stdout)
+        info = data.get(str(emu_idx), {})
+        if info.get("is_android_started", False):
+            return EMU_STATE_RUNNING
+        if info.get("is_process_started", False):
+            return EMU_STATE_STARTING
+        return EMU_STATE_STOPPED
+    except Exception:
+        return EMU_STATE_STOPPED
+
+
+def wait_emu_ready(emu_idx: str, timeout: int = 120) -> bool:
+    """Wait for emulator to fully boot. Returns True if ready."""
+    import time as _time
+    for _ in range(timeout):
+        st = get_emu_state(emu_idx)
+        if st == EMU_STATE_RUNNING:
+            return True
+        _time.sleep(1)
+    return False
