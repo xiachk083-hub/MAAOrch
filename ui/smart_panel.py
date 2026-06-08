@@ -1,159 +1,419 @@
-"""Smart scheduling panel — global defaults + per-account overrides."""
 from __future__ import annotations
+import time
+from datetime import datetime
 from typing import Any
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox,
     QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QGroupBox, QFormLayout, QLineEdit, QComboBox,
+    QFrame, QLineEdit,
 )
-from smart_scheduler import MATERIAL_STAGES
+from smart_scheduler import MATERIAL_STAGES, _arknights_now
 
 
 def build_smart_panel(mw: Any) -> QWidget:
     mw.smart_v = QWidget()
     vl = QVBoxLayout(mw.smart_v)
-    vl.setContentsMargins(12, 10, 12, 6)
-    vl.setSpacing(4)
+    vl.setContentsMargins(8, 6, 8, 4)
+    vl.setSpacing(3)
 
-    # ── Header: enable toggle ──
+    # ── Header ──
     hdr = QHBoxLayout()
-    hdr.addWidget(QLabel("🧠 智能调度", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
-    run_btn = QPushButton("▶ 立即调度全部")
-    run_btn.setObjectName("startBtn")
-    run_btn.clicked.connect(lambda: _run_smart_all(mw))
-    hdr.addWidget(run_btn)
+    hdr.setSpacing(6)
+
+    mw._queue_toggle_btn = QPushButton("▶ 启动队列")
+    mw._queue_toggle_btn.setFixedHeight(24)
+    mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#326cf3;color:#fff;border:1px solid #326cf3;border-radius:4px;padding:2px 10px;font-size:9pt}")
+    def _toggle_queue():
+        lq = getattr(mw, "launch_queue", None)
+        if not lq:
+            return
+        if lq.is_paused:
+            lq.resume()
+            mw._queue_toggle_btn.setText("⏸ 暂停队列")
+            mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#e8a000;color:#fff;border:1px solid #e8a000;border-radius:4px;padding:2px 10px;font-size:9pt}")
+            mw._log("队列已启动")
+        else:
+            lq.pause()
+            mw._queue_toggle_btn.setText("▶ 启动队列")
+            mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#326cf3;color:#fff;border:1px solid #326cf3;border-radius:4px;padding:2px 10px;font-size:9pt}")
+            mw._log("队列已暂停")
+    mw._queue_toggle_btn.clicked.connect(_toggle_queue)
+    hdr.addWidget(mw._queue_toggle_btn)
+
     mw._smart_anni_cb = QCheckBox("剿灭")
     mw._smart_anni_cb.setChecked(True)
     hdr.addWidget(mw._smart_anni_cb)
+
+    hdr.addWidget(QLabel("并行:"))
+    parallel_sp = QSpinBox()
+    parallel_sp.setRange(1, 10)
+    parallel_sp.setFixedWidth(50)
+    parallel_sp.setValue(mw.config.get("parallel_max", 1))
+    parallel_sp.valueChanged.connect(lambda v: mw.config.update({"parallel_max": v}))
+    hdr.addWidget(parallel_sp)
+
+    mw._queue_stats = QLabel("")
+    mw._queue_stats.setStyleSheet("color:#888;font-size:9pt")
+    hdr.addWidget(mw._queue_stats)
+
     hdr.addStretch()
+
     mw._smart_enabled_cb = QCheckBox("启用智能调度")
     mw._smart_enabled_cb.setChecked(mw.config.get("smart_global", {}).get("enabled", False))
     mw._smart_enabled_cb.toggled.connect(lambda v: _toggle_smart(mw, v))
     hdr.addWidget(mw._smart_enabled_cb)
+
+    log_btn = QPushButton("📋")
+    log_btn.setFixedSize(28, 24)
+    log_btn.setToolTip("打开日志窗口")
+    log_btn.clicked.connect(lambda: _open_log(mw))
+    hdr.addWidget(log_btn)
+
+    settings_btn = QPushButton("⚙")
+    settings_btn.setFixedSize(28, 24)
+    settings_btn.setToolTip("设置")
+    settings_btn.clicked.connect(lambda: _open_settings(mw))
+    hdr.addWidget(settings_btn)
+
     vl.addLayout(hdr)
 
-    # ── Global defaults ──
-    gb = QGroupBox("全局默认设置")
-    gf = QFormLayout(gb)
-    gf.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+    # ── Search bar ──
+    search_row = QHBoxLayout()
+    mw._smart_search = QLineEdit()
+    mw._smart_search.setPlaceholderText("🔍 搜索账号...")
+    mw._smart_search.textChanged.connect(lambda: _refresh_smart_view(mw))
+    search_row.addWidget(mw._smart_search, 1)
+    add_btn = QPushButton("+ 添加账号")
+    add_btn.setObjectName("startBtn")
+    add_btn.clicked.connect(lambda: _add_account(mw))
+    search_row.addWidget(add_btn)
+    vl.addLayout(search_row)
 
-    sg = mw.config.setdefault("smart_global", {})
-
-    # Threshold
-    th_sp = QSpinBox(); th_sp.setRange(10, 100); th_sp.setSuffix(" %")
-    th_sp.setValue(sg.get("threshold", 80))
-    th_sp.valueChanged.connect(lambda v: (_set_global(mw, "threshold", v), mw._save()))
-    gf.addRow("体力阈值:", th_sp)
-
-    # Expiring medicine
-    med_row = QHBoxLayout()
-    med_cb = QCheckBox("使用即将过期理智药")
-    med_cb.setChecked(sg.get("expiring_medicine", True))
-    med_cb.toggled.connect(lambda v: (_set_global(mw, "expiring_medicine", v), mw._save()))
-    med_row.addWidget(med_cb)
-    med_days = QSpinBox(); med_days.setRange(1, 7); med_days.setSuffix(" 天")
-    med_days.setValue(sg.get("medicine_days", 2))
-    med_days.valueChanged.connect(lambda v: (_set_global(mw, "medicine_days", v), mw._save()))
-    med_row.addWidget(QLabel("过期前")); med_row.addWidget(med_days); med_row.addStretch()
-    gf.addRow("", med_row)
-
-    # Annihilation
-    anni_cb = QCheckBox("每周自动跑剿灭")
-    anni_cb.setChecked(sg.get("annihilation_enabled", True))
-    anni_cb.toggled.connect(lambda v: (_set_global(mw, "annihilation_enabled", v), mw._save()))
-    gf.addRow("", anni_cb)
-
-    # Infrast times
-    infra_row = QHBoxLayout()
-    infra_t1 = QLineEdit(sg.get("infrast_times", ["04:00", "16:00"])[0] if sg.get("infrast_times") else "04:00")
-    infra_t1.setFixedWidth(55)
-    infra_t2 = QLineEdit(sg.get("infrast_times", ["04:00", "16:00"])[1] if len(sg.get("infrast_times", [])) > 1 else "16:00")
-    infra_t2.setFixedWidth(55)
-
-    def _save_infra_times():
-        sg["infrast_times"] = [infra_t1.text().strip(), infra_t2.text().strip()]
-        mw._save()
-
-    infra_t1.editingFinished.connect(_save_infra_times)
-    infra_t2.editingFinished.connect(_save_infra_times)
-    infra_row.addWidget(infra_t1); infra_row.addWidget(QLabel("  ")); infra_row.addWidget(infra_t2); infra_row.addStretch()
-    gf.addRow("基建班次:", infra_row)
-
-    # Recruit
-    recruit_cb = QCheckBox("公招随基建一起跑")
-    recruit_cb.setChecked(sg.get("recruit_enabled", True))
-    recruit_cb.toggled.connect(lambda v: (_set_global(mw, "recruit_enabled", v), mw._save()))
-    gf.addRow("", recruit_cb)
-
-    # Mall
-    mall_cb = QCheckBox("信用商店随基建一起跑")
-    mall_cb.setChecked(sg.get("mall_enabled", True))
-    mall_cb.toggled.connect(lambda v: (_set_global(mw, "mall_enabled", v), mw._save()))
-    gf.addRow("", mall_cb)
-
-    # Post action
-    post_row = QHBoxLayout()
-    post_opts = [("ExitArknights", "关闭游戏"), ("ExitSelf", "关闭MAA"), ("ExitEmulator", "关模拟器")]
-    post_cbs = {}
-    current_post = sg.get("post_action", "ExitArknights,ExitSelf")
-    current_set = set(current_post.split(",")) if current_post else set()
-
-    def _save_post():
-        selected = [k for k, cb in post_cbs.items() if cb.isChecked()]
-        sg["post_action"] = ",".join(selected) if selected else ""
-        mw._save()
-
-    for k, v in post_opts:
-        cb = QCheckBox(v)
-        cb.setChecked(k in current_set)
-        cb.toggled.connect(lambda: _save_post())
-        post_cbs[k] = cb
-        post_row.addWidget(cb)
-    post_row.addStretch()
-    gf.addRow("完成后:", post_row)
-
-    vl.addWidget(gb)
-
-    # ── Account overrides table ──
-    vl.addWidget(QLabel("账号关卡覆盖（空=继承全局或MAA自行决定）",
-                        font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    # ── Account table ──
     DAYS = ["一", "二", "三", "四", "五", "六", "日"]
     DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    cols = 4 + len(DAYS)
+    cols = 6 + len(DAYS)  # check + name + status + stage + anni + days + detail
     tbl = QTableWidget(0, cols)
-    tbl.setHorizontalHeaderLabels(["账号", "默认关卡", "剿灭关卡"] + DAYS + [""])
-    tbl.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-    tbl.setColumnWidth(1, 100)
-    tbl.setColumnWidth(2, 100)
+    tbl.setHorizontalHeaderLabels(["☐", "账号", "状态", "默认关卡", "剿灭"] + DAYS + [""])
+    tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+    tbl.setColumnWidth(0, 28)
+    tbl.setColumnWidth(2, 60)
+    tbl.setColumnWidth(3, 80)
+    tbl.setColumnWidth(4, 80)
     for i in range(len(DAYS)):
-        tbl.setColumnWidth(3 + i, 70)
-    tbl.setColumnWidth(3 + len(DAYS), 36)
+        tbl.setColumnWidth(5 + i, 55)
+    tbl.setColumnWidth(5 + len(DAYS), 32)
     tbl.verticalHeader().setVisible(False)
-    tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
+    tbl.setEditTriggers(QAbstractItemView.DoubleClicked)
     tbl.setShowGrid(False)
     tbl.setAlternatingRowColors(True)
-    tbl.verticalHeader().setDefaultSectionSize(28)
+    tbl.verticalHeader().setDefaultSectionSize(26)
+    tbl.setSortingEnabled(True)
     tbl.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    tbl.itemChanged.connect(lambda item: _on_cell_edit(mw, item))
     mw._smart_tbl = tbl
-
     vl.addWidget(tbl, 1)
 
+    # ── Batch operations bar ──
+    batch_row = QHBoxLayout()
+    batch_row.setSpacing(6)
+    mw._batch_edit_btn = QPushButton("批量设置")
+    mw._batch_edit_btn.setEnabled(False)
+    mw._batch_edit_btn.clicked.connect(lambda: _do_batch_edit(mw))
+    batch_row.addWidget(mw._batch_edit_btn)
+    mw._batch_enqueue_btn = QPushButton("批量入队")
+    mw._batch_enqueue_btn.setEnabled(False)
+    mw._batch_enqueue_btn.clicked.connect(lambda: _do_batch_enqueue(mw))
+    batch_row.addWidget(mw._batch_enqueue_btn)
+    mw._batch_stop_btn = QPushButton("批量停止")
+    mw._batch_stop_btn.setEnabled(False)
+    mw._batch_stop_btn.clicked.connect(lambda: _do_batch_stop(mw))
+    batch_row.addWidget(mw._batch_stop_btn)
+    mw._batch_delete_btn = QPushButton("批量删除")
+    mw._batch_delete_btn.setEnabled(False)
+    mw._batch_delete_btn.clicked.connect(lambda: _do_batch_delete(mw))
+    batch_row.addWidget(mw._batch_delete_btn)
+    mw._batch_status = QLabel("")
+    mw._batch_status.setStyleSheet("color:#888;font-size:8pt")
+    batch_row.addWidget(mw._batch_status)
+    batch_row.addStretch()
+    vl.addLayout(batch_row)
+
+    # ── Log bar ──
+    log_bar = QFrame()
+    log_bar.setFrameShape(QFrame.StyledPanel)
+    log_bar.setStyleSheet("QFrame{background:#1e1e22;border:1px solid #2b2b30;border-radius:4px;padding:2px 4px}")
+    log_bar.setFixedHeight(26)
+    mw._log_bar_text = QLabel(" 就绪")
+    mw._log_bar_text.setStyleSheet("color:#888;font-size:8pt")
+    log_bar.setToolTip("点击打开日志窗口")
+    log_bar.mousePressEvent = lambda e: _open_log(mw)
+    lb_layout = QHBoxLayout(log_bar)
+    lb_layout.setContentsMargins(4, 0, 4, 0)
+    lb_layout.addWidget(mw._log_bar_text)
+    vl.addWidget(log_bar)
+
+    # Initial render
     _rebuild_smart_table(mw)
+
+    # Auto-refresh timer for status column
+    mw._smart_refresh_timer = QTimer(mw.smart_v)
+    mw._smart_refresh_timer.timeout.connect(lambda: _update_status_column(mw))
+    mw._smart_refresh_timer.start(3000)
+
     return mw.smart_v
 
 
-def _set_global(mw: Any, key: str, value: Any) -> None:
-    mw.config.setdefault("smart_global", {})[key] = value
+def _open_log(mw: Any) -> None:
+    from ui.log_window import show_log_window
+    show_log_window(mw)
+
+
+def _open_settings(mw: Any) -> None:
+    from ui.settings_window import open_settings
+    open_settings(mw)
+
+
+def _add_account(mw: Any) -> None:
+    from account import Account
+    a = Account()
+    a.name = f"账号{len(mw.accounts) + 1}"
+    mw.accounts.append(a)
+    mw._save()
+    _rebuild_smart_table(mw)
+    mw._log(f"已添加账号: {a.name}")
+
+
+def _on_cell_edit(mw: Any, item: QTableWidgetItem) -> None:
+    """Handle in-place cell edits."""
+    row = item.row()
+    col = item.column()
+    if row >= len(mw.accounts):
+        return
+    a = mw.accounts[row]
+    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    text = item.text().strip()
+    if col == 1:  # 账号名
+        a["name"] = text
+    elif col == 3:  # 默认关卡
+        a["smart_stage"] = text
+    elif 5 <= col < 5 + len(DAY_KEYS):  # 一~日
+        dk = DAY_KEYS[col - 5]
+        a[f"smart_{dk}"] = text
+    else:
+        return
+    mw._save()
+
+
+def _do_batch_edit(mw: Any) -> None:
+    selected = _get_selected(mw)
+    if not selected:
+        return
+    from ui.batch_edit import open_batch_edit
+    open_batch_edit(mw, selected)
+    _rebuild_smart_table(mw)
+
+
+def _do_batch_enqueue(mw: Any) -> None:
+    selected = _get_selected(mw)
+    if not selected:
+        return
+    lq = getattr(mw, "launch_queue", None)
+    if lq:
+        for aid in selected:
+            lq.enqueue(aid, "manual", priority=0)
+        lq.tick()
+        mw._log(f"批量入队: {len(selected)} 个")
+
+
+def _do_batch_stop(mw: Any) -> None:
+    selected = _get_selected(mw)
+    if not selected:
+        return
+    if hasattr(mw, "runner") and mw.runner:
+        for aid in selected:
+            mw.runner.stop(aid)
+    mw._log(f"批量停止: {len(selected)} 个")
+
+
+def _do_batch_delete(mw: Any) -> None:
+    selected = _get_selected(mw)
+    if not selected:
+        return
+    from PySide6.QtWidgets import QMessageBox
+    if QMessageBox.question(mw, "确认", f"删除 {len(selected)} 个账号?") != QMessageBox.Yes:
+        return
+    mw.accounts[:] = [a for a in mw.accounts if a.get("id", "") not in selected]
+    mw._save()
+    _rebuild_smart_table(mw)
+    mw._log(f"已删除 {len(selected)} 个账号")
+
+
+def _get_selected(mw: Any) -> list[str]:
+    selected = []
+    tbl = mw._smart_tbl
+    for row in range(tbl.rowCount()):
+        cb = tbl.cellWidget(row, 0)
+        if cb and cb.isChecked():
+            if row < len(mw.accounts):
+                selected.append(mw.accounts[row].get("id", ""))
+    return selected
+
+
+def _update_batch_buttons(mw: Any) -> None:
+    selected = _get_selected(mw)
+    n = len(selected)
+    for btn in [mw._batch_edit_btn, mw._batch_enqueue_btn,
+                mw._batch_stop_btn, mw._batch_delete_btn]:
+        btn.setEnabled(n > 0)
+    mw._batch_status.setText(f"(已选 {n}/{len(mw.accounts)})" if n else "")
+
+
+def _update_status_column(mw: Any) -> None:
+    """Refresh the status column for all accounts."""
+    tbl = mw._smart_tbl
+    if not tbl or not hasattr(mw, "launch_queue"):
+        return
+    lq = mw.launch_queue
+    runner = getattr(mw, "runner", None)
+
+    # Update queue stats in header
+    ac = lq.active_count
+    qc = lq.pending_count
+    mw._queue_stats.setText(f"▶{ac}  ⏳{qc}" if ac or qc else "")
+
+    # Update log bar (show last log line)
+    try:
+        lp = __import__('pathlib').Path(__file__).parent.parent / "debug.log"
+        if lp.exists():
+            lines = lp.read_text(encoding="utf-8").strip().split("\n")
+            if lines:
+                last = lines[-1][:100]
+                mw._log_bar_text.setText(f" {last}")
+    except Exception:
+        pass
+
+    for row in range(tbl.rowCount()):
+        if row >= len(mw.accounts):
+            continue
+        a = mw.accounts[row]
+        aid = a.get("id", "")
+        running = lq.is_running(aid) or (runner and runner.is_running(aid))
+        queued = lq.is_queued(aid)
+        failures = a.get("consecutive_failures", 0)
+        status_text = "▶"
+        if running:
+            started = runner._start_times.get(aid, 0) if runner else 0
+            dur = int(time.time() - started) // 60 if started else 0
+            status_text = f"▶{dur}m" if dur else "▶"
+        elif queued:
+            status_text = "⏳"
+        elif failures >= 6:
+            status_text = "⏸30m"
+        elif failures:
+            status_text = f"❌×{failures}"
+        else:
+            continue
+        item = tbl.item(row, 2)
+        if item:
+            item.setText(status_text)
+
+
+def _rebuild_smart_table(mw: Any) -> None:
+    """Rebuild the account table from scratch."""
+    tbl = mw._smart_tbl
+    if not tbl:
+        return
+    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    day_names = ["一", "二", "三", "四", "五", "六", "日"]
+    btn_col = 5 + len(DAY_KEYS)
+    ANNIHILATION_NAMES = {"": "", "Annihilation": "当期", "Chernobog@Annihilation": "切城",
+                           "LungmenOutskirts@Annihilation": "外环", "LungmenDowntown@Annihilation": "市区"}
+
+    # Filter accounts by search
+    ft = getattr(mw, "_smart_search", None)
+    search_text = ft.text().strip().lower() if ft and ft.text() else ""
+    accounts = mw.accounts
+    if search_text:
+        accounts = [a for a in accounts if search_text in a.get("name", "").lower()
+                    or search_text in a.get("game_client", "").lower()
+                    or search_text in a.get("tags", "").lower()]
+
+    tbl.setRowCount(len(accounts))
+    tbl.blockSignals(True)
+    for i, a in enumerate(accounts):
+        # Checkbox
+        cb = __import__('PySide6').QtWidgets.QCheckBox()
+        cb.stateChanged.connect(lambda: _update_batch_buttons(mw))
+        cw = QWidget()
+        cl = QHBoxLayout(cw)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setAlignment(Qt.AlignCenter)
+        cl.addWidget(cb)
+        tbl.setCellWidget(i, 0, cw)
+
+        # 账号名
+        tbl.setItem(i, 1, QTableWidgetItem(a.get("name", "")))
+
+        # 状态 (placeholder, updated by timer)
+        status_item = QTableWidgetItem("")
+        status_item.setTextAlignment(Qt.AlignCenter)
+        tbl.setItem(i, 2, status_item)
+
+        # 默认关卡
+        tbl.setItem(i, 3, QTableWidgetItem(a.get("smart_stage", "")))
+
+        # 剿灭
+        anni = a.get("smart_annihilation", "")
+        anni_enabled = a.get("smart_annihilation_enabled", True)
+        anni_display = ANNIHILATION_NAMES.get(anni, "")
+        if anni_display:
+            anni_display = ("✔ " if anni_enabled else "✘ ") + anni_display
+        anni_item = QTableWidgetItem(anni_display)
+        tbl.setItem(i, 4, anni_item)
+
+        # 一~日
+        for j, dk in enumerate(DAY_KEYS):
+            tbl.setItem(i, 5 + j, QTableWidgetItem(a.get(f"smart_{dk}", "")))
+
+        # Detail button
+        detail_btn = QPushButton("✎")
+        detail_btn.setFixedSize(26, 26)
+        detail_btn.setToolTip("编辑账号详情")
+        # Capture the correct account index
+        orig_idx = mw.accounts.index(a)
+        detail_btn.clicked.connect(lambda _, r=orig_idx: _open_detail(mw, r))
+        dw = QWidget()
+        dl = QHBoxLayout(dw)
+        dl.setContentsMargins(0, 0, 0, 0)
+        dl.setAlignment(Qt.AlignCenter)
+        dl.addWidget(detail_btn)
+        tbl.setCellWidget(i, btn_col, dw)
+
+    tbl.blockSignals(False)
+    _update_status_column(mw)
+
+
+def _open_detail(mw: Any, row: int) -> None:
+    from ui.account_detail import open_account_detail
+    open_account_detail(mw, row)
+    _rebuild_smart_table(mw)
+
+
+def _toggle_smart(mw: Any, enabled: bool) -> None:
+    sg = mw.config.setdefault("smart_global", {})
+    sg["enabled"] = enabled
+    mw._save()
+    if enabled:
+        QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
 
 
 def _run_smart_all(mw: Any) -> None:
-    """立即调度全部账号（忽略触发条件）。"""
     if not mw.config.get("smart_global", {}).get("enabled", False):
         mw._log("智能调度未启用")
         return
-    # 清除所有已有排队，避免被旧 not_before 卡住
     if hasattr(mw, "launch_queue") and mw.launch_queue:
         with mw.launch_queue._lock:
             mw.launch_queue._pending.clear()
@@ -165,106 +425,6 @@ def _run_smart_all(mw: Any) -> None:
     mw._smart_force = False
 
 
-def _toggle_smart(mw: Any, enabled: bool) -> None:
-    sg = mw.config.setdefault("smart_global", {})
-    sg["enabled"] = enabled
-    mw._save()
-    mw._update_todo_badge()
-    if enabled:
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
-
-
-def _edit_account_smart(mw: Any, row: int) -> None:
-    if row < 0 or row >= len(mw.accounts):
-        return
-    a = mw.accounts[row]
-
-    from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout
-    d = QDialog(mw)
-    d.setWindowTitle(f"智能调度 — {a.get('name', '')}")
-    d.setMinimumSize(400, 350)
-    l = QVBoxLayout(d)
-    f = QFormLayout()
-    f.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-
-    stage_edit = QLineEdit(a.get("smart_stage", ""))
-    stage_edit.setPlaceholderText("空=MAA自行决定")
-    f.addRow("默认关卡:", stage_edit)
-
-    anni_enabled = QCheckBox("启用剿灭")
-    anni_enabled.setChecked(a.get("smart_annihilation_enabled", True))
-    anni_combo = QComboBox()
-    ANNI_LABELS = [("自动选择", ""), ("当期剿灭", "Annihilation"), ("切尔诺伯格", "Chernobog@Annihilation"),
-                   ("龙门外环", "LungmenOutskirts@Annihilation"), ("龙门市区", "LungmenDowntown@Annihilation")]
-    for label, val in ANNI_LABELS:
-        anni_combo.addItem(label, val)
-    current_anni = a.get("smart_annihilation", "")
-    idx = anni_combo.findData(current_anni)
-    if idx >= 0:
-        anni_combo.setCurrentIndex(idx)
-    f.addRow(anni_enabled, anni_combo)
-
-    day_names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-    day_keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    day_edits = {}
-    for dn, dk in zip(day_names, day_keys):
-        de = QLineEdit(a.get(f"smart_{dk}", ""))
-        de.setPlaceholderText("空=用默认关卡")
-        day_edits[dk] = de
-        f.addRow(dn + ":", de)
-
-    l.addLayout(f)
-
-    def _save_one():
-        a["smart_stage"] = stage_edit.text().strip()
-        a["smart_annihilation"] = anni_combo.currentData()
-        a["smart_annihilation_enabled"] = anni_enabled.isChecked()
-        for dk in day_keys:
-            a[f"smart_{dk}"] = day_edits[dk].text().strip()
-        mw._save()
-        _rebuild_smart_table(mw)
-        d.accept()
-
-    from PySide6.QtWidgets import QPushButton as QBtn
-    save_btn = QBtn("保存")
-    save_btn.setObjectName("startBtn")
-    save_btn.clicked.connect(_save_one)
-    l.addWidget(save_btn)
-    d.exec()
-
-
-ANNIHILATION_VALUES = {"自动选择": "", "当期剿灭": "Annihilation", "切尔诺伯格": "Chernobog@Annihilation",
-                       "龙门外环": "LungmenOutskirts@Annihilation", "龙门市区": "LungmenDowntown@Annihilation"}
-ANNIHILATION_NAMES = {v: k for k, v in ANNIHILATION_VALUES.items()}
-
-
-def _rebuild_smart_table(mw: Any) -> None:
-    tbl = mw._smart_tbl
-    if not tbl:
-        return
-    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    day_names = ["一", "二", "三", "四", "五", "六", "日"]
-    btn_col = 3 + len(DAY_KEYS)
-    tbl.setRowCount(len(mw.accounts))
-    for i, a in enumerate(mw.accounts):
-        tbl.setItem(i, 0, QTableWidgetItem(a.get("name", "")))
-        tbl.setItem(i, 1, QTableWidgetItem(a.get("smart_stage", "")))
-        anni = a.get("smart_annihilation", "")
-        anni_enabled = a.get("smart_annihilation_enabled", True)
-        anni_display = ANNIHILATION_NAMES.get(anni, "")
-        if anni_display:
-            anni_display = ("✔ " if anni_enabled else "✘ ") + anni_display
-        tbl.setItem(i, 2, QTableWidgetItem(anni_display))
-        for j, dk in enumerate(DAY_KEYS):
-            tbl.setItem(i, 3 + j, QTableWidgetItem(a.get(f"smart_{dk}", "")))
-        edit_btn = QPushButton("✎")
-        edit_btn.setFixedSize(28, 28)
-        edit_btn.setToolTip("编辑")
-        edit_btn.clicked.connect(lambda _, r=i: _edit_account_smart(mw, r))
-        ew = QWidget()
-        el = QHBoxLayout(ew)
-        el.setContentsMargins(0, 0, 0, 0)
-        el.setAlignment(Qt.AlignCenter)
-        el.addWidget(edit_btn)
-        tbl.setCellWidget(i, btn_col, ew)
+def _refresh_smart_view(mw: Any) -> None:
+    """Refresh the table (called when search text changes)."""
+    _rebuild_smart_table(mw)
