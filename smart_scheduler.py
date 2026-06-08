@@ -97,7 +97,9 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
 
     smart_annihilation = account.get("smart_annihilation", "")
     has_annihilation = False
-    if is_monday and smart_annihilation and global_cfg.get("annihilation_enabled", True):
+    if (is_monday and smart_annihilation
+        and global_cfg.get("annihilation_enabled", True)
+        and account.get("smart_annihilation_enabled", True)):
         if not _is_annihilation_done_this_week(account["id"]):
             tasks.append("Annihilation")
             has_annihilation = True
