@@ -490,10 +490,9 @@ class AccountRunner(QObject):
             # Collect diagnostic
             self._collect_diagnostic(aid, ac, exit_code)
 
-            # Restart emulator to clear all state
-            emu_idx = ac.get("emu_instance_index", "") if ac else ""
-            if emu_idx:
-                self._restart_emulator(emu_idx, name, ac)
+            # Reconnect ADB to clear stale connection (faster than restarting emulator)
+            if ac:
+                self._reconnect_adb(ac)
 
             # Track restart rate (per minute)
             now = time.time()
@@ -632,35 +631,22 @@ class AccountRunner(QObject):
         except Exception as e:
             self.log_msg.emit(f"[诊断] 保存失败: {e}")
 
-    def _restart_emulator(self, emu_idx: str, name: str, ac: dict | None = None) -> None:
-        """Restart a MuMu emulator instance and reconnect ADB."""
-        from task_constants import find_mumu_cli
-        cli = find_mumu_cli()
-        if not cli:
-            self.log_msg.emit(f"[模拟器] #{emu_idx} 未找到 mumu-cli")
+    def _reconnect_adb(self, ac: dict) -> None:
+        """Disconnect and reconnect ADB — faster than restarting emulator."""
+        adb = ac.get("adb_path", "") or "adb"
+        addr = ac.get("adb_address", "")
+        if not addr:
             return
         try:
-            self.log_msg.emit(f"[模拟器] #{emu_idx} 正在关闭...")
-            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "quit"],
-                           timeout=15, creationflags=CF, capture_output=True)
-            import time as _t
-            _t.sleep(3)
-            self.log_msg.emit(f"[模拟器] #{emu_idx} 正在启动...")
-            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"],
-                           timeout=15, creationflags=CF, capture_output=True)
-            self.log_msg.emit(f"[模拟器] #{emu_idx} 启动指令已发送")
-            # Wait for emulator to boot then reconnect ADB
-            if ac:
-                _t.sleep(8)
-                adb = ac.get("adb_path", "") or "adb"
-                addr = ac.get("adb_address", "")
-                if addr:
-                    subprocess.run([adb, "disconnect", addr], capture_output=True, timeout=5, creationflags=CF)
-                    _t.sleep(1)
-                    subprocess.run([adb, "connect", addr], capture_output=True, timeout=10, creationflags=CF)
-                    self.log_msg.emit(f"[ADB] {addr} 已重连")
+            import subprocess as _sp, time as _t
+            self.log_msg.emit(f"[ADB] {addr} 断开...")
+            _sp.run([adb, "disconnect", addr], capture_output=True, timeout=5, creationflags=CF)
+            _t.sleep(1)
+            self.log_msg.emit(f"[ADB] {addr} 重连...")
+            _sp.run([adb, "connect", addr], capture_output=True, timeout=10, creationflags=CF)
+            self.log_msg.emit(f"[ADB] {addr} 已重连")
         except Exception as e:
-            self.log_msg.emit(f"[模拟器] #{emu_idx} 操作失败: {e}")
+            self.log_msg.emit(f"[ADB] {addr} 重连失败: {e}")
 
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
