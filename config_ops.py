@@ -318,20 +318,24 @@ class ConfigService:
                             item["IsStageManually"] = bool(day_stage)
                     c["TaskQueue"] = clean_tq
                 else:
-                    # No existing TaskQueue — build one with all standard task types
+                    # No existing TaskQueue — build one matching MAA v6 default types
                     c["TaskQueue"] = []
                     TYPE_MAP = {
                         "StartUp": "StartUpTask", "Fight": "FightTask",
                         "Infrast": "InfrastTask", "Recruit": "RecruitTask",
                         "Mall": "MallTask", "Award": "AwardTask",
                         "Roguelike": "RoguelikeTask", "Reclamation": "ReclamationTask",
-                        "Depot": "DepotTask",
+                        "UserDataUpdate": "UserDataUpdateTask",
                     }
+                    # Only include task types MAA v6 actually supports
                     for task_type in ["StartUp", "Fight", "Infrast", "Recruit", "Mall",
-                                      "Award", "Roguelike", "Reclamation", "Depot"]:
-                        enabled = task_type.lower() in task_set
+                                      "Award", "Roguelike", "Reclamation", "UserDataUpdate"]:
+                        enabled = task_type.lower() in task_set or (task_type == "UserDataUpdate" and "depot" in task_set)
                         item = {"$type": TYPE_MAP.get(task_type, task_type + "Task"),
                                 "Name": "", "IsEnable": enabled, "TaskType": task_type}
+                        if task_type == "UserDataUpdate":
+                            item.update({"UpdateOperBox": True, "UpdateDepot": True,
+                                         "TriggerInterval": "EveryTime", "IsTriggered": True})
                         if task_type == "Fight":
                             item.update({"UseMedicine": enabled, "MedicineCount": 999,
                                          "UseStone": False, "StoneCount": 0,
@@ -346,7 +350,6 @@ class ConfigService:
                                          "UseCustomAnnihilation": False})
                             if run_annihilation:
                                 if has_fight:
-                                    # First as normal fight, insert anni clone
                                     if day_stage:
                                         item["StagePlan"] = [day_stage]
                                         item["IsStageManually"] = True
@@ -361,7 +364,6 @@ class ConfigService:
                                     anni_item["MedicineCount"] = 999
                                     c["TaskQueue"].append(anni_item)
                                 else:
-                                    # Only annihilation, no normal fight
                                     item["UseCustomAnnihilation"] = True
                                     item["AnnihilationStage"] = anni
                                     item["StagePlan"] = ["Annihilation"]
