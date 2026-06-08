@@ -25,6 +25,11 @@ class AccountRunner(QObject):
     account_finished = Signal(tuple)  # (account_id, exit_code, tasks)
     account_error = Signal(str, str)       # account_id, error_msg
 
+    # Resource limits
+    MAX_TOTAL_MEM_MB = 4096   # 4GB total MAA process memory → pause new launches
+    MAX_PROC_MEM_MB = 2048    # 2GB per MAA process → kill that instance
+    MAX_RESTART_PER_MIN = 4   # max restarts per minute per account
+
     def __init__(self, ctx: ServiceContext) -> None:
         super().__init__()
         self.ctx = ctx
@@ -34,6 +39,9 @@ class AccountRunner(QObject):
         self._start_times: dict[str, float] = {}    # account_id → time.time()
         self._task_start_times: dict[str, float] = {}  # account_id → last task start
         self._stopping: set = set()                 # accounts being stopped
+        self._proc_info: dict[str, dict] = {}       # account_id → {mem_mb, cpu_pct, pid}
+        self._restart_times: dict[str, list[float]] = {}  # account_id → [timestamps]
+        self._overloaded = False                    # true when resource limit hit
 
     # ── Public API ──
 
@@ -273,8 +281,48 @@ class AccountRunner(QObject):
 
     # ── Monitoring (called by centralized poll timer) ──
 
+    @property
+    def resource_summary(self) -> str:
+        """Return a short resource usage string for status bar."""
+        total_mem = sum(i.get("mem_mb", 0) for i in self._proc_info.values())
+        n = len(self._procs)
+        warn = " ⚠" if self._overloaded else ""
+        return f"MEM:{total_mem:.0f}MB({n}){warn}"
+
+    def _check_resources(self) -> None:
+        """Monitor MAA process memory/CPU and detect overload."""
+        import psutil
+        total_mem = 0
+        now = time.time()
+        for aid in list(self._procs.keys()):
+            p = self._procs.get(aid)
+            if not p:
+                continue
+            try:
+                pp = psutil.Process(p.pid)
+                mem_mb = pp.memory_info().rss / 1024 / 1024
+                self._proc_info[aid] = {"mem_mb": mem_mb, "pid": p.pid, "time": now}
+                total_mem += mem_mb
+                # Per-process memory limit
+                if mem_mb > self.MAX_PROC_MEM_MB:
+                    name = self._active.get(aid, {}).get("name", aid)
+                    self.log_msg.emit(f"[资源] {name} 内存超限 ({mem_mb:.0f}MB > {self.MAX_PROC_MEM_MB}MB)，强制终止")
+                    self.stop(aid)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                self._proc_info.pop(aid, None)
+
+        # Total memory limit
+        was = self._overloaded
+        self._overloaded = total_mem > self.MAX_TOTAL_MEM_MB
+        if self._overloaded != was:
+            if self._overloaded:
+                self.log_msg.emit(f"[资源] MAA 总内存 {total_mem:.0f}MB 超限 ({self.MAX_TOTAL_MEM_MB}MB)，暂停新启动")
+            else:
+                self.log_msg.emit(f"[资源] 内存已恢复，继续启动")
+
     def check_processes(self) -> None:
         """Check all running processes for completion. Called by centralized poll timer."""
+        self._check_resources()
         for aid in list(self._procs.keys()):
             self._check_one(aid)
 
@@ -403,17 +451,39 @@ class AccountRunner(QObject):
             if emu_idx:
                 self._restart_emulator(emu_idx, name)
 
-            # Auto re-enqueue or pause
-            if failures >= 6:
+            # Track restart rate (per minute)
+            now = time.time()
+            rts = self._restart_times.setdefault(aid, [])
+            rts[:] = [t for t in rts if t > now - 60]
+            rts.append(now)
+
+            # Check restart rate limit
+            if len(rts) > self.MAX_RESTART_PER_MIN:
+                self.log_msg.emit(f"[限流] {name} 每分钟重启 {len(rts)} 次，暂停5分钟")
+                from PySide6.QtCore import QTimer
+                QTimer.singleShot(300000, lambda: self._restart_times.pop(aid, None))
+            elif failures >= 6:
                 self.log_msg.emit(f"[暂停] {name} 连续失败 {failures} 次，暂停30分钟")
                 self.ctx.notify(f"{name} 连续失败暂停", True)
-            else:
-                delay = max(5, 15 - failures * 2)  # 5-15s decreasing with more failures
-                self.log_msg.emit(f"[重试] {name} {delay}s后重新入队")
+            # Check global resource overload
+            elif self._overloaded:
+                self.log_msg.emit(f"[资源] 系统过载，{name} 延迟重试")
                 from PySide6.QtCore import QTimer
+                from datetime import datetime, timedelta
                 q = getattr(self.ctx._mw, "launch_queue", None)
                 if q and ac:
-                    QTimer.singleShot(delay * 1000, lambda a=aid: q.enqueue(a, "schedule", priority=1))
+                    QTimer.singleShot(60000, lambda a=aid: q.enqueue(a, "schedule", priority=1,
+                                        not_before=datetime.now() + timedelta(seconds=60)))
+            else:
+                # Exponential backoff: 5s, 10s, 20s, 40s, 80s... capped at 300s
+                delay = min(300, 5 * (2 ** (failures - 1)))
+                self.log_msg.emit(f"[重试] {name} {delay}s后重试 (exp backoff {failures})")
+                from PySide6.QtCore import QTimer
+                from datetime import datetime, timedelta
+                q = getattr(self.ctx._mw, "launch_queue", None)
+                if q and ac:
+                    QTimer.singleShot(delay * 1000, lambda a=aid: q.enqueue(a, "schedule", priority=1,
+                                        not_before=datetime.now() + timedelta(seconds=delay)))
 
         else:
             if ac:

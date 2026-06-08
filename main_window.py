@@ -284,6 +284,9 @@ class MainWindow(QMainWindow):
         self._health_indicator.setToolTip("点击查看环境检测详情")
         self._health_indicator.mousePressEvent = lambda e: self._health_dialog()
         sb2.addPermanentWidget(self._health_indicator)
+        self._resource_lbl = QLabel("")
+        self._resource_lbl.setStyleSheet("color:#888;font-size:8pt")
+        sb2.addPermanentWidget(self._resource_lbl)
 
         # Menu bar
         mb = self.menuBar()
@@ -686,6 +689,11 @@ class MainWindow(QMainWindow):
                 self._qsb.setText(f"⏳{qc}")
             else:
                 self._qsb.setText("")
+            # Resource usage
+            if ac and hasattr(self, "runner") and self.runner:
+                self._resource_lbl.setText(self.runner.resource_summary)
+            else:
+                self._resource_lbl.setText("")
             # Status overview log (every 30 seconds)
             now = int(__import__("time").time())
             if now % 30 == 0:
