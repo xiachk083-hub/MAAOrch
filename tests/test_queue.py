@@ -76,6 +76,7 @@ class TestLaunchQueue:
         from launch_queue import LaunchQueue
         ctx = _make_ctx()
         q = LaunchQueue(ctx)
+        q.resume()  # unpause for test
         q.enqueue("a1", "manual", priority=0)
         q.enqueue("a2", "manual", priority=0)
 

@@ -67,6 +67,25 @@ def build_queue_panel(mw: Any) -> QWidget:
     # ── Parallel limit ──
     pr_row = QHBoxLayout()
     pr_row.addWidget(QLabel("▶ 运行中", font=QFont("Microsoft YaHei UI", 10, QFont.Bold)))
+    mw._queue_toggle_btn = QPushButton("▶ 启动队列")
+    mw._queue_toggle_btn.setFixedHeight(24)
+    mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#2b2b30;color:#888;border:1px solid #3a3a3a;border-radius:4px;padding:2px 12px;font-size:9pt}")
+    def _toggle_queue():
+        lq = getattr(mw, "launch_queue", None)
+        if not lq:
+            return
+        if lq.is_paused:
+            lq.resume()
+            mw._queue_toggle_btn.setText("⏸ 暂停队列")
+            mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#326cf3;color:#fff;border:1px solid #326cf3;border-radius:4px;padding:2px 12px;font-size:9pt}")
+            mw._log("队列已启动")
+        else:
+            lq.pause()
+            mw._queue_toggle_btn.setText("▶ 启动队列")
+            mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#2b2b30;color:#888;border:1px solid #3a3a3a;border-radius:4px;padding:2px 12px;font-size:9pt}")
+            mw._log("队列已暂停")
+    mw._queue_toggle_btn.clicked.connect(_toggle_queue)
+    pr_row.addWidget(mw._queue_toggle_btn)
     pr_row.addStretch()
     pr_row.addWidget(QLabel("上限并行:"))
     mw._parallel_sp = QSpinBox()
@@ -250,6 +269,15 @@ def refresh_queue_view(mw: Any) -> None:
         return
     if not hasattr(mw, "_queue_running_tbl"):
         return
+
+    # Sync toggle button with actual queue state
+    if hasattr(mw, "_queue_toggle_btn") and hasattr(mw, "launch_queue"):
+        if mw.launch_queue.is_paused:
+            mw._queue_toggle_btn.setText("▶ 启动队列")
+            mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#2b2b30;color:#888;border:1px solid #3a3a3a;border-radius:4px;padding:2px 12px;font-size:9pt}")
+        else:
+            mw._queue_toggle_btn.setText("⏸ 暂停队列")
+            mw._queue_toggle_btn.setStyleSheet("QPushButton{background:#326cf3;color:#fff;border:1px solid #326cf3;border-radius:4px;padding:2px 12px;font-size:9pt}")
 
     import time
     _refresh_lock = True

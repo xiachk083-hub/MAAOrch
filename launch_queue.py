@@ -49,6 +49,7 @@ class LaunchQueue(QObject):
         self._active_emus: dict[str, str] = {}  # emu_idx → account_id
         self._tick_timer = QTimer(self)
         self._tick_timer.timeout.connect(self._tick)
+        self._paused = True  # queue starts paused; user must explicitly start
         self._import_heapq()
 
     @staticmethod
@@ -57,6 +58,19 @@ class LaunchQueue(QObject):
 
     def start(self, interval_sec: int = 30) -> None:
         self._tick_timer.start(interval_sec * 1000)
+
+    def pause(self) -> None:
+        """Pause queue processing. Pending items are preserved."""
+        self._paused = True
+
+    def resume(self) -> None:
+        """Resume queue processing and tick immediately."""
+        self._paused = False
+        self._tick()
+
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
 
     def stop(self) -> None:
         self._tick_timer.stop()
@@ -175,6 +189,8 @@ class LaunchQueue(QObject):
 
     def _tick(self) -> None:
         """Check queue and launch all eligible accounts (parallel across different emus)."""
+        if self._paused:
+            return
         with self._lock:
             now = datetime.now()
             heapq = self._import_heapq()
