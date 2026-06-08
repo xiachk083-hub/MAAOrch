@@ -157,6 +157,7 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
     ver_changed = current_ver and built_ver and current_ver != built_ver
 
     if force or ver_changed:
+        ctx.log("[实例] 源 MAA 已变化，删除旧实例...")
         _delete_instances(pool)
         with _INSTANCE_LOCK:
             ctx.config["maa_instances"] = 0
@@ -169,6 +170,7 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
             s_stat = src_exe.stat()
             i_stat = inst1_exe.stat()
             if s_stat.st_mtime != i_stat.st_mtime or s_stat.st_size != i_stat.st_size:
+                ctx.log("[实例] maa/source/ 已更新，重建实例池...")
                 _delete_instances(pool)
                 with _INSTANCE_LOCK:
                     ctx.config["maa_instances"] = 0
@@ -194,10 +196,14 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
         pool.mkdir(parents=True, exist_ok=True)
         created = 0
         for i in range(1, desired + 1):
+            inst = pool / str(i)
+            ctx.log(f"[实例] 创建 #{i}...")
             source = src if i == 1 else (pool / "1")
-            if _create_instance(pool / str(i), source):
+            if _create_instance(inst, source):
                 created = i
+                ctx.log(f"[实例] #{i} 完成（软链接 resource/externals/Python）")
             else:
+                ctx.log(f"[实例] #{i} 创建失败")
                 break
             if progress_cb:
                 progress_cb(created, desired)
