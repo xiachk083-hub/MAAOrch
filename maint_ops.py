@@ -40,7 +40,14 @@ def _create_instance(inst: Path, source: Path) -> bool:
             if src_sub.exists() and not dst_sub.exists():
                 _sp.run(["cmd", "/c", "mklink", "/J", str(dst_sub), str(src_sub)],
                         capture_output=True, timeout=5)
-        for sub in ("config", "cache", "data", "debug"):
+        # Copy config from source (MAA must have been opened at least once to generate defaults)
+        src_config = source / "config"
+        dst_config = inst / "config"
+        if src_config.exists():
+            shutil.copytree(str(src_config), str(dst_config), dirs_exist_ok=True)
+        else:
+            dst_config.mkdir(exist_ok=True)
+        for sub in ("cache", "data", "debug"):
             (inst / sub).mkdir(exist_ok=True)
         return True
     except Exception:

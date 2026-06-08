@@ -320,27 +320,57 @@ class ConfigService:
                 else:
                     # No existing TaskQueue — build one with all standard task types
                     c["TaskQueue"] = []
-                    for task_type in ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award", "Roguelike", "Reclamation", "Depot"]:
-                        item = {"TaskType": task_type, "IsEnable": task_type.lower() in task_set}
-                        if task_type.lower() == "fight" and run_annihilation:
-                            item["UseCustomAnnihilation"] = False
-                            item["AnnihilationStage"] = ""
-                            item["UseMedicine"] = False
-                            if day_stage:
+                    TYPE_MAP = {
+                        "StartUp": "StartUpTask", "Fight": "FightTask",
+                        "Infrast": "InfrastTask", "Recruit": "RecruitTask",
+                        "Mall": "MallTask", "Award": "AwardTask",
+                        "Roguelike": "RoguelikeTask", "Reclamation": "ReclamationTask",
+                        "Depot": "DepotTask",
+                    }
+                    for task_type in ["StartUp", "Fight", "Infrast", "Recruit", "Mall",
+                                      "Award", "Roguelike", "Reclamation", "Depot"]:
+                        enabled = task_type.lower() in task_set
+                        item = {"$type": TYPE_MAP.get(task_type, task_type + "Task"),
+                                "Name": "", "IsEnable": enabled, "TaskType": task_type}
+                        if task_type == "Fight":
+                            item.update({"UseMedicine": enabled, "MedicineCount": 999,
+                                         "UseStone": False, "StoneCount": 0,
+                                         "EnableTimesLimit": False, "TimesLimit": 2147483647,
+                                         "IsDrGrandet": False, "UseExpiringMedicine": True,
+                                         "MedicineExpireDays": 2, "UseExpireMedicineForActivity": True,
+                                         "HideUnavailableStage": False, "IsStageManually": False,
+                                         "UseOptionalStage": False, "UseStoneAllowSave": False,
+                                         "HideSeries": False, "UseWeeklySchedule": False,
+                                         "Series": 0, "StageResetMode": "Current",
+                                         "StagePlan": [], "AnnihilationStage": "",
+                                         "UseCustomAnnihilation": False})
+                            if run_annihilation:
+                                if has_fight:
+                                    # First as normal fight, insert anni clone
+                                    if day_stage:
+                                        item["StagePlan"] = [day_stage]
+                                        item["IsStageManually"] = True
+                                    anni_item = dict(item)
+                                    anni_item["_smart_inserted"] = True
+                                    anni_item["UseCustomAnnihilation"] = True
+                                    anni_item["AnnihilationStage"] = anni
+                                    anni_item["StagePlan"] = ["Annihilation"]
+                                    anni_item["IsStageManually"] = True
+                                    anni_item["StageResetMode"] = "Current"
+                                    anni_item["UseMedicine"] = True
+                                    anni_item["MedicineCount"] = 999
+                                    c["TaskQueue"].append(anni_item)
+                                else:
+                                    # Only annihilation, no normal fight
+                                    item["UseCustomAnnihilation"] = True
+                                    item["AnnihilationStage"] = anni
+                                    item["StagePlan"] = ["Annihilation"]
+                                    item["IsStageManually"] = True
+                                    item["UseMedicine"] = True
+                                    item["MedicineCount"] = 999
+                            elif day_stage:
                                 item["StagePlan"] = [day_stage]
                                 item["IsStageManually"] = True
-                            if has_fight and "annihilation" in task_set:
-                                anni_item = dict(item)
-                                anni_item["IsEnable"] = True
-                                anni_item["_smart_inserted"] = True
-                                anni_item["UseCustomAnnihilation"] = True
-                                anni_item["AnnihilationStage"] = anni
-                                anni_item["StagePlan"] = [anni]
-                                anni_item["IsStageManually"] = True
-                                anni_item["StageResetMode"] = "Current"
-                                anni_item["UseMedicine"] = True
-                                anni_item["MedicineCount"] = 999
-                                c["TaskQueue"].append(anni_item)
                         c["TaskQueue"].append(item)
             else:
                 c.pop("TaskQueue", None)
