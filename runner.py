@@ -490,10 +490,6 @@ class AccountRunner(QObject):
             # Collect diagnostic
             self._collect_diagnostic(aid, ac, exit_code)
 
-            # Reconnect ADB to clear stale connection (faster than restarting emulator)
-            if ac:
-                self._reconnect_adb(ac)
-
             # Track restart rate (per minute)
             now = time.time()
             rts = self._restart_times.setdefault(aid, [])
@@ -630,23 +626,6 @@ class AccountRunner(QObject):
             self.log_msg.emit(f"[诊断] {name} 已保存到 {diag_dir}")
         except Exception as e:
             self.log_msg.emit(f"[诊断] 保存失败: {e}")
-
-    def _reconnect_adb(self, ac: dict) -> None:
-        """Disconnect and reconnect ADB — faster than restarting emulator."""
-        adb = ac.get("adb_path", "") or "adb"
-        addr = ac.get("adb_address", "")
-        if not addr:
-            return
-        try:
-            import subprocess as _sp, time as _t
-            self.log_msg.emit(f"[ADB] {addr} 断开...")
-            _sp.run([adb, "disconnect", addr], capture_output=True, timeout=5, creationflags=CF)
-            _t.sleep(1)
-            self.log_msg.emit(f"[ADB] {addr} 重连...")
-            _sp.run([adb, "connect", addr], capture_output=True, timeout=10, creationflags=CF)
-            self.log_msg.emit(f"[ADB] {addr} 已重连")
-        except Exception as e:
-            self.log_msg.emit(f"[ADB] {addr} 重连失败: {e}")
 
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
