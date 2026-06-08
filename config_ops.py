@@ -276,13 +276,6 @@ class ConfigService:
                         clean_tq = [item for i, item in enumerate(clean_tq)
                                     if not (item.get("TaskType", "").lower() == "fight" and i != keep_idx)]
                     for item in clean_tq:
-                    # Deduplicate Fight-type items
-                    fight_items = [(i, item) for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "fight"]
-                    if len(fight_items) > 1:
-                        keep_idx = fight_items[-1][0]
-                        clean_tq = [item for i, item in enumerate(clean_tq)
-                                    if not (item.get("TaskType", "").lower() == "fight" and i != keep_idx)]
-                    for item in clean_tq:
                         tt = item.get("TaskType", "").lower()
                         sp = item.get("StagePlan", [])
                         if sp:
