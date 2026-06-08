@@ -109,12 +109,9 @@ def refresh_maa_panel(mw: Any) -> None:
         pid_file = inst / ".pid"
         if pid_file.exists():
             try:
+                import psutil
                 pid = pid_file.read_text().strip()
-                r = subprocess.run(
-                    ['tasklist', '/FI', f'PID eq {pid}', '/NH'],
-                    capture_output=True, text=True, timeout=3,
-                    creationflags=subprocess.CREATE_NO_WINDOW
-                )
+                running = psutil.pid_exists(int(pid))
                 running = str(pid) in r.stdout
                 if not running:
                     pid = ""

@@ -106,16 +106,24 @@ def load_config() -> dict:
             pass
     return dict(DEFAULT_CONFIG)
 
+_last_save_hash = 0
+
+
 def save_config(data: dict) -> None:
+    global _last_save_hash
     from copy import deepcopy
-    # Convert Account objects back to plain dicts (deepcopy to avoid mutating callers)
     out = deepcopy(data)
     if "accounts" in out:
         out["accounts"] = [a.to_dict() if hasattr(a, "to_dict") else a for a in out["accounts"]]
+    raw_json = json.dumps(out, ensure_ascii=False, indent=2)
+    h = hash(raw_json)
+    if h == _last_save_hash:
+        return
+    _last_save_hash = h
     # Atomic write: write to temp file in same directory then rename
     tmp = CONFIG_FILE.with_name("config.json.tmp")
     try:
-        tmp.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.write_text(raw_json, encoding="utf-8")
         tmp.replace(CONFIG_FILE)
         # Create backup copy after successful save
         try:

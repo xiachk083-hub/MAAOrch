@@ -104,7 +104,7 @@ class AccountRunner(QObject):
 
     def _get_free_instance(self) -> tuple[int, str] | None:
         """Get a free MAA instance. Checks PID file + already assigned instances."""
-        import subprocess
+        import psutil
         max_n = self.ctx.config.get("maa_instances", 0)
         pool = Path(__file__).parent / "maa" / "instances"
         for i in range(1, max_n + 1):
@@ -125,9 +125,7 @@ class AccountRunner(QObject):
             if pid_file.exists():
                 try:
                     pid = int(pid_file.read_text().strip())
-                    r = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'], capture_output=True, text=True,
-                                        timeout=2, creationflags=subprocess.CREATE_NO_WINDOW)
-                    running = str(pid) in r.stdout
+                    running = psutil.pid_exists(pid)
                 except:
                     pid_file.unlink(missing_ok=True)
             if not running:

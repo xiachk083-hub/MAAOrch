@@ -272,20 +272,32 @@ class LaunchQueue(QObject):
                 return idx if idx else f"__noemu_{account_id}"
         return f"__unknown_{account_id}"
 
+    def _queue_path(self) -> Path:
+        return Path(__file__).parent / "queue.json"
+
     def _save_queue(self) -> None:
-        """Persist queue to config.json."""
+        """Persist queue to queue.json (separate from config.json for performance)."""
         data = []
         for e in self._pending:
             data.append({"account_id": e.account_id, "source": e.source,
                          "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
-        self.ctx.config["queue"] = data
-        self.ctx.save()
+        try:
+            import json
+            self._queue_path().write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
 
     def _restore(self) -> None:
-        """Restore queue from config.json on startup."""
-        data = self.ctx.config.get("queue", [])
-        if not data:
-            return
+        """Restore queue from queue.json on startup."""
+        try:
+            import json
+            qp = self._queue_path()
+            if qp.exists():
+                data = json.loads(qp.read_text(encoding="utf-8"))
+            else:
+                data = self.ctx.config.get("queue", [])
+        except Exception:
+            data = self.ctx.config.get("queue", [])
         from datetime import datetime as dt
         heapq = self._import_heapq()
         for d in data:
