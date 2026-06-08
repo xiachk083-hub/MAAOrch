@@ -189,6 +189,8 @@ def _edit_account_smart(mw: Any, row: int) -> None:
     stage_edit.setPlaceholderText("空=MAA自行决定")
     f.addRow("默认关卡:", stage_edit)
 
+    anni_enabled = QCheckBox("启用剿灭")
+    anni_enabled.setChecked(a.get("smart_annihilation_enabled", True))
     anni_combo = QComboBox()
     ANNI_LABELS = [("自动选择", ""), ("当期剿灭", "Annihilation"), ("切尔诺伯格", "Chernobog@Annihilation"),
                    ("龙门外环", "LungmenOutskirts@Annihilation"), ("龙门市区", "LungmenDowntown@Annihilation")]
@@ -198,7 +200,7 @@ def _edit_account_smart(mw: Any, row: int) -> None:
     idx = anni_combo.findData(current_anni)
     if idx >= 0:
         anni_combo.setCurrentIndex(idx)
-    f.addRow("剿灭关卡:", anni_combo)
+    f.addRow(anni_enabled, anni_combo)
 
     day_names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
     day_keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -214,6 +216,7 @@ def _edit_account_smart(mw: Any, row: int) -> None:
     def _save_one():
         a["smart_stage"] = stage_edit.text().strip()
         a["smart_annihilation"] = anni_combo.currentData()
+        a["smart_annihilation_enabled"] = anni_enabled.isChecked()
         for dk in day_keys:
             a[f"smart_{dk}"] = day_edits[dk].text().strip()
         mw._save()
@@ -245,7 +248,10 @@ def _rebuild_smart_table(mw: Any) -> None:
         tbl.setItem(i, 0, QTableWidgetItem(a.get("name", "")))
         tbl.setItem(i, 1, QTableWidgetItem(a.get("smart_stage", "")))
         anni = a.get("smart_annihilation", "")
+        anni_enabled = a.get("smart_annihilation_enabled", True)
         anni_display = ANNIHILATION_NAMES.get(anni, "")
+        if anni_display:
+            anni_display = ("✔ " if anni_enabled else "✘ ") + anni_display
         tbl.setItem(i, 2, QTableWidgetItem(anni_display))
         for j, dk in enumerate(DAY_KEYS):
             tbl.setItem(i, 3 + j, QTableWidgetItem(a.get(f"smart_{dk}", "")))

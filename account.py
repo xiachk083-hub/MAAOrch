@@ -43,6 +43,7 @@ class Account:
     # Smart scheduling fields
     smart_stage: str = ""
     smart_annihilation: str = ""
+    smart_annihilation_enabled: bool = True
     smart_mon: str = ""
     smart_tue: str = ""
     smart_wed: str = ""

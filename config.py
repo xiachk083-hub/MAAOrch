@@ -81,6 +81,7 @@ def load_config() -> dict:
                         m=re.match(r'^2?7\.0\.0\.1:(\d+)$',raw)
                         if m: a["adb_address"]="127.0.0.1:"+m.group(1)
                     a.setdefault("smart_stage",""); a.setdefault("smart_annihilation","")
+                    a.setdefault("smart_annihilation_enabled",True)
                     for d in ["mon","tue","wed","thu","fri","sat","sun"]: a.setdefault(f"smart_{d}","")
                     a.setdefault("smart_materials_enabled",True)
                 # Convert accounts to Account objects
