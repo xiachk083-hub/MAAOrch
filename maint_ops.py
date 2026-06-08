@@ -147,6 +147,7 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
     global _inst_init_task
     src = _find_maa_source()
     if not src:
+        ctx.log("[实例] 未找到 MAA.exe — 请将 MAA 完整目录复制到 maa/source/（含 MAA.exe 及 resource/ 等）")
         return
     desired = ctx.config.get("parallel_max", 1) + 1
     pool = Path(__file__).parent / "maa" / "instances"
@@ -250,8 +251,10 @@ def _find_maa_source() -> Path | None:
     Priority: maa/source/ (user-managed) → maa/v*/ (versioned) → accounts/*/ (legacy)."""
     root = Path(__file__).parent
     ver = root / "maa"
-    # 1. User-managed source
     src = ver / "source"
+    # Ensure directory exists even on fresh clone (maa/ is not tracked by git)
+    src.mkdir(parents=True, exist_ok=True)
+    # 1. User-managed source
     if (src / "MAA.exe").exists():
         return src
     # 2. Versioned download directories
