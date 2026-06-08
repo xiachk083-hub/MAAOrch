@@ -465,7 +465,17 @@ class MaintService:
                 self.ctx.log(f"下载中: {dl_url[:60]}...")
                 req = urllib.request.Request(dl_url, headers={"User-Agent": "MAAOrch-Updater"})
                 with urllib.request.urlopen(req, timeout=120) as resp:
-                    tmpf.write_bytes(resp.read())
+                    total = int(resp.headers.get("Content-Length", 0))
+                    data = bytearray()
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        data.extend(chunk)
+                        if total:
+                            pct = len(data) * 100 // total
+                            self.ctx.log(f"下载中: {pct}% ({len(data)//1024//1024}MB/{total//1024//1024}MB)")
+                    tmpf.write_bytes(data)
 
                 # Extract to _update/
                 root = Path(__file__).parent
@@ -476,6 +486,9 @@ class MaintService:
                 with zipfile.ZipFile(str(tmpf)) as zf:
                     # GitHub zip wraps in a folder like MAAOrch-1.1.0/
                     for member in zf.namelist():
+                        p = Path(member)
+                        if any(part == ".." for part in p.parts) or p.is_absolute():
+                            raise ValueError(f"zip slip: {member}")
                         # Strip the top-level folder
                         parts = member.split("/", 1)
                         if len(parts) < 2:
@@ -492,7 +505,7 @@ class MaintService:
                 bat = root / "replace.bat"
                 bat.write_text(
                     '@echo off\r\n'
-                    'taskkill /f /fi "WINDOWTITLE eq MAAOrch" /im python.exe 2>nul\r\n'
+                    'taskkill /f /fi "WINDOWTITLE eq MAAOrch" 2>nul\r\n'
                     'timeout /t 3 /nobreak >nul\r\n'
                     'xcopy /E /Y "%~dp0_update\\*" "%~dp0" >nul\r\n'
                     'rmdir /S /Q "%~dp0_update"\r\n'
