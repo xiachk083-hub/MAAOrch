@@ -243,9 +243,9 @@ class ConfigService:
                 smart_cfg = self.ctx.config.get("smart_global", {})
                 post = smart_cfg.get("post_action", "")
                 if post:
-                c["MainFunction.PostActions"] = f'"{post}"'
+                    c["MainFunction.PostActions"] = f'"{post}"'
             else:
-                    c.pop("MainFunction.PostActions", None)
+                c.pop("MainFunction.PostActions", None)
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx and not ac.get("emu_launch"):
