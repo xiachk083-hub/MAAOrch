@@ -105,6 +105,19 @@ class AccountRunner(QObject):
 
     def _get_free_instance(self) -> tuple[int, str] | None:
         """Get a free MAA instance. Checks PID file + already assigned instances."""
+        try:
+            import psutil as _psutil
+            _pid_exists = _psutil.pid_exists
+        except ImportError:
+            def _pid_exists(pid: int) -> bool:
+                try:
+                    import subprocess as _sp
+                    r = _sp.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                                capture_output=True, text=True, timeout=2,
+                                creationflags=_sp.CREATE_NO_WINDOW)
+                    return str(pid) in r.stdout
+                except Exception:
+                    return True  # can't check, assume running
         max_n = self.ctx.config.get("maa_instances", 0)
         pool = Path(__file__).parent / "maa" / "instances"
         for i in range(1, max_n + 1):
@@ -112,7 +125,6 @@ class AccountRunner(QObject):
             exe = inst_dir / "MAA.exe"
             if not exe.exists():
                 continue
-            # Check if this instance is already assigned to a running account
             inst_path = str(inst_dir)
             already_used = any(
                 getattr(p, "_inst_path", None) == inst_path
@@ -125,12 +137,8 @@ class AccountRunner(QObject):
             if pid_file.exists():
                 try:
                     pid = int(pid_file.read_text().strip())
-                    import subprocess
-                    r = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
-                                       capture_output=True, text=True, timeout=2,
-                                       creationflags=subprocess.CREATE_NO_WINDOW)
-                    running = str(pid) in r.stdout
-                except:
+                    running = _pid_exists(pid)
+                except Exception:
                     pid_file.unlink(missing_ok=True)
             if not running:
                 return (i, str(inst_dir))
