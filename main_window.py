@@ -48,7 +48,7 @@ except ImportError:
 
 class MainWindow(QMainWindow):
     # ── Constants ──
-    VERSION = "1.1.9"
+    VERSION = "1.2.0"
     POLL_INTERVAL_MS = 2000
     SAVE_DEBOUNCE_MS = 300
     LOG_MAX_BYTES = 100 * 1024
