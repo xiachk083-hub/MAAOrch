@@ -44,6 +44,7 @@ class AccountRunner(QObject):
         self._proc_info: dict[str, dict] = {}       # account_id → {mem_mb, cpu_pct, pid}
         self._restart_times: dict[str, list[float]] = {}  # account_id → [timestamps]
         self._overloaded = False                    # true when resource limit hit
+        self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
 
     # ── Public API ──
 
@@ -381,14 +382,19 @@ class AccountRunner(QObject):
         name = ac.get("name", aid)
         if lp and lp.exists():
             try:
-                # Read last 400 bytes instead of 5 lines (faster for large logs)
                 with lp.open("rb") as f:
                     f.seek(0, 2)
                     size = f.tell()
                     read_size = min(400, size)
                     f.seek(size - read_size)
                     tail = f.read(read_size).decode("utf-8", errors="replace")
-                for line in tail.split("\n"):
+                # Rolling buffer: keep last 200 lines
+                lines = tail.split("\n")
+                buf = self._log_buffers.setdefault(aid, [])
+                buf.extend(lines)
+                if len(buf) > 200:
+                    buf[:] = buf[-200:]
+                for line in lines:
                     if "append_callback" in line and "SubTaskStart" in line:
                         jm = re.search(r"\{.*\}", line)
                         if jm:
@@ -598,6 +604,10 @@ class AccountRunner(QObject):
                     if lp.exists():
                         lines = lp.read_text(encoding="utf-8", errors="replace").split("\n")[-100:]
                         (diag_dir / "asst.log").write_text("\n".join(lines), encoding="utf-8")
+            # Save rolling buffer (last 200 lines collected while running)
+            buf = self._log_buffers.get(aid, [])
+            if buf:
+                (diag_dir / "asst_tail.log").write_text("\n".join(buf[-200:]), encoding="utf-8")
             (diag_dir / "info.txt").write_text(
                 f"aid={aid}\nexit_code={exit_code}\nts={ts}\nconsecutive_failures={ac.get('consecutive_failures', 0) if ac else 0}",
                 encoding="utf-8")
