@@ -114,7 +114,9 @@ class MainWindow(QMainWindow):
         # Auto-init MAA instance pool from existing account installations
         raw_ver = self.config.get("maa_version", "")
         if not raw_ver or raw_ver == "installed":
-            maas = sorted(Path(__file__).parent.glob("maa/*/MAA.exe"))
+            maas = sorted(Path(__file__).parent.glob("maa/source/MAA.exe"))
+            if not maas:
+                maas = sorted(Path(__file__).parent.glob("maa/v*/MAA.exe"))
             if not maas:
                 maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
             if maas:

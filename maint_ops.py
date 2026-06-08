@@ -203,15 +203,22 @@ def _ensure_instance_n(ctx, n: int) -> bool:
 
 
 def _find_maa_source() -> Path | None:
-    """Find MAA executable source for instance pool creation."""
+    """Find MAA executable source for instance pool creation.
+    Priority: maa/source/ (user-managed) → maa/v*/ (versioned) → accounts/*/ (legacy)."""
     root = Path(__file__).parent
     ver = root / "maa"
-    # Check versioned download first
+    # 1. User-managed source
+    src = ver / "source"
+    if (src / "MAA.exe").exists():
+        return src
+    # 2. Versioned download directories
     for d in sorted(ver.iterdir()) if ver.exists() else []:
+        if d.name == "source":
+            continue
         exe = d / "MAA.exe"
         if exe.exists():
             return exe.parent
-    # Fallback: old account directories
+    # 3. Legacy account directories
     import glob
     maas = list(root.glob("accounts/*/MAA/MAA.exe"))
     if maas:
