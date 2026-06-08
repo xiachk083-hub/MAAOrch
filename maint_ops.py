@@ -77,15 +77,18 @@ def ensure_maa_instances_async(ctx) -> None:
         return created
 
     def _on_init_result(actual):
-        global _inst_init_task
-        _inst_init_task = None
         with _INSTANCE_LOCK:
             ctx.config["maa_instances"] = max(actual, ctx.config.get("maa_instances", 0))
             ctx.save()
 
+    def _on_finished():
+        global _inst_init_task
+        _inst_init_task = None
+
     with _INSTANCE_LOCK:
         t = BackgroundTask(_init)
         t.result.connect(_on_init_result)
+        t.finished.connect(_on_finished)
         _inst_init_task = t
         t.start()
 
