@@ -263,6 +263,18 @@ class ConfigService:
                 existing_tq = c.get("TaskQueue", [])
                 has_fight = "fight" in task_set
                 anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
+                # If no TaskQueue, try loading from source MAA config as template
+                if not existing_tq:
+                    try:
+                        ver = self.ctx.config.get("maa_version", "")
+                        src_gj = Path(__file__).parent / "maa" / ver / "config" / "gui.new.json" if ver else None
+                        if src_gj and src_gj.exists():
+                            src_d = json.loads(src_gj.read_text(encoding="utf-8"))
+                            src_tq = src_d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
+                            if src_tq:
+                                existing_tq = list(src_tq)
+                    except Exception:
+                        pass
                 if existing_tq:
                     anni_appended = False
                     # Don't use _smart_inserted (causes MAA v6 WPF crash).
@@ -319,6 +331,8 @@ class ConfigService:
                             item["StagePlan"] = [day_stage] if day_stage else []
                             item["IsStageManually"] = bool(day_stage)
                     c["TaskQueue"] = clean_tq
+                    c["TaskSelectedIndex"] = 0
+                    c.setdefault("DragItemIsChecked", {})
                 else:
                     # No existing TaskQueue — build one matching MAA v6 default types
                     c["TaskQueue"] = []
@@ -375,6 +389,8 @@ class ConfigService:
                                 item["StagePlan"] = [day_stage]
                                 item["IsStageManually"] = True
                         c["TaskQueue"].append(item)
+                    c["TaskSelectedIndex"] = 0
+                    c.setdefault("DragItemIsChecked", {})
             else:
                 c.pop("TaskQueue", None)
             tmp = gj.with_suffix(".json.tmp")
