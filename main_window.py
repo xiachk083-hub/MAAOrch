@@ -10,7 +10,7 @@ from utils import (is_admin,run_as_admin,make_id,parse_maa_version,get_platform_
 
 _log_lock = threading.Lock()
 from config import (CONFIG_FILE,STARTUP_DIR,DEFAULT_CONFIG,migrate_v4_to_v5,load_config,save_config,set_auto_start)
-from themes import DARK_STYLE, LIGHT_STYLE, BTN_DELETE
+from themes import DARK_STYLE, LIGHT_STYLE, NOTEPAPER_STYLE, BTN_DELETE
 from updater import UpdateCheckThread,DownloadThread,MaacliInstallThread,MaacliInstallDialog,UpdateDialog
 from task_constants import (TASK_NAMES,TASK_DEFAULTS,EMU_PRESETS,MUMU_INSTANCE_DIRS,MUMU_CLI_CANDIDATES,CLIENT_TYPES,CF,find_mumu_cli,detect_emu_instances,EmuMonitor)
 from emu_ops import EmuService
@@ -144,7 +144,9 @@ class MainWindow(QMainWindow):
         self.maint.start_auto_update_timer()
         QTimer.singleShot(5000, self._health_check)
 
-    def _set_theme(self, m: str) -> None: self.setStyleSheet(DARK_STYLE if m=="Dark" else LIGHT_STYLE)
+    def _set_theme(self, m: str) -> None:
+        style = {"Dark": DARK_STYLE, "Light": LIGHT_STYLE, "Notepaper": NOTEPAPER_STYLE}.get(m, DARK_STYLE)
+        self.setStyleSheet(style)
     def _start_api_server(self) -> None:
         if self._api_server: self._api_server.stop_server(); self._api_server.quit(); self._api_server.wait(1000)
         port=self.config.get("api_port",19999); token=self.config.get("api_token","")

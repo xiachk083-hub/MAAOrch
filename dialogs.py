@@ -37,7 +37,7 @@ class SettingsDialog(QDialog):
         # 外观
         g=QGroupBox("外观"); gl=QVBoxLayout(g)
         th=QHBoxLayout(); th.addWidget(QLabel("主题:"))
-        self.th=QComboBox(); self.th.addItems(["Dark","Light"]); self.th.setCurrentText(cfg.get("appearance_mode","Dark")); th.addWidget(self.th,1); gl.addLayout(th); l.addWidget(g)
+        self.th=QComboBox(); self.th.addItems(["Dark","Light","Notepaper"]); self.th.setCurrentText(cfg.get("appearance_mode","Dark")); th.addWidget(self.th,1); gl.addLayout(th); l.addWidget(g)
         # 启动
         g2=QGroupBox("启动"); gl2=QVBoxLayout(g2)
         self.auto=QCheckBox("开机自启"); self.auto.setChecked(cfg.get("auto_start",False)); gl2.addWidget(self.auto)
