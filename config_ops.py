@@ -264,6 +264,13 @@ class ConfigService:
                 if existing_tq:
                     anni_appended = False
                     clean_tq = [item for item in existing_tq if not item.pop("_smart_inserted", None)]
+                    # Deduplicate Fight-type items — keep only the ones we need
+                    fight_items = [(i, item) for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "fight"]
+                    if len(fight_items) > 1:
+                        # Keep last Fight item, remove earlier duplicates
+                        keep_idx = fight_items[-1][0]
+                        clean_tq = [item for i, item in enumerate(clean_tq)
+                                    if not (item.get("TaskType", "").lower() == "fight" and i != keep_idx)]
                     for item in clean_tq:
                         tt = item.get("TaskType", "").lower()
                         item["IsEnable"] = tt in task_set

@@ -66,7 +66,9 @@ class LaunchQueue(QObject):
     def resume(self) -> None:
         """Resume queue processing and tick immediately."""
         self._paused = False
-        self._tick()
+        # Tick after a brief delay so UI has time to settle
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(300, self._tick)
 
     @property
     def is_paused(self) -> bool:
@@ -249,13 +251,18 @@ class LaunchQueue(QObject):
                 self._active_emus[emu_idx] = entry.account_id
                 launch_now.append(entry)
 
-        # Launch outside lock to avoid re-entrancy
-        for entry in launch_now:
+        # Launch outside lock to avoid re-entrancy, staggered to prevent UI freeze
+        from PySide6.QtCore import QTimer
+        for idx, entry in enumerate(launch_now):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
                 continue
-            if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
-                self.ctx._mw.runner.launch_by_id(entry.account_id)
-            self.launched.emit(entry.account_id)
+            QTimer.singleShot(idx * 200, lambda e=entry: self._do_launch(e))
+
+    def _do_launch(self, entry) -> None:
+        """Launch a single queued account."""
+        if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
+            self.ctx._mw.runner.launch_by_id(entry.account_id)
+        self.launched.emit(entry.account_id)
 
     def _get_emu_key(self, account_id: str) -> str:
         """Return emu instance index, or a unique fallback for no-emu accounts."""
