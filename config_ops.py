@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json
+import json, re
 from pathlib import Path
 from datetime import datetime
 from task_constants import find_mumu_cli
@@ -257,6 +257,8 @@ class ConfigService:
                 weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
                 today_key = weekday_names[datetime.now().weekday()]
                 day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
+                # Sanitize: only allow valid stage names
+                day_stage = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff_\-]', '', day_stage) if day_stage else ""
 
                 existing_tq = c.get("TaskQueue", [])
                 has_fight = "fight" in task_set
@@ -273,6 +275,10 @@ class ConfigService:
                                     if not (item.get("TaskType", "").lower() == "fight" and i != keep_idx)]
                     for item in clean_tq:
                         tt = item.get("TaskType", "").lower()
+                        # Sanitize StagePlan — remove junk entries
+                        sp = item.get("StagePlan", [])
+                        if sp:
+                            item["StagePlan"] = [s for s in sp if isinstance(s, str) and re.match(r'^[a-zA-Z0-9\u4e00-\u9fff_\-]+$', s)]
                         item["IsEnable"] = tt in task_set
                         if tt == "fight" and run_annihilation:
                             if has_fight and not anni_appended:
