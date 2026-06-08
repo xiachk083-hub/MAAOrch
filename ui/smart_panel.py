@@ -20,15 +20,18 @@ def build_smart_panel(mw: Any) -> QWidget:
     # ── Header: enable toggle ──
     hdr = QHBoxLayout()
     hdr.addWidget(QLabel("🧠 智能调度", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
-    mw._smart_enabled_cb = QCheckBox("启用智能调度")
-    mw._smart_enabled_cb.setChecked(mw.config.get("smart_global", {}).get("enabled", False))
-    mw._smart_enabled_cb.toggled.connect(lambda v: _toggle_smart(mw, v))
-    hdr.addWidget(mw._smart_enabled_cb)
     run_btn = QPushButton("▶ 立即调度全部")
     run_btn.setObjectName("startBtn")
     run_btn.clicked.connect(lambda: _run_smart_all(mw))
     hdr.addWidget(run_btn)
+    mw._smart_anni_cb = QCheckBox("剿灭")
+    mw._smart_anni_cb.setChecked(True)
+    hdr.addWidget(mw._smart_anni_cb)
     hdr.addStretch()
+    mw._smart_enabled_cb = QCheckBox("启用智能调度")
+    mw._smart_enabled_cb.setChecked(mw.config.get("smart_global", {}).get("enabled", False))
+    mw._smart_enabled_cb.toggled.connect(lambda v: _toggle_smart(mw, v))
+    hdr.addWidget(mw._smart_enabled_cb)
     vl.addLayout(hdr)
 
     # ── Global defaults ──
