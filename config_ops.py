@@ -347,17 +347,12 @@ class ConfigService:
                         "Infrast": "InfrastTask", "Recruit": "RecruitTask",
                         "Mall": "MallTask", "Award": "AwardTask",
                         "Roguelike": "RoguelikeTask", "Reclamation": "ReclamationTask",
-                        "UserDataUpdate": "UserDataUpdateTask",
                     }
-                    # Only include task types MAA v6 actually supports
                     for task_type in ["StartUp", "Fight", "Infrast", "Recruit", "Mall",
-                                      "Award", "Roguelike", "Reclamation", "UserDataUpdate"]:
-                        enabled = task_type.lower() in task_set or (task_type == "UserDataUpdate" and "depot" in task_set)
+                                      "Award", "Roguelike", "Reclamation"]:
+                        enabled = task_type.lower() in task_set
                         item = {"$type": TYPE_MAP.get(task_type, task_type + "Task"),
                                 "Name": "", "IsEnable": enabled, "TaskType": task_type}
-                        if task_type == "UserDataUpdate":
-                            item.update({"UpdateOperBox": True, "UpdateDepot": True,
-                                         "TriggerInterval": "EveryTime", "IsTriggered": True})
                         if task_type == "Fight":
                             item.update({"UseMedicine": enabled, "MedicineCount": 999,
                                          "UseStone": False, "StoneCount": 0,
