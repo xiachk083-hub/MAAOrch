@@ -265,7 +265,17 @@ class ConfigService:
                 anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
                 if existing_tq:
                     anni_appended = False
-                    clean_tq = [item for item in existing_tq if not item.pop("_smart_inserted", None)]
+                    # Don't use _smart_inserted (causes MAA v6 WPF crash).
+                    # Instead, track original item count to identify inserted items.
+                    orig_count = len(existing_tq)
+                    clean_tq = list(existing_tq)
+                    # Deduplicate Fight-type items — keep only the ones we need
+                    fight_items = [(i, item) for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "fight"]
+                    if len(fight_items) > 1:
+                        keep_idx = fight_items[-1][0]
+                        clean_tq = [item for i, item in enumerate(clean_tq)
+                                    if not (item.get("TaskType", "").lower() == "fight" and i != keep_idx)]
+                    for item in clean_tq:
                     # Deduplicate Fight-type items
                     fight_items = [(i, item) for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "fight"]
                     if len(fight_items) > 1:
@@ -290,7 +300,6 @@ class ConfigService:
                                     item["IsStageManually"] = False
                                 anni_item = dict(item)
                                 anni_item["IsEnable"] = True
-                                anni_item["_smart_inserted"] = True
                                 anni_item["UseCustomAnnihilation"] = True
                                 anni_item["AnnihilationStage"] = anni
                                 anni_item["StagePlan"] = [anni]
@@ -354,7 +363,6 @@ class ConfigService:
                                         item["StagePlan"] = [day_stage]
                                         item["IsStageManually"] = True
                                     anni_item = dict(item)
-                                    anni_item["_smart_inserted"] = True
                                     anni_item["UseCustomAnnihilation"] = True
                                     anni_item["AnnihilationStage"] = anni
                                     anni_item["StagePlan"] = ["Annihilation"]
