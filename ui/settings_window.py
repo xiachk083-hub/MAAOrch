@@ -5,8 +5,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QGroupBox, QFormLayout, QSpinBox,
-                               QCheckBox, QComboBox, QLineEdit, QTableWidget,
-                               QTableWidgetItem, QHeaderView, QAbstractItemView,
+                               QCheckBox, QComboBox, QLineEdit, QFrame,
                                QDialogButtonBox)
 
 
@@ -51,48 +50,60 @@ def open_settings(mw: Any) -> None:
     par_row.addWidget(rebuild_btn)
     gl.addLayout(par_row)
 
-    # Instance status table (compact)
-    tbl = QTableWidget(0, 4)
-    tbl.setHorizontalHeaderLabels(["#", "状态", "配置", "PID"])
-    tbl.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-    tbl.setColumnWidth(0, 30)
-    tbl.setColumnWidth(1, 60)
-    tbl.setColumnWidth(3, 70)
-    tbl.verticalHeader().setVisible(False)
-    tbl.setEditTriggers(QAbstractItemView.NoEditTriggers)
-    tbl.setShowGrid(False)
-    tbl.setAlternatingRowColors(True)
-    tbl.verticalHeader().setDefaultSectionSize(24)
+    # Instance status list (compact cards)
     instances = cfg.get("maa_instances", 0)
-    pool = Path(__file__).parent.parent / "maa" / "instances"
+    pool = Path(__file__).parent.parent / "services" / "maa" / "instances"
+    running_count = 0
+    ready_count = 0
     for i in range(1, instances + 1):
-        r = tbl.rowCount()
-        tbl.insertRow(r)
-        tbl.setItem(r, 0, QTableWidgetItem(str(i)))
         inst_dir = pool / str(i)
         exe = inst_dir / "MAA.exe"
         if not exe.exists():
-            tbl.setItem(r, 1, QTableWidgetItem("未创建"))
             continue
         pid_file = inst_dir / ".pid"
         running = False
         if pid_file.exists():
             try:
                 pid = int(pid_file.read_text().strip())
-                import subprocess
-                r2 = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
-                                    capture_output=True, text=True, timeout=2,
-                                    creationflags=subprocess.CREATE_NO_WINDOW)
+                import subprocess as _sp
+                r2 = _sp.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                             capture_output=True, text=True, timeout=2,
+                             creationflags=_sp.CREATE_NO_WINDOW)
                 running = str(pid) in r2.stdout
-                tbl.setItem(r, 3, QTableWidgetItem(str(pid) if running else ""))
             except Exception:
                 pass
-        tbl.setItem(r, 1, QTableWidgetItem("▶ 运行中" if running else "⏹ 就绪"))
+        if running: running_count += 1
+        else: ready_count += 1
+        # Instance card
+        card = QFrame()
+        card.setStyleSheet("QFrame{background:#222;border:1px solid #2a2a2a;border-radius:5px;padding:6px 10px;margin:1px 0}")
+        cl = QHBoxLayout(card)
+        cl.setContentsMargins(8, 4, 8, 4)
+        cl.setSpacing(8)
+        cl.addWidget(QLabel(f"#{i}"))
+        status_text = "▶ 运行中" if running else "⏹ 就绪"
+        st = QLabel(status_text)
+        st.setStyleSheet(f"color:#498205;font-weight:bold;font-size:8pt" if running else "color:#888;font-size:8pt")
+        cl.addWidget(st)
+        if running and pid_file.exists():
+            try:
+                pid = int(pid_file.read_text().strip())
+                cl.addWidget(QLabel(f"PID:{pid}"))
+            except Exception:
+                pass
         gj = inst_dir / "config" / "gui.new.json"
         cfg_ok = gj.exists()
-        tbl.setItem(r, 2, QTableWidgetItem("✅" if cfg_ok else "❌"))
-    tbl.setMaximumHeight(min(instances, 5) * 26 + 28)
-    gl.addWidget(tbl)
+        cl.addWidget(QLabel("✅配置" if cfg_ok else "❌配置"))
+        cl.addStretch()
+        gl.addWidget(card)
+    # Summary
+    sum_row = QHBoxLayout()
+    sum_row.addWidget(QLabel(f"实例池: {instances} 个"))
+    sum_row.addStretch()
+    sum_row.addWidget(QLabel(f"▶ {running_count}"))
+    sum_row.addWidget(QLabel(f"⏹ {ready_count}"))
+    sum_row.addWidget(QLabel(f"❌ {instances - running_count - ready_count}"))
+    gl.addLayout(sum_row)
     vl.addWidget(g)
 
     # ── 外观 ──
