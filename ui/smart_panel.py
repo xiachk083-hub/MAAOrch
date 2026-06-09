@@ -24,6 +24,7 @@ def build_smart_panel(mw: Any) -> QWidget:
     mw._smart_search = QLineEdit()
     mw._smart_search.setPlaceholderText("搜索账号...")
     mw._smart_search.setFixedHeight(30)
+    mw._smart_search.setStyleSheet("QLineEdit{background:#222;color:#ddd;border:1px solid #2a2a2a;border-radius:5px;padding:3px 10px;font-size:9pt}")
     mw._smart_search.textChanged.connect(lambda: _rebuild_list(mw))
     sr.addWidget(mw._smart_search, 1)
     add_btn = QPushButton("＋添加")
