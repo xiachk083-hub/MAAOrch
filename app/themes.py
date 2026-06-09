@@ -13,8 +13,8 @@ QPushButton{{background:transparent;color:#999;border:none;border-radius:4px;pad
 QPushButton:hover{{background:#242424;color:#eee}}
 QPushButton:pressed{{background:#2a2a2a}}
 QPushButton:disabled{{color:#444}}
-QPushButton#startBtn{{background:{G};color:#fff;font-weight:bold;min-height:28px;padding:4px 18px;font-size:9pt;border-radius:5px}}
-QPushButton#startBtn:hover{{background:#55a00a}}
+QPushButton#startBtn{{color:{G};font-weight:bold;min-height:26px;padding:4px 14px;font-size:9pt;background:transparent;border:none;border-radius:4px}}
+QPushButton#startBtn:hover{{background:#242424;color:#55a00a}}
 QPushButton#iconBtn{{background:transparent;color:#666;border:none;border-radius:4px;padding:2px 4px;font-size:11pt;min-height:20px}}
 QPushButton#iconBtn:hover{{background:#242424;color:#ddd}}
 
