@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QFrame)
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
 
 
 def build_side_bar(mw: Any) -> QFrame:
