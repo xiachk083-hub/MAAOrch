@@ -183,8 +183,9 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     nm.setObjectName("accountName")
     nm.setStyleSheet("color:#ccc;font-size:9pt;font-weight:500")
     hl.addWidget(nm, 1)
-    # Store account id on the row for reliable lookup
+    # Store account id and index on the row
     row._account_id = a.get("id", "")
+    row._acc_idx = mw.accounts.index(a)
 
     # Status
     st_lbl = QLabel("")
@@ -304,6 +305,19 @@ def _get_selected(mw: Any) -> list[str]:
     return selected
 
 
+def _get_selected_indices(mw: Any) -> list[int]:
+    """Return sorted (descending) account indices for checked rows."""
+    if not hasattr(mw, '_list_rows'):
+        return []
+    idxs = set()
+    for rw in mw._list_rows:
+        if getattr(rw, '_checked', False):
+            i = getattr(rw, "_acc_idx", -1)
+            if i >= 0:
+                idxs.add(i)
+    return sorted(idxs, reverse=True)
+
+
 def _do_batch(mw: Any, action: str) -> None:
     """Batch action handler for main_window bottom bar."""
     from PySide6.QtWidgets import QMessageBox
@@ -325,9 +339,12 @@ def _do_batch(mw: Any, action: str) -> None:
         for aid in selected:
             runner.stop(aid)
     elif action == "del":
-        from PySide6.QtWidgets import QMessageBox
-        if QMessageBox.question(mw, "确认", f"删除 {len(selected)} 个?") == QMessageBox.Yes:
-            mw.accounts[:] = [a for a in mw.accounts if a.get("id") not in selected]
+        indices = _get_selected_indices(mw)
+        if not indices:
+            return
+        if QMessageBox.question(mw, "确认", f"删除 {len(indices)} 个?") == QMessageBox.Yes:
+            for idx in indices:
+                mw.accounts.pop(idx)
             mw._save()
     elif action == "edit":
         from ui.batch_edit import open_batch_edit
