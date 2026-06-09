@@ -220,28 +220,11 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     hl.addWidget(nm, 1)
 
     # Status
-    if running:
-        dur = ""
-        runner = getattr(mw, "runner", None)
-        if runner:
-            s = runner._start_times.get(a.get("id", ""), 0)
-            if s: dur = f"{int(time.time()-s)//60}m"
-        st_lbl = QLabel(f"  ▶{dur}" if dur else "  ▶")
-        st_lbl.setStyleSheet("color:#498205;font-size:8pt;font-weight:bold")
-    elif queued:
-        st_lbl = QLabel("  ⏳")
-        st_lbl.setStyleSheet("color:#e8a000;font-size:8pt")
-    elif fails >= 6:
-        st_lbl = QLabel("  ⏸")
-        st_lbl.setStyleSheet("color:#666;font-size:8pt")
-    elif fails:
-        st_lbl = QLabel(f"  ✕{fails}")
-        st_lbl.setStyleSheet("color:#c04040;font-size:8pt")
-    else:
-        st_lbl = QLabel("")
-        st_lbl.setStyleSheet("color:#555;font-size:8pt")
+    st_lbl = QLabel("")
+    st_lbl.setObjectName("statusLabel")
     st_lbl.setFixedWidth(55)
     st_lbl.setAlignment(Qt.AlignCenter)
+    _set_status_text(st_lbl, running, queued, fails, mw, a.get("id", ""))
     hl.addWidget(st_lbl)
 
     # Stage
@@ -291,8 +274,48 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     return row
 
 
+def _set_status_text(lbl: QLabel, running: bool, queued: bool, fails: int, mw: Any, aid: str) -> None:
+    if running:
+        dur = ""
+        rnr = getattr(mw, "runner", None)
+        if rnr:
+            s = rnr._start_times.get(aid, 0)
+            if s: dur = f"{int(time.time()-s)//60}m"
+        lbl.setText(f"  ▶{dur}" if dur else "  ▶")
+        lbl.setStyleSheet("color:#498205;font-size:8pt;font-weight:bold")
+    elif queued:
+        lbl.setText("  ⏳")
+        lbl.setStyleSheet("color:#e8a000;font-size:8pt")
+    elif fails >= 6:
+        lbl.setText("  ⏸")
+        lbl.setStyleSheet("color:#666;font-size:8pt")
+    elif fails:
+        lbl.setText(f"  ✕{fails}")
+        lbl.setStyleSheet("color:#c04040;font-size:8pt")
+    else:
+        lbl.setText("")
+        lbl.setStyleSheet("color:#555;font-size:8pt")
+
+
 def _update_status(mw: Any) -> None:
-    pass  # Status is set on rebuild; real-time updates can be added later
+    """Update status labels for all visible rows in real-time."""
+    for row_w in mw._list_rows:
+        st = row_w.findChild(QLabel, "statusLabel")
+        nm = row_w.findChild(QLabel, "accountName")
+        if not st or not nm:
+            continue
+        txt = nm.text().strip()
+        # Find matching account
+        for a in mw.accounts:
+            if a.get("name") == txt:
+                aid = a.get("id", "")
+                lq = getattr(mw, "launch_queue", None)
+                rnr = getattr(mw, "runner", None)
+                running = (lq and lq.is_running(aid)) or (rnr and rnr.is_running(aid))
+                queued = lq and lq.is_queued(aid)
+                fails = a.get("consecutive_failures", 0)
+                _set_status_text(st, running, queued, fails, mw, aid)
+                break
 
 
 def _get_selected(mw: Any) -> list[str]:
