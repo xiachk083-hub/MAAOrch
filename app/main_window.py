@@ -221,21 +221,19 @@ class MainWindow(QMainWindow):
         ml.setContentsMargins(8, 4, 8, 4)
         ml.setSpacing(2)
 
-        # Toolbar with sidebar toggle
+        # Toolbar
         tb = QHBoxLayout()
-        tb.setContentsMargins(0, 0, 0, 0)
-        tb.setSpacing(6)
+        tb.setContentsMargins(4, 2, 4, 2)
+        tb.setSpacing(4)
         self._sidebar_btn = QPushButton("☰")
         self._sidebar_btn.setObjectName("iconBtn")
-        self._sidebar_btn.setFixedSize(30, 28)
-        self._sidebar_btn.setToolTip("切换侧栏")
+        self._sidebar_btn.setFixedSize(28, 26)
         self._sidebar_btn.clicked.connect(self._toggle_sidebar)
         tb.addWidget(self._sidebar_btn)
         title_lbl = QLabel("MAAOrch")
-        title_lbl.setStyleSheet("font-weight:bold;font-size:11pt;color:#888")
+        title_lbl.setStyleSheet("font-weight:bold;font-size:12pt;color:#666;letter-spacing:1px")
         tb.addWidget(title_lbl)
         tb.addStretch()
-        # Queue launch button
         self._toolbar_launch_btn = QPushButton("▶ 启动队列")
         self._toolbar_launch_btn.setObjectName("startBtn")
         self._toolbar_launch_btn.setFixedHeight(28)

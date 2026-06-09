@@ -21,11 +21,13 @@ def build_smart_panel(mw: Any) -> QWidget:
 
     # ── Search bar ──
     search_row = QHBoxLayout()
+    search_row.setContentsMargins(0, 0, 0, 0)
+    search_row.setSpacing(6)
     mw._smart_search = QLineEdit()
-    mw._smart_search.setPlaceholderText("🔍 搜索账号...")
+    mw._smart_search.setPlaceholderText("搜索账号...")
     mw._smart_search.textChanged.connect(lambda: _rebuild_smart_table(mw))
     search_row.addWidget(mw._smart_search, 1)
-    add_btn = QPushButton("+ 添加账号")
+    add_btn = QPushButton("+ 添加")
     add_btn.setObjectName("startBtn")
     add_btn.setFixedHeight(28)
     add_btn.clicked.connect(lambda: _add_account(mw))
@@ -35,48 +37,42 @@ def build_smart_panel(mw: Any) -> QWidget:
     # ── Account table ──
     DAYS = ["一", "二", "三", "四", "五", "六", "日"]
     DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    cols = 6 + len(DAYS)  # check + name + status + stage + anni + days + detail
+    cols = 6 + len(DAYS)
     tbl = QTableWidget(0, cols)
-    tbl.setHorizontalHeaderLabels(["☐", "账号", "状态", "默认关卡", "剿灭"] + DAYS + [""])
+    tbl.setHorizontalHeaderLabels(["☐", "账号", "状态", "默认", "剿灭"] + DAYS + [""])
     tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
     tbl.setColumnWidth(0, 28)
     tbl.setColumnWidth(2, 55)
-    tbl.setColumnWidth(3, 80)
-    tbl.setColumnWidth(4, 70)
+    tbl.setColumnWidth(3, 65)
+    tbl.setColumnWidth(4, 65)
     for i in range(len(DAYS)):
-        tbl.setColumnWidth(5 + i, 50)
+        tbl.setColumnWidth(5 + i, 46)
     tbl.setColumnWidth(5 + len(DAYS), 28)
     tbl.verticalHeader().setVisible(False)
     tbl.setEditTriggers(QAbstractItemView.DoubleClicked)
     tbl.setShowGrid(False)
     tbl.setAlternatingRowColors(True)
-    tbl.verticalHeader().setDefaultSectionSize(26)
+    tbl.verticalHeader().setDefaultSectionSize(28)
     tbl.setSortingEnabled(True)
     tbl.itemChanged.connect(lambda item: _on_cell_edit(mw, item))
     mw._smart_tbl = tbl
     vl.addWidget(tbl, 1)
 
-    # ── Batch operations bar ──
+    # ── Batch bar ──
     batch_row = QHBoxLayout()
-    batch_row.setSpacing(4)
-    mw._batch_edit_btn = QPushButton("批量设置")
-    mw._batch_edit_btn.setEnabled(False)
-    mw._batch_edit_btn.clicked.connect(lambda: _do_batch_edit(mw))
-    batch_row.addWidget(mw._batch_edit_btn)
-    mw._batch_enqueue_btn = QPushButton("批量入队")
-    mw._batch_enqueue_btn.setEnabled(False)
-    mw._batch_enqueue_btn.clicked.connect(lambda: _do_batch_enqueue(mw))
-    batch_row.addWidget(mw._batch_enqueue_btn)
-    mw._batch_stop_btn = QPushButton("批量停止")
-    mw._batch_stop_btn.setEnabled(False)
-    mw._batch_stop_btn.clicked.connect(lambda: _do_batch_stop(mw))
-    batch_row.addWidget(mw._batch_stop_btn)
-    mw._batch_delete_btn = QPushButton("批量删除")
-    mw._batch_delete_btn.setEnabled(False)
-    mw._batch_delete_btn.clicked.connect(lambda: _do_batch_delete(mw))
-    batch_row.addWidget(mw._batch_delete_btn)
+    batch_row.setContentsMargins(0, 4, 0, 0)
+    batch_row.setSpacing(6)
+    for name, attr, handler in [("批量设置", "_batch_edit_btn", _do_batch_edit),
+                                 ("批量入队", "_batch_enqueue_btn", _do_batch_enqueue),
+                                 ("批量停止", "_batch_stop_btn", _do_batch_stop),
+                                 ("批量删除", "_batch_delete_btn", _do_batch_delete)]:
+        btn = QPushButton(name)
+        btn.setEnabled(False)
+        btn.clicked.connect(lambda _, m=mw, h=handler: h(m))
+        setattr(mw, attr, btn)
+        batch_row.addWidget(btn)
     mw._batch_status = QLabel("")
-    mw._batch_status.setStyleSheet("color:#888;font-size:8pt")
+    mw._batch_status.setStyleSheet("color:#555;font-size:8pt")
     batch_row.addWidget(mw._batch_status)
     batch_row.addStretch()
     vl.addLayout(batch_row)

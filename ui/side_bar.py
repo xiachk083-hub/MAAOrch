@@ -10,15 +10,14 @@ def build_side_bar(mw: Any) -> QFrame:
     sb = QFrame()
     sb.setObjectName("sideBar")
     sb.setFixedWidth(140)
-    sb.setStyleSheet("QFrame#sideBar{background:transparent;border-right:1px solid #2b2b30}")
 
     vl = QVBoxLayout(sb)
-    vl.setContentsMargins(8, 10, 8, 8)
-    vl.setSpacing(4)
+    vl.setContentsMargins(6, 8, 6, 6)
+    vl.setSpacing(2)
 
     # Header
-    hdr = QLabel("📊 总览")
-    hdr.setStyleSheet("font-weight:bold;font-size:10pt;color:#888;padding-bottom:4px")
+    hdr = QLabel("  总览")
+    hdr.setStyleSheet("font-weight:bold;font-size:10pt;color:#666;padding:6px 4px 8px 4px")
     vl.addWidget(hdr)
 
     # Status filter items
@@ -31,7 +30,7 @@ def build_side_bar(mw: Any) -> QFrame:
     mw._side_labels = {}
     for label, key in status_items:
         lbl = QLabel(f"  {label}  0")
-        lbl.setStyleSheet("color:#888;font-size:9pt;padding:4px 8px;border-radius:4px")
+        lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px")
         lbl.setCursor(Qt.PointingHandCursor)
         lbl.mousePressEvent = lambda e, k=key: _filter_click(mw, k)
         vl.addWidget(lbl)
@@ -39,30 +38,20 @@ def build_side_bar(mw: Any) -> QFrame:
 
     vl.addStretch()
 
-    # Divider
-    div = QFrame()
-    div.setFrameShape(QFrame.HLine)
-    div.setStyleSheet("color:#2b2b30")
-    vl.addWidget(div)
-
     # Quick access
-    log_lbl = QLabel("  📋 日志")
-    log_lbl.setStyleSheet("color:#888;font-size:9pt;padding:4px 8px;border-radius:4px")
-    log_lbl.setCursor(Qt.PointingHandCursor)
-    def _open_log(_e=None):
-        from ui.log_window import show_log_window
-        show_log_window(mw)
-    log_lbl.mousePressEvent = _open_log
-    vl.addWidget(log_lbl)
-
-    set_lbl = QLabel("  ⚙ 设置")
-    set_lbl.setStyleSheet("color:#888;font-size:9pt;padding:4px 8px;border-radius:4px")
-    set_lbl.setCursor(Qt.PointingHandCursor)
-    def _open_set(_e=None):
-        from ui.settings_window import open_settings
-        open_settings(mw)
-    set_lbl.mousePressEvent = _open_set
-    vl.addWidget(set_lbl)
+    for icon, text, mod in [("📋", "日志", "log_window"), ("⚙", "设置", "settings_window")]:
+        lbl = QLabel(f"  {icon} {text}")
+        lbl.setStyleSheet("color:#555;font-size:9pt;padding:5px 8px;border-radius:4px")
+        lbl.setCursor(Qt.PointingHandCursor)
+        def _open(e=None, m=mod):
+            if m == "log_window":
+                from ui.log_window import show_log_window
+                show_log_window(mw)
+            else:
+                from ui.settings_window import open_settings
+                open_settings(mw)
+        lbl.mousePressEvent = _open
+        vl.addWidget(lbl)
 
     # Refresh timer for counts
     def _refresh_counts():
@@ -91,9 +80,8 @@ def _filter_click(mw: Any, key: str) -> None:
     """Set filter on smart_panel table."""
     if hasattr(mw, '_set_smart_filter'):
         mw._set_smart_filter(key)
-    # Highlight selected item
     for k, lbl in mw._side_labels.items():
         if k == key:
-            lbl.setStyleSheet("color:#326cf3;font-weight:bold;font-size:9pt;padding:4px 8px;border-radius:4px;background:#326cf310")
+            lbl.setStyleSheet("color:#498205;font-weight:bold;font-size:9pt;padding:5px 8px;border-radius:4px;background:#49820515")
         else:
-            lbl.setStyleSheet("color:#888;font-size:9pt;padding:4px 8px;border-radius:4px")
+            lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px")
