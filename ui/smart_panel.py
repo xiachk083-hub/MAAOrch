@@ -173,6 +173,8 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     # Checkbox
     cb = QCheckBox()
     cb.setFixedWidth(28)
+    row._checked = False
+    cb.toggled.connect(lambda checked: setattr(row, '_checked', checked))
     hl.addWidget(cb)
     row._checkbox = cb
 
@@ -289,8 +291,7 @@ def _get_selected(mw: Any) -> list[str]:
         return []
     selected = []
     for row_w in mw._list_rows:
-        chk = getattr(row_w, '_checker', None)
-        if chk and getattr(chk, '_checked', False):
+        if getattr(row_w, '_checked', False):
             aid = getattr(row_w, "_account_id", "")
             if aid:
                 selected.append(aid)
