@@ -32,30 +32,29 @@ def build_smart_panel(mw: Any) -> QWidget:
     sr.addWidget(add_btn)
     vl.addLayout(sr)
 
-    # ── List header ──
+    # ── List header (must match _make_row column widths) ──
     hdr = QFrame()
-    hdr.setFixedHeight(30)
+    hdr.setFixedHeight(28)
     hl = QHBoxLayout(hdr)
     hl.setContentsMargins(12, 0, 12, 0)
     hl.setSpacing(0)
-    for text, w in [("", 32), ("账号", 100), ("状态", 55), ("关卡", 70), ("剿灭", 65)]:
+    # Column definitions: (text, width) — width 0 means stretch
+    cols = [("", 28), ("账号", 0), ("状态", 55), ("关卡", 70), ("剿灭", 65)]
+    for text, w in cols:
         lbl = QLabel(text)
         lbl.setStyleSheet("color:#555;font-size:8pt;font-weight:bold")
-        if text == "账号":
-            lbl.setStyleSheet("color:#555;font-size:8pt;font-weight:bold")
+        if w == 0:
             hl.addWidget(lbl, 1)
         else:
             lbl.setFixedWidth(w)
             lbl.setAlignment(Qt.AlignCenter)
             hl.addWidget(lbl)
-    # Day labels
     for d in ["一","二","三","四","五","六","日"]:
         lbl = QLabel(d)
         lbl.setFixedWidth(42)
         lbl.setAlignment(Qt.AlignCenter)
         lbl.setStyleSheet("color:#444;font-size:7pt")
         hl.addWidget(lbl)
-    # Detail placeholder
     hl.addSpacing(30)
     mw._list_header = hdr
     vl.addWidget(hdr)
@@ -186,7 +185,7 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     row.setCursor(Qt.PointingHandCursor)
 
     hl = QHBoxLayout(row)
-    hl.setContentsMargins(12, 0, 8, 0)
+    hl.setContentsMargins(12, 0, 12, 0)
     hl.setSpacing(0)
 
     # Checkbox
@@ -253,12 +252,18 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
         dl.setStyleSheet("color:#666;font-size:8pt")
         hl.addWidget(dl)
 
-    # Detail button
+    # Detail button (in 30px container to align with header)
+    dw = QWidget()
+    dw.setFixedWidth(30)
+    dl = QHBoxLayout(dw)
+    dl.setContentsMargins(0, 0, 0, 0)
+    dl.setAlignment(Qt.AlignCenter)
     dt = QPushButton("✎")
-    dt.setFixedSize(24, 24)
-    dt.setStyleSheet("QPushButton{background:transparent;color:#555;border:none;border-radius:4px;font-size:9pt}")
+    dt.setFixedSize(20, 20)
+    dt.setStyleSheet("QPushButton{background:transparent;color:#555;border:none;border-radius:3px;font-size:8pt}")
     dt.clicked.connect(lambda _, r=mw.accounts.index(a): _open_detail(mw, r))
-    hl.addWidget(dt)
+    dl.addWidget(dt)
+    hl.addWidget(dw)
 
     # Hover effect
     row.mousePressEvent = lambda e, r=mw.accounts.index(a): _open_detail(mw, r)
