@@ -45,21 +45,6 @@ def build_side_bar(mw: Any) -> QFrame:
 
     vl.addStretch()
 
-    # Quick access
-    for icon, text, mod in [("📋", "日志", "log_window"), ("⚙", "设置", "settings_window")]:
-        lbl = QLabel(f"  {icon} {text}")
-        lbl.setStyleSheet("color:#555;font-size:9pt;padding:5px 8px;border-radius:4px")
-        lbl.setCursor(Qt.PointingHandCursor)
-        def _open(e=None, m=mod):
-            if m == "log_window":
-                from ui.log_window import show_log_window
-                show_log_window(mw)
-            else:
-                from ui.settings_window import open_settings
-                open_settings(mw)
-        lbl.mousePressEvent = _open
-        vl.addWidget(lbl)
-
     # Refresh timer for counts
     def _refresh_counts():
         if not mw._side_labels:
@@ -93,7 +78,7 @@ def _filter_click(mw: Any, key: str) -> None:
         if k == key:
             lbl.setStyleSheet("color:#e6e6e6;font-size:9pt;padding:5px 8px;border-radius:4px;background:#49820515")
             if frame:
-                frame.setStyleSheet("QFrame{border:none;border-left:3px solid #498205;padding:0;margin-left:2px}")
+                frame.setStyleSheet("QFrame{border:none;border-left:4px solid #498205;padding:0;margin-left:2px}")
         else:
             lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px;background:transparent")
             if frame:

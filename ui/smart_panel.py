@@ -46,9 +46,6 @@ def build_smart_panel(mw: Any) -> QWidget:
     add_btn.clicked.connect(lambda: _add_account(mw))
     sf.addWidget(add_btn)
 
-    sr.addWidget(search_frame, 1)
-    add_btn.clicked.connect(lambda: _add_account(mw))
-    sr.addWidget(add_btn)
     vl.addLayout(sr)
 
     # ── List header (must match _make_row column widths) ──
