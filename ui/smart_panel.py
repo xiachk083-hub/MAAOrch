@@ -300,8 +300,14 @@ def _get_selected(mw: Any) -> list[str]:
 
 def _do_batch(mw: Any, action: str) -> None:
     """Batch action handler for main_window bottom bar."""
+    from PySide6.QtWidgets import QMessageBox
     selected = _get_selected(mw)
     if not selected:
+        # Count how many rows _get_selected checked
+        total = len(getattr(mw, '_list_rows', []))
+        checked = sum(1 for rw in getattr(mw, '_list_rows', []) if getattr(rw, '_checked', False))
+        mw._log(f"[批量] 按钮被点击, 检测到 {checked}/{total} 行勾选, selected={selected}")
+        QMessageBox.information(mw, "提示", f"没有勾选的账号\n(共 {total} 行, 检测到 {checked} 行勾选)")
         return
     lq = getattr(mw, "launch_queue", None)
     runner = getattr(mw, "runner", None)
