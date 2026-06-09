@@ -158,6 +158,7 @@ def _rebuild_list(mw: Any) -> None:
         mw._list_rows.append(row)
 
     _update_status(mw)
+    _update_batch_buttons(mw)
 
 
 def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFrame:
@@ -298,13 +299,18 @@ def _update_batch_buttons(mw: Any) -> None:
 
 
 def _get_selected(mw: Any) -> list[str]:
+    if not hasattr(mw, '_list_rows'):
+        return []
     selected = []
     for row_w in mw._list_rows:
-        cb = row_w.findChild(QCheckBox)
-        if cb and cb.isChecked():
-            aid = getattr(row_w, "_account_id", "")
-            if aid:
-                selected.append(aid)
+        try:
+            cbs = [c for c in row_w.children() if isinstance(c, QCheckBox)]
+            if cbs and cbs[0].isChecked():
+                aid = getattr(row_w, "_account_id", "")
+                if aid:
+                    selected.append(aid)
+        except RuntimeError:
+            continue
     return selected
 
 
