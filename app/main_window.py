@@ -707,166 +707,29 @@ class MainWindow(QMainWindow):
 
     def _poll(self) -> None:
         self.maint.poll()
-        if hasattr(self, "launch_queue"):
-            lq = self.launch_queue
-            ac = lq.active_count
-            qc = lq.pending_count
-            if ac:
-                self._qsb.setText(f"▶{ac}" + (f"  ⏳{qc}" if qc else ""))
-            elif qc:
-                self._qsb.setText(f"⏳{qc}")
-            else:
-                self._qsb.setText("")
-            # Status overview log (every 30 seconds)
-            now = int(__import__("time").time())
-            if now % 30 == 0:
-                total = len(self.accounts)
-                errors = sum(1 for a in self.accounts if a.get("consecutive_failures", 0) >= 6)
-                self._log(f"[状态] 运行中: {ac}/{total} | 队列: {qc} | 错误: {errors}")
+        from ui.main_poll import do_poll
+        do_poll(self)
     def _smart_tick(self) -> None:
-        sg = self.config.get("smart_global", {})
-        if not sg.get("enabled", False) or not hasattr(self, "launch_queue"):
-            return
-        now = datetime.now()
-        minute_key = now.strftime("%H:%M")
-        if getattr(self, "_last_smart_minute", "") == minute_key:
-            return
-        self._last_smart_minute = minute_key
-        from services.smart_scheduler import get_tasks_for_account, is_infrast_time, _check_sanity_above_threshold, _get_material_stage
-        infrast_times = sg.get("infrast_times", ["04:00", "16:00"])
-        is_time_trigger = is_infrast_time(now, infrast_times)
-        count = 0
-        skipped_no_cfg = 0
-        for a in self.accounts:
-            aid = a.get("id", "")
-            if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
-                skipped_no_cfg += 1
-                continue
-            if self.launch_queue.is_queued(aid):
-                continue
-            running = self.launch_queue.is_running(aid) or (getattr(self, "runner", None) and self.runner.is_running(aid))
-            if running:
-                if is_time_trigger and not a.get("smart_pending", False):
-                    a["smart_pending"] = True
-                continue
-            last_error = a.get("smart_last_error", 0)
-            if last_error and time.time() - last_error < 300 and not getattr(self, "_smart_force", False):
-                continue
-            should_launch = False
-            if is_time_trigger or getattr(self, "_smart_force", False):
-                should_launch = True
-            else:
-                threshold = sg.get("threshold", 80)
-                if _check_sanity_above_threshold(aid, threshold):
-                    should_launch = True
-                elif a.get("smart_materials_enabled", True):
-                    mat_stage = _get_material_stage(a, sg)
-                    if mat_stage:
-                        should_launch = True
-            if should_launch:
-                if getattr(self, "_smart_force", False):
-                    tasks = ["StartUp", "Award", "Fight", "Infrast", "Recruit", "Mall", "CloseDown"]
-                    if (hasattr(self, "_smart_anni_cb") and self._smart_anni_cb.isChecked()
-                        and a.get("smart_annihilation_enabled", True) and a.get("smart_annihilation", "")):
-                        tasks.insert(2, "Annihilation")
-                else:
-                    tasks = get_tasks_for_account(a, sg)
-                if tasks:
-                    plan_txt = ",".join(tasks)
-                    a["smart_plan"] = plan_txt
-                    self.launch_queue.enqueue(aid, "schedule", priority=1)
-                    count += 1
-        if count:
-            self._log(f"🧠 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg}个缺配置跳过)" if skipped_no_cfg else ""))
-            self.launch_queue.tick()
-        else:
-            reasons = []
-            if skipped_no_cfg:
-                reasons.append(f"{skipped_no_cfg}个缺配置")
-            reasons.append("体力不足/无任务到达")
-            self._log("🧠 智能调度: 暂无账号需要调度（" + "，".join(reasons) + "）")
+        from ui.main_poll import do_smart_tick
+        do_smart_tick(self)
     def _notify(self, msg: str, is_error: bool = False) -> None: self.maint.notify(msg, is_error)
     def _cu_single(self, w: dict) -> None: self.maint.cu_single(w)
     def _restore_geometry(self) -> None: self.maint.restore_geometry()
     def _setup_tray(self) -> None: self.maint.setup_tray()
     def _show_tray(self) -> None: self.maint.show_tray()
     def _show_todo(self) -> None:
-        issues = []
-        if not self.config.get("maa_version", ""):
-            issues.append(("系统", "未下载 MAA，请点击账号页的 ⬇ 批量MAA 下载"))
-        for a in self.accounts:
-            aid = a.get("id", "")
-            name = a.get("name", "").strip() or aid[:6]
-            if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
-                issues.append((name, "未配置 ADB 地址或模拟器实例"))
-            if self.config.get("smart_global", {}).get("enabled", False):
-                if not a.get("smart_stage", ""):
-                    issues.append((name, "智能模式开启但未设默认关卡"))
-        self._update_todo_badge(len(issues))
-        if not issues:
-            sg = self.config.get("smart_global", {})
-            if sg.get("enabled", False):
-                for a in self.accounts:
-                    materials_enabled = a.get("smart_materials_enabled", True)
-                    if materials_enabled:
-                        from pathlib import Path
-                        dp = Path(__file__).parent / "accounts" / a.get("id", "") / "depot.json"
-                        if not dp.exists():
-                            issues.append((a.get("name", "?"), "材料监控已开启但未跑过仓库识别，等待下次 04:00 Depot"))
-            if not issues:
-                QMessageBox.information(self, "📋 配置待办", "所有账号配置齐全，暂无待办项。")
-                return
-        from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
-        d = QDialog(self)
-        d.setWindowTitle(f"📋 配置待办 ({len(issues)})")
-        d.setMinimumSize(500, 350)
-        l = QVBoxLayout(d)
-        l.addWidget(QLabel("以下账号存在未完成的配置项："))
-        for acct, issue in issues:
-            l.addWidget(QLabel(f"  ⚠ {acct} — {issue}"))
-        btn = QPushButton("知道了")
-        btn.clicked.connect(d.accept)
-        l.addWidget(btn)
-        d.exec()
+        from ui.main_poll import show_todo
+        show_todo(self)
 
     def _health_check(self) -> None:
-        """Background health check on startup."""
-        try:
-            from services.health_check import run_health_check
-            report = run_health_check(self.ctx)
-            n = report.error_count + report.warn_count
-            if n:
-                self._log(f"⚠ 环境检测: {report.error_count} 个错误, {report.warn_count} 个警告")
-            else:
-                self._log("✅ 环境检测: 全部正常")
-        except Exception as e:
-            self._log(f"环境检测失败: {e}")
+        from ui.main_poll import do_health_check
+        do_health_check(self)
 
     def _health_dialog(self) -> None:
-        """Open health check dialog."""
-        from services.health_check import run_health_check, show_health_dialog
-        report = run_health_check(self.ctx)
-        show_health_dialog(self, report)
+        from ui.main_poll import show_health_dialog
+        show_health_dialog(self)
 
     def _update_todo_badge(self, count: int = -1) -> None:
-        if count < 0:
-            count = 0
-            for a in self.accounts:
-                if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
-                    count += 1
-                    continue
-                progs = [w for w in self.warehouse if w.get("account_ref") == a.get("id", "")]
-                if not progs:
-                    count += 1
-            if self.config.get("smart_global", {}).get("enabled", False):
-                for a in self.accounts:
-                    if not a.get("smart_stage", ""):
-                        count += 1
-                for a in self.accounts:
-                    if a.get("smart_materials_enabled", True):
-                        dp = Path(__file__).parent / "accounts" / a.get("id", "") / "depot.json"
-                        if not dp.exists():
-                            count += 1
         pass  # badge removed with tab bar
 
     def closeEvent(self, e) -> None:
