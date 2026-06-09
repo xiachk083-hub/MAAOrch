@@ -10,6 +10,13 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QDialogButtonBox)
 
 
+def _rebuild_instances(mw: Any) -> None:
+    """Force rebuild all MAA instances from existing source."""
+    from services.instance_pool import ensure_maa_instances_async
+    ensure_maa_instances_async(mw.ctx, force=True)
+    mw._log("🔄 实例池重建完成")
+
+
 def open_settings(mw: Any) -> None:
     d = QDialog(mw)
     d.setWindowTitle("设置")
@@ -40,7 +47,7 @@ def open_settings(mw: Any) -> None:
     par_row.addWidget(QLabel("个实例"))
     par_row.addStretch()
     rebuild_btn = QPushButton("🔄 重建实例")
-    rebuild_btn.clicked.connect(lambda: mw.maint.dl_maa_all())
+    rebuild_btn.clicked.connect(lambda: _rebuild_instances(mw))
     par_row.addWidget(rebuild_btn)
     gl.addLayout(par_row)
 
