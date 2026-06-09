@@ -130,16 +130,18 @@ def open_settings(mw: Any) -> None:
     g4 = QGroupBox("MAA 源目录")
     gl4 = QVBoxLayout(g4)
     from services.instance_pool import _find_maa_source
-    maa_path = _find_maa_source()
-    src_dir = maa_path if maa_path else (Path(__file__).parent.parent / "services" / "maa" / "source")
+    cur_path = cfg.get("maa_source_path", "") or _find_maa_source(cfg)
+    src_path_edit = QLineEdit(str(cur_path) if cur_path else "")
+    src_path_edit.setPlaceholderText("选择 MAA 目录...")
+    src_path_edit.setReadOnly(True)
     src_row = QHBoxLayout()
-    src_row.addWidget(QLabel(str(src_dir)))
-    open_btn = QPushButton("📂 打开目录")
-    open_btn.clicked.connect(lambda: __import__('os').startfile(str(src_dir)))
-    src_row.addWidget(open_btn)
+    src_row.addWidget(src_path_edit, 1)
+    browse_btn = QPushButton("浏览…")
+    browse_btn.clicked.connect(lambda: _browse_maa(src_path_edit, cfg))
+    src_row.addWidget(browse_btn)
     src_row.addStretch()
-    exe_ok = src_dir and (src_dir / "MAA.exe").exists()
-    src_row.addWidget(QLabel("✅ 已就绪" if exe_ok else "❌ 未找到 MAA.exe"))
+    exe_ok = cur_path and Path(cur_path).joinpath("MAA.exe").exists()
+    src_row.addWidget(QLabel("✅" if exe_ok else ""))
     gl4.addLayout(src_row)
     vl.addWidget(g4)
 
@@ -147,6 +149,15 @@ def open_settings(mw: Any) -> None:
 
     # ── Buttons ──
     bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+    def _browse_maa(edit, cfg):
+        from PySide6.QtWidgets import QFileDialog
+        folder = QFileDialog.getExistingDirectory(d, "选择 MAA 目录", str(edit.text()))
+        if folder and Path(folder).joinpath("MAA.exe").exists():
+            edit.setText(folder)
+            cfg["maa_source_path"] = folder
+        elif folder:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(d, "提示", "所选目录未找到 MAA.exe")
     def _save():
         cfg["appearance_mode"] = theme_cb.currentText()
         cfg["minimize_to_tray"] = tray_cb.isChecked()
