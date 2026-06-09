@@ -70,7 +70,13 @@ def open_account_detail(mw: Any, row: int) -> None:
     emu_row.addStretch()
     gl1.addRow("模拟器:", emu_row)
 
-    preset_label = QLabel(f"连接预设: {ac.get('connection_preset', EMU_PRESETS.get(ac.get('connection_preset', ''), {}).get('name', '通用'))} (自动)")
+    cp = ac.get('connection_preset', '')
+    preset_name = '通用'
+    for p in EMU_PRESETS:
+        if isinstance(p, dict) and p.get('key', '') == cp:
+            preset_name = p.get('name', cp)
+            break
+    preset_label = QLabel(f"连接预设: {preset_name} (自动)")
     touch_label = QLabel(f"触摸: {ac.get('touch_mode', 'MiniTouch')} (自动)")
     gl1.addRow("", preset_label)
     gl1.addRow("", touch_label)
