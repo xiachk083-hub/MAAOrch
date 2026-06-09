@@ -11,6 +11,8 @@ QPushButton#stopBtn{{background:#5d2626;color:#d0a0a0;border-color:#7a2b2b}}QPus
 QPushButton#addProgBtn{{background:{A};color:#fff;font-weight:bold;border-color:{A};min-height:28px}}
 QPushButton#tabBtn{{background:transparent;color:#666;border:none;padding:6px 14px;font-size:11px;border-radius:0}}QPushButton#tabBtn:hover{{color:#aaa;border-bottom:2px solid #3a3a3a}}
 QPushButton#tabBtnActive{{background:transparent;color:#e6e6e6;border:none;padding:6px 14px;font-size:11px;border-bottom:2px solid {A};border-radius:0;font-weight:bold}}
+QPushButton#iconBtn{{background:transparent;color:#888;border:none;border-radius:6px;padding:3px 6px;font-size:11pt}}QPushButton#iconBtn:hover{{background:#2b2b30;color:#e6e6e6}}
+QFrame#sideBar QLabel{{color:#888;font-size:9pt;padding:5px 8px;border-radius:6px}}QFrame#sideBar QLabel:hover{{background:#2b2b30;color:#e6e6e6}}
 QLineEdit,QSpinBox,QComboBox{{background:#2b2b30;color:#e6e6e6;border:1px solid #3a3a3a;border-radius:5px;padding:6px 10px;min-height:24px}}
 QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border:1px solid #555}}
 QLineEdit:focus,QSpinBox:focus{{border:1px solid {A};background:#25252a}}
@@ -43,6 +45,8 @@ QPushButton#stopBtn{{background:#8b4a4a;color:#fff;border-color:#8b4a4a}}QPushBu
 QPushButton#addProgBtn{{background:{A};color:#fff;font-weight:bold;border-color:{A};min-height:28px}}
 QPushButton#tabBtn{{background:transparent;color:#666;border:none;padding:6px 14px;font-size:11px;border-radius:0}}QPushButton#tabBtn:hover{{color:#333;border-bottom:2px solid #ccc}}
 QPushButton#tabBtnActive{{background:transparent;color:#333;border:none;padding:6px 14px;font-size:11px;border-bottom:2px solid {A};border-radius:0;font-weight:bold}}
+QPushButton#iconBtn{{background:transparent;color:#666;border:none;border-radius:6px;padding:3px 6px;font-size:11pt}}QPushButton#iconBtn:hover{{background:#e0e0e0;color:#333}}
+QFrame#sideBar QLabel{{color:#666;font-size:9pt;padding:5px 8px;border-radius:6px}}QFrame#sideBar QLabel:hover{{background:#e0e0e0;color:#333}}
 QLineEdit,QSpinBox,QComboBox{{background:#fff;color:#333;border:1px solid #ccc;border-radius:5px;padding:6px 10px;min-height:24px}}
 QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border:1px solid #aaa}}
 QLineEdit:focus,QSpinBox:focus{{border:1px solid {A};background:#f8f8ff}}
@@ -83,6 +87,8 @@ QPushButton#stopBtn{{background:#a04040;color:#f0dcdc;border-color:#a04040}}QPus
 QPushButton#addProgBtn{{background:{G};color:#f6f3ec;font-weight:bold;border-color:{G};min-height:28px;border-radius:10px}}
 QPushButton#tabBtn{{background:transparent;color:#8a867e;border:none;padding:7px 16px;font-size:11px;border-radius:0}}QPushButton#tabBtn:hover{{color:#2a2a28;border-bottom:2px solid #c8c2b6}}
 QPushButton#tabBtnActive{{background:transparent;color:#2a2a28;border:none;padding:7px 16px;font-size:11px;border-bottom:2px solid {G};border-radius:0;font-weight:bold}}
+QPushButton#iconBtn{{background:transparent;color:#8a867e;border:none;border-radius:6px;padding:3px 6px;font-size:11pt}}QPushButton#iconBtn:hover{{background:#ede9e0;color:#2a2a28}}
+QFrame#sideBar QLabel{{color:#8a867e;font-size:9pt;padding:5px 8px;border-radius:6px}}QFrame#sideBar QLabel:hover{{background:#ede9e0;color:#2a2a28}}
 
 /* ── Inputs ── */
 QLineEdit,QSpinBox,QComboBox{{background:#f0ece4;color:#2a2a28;border:1px solid #ddd8ce;border-radius:8px;padding:7px 12px;min-height:24px}}

@@ -226,6 +226,7 @@ class MainWindow(QMainWindow):
         tb.setContentsMargins(0, 0, 0, 0)
         tb.setSpacing(6)
         self._sidebar_btn = QPushButton("☰")
+        self._sidebar_btn.setObjectName("iconBtn")
         self._sidebar_btn.setFixedSize(30, 28)
         self._sidebar_btn.setToolTip("切换侧栏")
         self._sidebar_btn.clicked.connect(self._toggle_sidebar)
@@ -271,12 +272,14 @@ class MainWindow(QMainWindow):
         sb2.addPermanentWidget(self._qsb)
         # Settings button
         set_btn = QPushButton("⚙")
+        set_btn.setObjectName("iconBtn")
         set_btn.setFixedSize(22, 20)
         set_btn.setToolTip("设置")
         set_btn.clicked.connect(lambda: open_settings(self))
         sb2.addPermanentWidget(set_btn)
         # Log button
         log_btn = QPushButton("📋")
+        log_btn.setObjectName("iconBtn")
         log_btn.setFixedSize(22, 20)
         log_btn.setToolTip("日志")
         log_btn.clicked.connect(lambda: show_log_window(self))
