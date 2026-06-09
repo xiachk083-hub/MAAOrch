@@ -98,7 +98,7 @@ def build_smart_panel(mw: Any) -> QWidget:
     _rebuild_list(mw)
 
     timer = QTimer(mw.smart_v)
-    timer.timeout.connect(lambda: (_update_status(mw), _update_batch_buttons(mw)))
+    timer.timeout.connect(lambda: _update_status(mw))
     timer.start(3000)
 
     return mw.smart_v
@@ -158,7 +158,6 @@ def _rebuild_list(mw: Any) -> None:
         mw._list_rows.append(row)
 
     _update_status(mw)
-    _update_batch_buttons(mw)
 
 
 def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFrame:
@@ -175,7 +174,6 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     cb = QCheckBox()
     cb.setFixedWidth(28)
     cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
-    cb.toggled.connect(lambda: _update_batch_buttons(mw))
     hl.addWidget(cb)
     row._checkbox = cb
 
@@ -285,21 +283,6 @@ def _update_status(mw: Any) -> None:
                 fails = a.get("consecutive_failures", 0)
                 _set_status_text(st, running, queued, fails, mw, aid)
                 break
-
-
-def _update_batch_buttons(mw: Any) -> None:
-    """Update batch button states based on current selections."""
-    if not hasattr(mw, '_list_rows'):
-        return
-    selected = _get_selected(mw)
-    n = len(selected)
-    for act in ("edit", "enq", "stop", "del"):
-        btn = getattr(mw, f"_batch_{act}_btn", None)
-        if btn:
-            btn.setEnabled(n > 0)
-    stat = getattr(mw, "_batch_stat", None)
-    if stat:
-        stat.setText(f"(已选 {n}/{len(mw.accounts)})" if n else "")
 
 
 def _get_selected(mw: Any) -> list[str]:

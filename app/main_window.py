@@ -263,7 +263,7 @@ class MainWindow(QMainWindow):
         bb.setContentsMargins(8, 2, 8, 2)
         bb.setSpacing(6)
 
-        from ui.smart_panel import _do_batch, _get_selected
+        from ui.smart_panel import _do_batch
         from ui.side_bar import _toggle_smart, _run_smart_all
 
         smart_cb = QCheckBox("智能调度")
@@ -282,19 +282,12 @@ class MainWindow(QMainWindow):
         for name, act in [("批量设置","edit"),("批量入队","enq"),
                           ("批量停止","stop"),("批量删除","del")]:
             btn = QPushButton(name)
-            btn.setEnabled(False)
             btn.setFixedHeight(26)
             btn.clicked.connect(lambda _, a=act: _do_batch(self, a))
-            setattr(self, f"_batch_{act}_btn", btn)
             bb.addWidget(btn)
 
-        self._batch_stat = QLabel("")
-        self._batch_stat.setStyleSheet("color:#555;font-size:8pt")
-        bb.addWidget(self._batch_stat)
         bb.addStretch()
         ml.addLayout(bb)
-        from ui.smart_panel import _update_batch_buttons
-        _update_batch_buttons(self)
 
         # Status bar — log line + queue stats + action buttons
         sb2 = self.statusBar()
