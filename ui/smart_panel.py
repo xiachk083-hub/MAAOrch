@@ -293,7 +293,6 @@ def _update_batch_buttons(mw: Any) -> None:
         return
     selected = _get_selected(mw)
     n = len(selected)
-    mw._log(f"[debug] _update_batch_buttons: selected={selected}")
     for act in ("edit", "enq", "stop", "del"):
         btn = getattr(mw, f"_batch_{act}_btn", None)
         if btn:
