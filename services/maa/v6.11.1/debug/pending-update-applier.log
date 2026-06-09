@@ -1,0 +1,222 @@
+[2026-06-09 15:12:54.449] MAA.Updater started (C++ external updater).
+[2026-06-09 15:12:54.449] Console output: disabled
+[2026-06-09 15:12:54.451] Parent PID: 2456, root dir: D:\1-2\MAAOrch\services\maa\v6.11.1\
+[2026-06-09 15:12:54.451] Plan file: D:\1-2\MAAOrch\services\maa\v6.11.1\maa-pending-update-6013764c7a964c0f8e0ab2cc40946228.json, extract dir: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract
+[2026-06-09 15:12:54.451] Waiting for parent process to exit, PID=2456
+[2026-06-09 15:12:55.262] Parent process exited.
+[2026-06-09 15:12:55.272] Plan loaded, package type: ota, remove entries: 0, install entries: 70
+[2026-06-09 15:12:55.272] Files to remove (0)
+[2026-06-09 15:12:55.272] Files to install (70)
+[2026-06-09 15:12:55.274]   - filelist.txt
+[2026-06-09 15:12:55.274]   - MAA.deps.json
+[2026-06-09 15:12:55.274]   - MAA.dll
+[2026-06-09 15:12:55.274]   - MAA.exe
+[2026-06-09 15:12:55.274]   - MAA.Updater.exe
+[2026-06-09 15:12:55.274]   - MaaCore.dll
+[2026-06-09 15:12:55.274]   - MaaUtils.dll
+[2026-06-09 15:12:55.275]   - resource\battle_data.json
+[2026-06-09 15:12:55.275]   - resource\infrast.json
+[2026-06-09 15:12:55.275]   - resource\item_index.json
+[2026-06-09 15:12:55.275]   - resource\stages.json
+[2026-06-09 15:12:55.275]   - resource\version.json
+[2026-06-09 15:12:55.275]   - resource\Arknights-Tile-Pos\act1football_01-activities-act1football-level_act1football_01.json
+[2026-06-09 15:12:55.275]   - resource\Arknights-Tile-Pos\act1football_02-activities-act1football-level_act1football_02.json
+[2026-06-09 15:12:55.275]   - resource\Arknights-Tile-Pos\act1football_03-activities-act1football-level_act1football_03.json
+[2026-06-09 15:12:55.276]   - resource\Arknights-Tile-Pos\act1football_04-activities-act1football-level_act1football_04.json
+[2026-06-09 15:12:55.276]   - resource\Arknights-Tile-Pos\act1football_05-activities-act1football-level_act1football_05.json
+[2026-06-09 15:12:55.276]   - resource\Arknights-Tile-Pos\act1football_06-activities-act1football-level_act1football_06.json
+[2026-06-09 15:12:55.276]   - resource\Arknights-Tile-Pos\act1football_07-activities-act1football-level_act1football_07.json
+[2026-06-09 15:12:55.276]   - resource\Arknights-Tile-Pos\act1football_s01-activities-act1football-level_act1football_sub-1-1.json
+[2026-06-09 15:12:55.276]   - resource\Arknights-Tile-Pos\act1football_tr01-activities-act1football-level_act1football_tr01.json
+[2026-06-09 15:12:55.277]   - resource\Arknights-Tile-Pos\act50side_ex01#f#-activities-act50side-level_act50side_ex02.json
+[2026-06-09 15:12:55.277]   - resource\Arknights-Tile-Pos\act50side_ex01-activities-act50side-level_act50side_ex02.json
+[2026-06-09 15:12:55.277]   - resource\Arknights-Tile-Pos\act50side_ex02#f#-activities-act50side-level_act50side_ex01.json
+[2026-06-09 15:12:55.277]   - resource\Arknights-Tile-Pos\act50side_ex02-activities-act50side-level_act50side_ex01.json
+[2026-06-09 15:12:55.277]   - resource\Arknights-Tile-Pos\act50side_ex03#f#-activities-act50side-level_act50side_ex03.json
+[2026-06-09 15:12:55.277]   - resource\Arknights-Tile-Pos\act50side_ex03-activities-act50side-level_act50side_ex03.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex04#f#-activities-act50side-level_act50side_ex04.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex04-activities-act50side-level_act50side_ex04.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex05#f#-activities-act50side-level_act50side_ex05.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex05-activities-act50side-level_act50side_ex05.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex06#f#-activities-act50side-level_act50side_ex06.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex06-activities-act50side-level_act50side_ex06.json
+[2026-06-09 15:12:55.278]   - resource\Arknights-Tile-Pos\act50side_ex07#f#-activities-act50side-level_act50side_ex07.json
+[2026-06-09 15:12:55.279]   - resource\Arknights-Tile-Pos\act50side_ex07-activities-act50side-level_act50side_ex07.json
+[2026-06-09 15:12:55.279]   - resource\Arknights-Tile-Pos\act50side_ex08#f#-activities-act50side-level_act50side_ex08.json
+[2026-06-09 15:12:55.279]   - resource\Arknights-Tile-Pos\act50side_ex08-activities-act50side-level_act50side_ex08.json
+[2026-06-09 15:12:55.279]   - resource\Arknights-Tile-Pos\act50side_s01-activities-act50side-level_act50side_sub-1-1.json
+[2026-06-09 15:12:55.279]   - resource\Arknights-Tile-Pos\overview.json
+[2026-06-09 15:12:55.279]   - resource\tasks\tasks.json
+[2026-06-09 15:12:55.279]   - resource\tasks\Roguelike\JieGarden.json
+[2026-06-09 15:12:55.279]   - resource\tasks\Roguelike\Mizuki.json
+[2026-06-09 15:12:55.280]   - resource\tasks\Roguelike\Sami.json
+[2026-06-09 15:12:55.280]   - resource\tasks\Roguelike\Sarkaz.json
+[2026-06-09 15:12:55.280]   - resource\tasks\UiTheme\SwitchTheme.json
+[2026-06-09 15:12:55.280]   - resource\template\infrast\Bskill_ctrl_c_spd 1.png
+[2026-06-09 15:12:55.280]   - resource\template\items\act1football_milestone_point.png
+[2026-06-09 15:12:55.280]   - resource\template\MiniGame\GreenTicket@Store@SecondFloor-Check.png
+[2026-06-09 15:12:55.280]   - resource\global\txwy\resource\item_index.json
+[2026-06-09 15:12:55.280]   - resource\global\txwy\resource\version.json
+[2026-06-09 15:12:55.281]   - resource\global\YoStarEN\resource\version.json
+[2026-06-09 15:12:55.281]   - resource\global\YoStarJP\resource\version.json
+[2026-06-09 15:12:55.281]   - resource\global\YoStarKR\resource\version.json
+[2026-06-09 15:12:55.281]   - resource\platform_diff\iOS\resource\tasks.json
+[2026-06-09 15:12:55.281]   - resource\template\UiTheme\Hunting\DepotEnter.png
+[2026-06-09 15:12:55.281]   - resource\template\UiTheme\Hunting\EnterInfrast.png
+[2026-06-09 15:12:55.281]   - resource\template\UiTheme\Hunting\Friends.png
+[2026-06-09 15:12:55.281]   - resource\template\UiTheme\Hunting\GachaEnter.png
+[2026-06-09 15:12:55.281]   - resource\template\UiTheme\Hunting\Mall.png
+[2026-06-09 15:12:55.281]   - resource\template\UiTheme\Hunting\OperBoxEnter.png
+[2026-06-09 15:12:55.282]   - resource\template\UiTheme\Hunting\Recruit.png
+[2026-06-09 15:12:55.282]   - resource\template\UiTheme\Hunting\Task.png
+[2026-06-09 15:12:55.282]   - resource\template\UiTheme\Hunting\Terminal.png
+[2026-06-09 15:12:55.282]   - resource\template\StageNavigation\SideStory\TD\TD-6.png
+[2026-06-09 15:12:55.282]   - resource\template\StageNavigation\SideStory\TD\TD-7.png
+[2026-06-09 15:12:55.282]   - resource\template\StageNavigation\SideStory\TD\TD-8.png
+[2026-06-09 15:12:55.282]   - resource\template\StageNavigation\SideStory\TD\TD-Open.png
+[2026-06-09 15:12:55.283]   - resource\template\StageNavigation\SideStory\TD\TDChapterToTD.png
+[2026-06-09 15:12:55.283]   - resource\global\YoStarKR\resource\tasks\Roguelike\JieGarden.json
+[2026-06-09 15:12:55.283]   - resource\global\YoStarEN\resource\template\Roguelike\JieGarden\JieGarden@Roguelike@ClickRemainingCandleFlame.png
+[2026-06-09 15:12:55.283] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\filelist.txt -> D:\1-2\MAAOrch\services\maa\v6.11.1\filelist.txt
+[2026-06-09 15:12:55.286] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.deps.json
+[2026-06-09 15:12:55.287] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\MAA.deps.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.deps.json
+[2026-06-09 15:12:55.289] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.dll
+[2026-06-09 15:12:55.290] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\MAA.dll -> D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.dll
+[2026-06-09 15:12:55.291] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.exe
+[2026-06-09 15:12:55.292] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\MAA.exe -> D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.exe
+[2026-06-09 15:12:55.293] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.Updater.exe
+[2026-06-09 15:12:55.294] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\MAA.Updater.exe -> D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.Updater.exe
+[2026-06-09 15:12:55.297] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\MaaCore.dll
+[2026-06-09 15:12:55.297] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\MaaCore.dll -> D:\1-2\MAAOrch\services\maa\v6.11.1\MaaCore.dll
+[2026-06-09 15:12:55.299] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\MaaUtils.dll
+[2026-06-09 15:12:55.299] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\MaaUtils.dll -> D:\1-2\MAAOrch\services\maa\v6.11.1\MaaUtils.dll
+[2026-06-09 15:12:55.301] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\battle_data.json
+[2026-06-09 15:12:55.302] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\battle_data.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\battle_data.json
+[2026-06-09 15:12:55.304] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\infrast.json
+[2026-06-09 15:12:55.305] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\infrast.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\infrast.json
+[2026-06-09 15:12:55.306] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\item_index.json
+[2026-06-09 15:12:55.307] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\item_index.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\item_index.json
+[2026-06-09 15:12:55.308] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\stages.json
+[2026-06-09 15:12:55.309] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\stages.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\stages.json
+[2026-06-09 15:12:55.310] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\version.json
+[2026-06-09 15:12:55.311] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\version.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\version.json
+[2026-06-09 15:12:55.312] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_01-activities-act1football-level_act1football_01.json
+[2026-06-09 15:12:55.313] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_01-activities-act1football-level_act1football_01.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_01-activities-act1football-level_act1football_01.json
+[2026-06-09 15:12:55.316] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_02-activities-act1football-level_act1football_02.json
+[2026-06-09 15:12:55.317] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_02-activities-act1football-level_act1football_02.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_02-activities-act1football-level_act1football_02.json
+[2026-06-09 15:12:55.318] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_03-activities-act1football-level_act1football_03.json
+[2026-06-09 15:12:55.319] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_03-activities-act1football-level_act1football_03.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_03-activities-act1football-level_act1football_03.json
+[2026-06-09 15:12:55.321] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_04-activities-act1football-level_act1football_04.json
+[2026-06-09 15:12:55.322] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_04-activities-act1football-level_act1football_04.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_04-activities-act1football-level_act1football_04.json
+[2026-06-09 15:12:55.324] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_05-activities-act1football-level_act1football_05.json
+[2026-06-09 15:12:55.325] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_05-activities-act1football-level_act1football_05.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_05-activities-act1football-level_act1football_05.json
+[2026-06-09 15:12:55.326] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_06-activities-act1football-level_act1football_06.json
+[2026-06-09 15:12:55.327] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_06-activities-act1football-level_act1football_06.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_06-activities-act1football-level_act1football_06.json
+[2026-06-09 15:12:55.328] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_07-activities-act1football-level_act1football_07.json
+[2026-06-09 15:12:55.329] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_07-activities-act1football-level_act1football_07.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_07-activities-act1football-level_act1football_07.json
+[2026-06-09 15:12:55.330] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_s01-activities-act1football-level_act1football_sub-1-1.json
+[2026-06-09 15:12:55.331] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_s01-activities-act1football-level_act1football_sub-1-1.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_s01-activities-act1football-level_act1football_sub-1-1.json
+[2026-06-09 15:12:55.333] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_tr01-activities-act1football-level_act1football_tr01.json
+[2026-06-09 15:12:55.334] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act1football_tr01-activities-act1football-level_act1football_tr01.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act1football_tr01-activities-act1football-level_act1football_tr01.json
+[2026-06-09 15:12:55.335] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex01#f#-activities-act50side-level_act50side_ex02.json
+[2026-06-09 15:12:55.336] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex01#f#-activities-act50side-level_act50side_ex02.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex01#f#-activities-act50side-level_act50side_ex02.json
+[2026-06-09 15:12:55.338] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex01-activities-act50side-level_act50side_ex02.json
+[2026-06-09 15:12:55.339] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex01-activities-act50side-level_act50side_ex02.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex01-activities-act50side-level_act50side_ex02.json
+[2026-06-09 15:12:55.341] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex02#f#-activities-act50side-level_act50side_ex01.json
+[2026-06-09 15:12:55.343] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex02#f#-activities-act50side-level_act50side_ex01.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex02#f#-activities-act50side-level_act50side_ex01.json
+[2026-06-09 15:12:55.344] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex02-activities-act50side-level_act50side_ex01.json
+[2026-06-09 15:12:55.345] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex02-activities-act50side-level_act50side_ex01.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex02-activities-act50side-level_act50side_ex01.json
+[2026-06-09 15:12:55.346] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex03#f#-activities-act50side-level_act50side_ex03.json
+[2026-06-09 15:12:55.347] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex03#f#-activities-act50side-level_act50side_ex03.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex03#f#-activities-act50side-level_act50side_ex03.json
+[2026-06-09 15:12:55.349] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex03-activities-act50side-level_act50side_ex03.json
+[2026-06-09 15:12:55.351] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex03-activities-act50side-level_act50side_ex03.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex03-activities-act50side-level_act50side_ex03.json
+[2026-06-09 15:12:55.352] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex04#f#-activities-act50side-level_act50side_ex04.json
+[2026-06-09 15:12:55.352] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex04#f#-activities-act50side-level_act50side_ex04.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex04#f#-activities-act50side-level_act50side_ex04.json
+[2026-06-09 15:12:55.354] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex04-activities-act50side-level_act50side_ex04.json
+[2026-06-09 15:12:55.355] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex04-activities-act50side-level_act50side_ex04.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex04-activities-act50side-level_act50side_ex04.json
+[2026-06-09 15:12:55.356] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex05#f#-activities-act50side-level_act50side_ex05.json
+[2026-06-09 15:12:55.358] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex05#f#-activities-act50side-level_act50side_ex05.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex05#f#-activities-act50side-level_act50side_ex05.json
+[2026-06-09 15:12:55.360] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex05-activities-act50side-level_act50side_ex05.json
+[2026-06-09 15:12:55.362] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex05-activities-act50side-level_act50side_ex05.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex05-activities-act50side-level_act50side_ex05.json
+[2026-06-09 15:12:55.363] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex06#f#-activities-act50side-level_act50side_ex06.json
+[2026-06-09 15:12:55.364] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex06#f#-activities-act50side-level_act50side_ex06.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex06#f#-activities-act50side-level_act50side_ex06.json
+[2026-06-09 15:12:55.366] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex06-activities-act50side-level_act50side_ex06.json
+[2026-06-09 15:12:55.367] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex06-activities-act50side-level_act50side_ex06.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex06-activities-act50side-level_act50side_ex06.json
+[2026-06-09 15:12:55.368] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex07#f#-activities-act50side-level_act50side_ex07.json
+[2026-06-09 15:12:55.369] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex07#f#-activities-act50side-level_act50side_ex07.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex07#f#-activities-act50side-level_act50side_ex07.json
+[2026-06-09 15:12:55.371] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex07-activities-act50side-level_act50side_ex07.json
+[2026-06-09 15:12:55.372] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex07-activities-act50side-level_act50side_ex07.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex07-activities-act50side-level_act50side_ex07.json
+[2026-06-09 15:12:55.374] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex08#f#-activities-act50side-level_act50side_ex08.json
+[2026-06-09 15:12:55.374] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex08#f#-activities-act50side-level_act50side_ex08.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex08#f#-activities-act50side-level_act50side_ex08.json
+[2026-06-09 15:12:55.376] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex08-activities-act50side-level_act50side_ex08.json
+[2026-06-09 15:12:55.377] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_ex08-activities-act50side-level_act50side_ex08.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_ex08-activities-act50side-level_act50side_ex08.json
+[2026-06-09 15:12:55.378] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_s01-activities-act50side-level_act50side_sub-1-1.json
+[2026-06-09 15:12:55.379] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\act50side_s01-activities-act50side-level_act50side_sub-1-1.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\act50side_s01-activities-act50side-level_act50side_sub-1-1.json
+[2026-06-09 15:12:55.380] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\overview.json
+[2026-06-09 15:12:55.381] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\Arknights-Tile-Pos\overview.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\Arknights-Tile-Pos\overview.json
+[2026-06-09 15:12:55.383] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\tasks.json
+[2026-06-09 15:12:55.384] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\tasks\tasks.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\tasks.json
+[2026-06-09 15:12:55.385] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\JieGarden.json
+[2026-06-09 15:12:55.386] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\tasks\Roguelike\JieGarden.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\JieGarden.json
+[2026-06-09 15:12:55.388] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\Mizuki.json
+[2026-06-09 15:12:55.389] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\tasks\Roguelike\Mizuki.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\Mizuki.json
+[2026-06-09 15:12:55.390] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\Sami.json
+[2026-06-09 15:12:55.391] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\tasks\Roguelike\Sami.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\Sami.json
+[2026-06-09 15:12:55.393] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\Sarkaz.json
+[2026-06-09 15:12:55.394] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\tasks\Roguelike\Sarkaz.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\Roguelike\Sarkaz.json
+[2026-06-09 15:12:55.395] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\tasks\UiTheme\SwitchTheme.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\tasks\UiTheme\SwitchTheme.json
+[2026-06-09 15:12:55.397] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\infrast\Bskill_ctrl_c_spd 1.png
+[2026-06-09 15:12:55.398] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\infrast\Bskill_ctrl_c_spd 1.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\infrast\Bskill_ctrl_c_spd 1.png
+[2026-06-09 15:12:55.400] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\items\act1football_milestone_point.png
+[2026-06-09 15:12:55.401] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\items\act1football_milestone_point.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\items\act1football_milestone_point.png
+[2026-06-09 15:12:55.402] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\MiniGame\GreenTicket@Store@SecondFloor-Check.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\MiniGame\GreenTicket@Store@SecondFloor-Check.png
+[2026-06-09 15:12:55.404] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\txwy\resource\item_index.json
+[2026-06-09 15:12:55.405] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\txwy\resource\item_index.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\txwy\resource\item_index.json
+[2026-06-09 15:12:55.407] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\txwy\resource\version.json
+[2026-06-09 15:12:55.408] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\txwy\resource\version.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\txwy\resource\version.json
+[2026-06-09 15:12:55.409] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarEN\resource\version.json
+[2026-06-09 15:12:55.410] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\YoStarEN\resource\version.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarEN\resource\version.json
+[2026-06-09 15:12:55.413] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarJP\resource\version.json
+[2026-06-09 15:12:55.414] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\YoStarJP\resource\version.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarJP\resource\version.json
+[2026-06-09 15:12:55.415] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarKR\resource\version.json
+[2026-06-09 15:12:55.416] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\YoStarKR\resource\version.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarKR\resource\version.json
+[2026-06-09 15:12:55.418] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\platform_diff\iOS\resource\tasks.json
+[2026-06-09 15:12:55.419] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\platform_diff\iOS\resource\tasks.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\platform_diff\iOS\resource\tasks.json
+[2026-06-09 15:12:55.421] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\DepotEnter.png
+[2026-06-09 15:12:55.422] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\DepotEnter.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\DepotEnter.png
+[2026-06-09 15:12:55.424] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\EnterInfrast.png
+[2026-06-09 15:12:55.425] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\EnterInfrast.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\EnterInfrast.png
+[2026-06-09 15:12:55.427] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Friends.png
+[2026-06-09 15:12:55.428] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\Friends.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Friends.png
+[2026-06-09 15:12:55.431] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\GachaEnter.png
+[2026-06-09 15:12:55.432] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\GachaEnter.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\GachaEnter.png
+[2026-06-09 15:12:55.433] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Mall.png
+[2026-06-09 15:12:55.434] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\Mall.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Mall.png
+[2026-06-09 15:12:55.436] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\OperBoxEnter.png
+[2026-06-09 15:12:55.437] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\OperBoxEnter.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\OperBoxEnter.png
+[2026-06-09 15:12:55.439] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Recruit.png
+[2026-06-09 15:12:55.440] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\Recruit.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Recruit.png
+[2026-06-09 15:12:55.442] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Task.png
+[2026-06-09 15:12:55.443] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\Task.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Task.png
+[2026-06-09 15:12:55.445] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Terminal.png
+[2026-06-09 15:12:55.446] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\UiTheme\Hunting\Terminal.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\UiTheme\Hunting\Terminal.png
+[2026-06-09 15:12:55.448] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-6.png
+[2026-06-09 15:12:55.449] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\StageNavigation\SideStory\TD\TD-6.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-6.png
+[2026-06-09 15:12:55.451] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-7.png
+[2026-06-09 15:12:55.452] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\StageNavigation\SideStory\TD\TD-7.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-7.png
+[2026-06-09 15:12:55.455] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-8.png
+[2026-06-09 15:12:55.456] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\StageNavigation\SideStory\TD\TD-8.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-8.png
+[2026-06-09 15:12:55.457] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-Open.png
+[2026-06-09 15:12:55.458] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\StageNavigation\SideStory\TD\TD-Open.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TD-Open.png
+[2026-06-09 15:12:55.461] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TDChapterToTD.png
+[2026-06-09 15:12:55.462] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\template\StageNavigation\SideStory\TD\TDChapterToTD.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\template\StageNavigation\SideStory\TD\TDChapterToTD.png
+[2026-06-09 15:12:55.463] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarKR\resource\tasks\Roguelike\JieGarden.json
+[2026-06-09 15:12:55.464] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\YoStarKR\resource\tasks\Roguelike\JieGarden.json -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarKR\resource\tasks\Roguelike\JieGarden.json
+[2026-06-09 15:12:55.467] Backing up existing entry: D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarEN\resource\template\Roguelike\JieGarden\JieGarden@Roguelike@ClickRemainingCandleFlame.png
+[2026-06-09 15:12:55.468] Installing new file: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract\resource\global\YoStarEN\resource\template\Roguelike\JieGarden\JieGarden@Roguelike@ClickRemainingCandleFlame.png -> D:\1-2\MAAOrch\services\maa\v6.11.1\resource\global\YoStarEN\resource\template\Roguelike\JieGarden\JieGarden@Roguelike@ClickRemainingCandleFlame.png
+[2026-06-09 15:12:55.471] Deleted update package: MAAComponent-OTA-v6.11.1_v6.12.0-beta.1-win-x64.zip
+[2026-06-09 15:12:55.473] Wrote success status file: D:\1-2\MAAOrch\services\maa\v6.11.1\pending-update-success.txt
+[2026-06-09 15:12:55.473] Cleaning extract directory: D:\1-2\MAAOrch\services\maa\v6.11.1\NewVersionExtract
+[2026-06-09 15:12:55.479] Relaunching MAA: D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.exe
+[2026-06-09 15:12:55.513] Relaunch succeeded.
+[2026-06-09 15:12:55.513] MAA.Updater exiting.

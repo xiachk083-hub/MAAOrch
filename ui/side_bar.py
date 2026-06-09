@@ -20,6 +20,7 @@ def build_side_bar(mw: Any) -> QFrame:
     hdr.setStyleSheet("font-weight:bold;font-size:10pt;color:#666;padding:6px 4px 8px 4px;border-radius:4px")
     hdr.setCursor(Qt.PointingHandCursor)
     hdr.mousePressEvent = lambda e: _filter_click(mw, "")
+    mw._overview_header = hdr
 
     # Status filter items
     status_items = [
@@ -74,6 +75,14 @@ def _filter_click(mw: Any, key: str) -> None:
     if hasattr(mw, '_set_smart_filter'):
         mw._set_smart_filter(key)
     active = getattr(mw, '_smart_filter', '')
+
+    # Highlight overview header when active (no filter)
+    ov = getattr(mw, '_overview_header', None)
+    if ov:
+        if not active:
+            ov.setStyleSheet("font-weight:bold;font-size:10pt;color:#e6e6e6;padding:6px 4px 8px 4px;border-radius:4px;background:#49820515")
+        else:
+            ov.setStyleSheet("font-weight:bold;font-size:10pt;color:#666;padding:6px 4px 8px 4px;border-radius:4px;background:transparent")
 
     for k in mw._side_labels:
         lbl = mw._side_labels[k]

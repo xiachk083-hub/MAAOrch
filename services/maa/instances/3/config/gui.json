@@ -1,0 +1,50 @@
+{
+  "Configurations": {
+    "Default": {
+      "Connect.AdbLiteEnabled": "False",
+      "Connect.AdbPath": "",
+      "Connect.Address": "",
+      "Connect.AllowADBHardRestart": "True",
+      "Connect.AllowADBRestart": "True",
+      "Connect.AlwaysAutoDetect": "False",
+      "Connect.AutoDetect": "True",
+      "Connect.ConnectConfig": "General",
+      "Connect.KillAdbOnExit": "False",
+      "Connect.LdPlayerEmulatorPath": "",
+      "Connect.LdPlayerExtras.Enabled": "False",
+      "Connect.LdPlayerIndex": "0",
+      "Connect.LdPlayerManualSetIndex": "False",
+      "Connect.MuMu12EmulatorPath": "",
+      "Connect.MuMu12Extras.Enabled": "False",
+      "Connect.MuMu12Index": "0",
+      "Connect.MumuBridgeConnection": "False",
+      "Connect.RetryOnDisconnected": "False",
+      "Penguin.EnablePenguin": "True",
+      "Penguin.Id": "",
+      "Roguelike.DeploymentWithPause": "False",
+      "Start.BlockSleep": "False",
+      "Start.BlockSleepWithScreenOn": "True",
+      "Start.ClientType": "Official",
+      "Start.CopilotWithScript": "False",
+      "Start.EndsWithScript": "",
+      "Start.ManualStopWithScript": "False",
+      "Start.StartGame": "True",
+      "Start.StartsWithScript": "",
+      "TimeOut.Timer.ReminderIntervalMinutes": "30",
+      "TimeOut.Timer.StallTimeoutEnabled": "True",
+      "TimeOut.Timer.StallTimeoutMinutes": "25",
+      "Yituliu.EnableYituliu": "True"
+    }
+  },
+  "Current": "Default",
+  "Global": {
+    "GUI.CustomCulture": "",
+    "GUI.Localization": "zh-cn",
+    "GUI.MinimizeToTray": "False",
+    "GUI.Placement.Load": "True",
+    "GUI.Placement.SaveOnClosing": "True",
+    "Start.MinimizeDirectly": "False",
+    "VersionUpdate.name": "",
+    "VersionUpdate.package": ""
+  }
+}

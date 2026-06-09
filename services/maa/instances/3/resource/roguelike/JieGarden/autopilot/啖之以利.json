@@ -1,0 +1,76 @@
+{
+    "stage_name": "啖之以利",
+    "replacement_home": [
+        {
+            "location": [4, 6],
+            "direction": "left"
+        }
+    ],
+    "blacklist_location": [
+        [3, 6],
+        [4, 6],
+        [5, 6]
+    ],
+    "deploy_plan": [
+        {
+            "groups": ["召唤"],
+            "location": [2, 5],
+            "direction": "right"
+        },
+        {
+            "groups": ["炮灰", "处决者"],
+            "location": [6, 1],
+            "direction": "right"
+        },
+        {
+            "groups": ["新能"],
+            "location": [2, 2],
+            "direction": "right"
+        },
+        {
+            "groups": ["益达", "高台输出"],
+            "location": [6, 5],
+            "direction": "left"
+        },
+        {
+            "groups": ["炮灰", "处决者"],
+            "location": [5, 1],
+            "direction": "right"
+        },
+        {
+            "groups": ["玛恩纳", "领主", "情报官", "地面远程"],
+            "location": [2, 1],
+            "direction": "right"
+        },
+        {
+            "groups": ["辅助", "阵法术师"],
+            "location": [6, 2],
+            "direction": "left"
+        },
+        {
+            "groups": ["高台输出"],
+            "location": [2, 4],
+            "direction": "right"
+        },
+        {
+            "groups": ["地面阻挡", "回费", "处决者", "其他地面"],
+            "location": [3, 5],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面阻挡", "回费", "处决者", "其他地面"],
+            "location": [4, 5],
+            "direction": "up"
+        },
+        {
+            "groups": ["地面阻挡", "回费", "处决者", "其他地面"],
+            "location": [5, 5],
+            "direction": "up"
+        },
+        {
+            "groups": ["补给站"],
+            "location": [1, 5],
+            "direction": "right"
+        }
+    ]
+}

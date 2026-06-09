@@ -1,0 +1,92 @@
+{
+    "stage_name": "落叶归根",
+    "replacement_home": [
+        {
+            "location": [4, 1],
+            "direction": "down"
+        }
+    ],
+    "blacklist_location": [
+        [4, 4],
+        [5, 6],
+        [6, 2],
+        [8, 2]
+    ],
+    "deploy_plan": [
+        {
+            "groups": ["回费"],
+            "location": [3, 1],
+            "direction": "down"
+        },
+        {
+            "groups": ["召唤", "辅助"],
+            "location": [2, 1],
+            "direction": "down"
+        },
+        {
+            "groups": ["益达", "焰苇", "高台输出"],
+            "location": [10, 2],
+            "direction": "left"
+        },
+        {
+            "groups": ["鱼", "地面远程", "地面阻挡", "其他地面"],
+            "location": [1, 4],
+            "direction": "right"
+        },
+        {
+            "groups": ["鱼"],
+            "location": [9, 3],
+            "direction": "down"
+        },
+        {
+            "groups": ["鱼"],
+            "location": [3, 6],
+            "direction": "right"
+        },
+        {
+            "groups": ["鱼"],
+            "location": [10, 6],
+            "direction": "left"
+        },
+        {
+            "groups": ["处决者"],
+            "location": [7, 5],
+            "direction": "down"
+        },
+        {
+            "groups": ["鱼", "地面远程", "地面阻挡", "其他地面"],
+            "location": [10, 5],
+            "direction": "left"
+        },
+        {
+            "groups": ["鱼"],
+            "location": [7, 4],
+            "direction": "down"
+        },
+        {
+            "groups": ["高台输出"],
+            "location": [3, 3],
+            "direction": "right"
+        },
+        {
+            "groups": ["玛恩纳", "地面远程", "重装", "地面阻挡", "回费", "处决者", "其他地面"],
+            "location": [3, 2],
+            "direction": "down"
+        },
+        {
+            "groups": ["玛恩纳", "地面远程", "重装", "地面阻挡", "回费", "处决者", "其他地面"],
+            "location": [9, 1],
+            "direction": "down"
+        },
+        {
+            "groups": ["奶", "高台输出"],
+            "location": [1, 1],
+            "direction": "down"
+        },
+        {
+            "groups": ["补给站"],
+            "location": [2, 2],
+            "direction": "up"
+        }
+    ]
+}

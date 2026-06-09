@@ -215,6 +215,7 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
 
     # Name
     nm = QLabel(a.get("name", ""))
+    nm.setObjectName("accountName")
     nm.setStyleSheet("color:#ccc;font-size:9pt;font-weight:500")
     hl.addWidget(nm, 1)
 
@@ -299,15 +300,13 @@ def _get_selected(mw: Any) -> list[str]:
     for row_w in mw._list_rows:
         cb = row_w.findChild(QCheckBox)
         if cb and cb.isChecked():
-            # Find name label to get account
-            for lbl in row_w.findChildren(QLabel):
-                txt = lbl.text().strip()
-                if txt and not any(c in txt for c in "▶⏳✕⏸—"):
-                    for a in mw.accounts:
-                        if a.get("name") == txt:
-                            selected.append(a.get("id", ""))
-                            break
-                    break
+            nm = row_w.findChild(QLabel, "accountName")
+            if nm:
+                txt = nm.text().strip()
+                for a in mw.accounts:
+                    if a.get("name") == txt:
+                        selected.append(a.get("id", ""))
+                        break
     return selected
 
 

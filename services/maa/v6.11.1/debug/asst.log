@@ -1,0 +1,1199 @@
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] -----------------------------
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] MaaCore Process Start
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] Version v6.11.1
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] Built at Jun  1 2026 21:34:46
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] User Dir D:\1-2\MAAOrch\services\maa\v6.11.1\
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] -----------------------------
+[2026-06-09 15:10:56.816][TRC][Px24456][Tx46046] asst::ResourceLoader::load | enter
+[2026-06-09 15:10:56.844][TRC][Px24456][Tx46046] asst::OnnxSessions::load | enter
+[2026-06-09 15:10:56.844][INF][Px24456][Tx46046] record path resource\onnx\skill_ready_cls.onnx
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OnnxSessions::load | leave, 7 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OnnxSessions::load | enter
+[2026-06-09 15:10:56.852][INF][Px24456][Tx46046] record path resource\onnx\deploy_direction_cls.onnx
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OnnxSessions::load | enter
+[2026-06-09 15:10:56.852][INF][Px24456][Tx46046] record path resource\onnx\operators_det.onnx
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::OcrPack | enter
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::OcrPack | leave, 0 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::load | enter
+[2026-06-09 15:10:56.852][INF][Px24456][Tx46046] load resource\PaddleOCR
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::OcrPack | enter
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::OcrPack | leave, 0 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::load | enter
+[2026-06-09 15:10:56.852][INF][Px24456][Tx46046] load resource\PaddleCharOCR
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:10:56.852][TRC][Px24456][Tx46046] asst::GeneralConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:56.859][TRC][Px24456][Tx46046] asst::GeneralConfig::parse | enter
+[2026-06-09 15:10:56.860][TRC][Px24456][Tx46046] asst::GeneralConfig::parse | leave, 0 ms
+[2026-06-09 15:10:56.860][TRC][Px24456][Tx46046] asst::GeneralConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:10:56.860][TRC][Px24456][Tx46046] asst::RecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:56.860][TRC][Px24456][Tx46046] asst::RecruitConfig::parse | enter
+[2026-06-09 15:10:56.860][TRC][Px24456][Tx46046] asst::RecruitConfig::clear | enter
+[2026-06-09 15:10:56.860][TRC][Px24456][Tx46046] asst::RecruitConfig::clear | leave, 0 ms
+[2026-06-09 15:10:56.861][TRC][Px24456][Tx46046] asst::RecruitConfig::parse | leave, 0 ms
+[2026-06-09 15:10:56.861][TRC][Px24456][Tx46046] asst::RecruitConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:10:56.861][TRC][Px24456][Tx46046] asst::BattleDataConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:56.871][TRC][Px24456][Tx46046] asst::BattleDataConfig::parse | enter
+[2026-06-09 15:10:56.874][TRC][Px24456][Tx46046] asst::BattleDataConfig::parse | leave, 3 ms
+[2026-06-09 15:10:56.875][TRC][Px24456][Tx46046] asst::BattleDataConfig :: asst::AbstractConfig::load | leave, 13 ms
+[2026-06-09 15:10:56.875][TRC][Px24456][Tx46046] asst::OcrConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:56.883][TRC][Px24456][Tx46046] asst::OcrConfig::parse | enter
+[2026-06-09 15:10:56.883][TRC][Px24456][Tx46046] asst::OcrConfig::parse | leave, 0 ms
+[2026-06-09 15:10:56.883][TRC][Px24456][Tx46046] asst::OcrConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:10:56.883][TRC][Px24456][Tx46046] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:10:56.883][INF][Px24456][Tx46046] load cache\avatars
+[2026-06-09 15:10:56.884][TRC][Px24456][Tx46046] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:10:56.884][TRC][Px24456][Tx28986] asst::AvatarCacheManager::_load | enter
+[2026-06-09 15:10:56.884][TRC][Px24456][Tx28986] asst::AvatarCacheManager::_load | leave, 0 ms
+[2026-06-09 15:10:56.884][TRC][Px24456][Tx46046] TaskData::load | enter
+[2026-06-09 15:10:57.480][TRC][Px24456][Tx46046] asst::TaskData::parse | enter
+[2026-06-09 15:10:57.480][TRC][Px24456][Tx46046] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:10:57.488][TRC][Px24456][Tx46046] asst::TaskData::lazy_parse | leave, 8 ms
+[2026-06-09 15:10:57.606][TRC][Px24456][Tx46046] asst::TaskData::parse | leave, 126 ms
+[2026-06-09 15:10:57.613][TRC][Px24456][Tx46046] TaskData::load | leave, 729 ms
+[2026-06-09 15:10:57.614][TRC][Px24456][Tx46046] asst::TemplResource::load | enter
+[2026-06-09 15:10:57.614][INF][Px24456][Tx46046] load resource\template
+[2026-06-09 15:10:57.657][TRC][Px24456][Tx46046] asst::TemplResource::load | leave, 43 ms
+[2026-06-09 15:10:57.657][TRC][Px24456][Tx46046] asst::InfrastConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:57.668][TRC][Px24456][Tx46046] asst::InfrastConfig::parse | enter
+[2026-06-09 15:10:57.671][TRC][Px24456][Tx46046] asst::InfrastConfig::parse | leave, 2 ms
+[2026-06-09 15:10:57.671][TRC][Px24456][Tx46046] asst::InfrastConfig :: asst::AbstractConfig::load | leave, 13 ms
+[2026-06-09 15:10:57.671][TRC][Px24456][Tx46046] asst::TemplResource::load | enter
+[2026-06-09 15:10:57.671][INF][Px24456][Tx46046] load resource\template\infrast
+[2026-06-09 15:10:57.673][TRC][Px24456][Tx46046] asst::TemplResource::load | leave, 1 ms
+[2026-06-09 15:10:57.673][TRC][Px24456][Tx46046] asst::ItemConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:57.675][TRC][Px24456][Tx46046] asst::ItemConfig::parse | enter
+[2026-06-09 15:10:57.675][TRC][Px24456][Tx46046] asst::ItemConfig::parse | leave, 0 ms
+[2026-06-09 15:10:57.676][TRC][Px24456][Tx46046] asst::ItemConfig :: asst::AbstractConfig::load | leave, 2 ms
+[2026-06-09 15:10:57.676][TRC][Px24456][Tx46046] asst::TemplResource::load | enter
+[2026-06-09 15:10:57.676][INF][Px24456][Tx46046] load resource\template\items
+[2026-06-09 15:10:57.678][TRC][Px24456][Tx46046] asst::TemplResource::load | leave, 2 ms
+[2026-06-09 15:10:57.678][TRC][Px24456][Tx46046] asst::StageDropsConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:57.697][TRC][Px24456][Tx46046] asst::StageDropsConfig::parse | enter
+[2026-06-09 15:10:57.705][TRC][Px24456][Tx46046] asst::StageDropsConfig::parse | leave, 7 ms
+[2026-06-09 15:10:57.708][TRC][Px24456][Tx46046] asst::StageDropsConfig :: asst::AbstractConfig::load | leave, 28 ms
+[2026-06-09 15:10:57.708][TRC][Px24456][Tx46046] asst::TilePack :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:57.721][TRC][Px24456][Tx46046] asst::TilePack::parse | enter
+[2026-06-09 15:10:57.726][TRC][Px24456][Tx46046] asst::TilePack::parse | leave, 5 ms
+[2026-06-09 15:10:57.729][TRC][Px24456][Tx46046] asst::TilePack :: asst::AbstractConfig::load | leave, 22 ms
+[2026-06-09 15:10:57.731][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:10:58.116][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | leave, 385 ms
+[2026-06-09 15:10:58.116][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:10:58.510][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | leave, 394 ms
+[2026-06-09 15:10:58.510][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:10:58.937][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | leave, 426 ms
+[2026-06-09 15:10:58.937][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:10:59.156][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | leave, 219 ms
+[2026-06-09 15:10:59.156][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:10:59.415][TRC][Px24456][Tx46046] asst::RoguelikeCopilotConfig::load | leave, 259 ms
+[2026-06-09 15:10:59.415][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.426][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:10:59.429][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:10:59.429][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 13 ms
+[2026-06-09 15:10:59.429][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.442][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:10:59.444][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | leave, 3 ms
+[2026-06-09 15:10:59.446][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 16 ms
+[2026-06-09 15:10:59.446][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.525][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:10:59.527][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:10:59.527][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 81 ms
+[2026-06-09 15:10:59.527][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.537][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:10:59.540][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:10:59.540][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 12 ms
+[2026-06-09 15:10:59.540][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.541][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:10:59.543][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:10:59.543][TRC][Px24456][Tx46046] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:10:59.544][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.550][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:10:59.551][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.551][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:10:59.551][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.557][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:10:59.557][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.557][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.557][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.563][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:10:59.563][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.563][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.565][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.571][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:10:59.571][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.571][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:10:59.571][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.578][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:10:59.578][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.578][TRC][Px24456][Tx46046] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.578][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.584][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.584][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.584][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.585][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.591][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.591][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.591][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.591][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.599][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.599][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.599][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:10:59.599][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.605][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.605][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.605][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.605][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.611][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.612][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.612][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.612][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.618][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.618][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.618][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.618][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.624][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.624][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.624][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.624][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.631][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.632][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.632][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:10:59.632][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.638][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:10:59.638][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.638][TRC][Px24456][Tx46046] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.638][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.645][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:10:59.645][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.645][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.645][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.652][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:10:59.652][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.652][TRC][Px24456][Tx46046] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.652][TRC][Px24456][Tx46046] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.658][TRC][Px24456][Tx46046] asst::RoguelikeFoldartalConfig::parse | enter
+[2026-06-09 15:10:59.658][TRC][Px24456][Tx46046] asst::RoguelikeFoldartalConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.658][TRC][Px24456][Tx46046] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.658][TRC][Px24456][Tx46046] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.665][TRC][Px24456][Tx46046] asst::RoguelikeCollapsalParadigmConfig::parse | enter
+[2026-06-09 15:10:59.665][TRC][Px24456][Tx46046] asst::RoguelikeCollapsalParadigmConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.665][TRC][Px24456][Tx46046] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.665][TRC][Px24456][Tx46046] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::RoguelikeCoppersConfig::parse | enter
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::RoguelikeCoppersConfig::parse | leave, 0 ms
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | leave, 6 ms
+[2026-06-09 15:10:59.672][INF][Px24456][Tx46046] asst::ResourceLoader::load ret 1
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::ResourceLoader::load | leave, 2857 ms
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::Assistant::Assistant | enter
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::Controller::Controller | enter
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::Controller::Controller | leave, 0 ms
+[2026-06-09 15:10:59.672][TRC][Px24456][Tx46046] asst::Assistant::Assistant | leave, 0 ms
+[2026-06-09 15:10:59.674][TRC][Px24456][Tx28486] asst::Assistant::msg_proc | enter
+[2026-06-09 15:10:59.674][TRC][Px24456][Tx65152] asst::Assistant::call_proc | enter
+[2026-06-09 15:10:59.674][TRC][Px24456][Tx64318] asst::Assistant::working_proc | enter
+[2026-06-09 15:10:59.677][INF][Px24456][Tx46046] asst::Assistant::set_instance_option | key 2 value minitouch
+[2026-06-09 15:10:59.677][INF][Px24456][Tx46046] asst::Assistant::set_instance_option | key 3 value 0
+[2026-06-09 15:10:59.678][INF][Px24456][Tx46046] skip sync_params, retry when connect
+[2026-06-09 15:10:59.678][INF][Px24456][Tx46046] asst::Assistant::set_instance_option | key 4 value 0
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::ResourceLoader::load | enter
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OnnxSessions::load | enter
+[2026-06-09 15:11:02.773][INF][Px24456][Tx23692] record path resource\onnx\skill_ready_cls.onnx
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OnnxSessions::load | enter
+[2026-06-09 15:11:02.773][INF][Px24456][Tx23692] record path resource\onnx\deploy_direction_cls.onnx
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OnnxSessions::load | enter
+[2026-06-09 15:11:02.773][INF][Px24456][Tx23692] record path resource\onnx\operators_det.onnx
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OcrPack::load | enter
+[2026-06-09 15:11:02.773][INF][Px24456][Tx23692] load resource\PaddleOCR
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OcrPack::load | enter
+[2026-06-09 15:11:02.773][INF][Px24456][Tx23692] load resource\PaddleCharOCR
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:11:02.773][TRC][Px24456][Tx23692] asst::GeneralConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::GeneralConfig::parse | enter
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::GeneralConfig::parse | leave, 0 ms
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::GeneralConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::RecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::RecruitConfig::parse | enter
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::RecruitConfig::clear | enter
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::RecruitConfig::clear | leave, 0 ms
+[2026-06-09 15:11:02.774][TRC][Px24456][Tx23692] asst::RecruitConfig::parse | leave, 0 ms
+[2026-06-09 15:11:02.775][TRC][Px24456][Tx23692] asst::RecruitConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:02.775][TRC][Px24456][Tx23692] asst::BattleDataConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.782][TRC][Px24456][Tx23692] asst::BattleDataConfig::parse | enter
+[2026-06-09 15:11:02.786][TRC][Px24456][Tx23692] asst::BattleDataConfig::parse | leave, 4 ms
+[2026-06-09 15:11:02.787][TRC][Px24456][Tx23692] asst::BattleDataConfig :: asst::AbstractConfig::load | leave, 12 ms
+[2026-06-09 15:11:02.787][TRC][Px24456][Tx23692] asst::OcrConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.787][TRC][Px24456][Tx23692] asst::OcrConfig::parse | enter
+[2026-06-09 15:11:02.787][TRC][Px24456][Tx23692] asst::OcrConfig::parse | leave, 0 ms
+[2026-06-09 15:11:02.787][TRC][Px24456][Tx23692] asst::OcrConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:02.787][TRC][Px24456][Tx23692] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:11:02.788][INF][Px24456][Tx23692] already loaded cache\avatars
+[2026-06-09 15:11:02.788][TRC][Px24456][Tx23692] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:11:02.788][TRC][Px24456][Tx23692] TaskData::load | enter
+[2026-06-09 15:11:02.812][TRC][Px24456][Tx23692] asst::TaskData::parse | enter
+[2026-06-09 15:11:02.812][TRC][Px24456][Tx23692] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:11:02.822][TRC][Px24456][Tx23692] asst::TaskData::lazy_parse | leave, 10 ms
+[2026-06-09 15:11:02.914][TRC][Px24456][Tx23692] asst::TaskData::parse | leave, 102 ms
+[2026-06-09 15:11:02.920][TRC][Px24456][Tx23692] TaskData::load | leave, 132 ms
+[2026-06-09 15:11:02.921][TRC][Px24456][Tx23692] asst::TemplResource::load | enter
+[2026-06-09 15:11:02.921][INF][Px24456][Tx23692] load resource\template
+[2026-06-09 15:11:02.952][TRC][Px24456][Tx23692] asst::TemplResource::load | leave, 31 ms
+[2026-06-09 15:11:02.952][TRC][Px24456][Tx23692] asst::InfrastConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.954][TRC][Px24456][Tx23692] asst::InfrastConfig::parse | enter
+[2026-06-09 15:11:02.956][TRC][Px24456][Tx23692] asst::InfrastConfig::parse | leave, 1 ms
+[2026-06-09 15:11:02.956][TRC][Px24456][Tx23692] asst::InfrastConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:02.956][TRC][Px24456][Tx23692] asst::TemplResource::load | enter
+[2026-06-09 15:11:02.956][INF][Px24456][Tx23692] load resource\template\infrast
+[2026-06-09 15:11:02.958][TRC][Px24456][Tx23692] asst::TemplResource::load | leave, 1 ms
+[2026-06-09 15:11:02.958][TRC][Px24456][Tx23692] asst::ItemConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.959][TRC][Px24456][Tx23692] asst::ItemConfig::parse | enter
+[2026-06-09 15:11:02.959][TRC][Px24456][Tx23692] asst::ItemConfig::parse | leave, 0 ms
+[2026-06-09 15:11:02.960][TRC][Px24456][Tx23692] asst::ItemConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:11:02.960][TRC][Px24456][Tx23692] asst::TemplResource::load | enter
+[2026-06-09 15:11:02.960][INF][Px24456][Tx23692] load resource\template\items
+[2026-06-09 15:11:02.961][TRC][Px24456][Tx23692] asst::TemplResource::load | leave, 2 ms
+[2026-06-09 15:11:02.963][TRC][Px24456][Tx23692] asst::StageDropsConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.968][TRC][Px24456][Tx23692] asst::StageDropsConfig::parse | enter
+[2026-06-09 15:11:02.973][TRC][Px24456][Tx23692] asst::StageDropsConfig::parse | leave, 4 ms
+[2026-06-09 15:11:02.974][TRC][Px24456][Tx23692] asst::StageDropsConfig :: asst::AbstractConfig::load | leave, 12 ms
+[2026-06-09 15:11:02.974][TRC][Px24456][Tx23692] asst::TilePack :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:02.985][TRC][Px24456][Tx23692] asst::TilePack::parse | enter
+[2026-06-09 15:11:02.990][TRC][Px24456][Tx23692] asst::TilePack::parse | leave, 4 ms
+[2026-06-09 15:11:02.993][TRC][Px24456][Tx23692] asst::TilePack :: asst::AbstractConfig::load | leave, 18 ms
+[2026-06-09 15:11:02.993][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:02.998][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | leave, 5 ms
+[2026-06-09 15:11:02.998][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:03.004][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:11:03.004][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:03.012][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:11:03.012][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:03.016][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | leave, 3 ms
+[2026-06-09 15:11:03.016][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:03.020][TRC][Px24456][Tx23692] asst::RoguelikeCopilotConfig::load | leave, 4 ms
+[2026-06-09 15:11:03.020][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.021][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:03.023][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:03.024][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:03.024][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.024][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:03.026][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | leave, 1 ms
+[2026-06-09 15:11:03.026][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:03.026][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.028][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:03.029][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:03.029][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:03.029][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.031][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:03.035][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:03.035][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:11:03.035][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.036][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:03.039][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:03.039][TRC][Px24456][Tx23692] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:11:03.039][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.040][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.041][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.042][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.043][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.044][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeFoldartalConfig::parse | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeFoldartalConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCollapsalParadigmConfig::parse | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCollapsalParadigmConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCoppersConfig::parse | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCoppersConfig::parse | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:03.046][INF][Px24456][Tx23692] asst::ResourceLoader::load ret 1
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::ResourceLoader::load | leave, 272 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::ResourceLoader::load | enter
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:11:03.046][INF][Px24456][Tx23692] already loaded cache\avatars
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:11:03.046][TRC][Px24456][Tx23692] TaskData::load | enter
+[2026-06-09 15:11:03.052][TRC][Px24456][Tx23692] asst::TaskData::parse | enter
+[2026-06-09 15:11:03.052][TRC][Px24456][Tx23692] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:11:03.057][TRC][Px24456][Tx23692] asst::TaskData::lazy_parse | leave, 3 ms
+[2026-06-09 15:11:03.132][TRC][Px24456][Tx23692] asst::TaskData::parse | leave, 79 ms
+[2026-06-09 15:11:03.132][TRC][Px24456][Tx23692] TaskData::load | leave, 85 ms
+[2026-06-09 15:11:03.133][INF][Px24456][Tx23692] asst::ResourceLoader::load ret 1
+[2026-06-09 15:11:03.133][TRC][Px24456][Tx23692] asst::ResourceLoader::load | leave, 86 ms
+[2026-06-09 15:11:37.822][TRC][Px24456][Tx62613] asst::OcrPack::~OcrPack | enter
+[2026-06-09 15:11:37.822][TRC][Px24456][Tx62613] asst::OcrPack::~OcrPack | leave, 0 ms
+[2026-06-09 15:11:37.822][TRC][Px24456][Tx62613] asst::OcrPack::~OcrPack | enter
+[2026-06-09 15:11:37.822][TRC][Px24456][Tx62613] asst::OcrPack::~OcrPack | leave, 0 ms
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] -----------------------------
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] MaaCore Process Start
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] Version v6.11.1
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] Built at Jun  1 2026 21:34:46
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] User Dir D:\1-2\MAAOrch\services\maa\v6.11.1\
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] -----------------------------
+[2026-06-09 15:11:40.082][INF][Px25272][Tx37392] AsstExtAPI::set_static_option | key 2 value 0
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] asst::OcrPack::OcrPack | enter
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] asst::OcrPack::OcrPack | leave, 0 ms
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] asst::OcrPack::OcrPack | enter
+[2026-06-09 15:11:40.082][TRC][Px25272][Tx37392] asst::OcrPack::OcrPack | leave, 0 ms
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::ResourceLoader::load | enter
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OnnxSessions::load | enter
+[2026-06-09 15:11:40.261][INF][Px25272][Tx37392] record path resource\onnx\skill_ready_cls.onnx
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OnnxSessions::load | enter
+[2026-06-09 15:11:40.261][INF][Px25272][Tx37392] record path resource\onnx\deploy_direction_cls.onnx
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OnnxSessions::load | enter
+[2026-06-09 15:11:40.261][INF][Px25272][Tx37392] record path resource\onnx\operators_det.onnx
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OcrPack::load | enter
+[2026-06-09 15:11:40.261][INF][Px25272][Tx37392] load resource\PaddleOCR
+[2026-06-09 15:11:40.261][TRC][Px25272][Tx37392] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::OcrPack::load | enter
+[2026-06-09 15:11:40.262][INF][Px25272][Tx37392] load resource\PaddleCharOCR
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::GeneralConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::GeneralConfig::parse | enter
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::GeneralConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::GeneralConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::RecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::RecruitConfig::parse | enter
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::RecruitConfig::clear | enter
+[2026-06-09 15:11:40.262][TRC][Px25272][Tx37392] asst::RecruitConfig::clear | leave, 0 ms
+[2026-06-09 15:11:40.263][TRC][Px25272][Tx37392] asst::RecruitConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.263][TRC][Px25272][Tx37392] asst::RecruitConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.263][TRC][Px25272][Tx37392] asst::BattleDataConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.268][TRC][Px25272][Tx37392] asst::BattleDataConfig::parse | enter
+[2026-06-09 15:11:40.272][TRC][Px25272][Tx37392] asst::BattleDataConfig::parse | leave, 3 ms
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::BattleDataConfig :: asst::AbstractConfig::load | leave, 10 ms
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::OcrConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::OcrConfig::parse | enter
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::OcrConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::OcrConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:11:40.273][INF][Px25272][Tx37392] load cache\avatars
+[2026-06-09 15:11:40.273][TRC][Px25272][Tx37392] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:11:40.274][TRC][Px25272][Tx48612] asst::AvatarCacheManager::_load | enter
+[2026-06-09 15:11:40.274][TRC][Px25272][Tx48612] asst::AvatarCacheManager::_load | leave, 0 ms
+[2026-06-09 15:11:40.274][TRC][Px25272][Tx37392] TaskData::load | enter
+[2026-06-09 15:11:40.296][TRC][Px25272][Tx37392] asst::TaskData::parse | enter
+[2026-06-09 15:11:40.296][TRC][Px25272][Tx37392] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:11:40.303][TRC][Px25272][Tx37392] asst::TaskData::lazy_parse | leave, 7 ms
+[2026-06-09 15:11:40.384][TRC][Px25272][Tx37392] asst::TaskData::parse | leave, 88 ms
+[2026-06-09 15:11:40.389][TRC][Px25272][Tx37392] TaskData::load | leave, 115 ms
+[2026-06-09 15:11:40.390][TRC][Px25272][Tx37392] asst::TemplResource::load | enter
+[2026-06-09 15:11:40.390][INF][Px25272][Tx37392] load resource\template
+[2026-06-09 15:11:40.423][TRC][Px25272][Tx37392] asst::TemplResource::load | leave, 32 ms
+[2026-06-09 15:11:40.423][TRC][Px25272][Tx37392] asst::InfrastConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.424][TRC][Px25272][Tx37392] asst::InfrastConfig::parse | enter
+[2026-06-09 15:11:40.426][TRC][Px25272][Tx37392] asst::InfrastConfig::parse | leave, 1 ms
+[2026-06-09 15:11:40.426][TRC][Px25272][Tx37392] asst::InfrastConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:40.426][TRC][Px25272][Tx37392] asst::TemplResource::load | enter
+[2026-06-09 15:11:40.427][INF][Px25272][Tx37392] load resource\template\infrast
+[2026-06-09 15:11:40.428][TRC][Px25272][Tx37392] asst::TemplResource::load | leave, 1 ms
+[2026-06-09 15:11:40.428][TRC][Px25272][Tx37392] asst::ItemConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.429][TRC][Px25272][Tx37392] asst::ItemConfig::parse | enter
+[2026-06-09 15:11:40.430][TRC][Px25272][Tx37392] asst::ItemConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.430][TRC][Px25272][Tx37392] asst::ItemConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:11:40.430][TRC][Px25272][Tx37392] asst::TemplResource::load | enter
+[2026-06-09 15:11:40.430][INF][Px25272][Tx37392] load resource\template\items
+[2026-06-09 15:11:40.433][TRC][Px25272][Tx37392] asst::TemplResource::load | leave, 2 ms
+[2026-06-09 15:11:40.433][TRC][Px25272][Tx37392] asst::StageDropsConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.440][TRC][Px25272][Tx37392] asst::StageDropsConfig::parse | enter
+[2026-06-09 15:11:40.444][TRC][Px25272][Tx37392] asst::StageDropsConfig::parse | leave, 4 ms
+[2026-06-09 15:11:40.447][TRC][Px25272][Tx37392] asst::StageDropsConfig :: asst::AbstractConfig::load | leave, 13 ms
+[2026-06-09 15:11:40.447][TRC][Px25272][Tx37392] asst::TilePack :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.457][TRC][Px25272][Tx37392] asst::TilePack::parse | enter
+[2026-06-09 15:11:40.464][TRC][Px25272][Tx37392] asst::TilePack::parse | leave, 6 ms
+[2026-06-09 15:11:40.469][TRC][Px25272][Tx37392] asst::TilePack :: asst::AbstractConfig::load | leave, 22 ms
+[2026-06-09 15:11:40.469][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:40.475][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:11:40.475][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:40.482][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:11:40.482][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:40.489][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:11:40.489][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:40.492][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | leave, 3 ms
+[2026-06-09 15:11:40.492][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:11:40.497][TRC][Px25272][Tx37392] asst::RoguelikeCopilotConfig::load | leave, 4 ms
+[2026-06-09 15:11:40.497][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.498][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:40.500][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:40.500][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:40.500][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.502][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:40.503][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | leave, 1 ms
+[2026-06-09 15:11:40.503][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 2 ms
+[2026-06-09 15:11:40.503][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.505][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:40.507][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:40.507][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:40.507][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.508][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:40.511][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:40.511][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:40.511][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.512][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:11:40.515][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:11:40.515][TRC][Px25272][Tx37392] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:11:40.515][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.515][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:40.515][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.516][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.517][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.518][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.519][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeFoldartalConfig::parse | enter
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeFoldartalConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.521][TRC][Px25272][Tx37392] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCollapsalParadigmConfig::parse | enter
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCollapsalParadigmConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCoppersConfig::parse | enter
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCoppersConfig::parse | leave, 0 ms
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:11:40.522][INF][Px25272][Tx37392] asst::ResourceLoader::load ret 1
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::ResourceLoader::load | leave, 261 ms
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::ResourceLoader::load | enter
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:11:40.522][INF][Px25272][Tx37392] already loaded cache\avatars
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:11:40.522][TRC][Px25272][Tx37392] TaskData::load | enter
+[2026-06-09 15:11:40.524][TRC][Px25272][Tx37392] asst::TaskData::parse | enter
+[2026-06-09 15:11:40.524][TRC][Px25272][Tx37392] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:11:40.527][TRC][Px25272][Tx37392] asst::TaskData::lazy_parse | leave, 3 ms
+[2026-06-09 15:11:40.602][TRC][Px25272][Tx37392] asst::TaskData::parse | leave, 78 ms
+[2026-06-09 15:11:40.602][TRC][Px25272][Tx37392] TaskData::load | leave, 79 ms
+[2026-06-09 15:11:40.604][INF][Px25272][Tx37392] asst::ResourceLoader::load ret 1
+[2026-06-09 15:11:40.604][TRC][Px25272][Tx37392] asst::ResourceLoader::load | leave, 81 ms
+[2026-06-09 15:11:40.604][TRC][Px25272][Tx37392] asst::Assistant::Assistant | enter
+[2026-06-09 15:11:40.604][TRC][Px25272][Tx37392] asst::Controller::Controller | enter
+[2026-06-09 15:11:40.604][TRC][Px25272][Tx37392] asst::Controller::Controller | leave, 0 ms
+[2026-06-09 15:11:40.604][TRC][Px25272][Tx37392] asst::Assistant::Assistant | leave, 0 ms
+[2026-06-09 15:11:40.604][TRC][Px25272][Tx28304] asst::Assistant::msg_proc | enter
+[2026-06-09 15:11:40.605][TRC][Px25272][Tx12108] asst::Assistant::call_proc | enter
+[2026-06-09 15:11:40.605][TRC][Px25272][Tx59346] asst::Assistant::working_proc | enter
+[2026-06-09 15:11:40.608][INF][Px25272][Tx37392] asst::Assistant::set_instance_option | key 2 value minitouch
+[2026-06-09 15:11:40.608][INF][Px25272][Tx37392] asst::Assistant::set_instance_option | key 3 value 0
+[2026-06-09 15:11:40.608][INF][Px25272][Tx37392] skip sync_params, retry when connect
+[2026-06-09 15:11:40.608][INF][Px25272][Tx37392] asst::Assistant::set_instance_option | key 4 value 0
+[2026-06-09 15:12:16.513][TRC][Px25272][Tx55303] asst::ResourceLoader::load | enter
+[2026-06-09 15:12:16.513][TRC][Px25272][Tx55303] asst::OnnxSessions::load | enter
+[2026-06-09 15:12:16.514][INF][Px25272][Tx55303] record path resource\onnx\skill_ready_cls.onnx
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OnnxSessions::load | enter
+[2026-06-09 15:12:16.514][INF][Px25272][Tx55303] record path resource\onnx\deploy_direction_cls.onnx
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OnnxSessions::load | enter
+[2026-06-09 15:12:16.514][INF][Px25272][Tx55303] record path resource\onnx\operators_det.onnx
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OcrPack::load | enter
+[2026-06-09 15:12:16.514][INF][Px25272][Tx55303] load resource\PaddleOCR
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OcrPack::load | enter
+[2026-06-09 15:12:16.514][INF][Px25272][Tx55303] load resource\PaddleCharOCR
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::GeneralConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::GeneralConfig::parse | enter
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::GeneralConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::GeneralConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.514][TRC][Px25272][Tx55303] asst::RecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.521][TRC][Px25272][Tx55303] asst::RecruitConfig::parse | enter
+[2026-06-09 15:12:16.521][TRC][Px25272][Tx55303] asst::RecruitConfig::clear | enter
+[2026-06-09 15:12:16.521][TRC][Px25272][Tx55303] asst::RecruitConfig::clear | leave, 0 ms
+[2026-06-09 15:12:16.521][TRC][Px25272][Tx55303] asst::RecruitConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.521][TRC][Px25272][Tx55303] asst::RecruitConfig :: asst::AbstractConfig::load | leave, 7 ms
+[2026-06-09 15:12:16.521][TRC][Px25272][Tx55303] asst::BattleDataConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.534][TRC][Px25272][Tx55303] asst::BattleDataConfig::parse | enter
+[2026-06-09 15:12:16.537][TRC][Px25272][Tx55303] asst::BattleDataConfig::parse | leave, 3 ms
+[2026-06-09 15:12:16.537][TRC][Px25272][Tx55303] asst::BattleDataConfig :: asst::AbstractConfig::load | leave, 16 ms
+[2026-06-09 15:12:16.537][TRC][Px25272][Tx55303] asst::OcrConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.538][TRC][Px25272][Tx55303] asst::OcrConfig::parse | enter
+[2026-06-09 15:12:16.538][TRC][Px25272][Tx55303] asst::OcrConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.538][TRC][Px25272][Tx55303] asst::OcrConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.538][TRC][Px25272][Tx55303] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:12:16.538][INF][Px25272][Tx55303] already loaded cache\avatars
+[2026-06-09 15:12:16.538][TRC][Px25272][Tx55303] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:12:16.538][TRC][Px25272][Tx55303] TaskData::load | enter
+[2026-06-09 15:12:16.560][TRC][Px25272][Tx55303] asst::TaskData::parse | enter
+[2026-06-09 15:12:16.560][TRC][Px25272][Tx55303] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:12:16.569][TRC][Px25272][Tx55303] asst::TaskData::lazy_parse | leave, 9 ms
+[2026-06-09 15:12:16.646][TRC][Px25272][Tx55303] asst::TaskData::parse | leave, 85 ms
+[2026-06-09 15:12:16.651][TRC][Px25272][Tx55303] TaskData::load | leave, 112 ms
+[2026-06-09 15:12:16.651][TRC][Px25272][Tx55303] asst::TemplResource::load | enter
+[2026-06-09 15:12:16.652][INF][Px25272][Tx55303] load resource\template
+[2026-06-09 15:12:16.683][TRC][Px25272][Tx55303] asst::TemplResource::load | leave, 31 ms
+[2026-06-09 15:12:16.683][TRC][Px25272][Tx55303] asst::InfrastConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.690][TRC][Px25272][Tx55303] asst::InfrastConfig::parse | enter
+[2026-06-09 15:12:16.692][TRC][Px25272][Tx55303] asst::InfrastConfig::parse | leave, 1 ms
+[2026-06-09 15:12:16.692][TRC][Px25272][Tx55303] asst::InfrastConfig :: asst::AbstractConfig::load | leave, 9 ms
+[2026-06-09 15:12:16.693][TRC][Px25272][Tx55303] asst::TemplResource::load | enter
+[2026-06-09 15:12:16.693][INF][Px25272][Tx55303] load resource\template\infrast
+[2026-06-09 15:12:16.695][TRC][Px25272][Tx55303] asst::TemplResource::load | leave, 1 ms
+[2026-06-09 15:12:16.695][TRC][Px25272][Tx55303] asst::ItemConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.702][TRC][Px25272][Tx55303] asst::ItemConfig::parse | enter
+[2026-06-09 15:12:16.703][TRC][Px25272][Tx55303] asst::ItemConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.703][TRC][Px25272][Tx55303] asst::ItemConfig :: asst::AbstractConfig::load | leave, 8 ms
+[2026-06-09 15:12:16.703][TRC][Px25272][Tx55303] asst::TemplResource::load | enter
+[2026-06-09 15:12:16.703][INF][Px25272][Tx55303] load resource\template\items
+[2026-06-09 15:12:16.706][TRC][Px25272][Tx55303] asst::TemplResource::load | leave, 2 ms
+[2026-06-09 15:12:16.706][TRC][Px25272][Tx55303] asst::StageDropsConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.719][TRC][Px25272][Tx55303] asst::StageDropsConfig::parse | enter
+[2026-06-09 15:12:16.723][TRC][Px25272][Tx55303] asst::StageDropsConfig::parse | leave, 4 ms
+[2026-06-09 15:12:16.725][TRC][Px25272][Tx55303] asst::StageDropsConfig :: asst::AbstractConfig::load | leave, 19 ms
+[2026-06-09 15:12:16.725][TRC][Px25272][Tx55303] asst::TilePack :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.743][TRC][Px25272][Tx55303] asst::TilePack::parse | enter
+[2026-06-09 15:12:16.749][TRC][Px25272][Tx55303] asst::TilePack::parse | leave, 5 ms
+[2026-06-09 15:12:16.752][TRC][Px25272][Tx55303] asst::TilePack :: asst::AbstractConfig::load | leave, 26 ms
+[2026-06-09 15:12:16.752][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:16.759][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:12:16.759][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:16.766][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | leave, 7 ms
+[2026-06-09 15:12:16.766][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:16.775][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | leave, 8 ms
+[2026-06-09 15:12:16.775][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:16.778][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | leave, 3 ms
+[2026-06-09 15:12:16.778][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:16.783][TRC][Px25272][Tx55303] asst::RoguelikeCopilotConfig::load | leave, 4 ms
+[2026-06-09 15:12:16.783][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.784][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:16.788][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:16.788][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:12:16.788][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.789][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:16.790][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:16.790][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:12:16.792][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.793][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:16.796][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:16.796][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:12:16.796][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.797][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:16.799][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:16.800][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:12:16.800][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.802][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:16.805][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig::parse | leave, 3 ms
+[2026-06-09 15:12:16.805][TRC][Px25272][Tx55303] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 5 ms
+[2026-06-09 15:12:16.805][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.806][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:16.806][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.806][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.806][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.806][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.807][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.808][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:16.808][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.808][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.808][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.808][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.810][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.811][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeFoldartalConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeFoldartalConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeCollapsalParadigmConfig::parse | enter
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeCollapsalParadigmConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.812][TRC][Px25272][Tx55303] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::RoguelikeCoppersConfig::parse | enter
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::RoguelikeCoppersConfig::parse | leave, 0 ms
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:16.813][INF][Px25272][Tx55303] asst::ResourceLoader::load ret 1
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::ResourceLoader::load | leave, 300 ms
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::ResourceLoader::load | enter
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:12:16.813][INF][Px25272][Tx55303] already loaded cache\avatars
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:12:16.813][TRC][Px25272][Tx55303] TaskData::load | enter
+[2026-06-09 15:12:16.815][TRC][Px25272][Tx55303] asst::TaskData::parse | enter
+[2026-06-09 15:12:16.815][TRC][Px25272][Tx55303] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:12:16.818][TRC][Px25272][Tx55303] asst::TaskData::lazy_parse | leave, 3 ms
+[2026-06-09 15:12:16.899][TRC][Px25272][Tx55303] asst::TaskData::parse | leave, 84 ms
+[2026-06-09 15:12:16.899][TRC][Px25272][Tx55303] TaskData::load | leave, 85 ms
+[2026-06-09 15:12:16.900][INF][Px25272][Tx55303] asst::ResourceLoader::load ret 1
+[2026-06-09 15:12:16.900][TRC][Px25272][Tx55303] asst::ResourceLoader::load | leave, 87 ms
+[2026-06-09 15:12:53.012][TRC][Px25272][Tx35074] asst::OcrPack::~OcrPack | enter
+[2026-06-09 15:12:53.012][TRC][Px25272][Tx35074] asst::OcrPack::~OcrPack | leave, 0 ms
+[2026-06-09 15:12:53.012][TRC][Px25272][Tx35074] asst::OcrPack::~OcrPack | enter
+[2026-06-09 15:12:53.012][TRC][Px25272][Tx35074] asst::OcrPack::~OcrPack | leave, 0 ms
+[2026-06-09 15:12:57.980][TRC][Px25756][Tx32134] -----------------------------
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] MaaCore Process Start
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] Version v6.12.0-beta.1
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] Built at Jun  8 2026 18:57:31
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] User Dir D:\1-2\MAAOrch\services\maa\v6.11.1\
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] -----------------------------
+[2026-06-09 15:12:57.981][INF][Px25756][Tx32134] AsstExtAPI::set_static_option | key 2 value 0
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] asst::OcrPack::OcrPack | enter
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] asst::OcrPack::OcrPack | leave, 0 ms
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] asst::OcrPack::OcrPack | enter
+[2026-06-09 15:12:57.981][TRC][Px25756][Tx32134] asst::OcrPack::OcrPack | leave, 0 ms
+[2026-06-09 15:12:58.127][TRC][Px25756][Tx32134] asst::ResourceLoader::load | enter
+[2026-06-09 15:12:58.127][TRC][Px25756][Tx32134] asst::OnnxSessions::load | enter
+[2026-06-09 15:12:58.127][INF][Px25756][Tx32134] record path resource\onnx\skill_ready_cls.onnx
+[2026-06-09 15:12:58.127][TRC][Px25756][Tx32134] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OnnxSessions::load | enter
+[2026-06-09 15:12:58.129][INF][Px25756][Tx32134] record path resource\onnx\deploy_direction_cls.onnx
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OnnxSessions::load | enter
+[2026-06-09 15:12:58.129][INF][Px25756][Tx32134] record path resource\onnx\operators_det.onnx
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OcrPack::load | enter
+[2026-06-09 15:12:58.129][INF][Px25756][Tx32134] load resource\PaddleOCR
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OcrPack::load | enter
+[2026-06-09 15:12:58.129][INF][Px25756][Tx32134] load resource\PaddleCharOCR
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::GeneralConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::GeneralConfig::parse | enter
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::GeneralConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::GeneralConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.129][TRC][Px25756][Tx32134] asst::RecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.130][TRC][Px25756][Tx32134] asst::RecruitConfig::parse | enter
+[2026-06-09 15:12:58.130][TRC][Px25756][Tx32134] asst::RecruitConfig::clear | enter
+[2026-06-09 15:12:58.130][TRC][Px25756][Tx32134] asst::RecruitConfig::clear | leave, 0 ms
+[2026-06-09 15:12:58.130][TRC][Px25756][Tx32134] asst::RecruitConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.130][TRC][Px25756][Tx32134] asst::RecruitConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.130][TRC][Px25756][Tx32134] asst::BattleDataConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.136][TRC][Px25756][Tx32134] asst::BattleDataConfig::parse | enter
+[2026-06-09 15:12:58.139][TRC][Px25756][Tx32134] asst::BattleDataConfig::parse | leave, 3 ms
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::BattleDataConfig :: asst::AbstractConfig::load | leave, 10 ms
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::OcrConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::OcrConfig::parse | enter
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::OcrConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::OcrConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:12:58.141][INF][Px25756][Tx32134] load cache\avatars
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx49416] asst::AvatarCacheManager::_load | enter
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx49416] asst::AvatarCacheManager::_load | leave, 0 ms
+[2026-06-09 15:12:58.141][TRC][Px25756][Tx32134] TaskData::load | enter
+[2026-06-09 15:12:58.166][TRC][Px25756][Tx32134] asst::TaskData::parse | enter
+[2026-06-09 15:12:58.166][TRC][Px25756][Tx32134] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:12:58.176][TRC][Px25756][Tx32134] asst::TaskData::lazy_parse | leave, 9 ms
+[2026-06-09 15:12:58.261][TRC][Px25756][Tx32134] asst::TaskData::parse | leave, 94 ms
+[2026-06-09 15:12:58.268][TRC][Px25756][Tx32134] TaskData::load | leave, 125 ms
+[2026-06-09 15:12:58.268][TRC][Px25756][Tx32134] asst::TemplResource::load | enter
+[2026-06-09 15:12:58.268][INF][Px25756][Tx32134] load resource\template
+[2026-06-09 15:12:58.300][TRC][Px25756][Tx32134] asst::TemplResource::load | leave, 31 ms
+[2026-06-09 15:12:58.300][TRC][Px25756][Tx32134] asst::InfrastConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.301][TRC][Px25756][Tx32134] asst::InfrastConfig::parse | enter
+[2026-06-09 15:12:58.304][TRC][Px25756][Tx32134] asst::InfrastConfig::parse | leave, 2 ms
+[2026-06-09 15:12:58.304][TRC][Px25756][Tx32134] asst::InfrastConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:12:58.304][TRC][Px25756][Tx32134] asst::TemplResource::load | enter
+[2026-06-09 15:12:58.304][INF][Px25756][Tx32134] load resource\template\infrast
+[2026-06-09 15:12:58.306][TRC][Px25756][Tx32134] asst::TemplResource::load | leave, 1 ms
+[2026-06-09 15:12:58.306][TRC][Px25756][Tx32134] asst::ItemConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.307][TRC][Px25756][Tx32134] asst::ItemConfig::parse | enter
+[2026-06-09 15:12:58.308][TRC][Px25756][Tx32134] asst::ItemConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.308][TRC][Px25756][Tx32134] asst::ItemConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:12:58.308][TRC][Px25756][Tx32134] asst::TemplResource::load | enter
+[2026-06-09 15:12:58.308][INF][Px25756][Tx32134] load resource\template\items
+[2026-06-09 15:12:58.311][TRC][Px25756][Tx32134] asst::TemplResource::load | leave, 2 ms
+[2026-06-09 15:12:58.311][TRC][Px25756][Tx32134] asst::StageDropsConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.318][TRC][Px25756][Tx32134] asst::StageDropsConfig::parse | enter
+[2026-06-09 15:12:58.322][TRC][Px25756][Tx32134] asst::StageDropsConfig::parse | leave, 5 ms
+[2026-06-09 15:12:58.324][TRC][Px25756][Tx32134] asst::StageDropsConfig :: asst::AbstractConfig::load | leave, 14 ms
+[2026-06-09 15:12:58.325][TRC][Px25756][Tx32134] asst::TilePack :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.338][TRC][Px25756][Tx32134] asst::TilePack::parse | enter
+[2026-06-09 15:12:58.344][TRC][Px25756][Tx32134] asst::TilePack::parse | leave, 5 ms
+[2026-06-09 15:12:58.348][TRC][Px25756][Tx32134] asst::TilePack :: asst::AbstractConfig::load | leave, 22 ms
+[2026-06-09 15:12:58.348][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:58.354][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | leave, 6 ms
+[2026-06-09 15:12:58.354][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:58.362][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | leave, 7 ms
+[2026-06-09 15:12:58.362][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:58.370][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | leave, 7 ms
+[2026-06-09 15:12:58.370][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:58.374][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | leave, 3 ms
+[2026-06-09 15:12:58.374][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:12:58.379][TRC][Px25756][Tx32134] asst::RoguelikeCopilotConfig::load | leave, 4 ms
+[2026-06-09 15:12:58.379][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.380][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:58.382][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:58.383][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:12:58.383][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.384][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:58.386][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | leave, 1 ms
+[2026-06-09 15:12:58.386][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:12:58.386][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.387][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:58.389][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:58.389][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:12:58.389][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.390][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:58.393][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:58.394][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:12:58.394][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.395][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:12:58.398][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:12:58.398][TRC][Px25756][Tx32134] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:12:58.398][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.398][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:58.398][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.399][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.399][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.399][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:58.399][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.399][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.399][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.400][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:58.400][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.400][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.400][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.400][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.401][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.402][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.403][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeFoldartalConfig::parse | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeFoldartalConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeCollapsalParadigmConfig::parse | enter
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeCollapsalParadigmConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.404][TRC][Px25756][Tx32134] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::RoguelikeCoppersConfig::parse | enter
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::RoguelikeCoppersConfig::parse | leave, 0 ms
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:12:58.405][INF][Px25756][Tx32134] asst::ResourceLoader::load ret 1
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::ResourceLoader::load | leave, 277 ms
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::ResourceLoader::load | enter
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:12:58.405][INF][Px25756][Tx32134] already loaded cache\avatars
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:12:58.405][TRC][Px25756][Tx32134] TaskData::load | enter
+[2026-06-09 15:12:58.406][TRC][Px25756][Tx32134] asst::TaskData::parse | enter
+[2026-06-09 15:12:58.406][TRC][Px25756][Tx32134] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:12:58.410][TRC][Px25756][Tx32134] asst::TaskData::lazy_parse | leave, 3 ms
+[2026-06-09 15:12:58.489][TRC][Px25756][Tx32134] asst::TaskData::parse | leave, 82 ms
+[2026-06-09 15:12:58.489][TRC][Px25756][Tx32134] TaskData::load | leave, 83 ms
+[2026-06-09 15:12:58.491][INF][Px25756][Tx32134] asst::ResourceLoader::load ret 1
+[2026-06-09 15:12:58.491][TRC][Px25756][Tx32134] asst::ResourceLoader::load | leave, 84 ms
+[2026-06-09 15:12:58.491][TRC][Px25756][Tx32134] asst::Assistant::Assistant | enter
+[2026-06-09 15:12:58.491][TRC][Px25756][Tx32134] asst::Controller::Controller | enter
+[2026-06-09 15:12:58.491][TRC][Px25756][Tx32134] asst::Controller::Controller | leave, 0 ms
+[2026-06-09 15:12:58.491][TRC][Px25756][Tx32134] asst::Assistant::Assistant | leave, 0 ms
+[2026-06-09 15:12:58.492][TRC][Px25756][Tx55382] asst::Assistant::msg_proc | enter
+[2026-06-09 15:12:58.492][TRC][Px25756][Tx62553] asst::Assistant::call_proc | enter
+[2026-06-09 15:12:58.492][TRC][Px25756][Tx17998] asst::Assistant::working_proc | enter
+[2026-06-09 15:12:58.495][INF][Px25756][Tx32134] asst::Assistant::set_instance_option | key 2 value minitouch
+[2026-06-09 15:12:58.496][INF][Px25756][Tx32134] asst::Assistant::set_instance_option | key 3 value 0
+[2026-06-09 15:12:58.496][INF][Px25756][Tx32134] skip sync_params, retry when connect
+[2026-06-09 15:12:58.496][INF][Px25756][Tx32134] asst::Assistant::set_instance_option | key 4 value 0
+[2026-06-09 15:13:02.636][TRC][Px25756][Tx27145] asst::ResourceLoader::load | enter
+[2026-06-09 15:13:02.636][TRC][Px25756][Tx27145] asst::OnnxSessions::load | enter
+[2026-06-09 15:13:02.637][INF][Px25756][Tx27145] record path resource\onnx\skill_ready_cls.onnx
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OnnxSessions::load | enter
+[2026-06-09 15:13:02.637][INF][Px25756][Tx27145] record path resource\onnx\deploy_direction_cls.onnx
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OnnxSessions::load | enter
+[2026-06-09 15:13:02.637][INF][Px25756][Tx27145] record path resource\onnx\operators_det.onnx
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OnnxSessions::load | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OcrPack::load | enter
+[2026-06-09 15:13:02.637][INF][Px25756][Tx27145] load resource\PaddleOCR
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OcrPack::load | enter
+[2026-06-09 15:13:02.637][INF][Px25756][Tx27145] load resource\PaddleCharOCR
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::OcrPack::load | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::GeneralConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::GeneralConfig::parse | enter
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::GeneralConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::GeneralConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.637][TRC][Px25756][Tx27145] asst::RecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.638][TRC][Px25756][Tx27145] asst::RecruitConfig::parse | enter
+[2026-06-09 15:13:02.638][TRC][Px25756][Tx27145] asst::RecruitConfig::clear | enter
+[2026-06-09 15:13:02.638][TRC][Px25756][Tx27145] asst::RecruitConfig::clear | leave, 0 ms
+[2026-06-09 15:13:02.638][TRC][Px25756][Tx27145] asst::RecruitConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.638][TRC][Px25756][Tx27145] asst::RecruitConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:13:02.638][TRC][Px25756][Tx27145] asst::BattleDataConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.646][TRC][Px25756][Tx27145] asst::BattleDataConfig::parse | enter
+[2026-06-09 15:13:02.652][TRC][Px25756][Tx27145] asst::BattleDataConfig::parse | leave, 5 ms
+[2026-06-09 15:13:02.654][TRC][Px25756][Tx27145] asst::BattleDataConfig :: asst::AbstractConfig::load | leave, 15 ms
+[2026-06-09 15:13:02.654][TRC][Px25756][Tx27145] asst::OcrConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.654][TRC][Px25756][Tx27145] asst::OcrConfig::parse | enter
+[2026-06-09 15:13:02.654][TRC][Px25756][Tx27145] asst::OcrConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.654][TRC][Px25756][Tx27145] asst::OcrConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.655][TRC][Px25756][Tx27145] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:13:02.655][INF][Px25756][Tx27145] already loaded cache\avatars
+[2026-06-09 15:13:02.655][TRC][Px25756][Tx27145] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:13:02.655][TRC][Px25756][Tx27145] TaskData::load | enter
+[2026-06-09 15:13:02.681][TRC][Px25756][Tx27145] asst::TaskData::parse | enter
+[2026-06-09 15:13:02.681][TRC][Px25756][Tx27145] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:13:02.692][TRC][Px25756][Tx27145] asst::TaskData::lazy_parse | leave, 10 ms
+[2026-06-09 15:13:02.776][TRC][Px25756][Tx27145] asst::TaskData::parse | leave, 94 ms
+[2026-06-09 15:13:02.782][TRC][Px25756][Tx27145] TaskData::load | leave, 127 ms
+[2026-06-09 15:13:02.782][TRC][Px25756][Tx27145] asst::TemplResource::load | enter
+[2026-06-09 15:13:02.782][INF][Px25756][Tx27145] load resource\template
+[2026-06-09 15:13:02.819][TRC][Px25756][Tx27145] asst::TemplResource::load | leave, 36 ms
+[2026-06-09 15:13:02.819][TRC][Px25756][Tx27145] asst::InfrastConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.820][TRC][Px25756][Tx27145] asst::InfrastConfig::parse | enter
+[2026-06-09 15:13:02.823][TRC][Px25756][Tx27145] asst::InfrastConfig::parse | leave, 2 ms
+[2026-06-09 15:13:02.824][TRC][Px25756][Tx27145] asst::InfrastConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:13:02.824][TRC][Px25756][Tx27145] asst::TemplResource::load | enter
+[2026-06-09 15:13:02.824][INF][Px25756][Tx27145] load resource\template\infrast
+[2026-06-09 15:13:02.826][TRC][Px25756][Tx27145] asst::TemplResource::load | leave, 1 ms
+[2026-06-09 15:13:02.826][TRC][Px25756][Tx27145] asst::ItemConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.826][TRC][Px25756][Tx27145] asst::ItemConfig::parse | enter
+[2026-06-09 15:13:02.828][TRC][Px25756][Tx27145] asst::ItemConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.828][TRC][Px25756][Tx27145] asst::ItemConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:13:02.828][TRC][Px25756][Tx27145] asst::TemplResource::load | enter
+[2026-06-09 15:13:02.828][INF][Px25756][Tx27145] load resource\template\items
+[2026-06-09 15:13:02.831][TRC][Px25756][Tx27145] asst::TemplResource::load | leave, 2 ms
+[2026-06-09 15:13:02.831][TRC][Px25756][Tx27145] asst::StageDropsConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.839][TRC][Px25756][Tx27145] asst::StageDropsConfig::parse | enter
+[2026-06-09 15:13:02.844][TRC][Px25756][Tx27145] asst::StageDropsConfig::parse | leave, 5 ms
+[2026-06-09 15:13:02.845][TRC][Px25756][Tx27145] asst::StageDropsConfig :: asst::AbstractConfig::load | leave, 14 ms
+[2026-06-09 15:13:02.845][TRC][Px25756][Tx27145] asst::TilePack :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.859][TRC][Px25756][Tx27145] asst::TilePack::parse | enter
+[2026-06-09 15:13:02.865][TRC][Px25756][Tx27145] asst::TilePack::parse | leave, 5 ms
+[2026-06-09 15:13:02.868][TRC][Px25756][Tx27145] asst::TilePack :: asst::AbstractConfig::load | leave, 22 ms
+[2026-06-09 15:13:02.868][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:13:02.878][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | leave, 10 ms
+[2026-06-09 15:13:02.878][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:13:02.887][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | leave, 8 ms
+[2026-06-09 15:13:02.887][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:13:02.896][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | leave, 9 ms
+[2026-06-09 15:13:02.896][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:13:02.901][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | leave, 4 ms
+[2026-06-09 15:13:02.901][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | enter
+[2026-06-09 15:13:02.906][TRC][Px25756][Tx27145] asst::RoguelikeCopilotConfig::load | leave, 5 ms
+[2026-06-09 15:13:02.907][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.908][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:13:02.910][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:13:02.910][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:13:02.911][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.911][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:13:02.914][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:13:02.915][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 3 ms
+[2026-06-09 15:13:02.915][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.916][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:13:02.919][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:13:02.919][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:13:02.919][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.921][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:13:02.923][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:13:02.923][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:13:02.923][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.925][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | enter
+[2026-06-09 15:13:02.927][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig::parse | leave, 2 ms
+[2026-06-09 15:13:02.928][TRC][Px25756][Tx27145] asst::RoguelikeRecruitConfig :: asst::AbstractConfig::load | leave, 4 ms
+[2026-06-09 15:13:02.928][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.928][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:13:02.928][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.928][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.928][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.929][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:13:02.929][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.929][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.929][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.929][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.930][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | enter
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeShoppingConfig :: asst::AbstractConfig::load | leave, 1 ms
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.932][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.933][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | enter
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.934][TRC][Px25756][Tx27145] asst::RoguelikeStageEncounterConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig::parse | enter
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeMapConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeFoldartalConfig::parse | enter
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeFoldartalConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeFoldartalConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.935][TRC][Px25756][Tx27145] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCollapsalParadigmConfig::parse | enter
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCollapsalParadigmConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCollapsalParadigmConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | enter
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCoppersConfig::parse | enter
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCoppersConfig::parse | leave, 0 ms
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::RoguelikeCoppersConfig :: asst::AbstractConfig::load | leave, 0 ms
+[2026-06-09 15:13:02.936][INF][Px25756][Tx27145] asst::ResourceLoader::load ret 1
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::ResourceLoader::load | leave, 300 ms
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::ResourceLoader::load | enter
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::AvatarCacheManager::load | enter
+[2026-06-09 15:13:02.936][INF][Px25756][Tx27145] already loaded cache\avatars
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] asst::AvatarCacheManager::load | leave, 0 ms
+[2026-06-09 15:13:02.936][TRC][Px25756][Tx27145] TaskData::load | enter
+[2026-06-09 15:13:02.939][TRC][Px25756][Tx27145] asst::TaskData::parse | enter
+[2026-06-09 15:13:02.939][TRC][Px25756][Tx27145] asst::TaskData::lazy_parse | enter
+[2026-06-09 15:13:02.942][TRC][Px25756][Tx27145] asst::TaskData::lazy_parse | leave, 3 ms
+[2026-06-09 15:13:03.034][TRC][Px25756][Tx27145] asst::TaskData::parse | leave, 96 ms
+[2026-06-09 15:13:03.034][TRC][Px25756][Tx27145] TaskData::load | leave, 97 ms
+[2026-06-09 15:13:03.036][INF][Px25756][Tx27145] asst::ResourceLoader::load ret 1
+[2026-06-09 15:13:03.036][TRC][Px25756][Tx27145] asst::ResourceLoader::load | leave, 99 ms
+[2026-06-09 15:13:19.891][TRC][Px25756][Tx34647] asst::OcrPack::~OcrPack | enter
+[2026-06-09 15:13:19.891][TRC][Px25756][Tx34647] asst::OcrPack::~OcrPack | leave, 0 ms
+[2026-06-09 15:13:19.891][TRC][Px25756][Tx34647] asst::OcrPack::~OcrPack | enter
+[2026-06-09 15:13:19.891][TRC][Px25756][Tx34647] asst::OcrPack::~OcrPack | leave, 0 ms
