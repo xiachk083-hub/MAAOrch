@@ -260,8 +260,9 @@ class MainWindow(QMainWindow):
 
         # ── Bottom bar: smart controls + batch operations ──
         bb = QHBoxLayout()
-        bb.setContentsMargins(8, 2, 8, 2)
-        bb.setSpacing(6)
+        bb.setContentsMargins(8, 4, 8, 4)
+        bb.setSpacing(8)
+        bb.setAlignment(Qt.AlignVCenter)
 
         from ui.smart_panel import _do_batch
         from ui.side_bar import _toggle_smart, _run_smart_all
