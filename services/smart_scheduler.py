@@ -1,5 +1,6 @@
 from __future__ import annotations
 import time as _time
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ def _arknights_now() -> datetime:
 
 # Simple TTL cache for file I/O (30s)
 _io_cache: dict[str, tuple[float, Any]] = {}
+_io_cache_lock = threading.Lock()
 _IO_CACHE_TTL = 30
 
 
@@ -19,13 +21,15 @@ def _cached_read_json(path: Path) -> Any:
     """Read JSON file with 30s TTL cache."""
     key = str(path.resolve())
     now = _time.time()
-    entry = _io_cache.get(key)
-    if entry and now - entry[0] < _IO_CACHE_TTL:
-        return entry[1]
+    with _io_cache_lock:
+        entry = _io_cache.get(key)
+        if entry and now - entry[0] < _IO_CACHE_TTL:
+            return entry[1]
     try:
         import json
         data = json.loads(path.read_text(encoding="utf-8"))
-        _io_cache[key] = (now, data)
+        with _io_cache_lock:
+            _io_cache[key] = (now, data)
         return data
     except Exception:
         return None

@@ -14,6 +14,8 @@ TASK_DEFAULTS={
     "Roguelike":{"theme":"Sarkaz","mode":0,"difficulty":15,"squad":"","roles":"","core_char":"","start_count":99999,"investment":True,"invest_count":999,"stop_when_level_max":False,"stop_when_deposit_full":False,"use_support":False,"start_with_seed":False,"seed":""},
     "Reclamation":{"theme":"Tales","mode":"ProsperityInSave","tool_to_craft":"","max_craft_count":16,"clear_store":False},
 }
+CONNECT_CONFIG_MAP = {"MuMuPro": "MuMuEmulator12"}
+TOUCH_MODE_MAP = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}
 EMU_PRESETS=[
     {"name":"MuMu 12(默认)","type":"MuMuEmulator12","ports":[str(16384+i*32) for i in range(100)],"detect":"MuMu 12"},
     {"name":"MuMu 6(默认)","type":"MuMu","ports":["7555"],"detect":"MuMu 6"},
