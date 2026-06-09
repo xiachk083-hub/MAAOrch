@@ -3,9 +3,9 @@ from typing import Any
 from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                               QPushButton, QGroupBox, QFormLayout, QSpinBox,
-                               QCheckBox, QComboBox, QLineEdit, QFrame,
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGridLayout,
+                               QLabel, QPushButton, QGroupBox, QFormLayout,
+                               QSpinBox, QCheckBox, QComboBox, QLineEdit, QFrame,
                                QDialogButtonBox)
 
 
@@ -53,8 +53,9 @@ def open_settings(mw: Any) -> None:
     # Instance status list (compact cards)
     instances = cfg.get("maa_instances", 0)
     pool = Path(__file__).parent.parent / "services" / "maa" / "instances"
-    running_count = 0
-    ready_count = 0
+    grid = QGridLayout()
+    grid.setSpacing(4)
+    r_cnt = 0; rd_cnt = 0; row_i = 0; col_i = 0
     for i in range(1, instances + 1):
         inst_dir = pool / str(i)
         exe = inst_dir / "MAA.exe"
@@ -62,6 +63,7 @@ def open_settings(mw: Any) -> None:
             continue
         pid_file = inst_dir / ".pid"
         running = False
+        pid = ""
         if pid_file.exists():
             try:
                 pid = int(pid_file.read_text().strip())
@@ -70,39 +72,40 @@ def open_settings(mw: Any) -> None:
                              capture_output=True, text=True, timeout=2,
                              creationflags=_sp.CREATE_NO_WINDOW)
                 running = str(pid) in r2.stdout
+                pid = str(pid) if running else ""
             except Exception:
                 pass
-        if running: running_count += 1
-        else: ready_count += 1
-        # Instance card
-        card = QFrame()
-        card.setStyleSheet("QFrame{background:#222;border:1px solid #2a2a2a;border-radius:5px;padding:6px 10px;margin:1px 0}")
-        cl = QHBoxLayout(card)
-        cl.setContentsMargins(8, 4, 8, 4)
-        cl.setSpacing(8)
-        cl.addWidget(QLabel(f"#{i}"))
-        status_text = "▶ 运行中" if running else "⏹ 就绪"
-        st = QLabel(status_text)
-        st.setStyleSheet(f"color:#498205;font-weight:bold;font-size:8pt" if running else "color:#888;font-size:8pt")
-        cl.addWidget(st)
-        if running and pid_file.exists():
-            try:
-                pid = int(pid_file.read_text().strip())
-                cl.addWidget(QLabel(f"PID:{pid}"))
-            except Exception:
-                pass
+        if running: r_cnt += 1
+        else: rd_cnt += 1
         gj = inst_dir / "config" / "gui.new.json"
         cfg_ok = gj.exists()
-        cl.addWidget(QLabel("✅配置" if cfg_ok else "❌配置"))
+        # Compact card
+        card = QFrame()
+        card.setFixedHeight(28)
+        card.setStyleSheet("QFrame{background:#222;border:1px solid #2a2a2a;border-radius:4px}")
+        cl = QHBoxLayout(card)
+        cl.setContentsMargins(6, 0, 6, 0)
+        cl.setSpacing(4)
+        cl.addWidget(QLabel(f"#{i}"))
+        icon = "▶" if running else "❌" if not exe.exists() else "⏹"
+        ic = QLabel(icon)
+        ic.setStyleSheet("color:#498205;font-weight:bold;font-size:8pt" if running else "color:#888;font-size:8pt")
+        cl.addWidget(ic)
+        if pid: cl.addWidget(QLabel(pid, styleSheet="color:#888;font-size:7pt"))
+        cl.addWidget(QLabel("✅" if cfg_ok else "❌", styleSheet="color:#888;font-size:7pt"))
         cl.addStretch()
-        gl.addWidget(card)
+        grid.addWidget(card, row_i, col_i)
+        col_i += 1
+        if col_i >= 2:
+            col_i = 0; row_i += 1
+    gl.addLayout(grid)
     # Summary
     sum_row = QHBoxLayout()
     sum_row.addWidget(QLabel(f"实例池: {instances} 个"))
     sum_row.addStretch()
-    sum_row.addWidget(QLabel(f"▶ {running_count}"))
-    sum_row.addWidget(QLabel(f"⏹ {ready_count}"))
-    sum_row.addWidget(QLabel(f"❌ {instances - running_count - ready_count}"))
+    sum_row.addWidget(QLabel(f"▶ {r_cnt}"))
+    sum_row.addWidget(QLabel(f"⏹ {rd_cnt}"))
+    sum_row.addWidget(QLabel(f"❌ {instances - r_cnt - rd_cnt}"))
     gl.addLayout(sum_row)
     vl.addWidget(g)
 
