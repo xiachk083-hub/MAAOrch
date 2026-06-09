@@ -272,7 +272,10 @@ class MainWindow(QMainWindow):
         smart_btn.setChecked(self.config.get("smart_global", {}).get("enabled", False))
         smart_btn.setFixedHeight(26)
         smart_btn.toggled.connect(lambda v: _toggle_smart(self, v))
-        smart_btn.toggled.connect(lambda v: smart_btn.setText("☑ 智能调度" if v else "☐ 智能调度"))
+        smart_btn.toggled.connect(lambda v: (
+            smart_btn.setText("☑ 智能调度" if v else "☐ 智能调度"),
+            smart_btn.setStyleSheet("color:#498205;font-weight:bold" if v else "")
+        ))
         bb.addWidget(smart_btn)
 
         run_btn = QPushButton("▶ 立即调度全部")
