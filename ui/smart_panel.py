@@ -1,14 +1,12 @@
-"""Smart scheduling panel — main account table."""
+"""Smart scheduling panel — modern account list (no table widget)."""
 from __future__ import annotations
 import time
-from datetime import datetime
 from typing import Any
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox,
-    QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QFrame, QLineEdit,
+    QScrollArea, QLineEdit, QFrame, QSizePolicy,
 )
 from services.smart_scheduler import MATERIAL_STAGES, _arknights_now
 
@@ -16,86 +14,114 @@ from services.smart_scheduler import MATERIAL_STAGES, _arknights_now
 def build_smart_panel(mw: Any) -> QWidget:
     mw.smart_v = QWidget()
     vl = QVBoxLayout(mw.smart_v)
-    vl.setContentsMargins(0, 4, 0, 0)
-    vl.setSpacing(3)
+    vl.setContentsMargins(0, 0, 0, 0)
+    vl.setSpacing(0)
 
     # ── Search bar ──
-    search_row = QHBoxLayout()
-    search_row.setContentsMargins(4, 6, 4, 0)
-    search_row.setSpacing(8)
-    search_lbl = QLabel("🔍")
-    search_lbl.setStyleSheet("color:#555;font-size:10pt;padding:0")
-    search_row.addWidget(search_lbl)
+    sr = QHBoxLayout()
+    sr.setContentsMargins(12, 8, 12, 4)
+    sr.setSpacing(8)
     mw._smart_search = QLineEdit()
     mw._smart_search.setPlaceholderText("搜索账号...")
-    mw._smart_search.textChanged.connect(lambda: _rebuild_smart_table(mw))
-    search_row.addWidget(mw._smart_search, 1)
+    mw._smart_search.textChanged.connect(lambda: _rebuild_list(mw))
+    sr.addWidget(mw._smart_search, 1)
     add_btn = QPushButton("＋添加")
     add_btn.setObjectName("startBtn")
     add_btn.setFixedHeight(30)
     add_btn.clicked.connect(lambda: _add_account(mw))
-    search_row.addWidget(add_btn)
-    vl.addLayout(search_row)
+    sr.addWidget(add_btn)
+    vl.addLayout(sr)
 
-    # ── Account table ──
-    DAYS = ["一", "二", "三", "四", "五", "六", "日"]
-    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    cols = 6 + len(DAYS)
-    tbl = QTableWidget(0, cols)
-    tbl.setHorizontalHeaderLabels(["☐", "账号", "状态", "默认", "剿灭"] + DAYS + [""])
-    tbl.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-    tbl.setColumnWidth(0, 30)
-    tbl.setColumnWidth(2, 60)
-    tbl.setColumnWidth(3, 70)
-    tbl.setColumnWidth(4, 70)
-    for i in range(len(DAYS)):
-        tbl.setColumnWidth(5 + i, 50)
-    tbl.setColumnWidth(5 + len(DAYS), 30)
-    tbl.verticalHeader().setVisible(False)
-    tbl.setEditTriggers(QAbstractItemView.DoubleClicked)
-    tbl.setShowGrid(False)
-    tbl.setAlternatingRowColors(False)
-    tbl.verticalHeader().setDefaultSectionSize(30)
-    tbl.setSortingEnabled(True)
-    tbl.setSelectionBehavior(QAbstractItemView.SelectRows)
-    tbl.setSelectionMode(QAbstractItemView.SingleSelection)
-    tbl.itemChanged.connect(lambda item: _on_cell_edit(mw, item))
-    mw._smart_tbl = tbl
-    vl.addWidget(tbl, 1)
+    # ── List header ──
+    hdr = QFrame()
+    hdr.setFixedHeight(30)
+    hl = QHBoxLayout(hdr)
+    hl.setContentsMargins(12, 0, 12, 0)
+    hl.setSpacing(0)
+    for text, w in [("", 32), ("账号", 100), ("状态", 55), ("关卡", 70), ("剿灭", 65)]:
+        lbl = QLabel(text)
+        lbl.setStyleSheet("color:#555;font-size:8pt;font-weight:bold")
+        if text == "账号":
+            lbl.setStyleSheet("color:#555;font-size:8pt;font-weight:bold")
+            hl.addWidget(lbl, 1)
+        else:
+            lbl.setFixedWidth(w)
+            lbl.setAlignment(Qt.AlignCenter)
+            hl.addWidget(lbl)
+    # Day labels
+    for d in ["一","二","三","四","五","六","日"]:
+        lbl = QLabel(d)
+        lbl.setFixedWidth(42)
+        lbl.setAlignment(Qt.AlignCenter)
+        lbl.setStyleSheet("color:#444;font-size:7pt")
+        hl.addWidget(lbl)
+    # Detail placeholder
+    hl.addSpacing(30)
+    mw._list_header = hdr
+    vl.addWidget(hdr)
+
+    # ── Scrollable account list ──
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    scroll.setFrameShape(QFrame.NoFrame)
+    scroll.setStyleSheet("QScrollArea{background:transparent;border:none}")
+
+    list_w = QWidget()
+    list_w.setObjectName("accountList")
+    mw._list_layout = QVBoxLayout(list_w)
+    mw._list_layout.setContentsMargins(0, 0, 0, 0)
+    mw._list_layout.setSpacing(1)
+    mw._list_layout.addStretch()
+    scroll.setWidget(list_w)
+    vl.addWidget(scroll, 1)
 
     # ── Batch bar ──
-    batch_row = QHBoxLayout()
-    batch_row.setContentsMargins(4, 2, 4, 0)
-    batch_row.setSpacing(8)
-    for name, attr, handler in [("批量设置", "_batch_edit_btn", _do_batch_edit),
-                                 ("批量入队", "_batch_enqueue_btn", _do_batch_enqueue),
-                                 ("批量停止", "_batch_stop_btn", _do_batch_stop),
-                                 ("批量删除", "_batch_delete_btn", _do_batch_delete)]:
+    br = QHBoxLayout()
+    br.setContentsMargins(12, 4, 12, 4)
+    br.setSpacing(8)
+    def _batch_handler(mw, action):
+        selected = _get_selected(mw)
+        if not selected: return
+        lq = getattr(mw, "launch_queue", None)
+        runner = getattr(mw, "runner", None)
+        if action == "enq" and lq:
+            for aid in selected: lq.enqueue(aid, "manual")
+            lq.tick()
+        elif action == "stop" and runner:
+            for aid in selected: runner.stop(aid)
+        elif action == "del":
+            from PySide6.QtWidgets import QMessageBox
+            if QMessageBox.question(mw, "确认", f"删除 {len(selected)} 个?") == QMessageBox.Yes:
+                mw.accounts[:] = [a for a in mw.accounts if a.get("id") not in selected]
+                mw._save()
+        elif action == "edit":
+            from ui.batch_edit import open_batch_edit
+            open_batch_edit(mw, selected)
+        _rebuild_list(mw)
+
+    for name, attr, act in [("批量设置","_batch_edit","edit"),("批量入队","_batch_enq","enq"),
+                             ("批量停止","_batch_stop","stop"),("批量删除","_batch_del","del")]:
         btn = QPushButton(name)
         btn.setEnabled(False)
         btn.setFixedHeight(26)
-        btn.clicked.connect(lambda _, m=mw, h=handler: h(m))
+        btn.clicked.connect(lambda _, a=act: _batch_handler(mw, a))
         setattr(mw, attr, btn)
-        batch_row.addWidget(btn)
-    mw._batch_status = QLabel("")
-    mw._batch_status.setStyleSheet("color:#555;font-size:8pt")
-    batch_row.addWidget(mw._batch_status)
-    batch_row.addStretch()
-    vl.addLayout(batch_row)
+        br.addWidget(btn)
+    mw._batch_stat = QLabel("")
+    mw._batch_stat.setStyleSheet("color:#555;font-size:8pt")
+    br.addWidget(mw._batch_stat)
+    br.addStretch()
+    vl.addLayout(br)
 
-    # Filter state
     mw._smart_filter = ""
+    mw._list_rows = []
+    mw._set_smart_filter = lambda k: _set_filter(mw, k)
+    _rebuild_list(mw)
 
-    # Initial render
-    _rebuild_smart_table(mw)
-
-    # Auto-refresh timer
-    mw._smart_refresh_timer = QTimer(mw.smart_v)
-    mw._smart_refresh_timer.timeout.connect(lambda: _update_status_column(mw))
-    mw._smart_refresh_timer.start(3000)
-
-    # Expose filter setter for sidebar
-    mw._set_smart_filter = lambda key: _set_filter(mw, key)
+    timer = QTimer(mw.smart_v)
+    timer.timeout.connect(lambda: _update_status(mw))
+    timer.start(3000)
 
     return mw.smart_v
 
@@ -105,218 +131,163 @@ def _set_filter(mw: Any, key: str) -> None:
         mw._smart_filter = ""
     else:
         mw._smart_filter = key
-    _rebuild_smart_table(mw)
+    _rebuild_list(mw)
 
 
 def _add_account(mw: Any) -> None:
     from models.account import Account
     a = Account()
-    a.name = f"账号{len(mw.accounts) + 1}"
+    a.name = f"账号{len(mw.accounts)+1}"
     mw.accounts.append(a)
     mw._save()
-    _rebuild_smart_table(mw)
-    mw._log(f"已添加账号: {a.name}")
+    _rebuild_list(mw)
 
 
-def _on_cell_edit(mw: Any, item: QTableWidgetItem) -> None:
-    row = item.row()
-    col = item.column()
-    if row >= len(mw.accounts):
-        return
-    a = mw.accounts[row]
-    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    text = item.text().strip()
-    if col == 1:
-        a["name"] = text
-    elif col == 3:
-        a["smart_stage"] = text
-    elif 5 <= col < 5 + len(DAY_KEYS):
-        dk = DAY_KEYS[col - 5]
-        a[f"smart_{dk}"] = text
+def _rebuild_list(mw: Any) -> None:
+    layout = mw._list_layout
+    # Remove existing rows (keep stretch at end)
+    while layout.count() > 1:
+        item = layout.takeAt(0)
+        if item.widget():
+            item.widget().deleteLater()
+
+    ft = getattr(mw, "_smart_search", None)
+    st = ft.text().strip().lower() if ft and ft.text() else ""
+    fk = getattr(mw, "_smart_filter", "")
+    mw._list_rows = []
+
+    for a in mw.accounts:
+        name = a.get("name", "")
+        if st and st not in name.lower():
+            continue
+        aid = a.get("id", "")
+        lq = getattr(mw, "launch_queue", None)
+        runner = getattr(mw, "runner", None)
+        running = (lq and lq.is_running(aid)) or (runner and runner.is_running(aid))
+        queued = lq and lq.is_queued(aid)
+        fails = a.get("consecutive_failures", 0)
+
+        if fk == "running" and not running: continue
+        if fk == "waiting" and not queued: continue
+        if fk == "error" and not (1 <= fails < 6): continue
+        if fk == "paused" and fails < 6: continue
+
+        row = _make_row(mw, a, running, queued, fails)
+        layout.insertWidget(layout.count() - 1, row)
+        mw._list_rows.append(row)
+
+    _update_status(mw)
+
+
+def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFrame:
+    row = QFrame()
+    row.setObjectName("accountRow")
+    row.setFixedHeight(34)
+    row.setCursor(Qt.PointingHandCursor)
+
+    hl = QHBoxLayout(row)
+    hl.setContentsMargins(12, 0, 8, 0)
+    hl.setSpacing(0)
+
+    # Checkbox
+    cb = QCheckBox()
+    cb.setFixedWidth(28)
+    cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
+    hl.addWidget(cb)
+
+    # Name
+    nm = QLabel(a.get("name", ""))
+    nm.setStyleSheet("color:#ccc;font-size:9pt;font-weight:500")
+    hl.addWidget(nm, 1)
+
+    # Status
+    if running:
+        dur = ""
+        runner = getattr(mw, "runner", None)
+        if runner:
+            s = runner._start_times.get(a.get("id", ""), 0)
+            if s: dur = f"{int(time.time()-s)//60}m"
+        st_lbl = QLabel(f"  ▶{dur}" if dur else "  ▶")
+        st_lbl.setStyleSheet("color:#498205;font-size:8pt;font-weight:bold")
+    elif queued:
+        st_lbl = QLabel("  ⏳")
+        st_lbl.setStyleSheet("color:#e8a000;font-size:8pt")
+    elif fails >= 6:
+        st_lbl = QLabel("  ⏸")
+        st_lbl.setStyleSheet("color:#666;font-size:8pt")
+    elif fails:
+        st_lbl = QLabel(f"  ✕{fails}")
+        st_lbl.setStyleSheet("color:#c04040;font-size:8pt")
     else:
-        return
-    mw._save()
+        st_lbl = QLabel("")
+        st_lbl.setStyleSheet("color:#555;font-size:8pt")
+    st_lbl.setFixedWidth(55)
+    st_lbl.setAlignment(Qt.AlignCenter)
+    hl.addWidget(st_lbl)
+
+    # Stage
+    stage = a.get("smart_stage", "")
+    sg = QLabel(stage if stage else "—")
+    sg.setFixedWidth(70)
+    sg.setAlignment(Qt.AlignCenter)
+    sg.setStyleSheet("color:#888;font-size:8pt")
+    hl.addWidget(sg)
+
+    # Anni
+    anni = a.get("smart_annihilation", "")
+    ae = a.get("smart_annihilation_enabled", True)
+    ad = {"":"—","Annihilation":"当期","Chernobog@Annihilation":"切城",
+          "LungmenOutskirts@Annihilation":"外环","LungmenDowntown@Annihilation":"市区"}.get(anni, "")
+    an = QLabel(ad if ae else f"✘{ad}" if ad else "—")
+    an.setFixedWidth(65)
+    an.setAlignment(Qt.AlignCenter)
+    an.setStyleSheet("color:#888;font-size:8pt")
+    hl.addWidget(an)
+
+    # Days
+    for dk in ["mon","tue","wed","thu","fri","sat","sun"]:
+        v = a.get(f"smart_{dk}", "")
+        dl = QLabel(v if v else "")
+        dl.setFixedWidth(42)
+        dl.setAlignment(Qt.AlignCenter)
+        dl.setStyleSheet("color:#666;font-size:8pt")
+        hl.addWidget(dl)
+
+    # Detail button
+    dt = QPushButton("✎")
+    dt.setFixedSize(24, 24)
+    dt.setStyleSheet("QPushButton{background:transparent;color:#555;border:none;border-radius:4px;font-size:9pt}")
+    dt.clicked.connect(lambda _, r=mw.accounts.index(a): _open_detail(mw, r))
+    hl.addWidget(dt)
+
+    # Hover effect
+    row.mousePressEvent = lambda e, r=mw.accounts.index(a): _open_detail(mw, r)
+
+    return row
 
 
-def _do_batch_edit(mw: Any) -> None:
-    selected = _get_selected(mw)
-    if not selected:
-        return
-    from ui.batch_edit import open_batch_edit
-    open_batch_edit(mw, selected)
-    _rebuild_smart_table(mw)
-
-
-def _do_batch_enqueue(mw: Any) -> None:
-    selected = _get_selected(mw)
-    if not selected:
-        return
-    lq = getattr(mw, "launch_queue", None)
-    if lq:
-        for aid in selected:
-            lq.enqueue(aid, "manual", priority=0)
-        lq.tick()
-        mw._log(f"批量入队: {len(selected)} 个")
-
-
-def _do_batch_stop(mw: Any) -> None:
-    selected = _get_selected(mw)
-    if not selected:
-        return
-    if hasattr(mw, "runner") and mw.runner:
-        for aid in selected:
-            mw.runner.stop(aid)
-    mw._log(f"批量停止: {len(selected)} 个")
-
-
-def _do_batch_delete(mw: Any) -> None:
-    selected = _get_selected(mw)
-    if not selected:
-        return
-    from PySide6.QtWidgets import QMessageBox
-    if QMessageBox.question(mw, "确认", f"删除 {len(selected)} 个账号?") != QMessageBox.Yes:
-        return
-    mw.accounts[:] = [a for a in mw.accounts if a.get("id", "") not in selected]
-    mw._save()
-    _rebuild_smart_table(mw)
-    mw._log(f"已删除 {len(selected)} 个账号")
+def _update_status(mw: Any) -> None:
+    pass  # Status is set on rebuild; real-time updates can be added later
 
 
 def _get_selected(mw: Any) -> list[str]:
     selected = []
-    tbl = mw._smart_tbl
-    for row in range(tbl.rowCount()):
-        cb = tbl.cellWidget(row, 0)
+    for row_w in mw._list_rows:
+        cb = row_w.findChild(QCheckBox)
         if cb and cb.isChecked():
-            if row < len(mw.accounts):
-                selected.append(mw.accounts[row].get("id", ""))
+            # Find name label to get account
+            for lbl in row_w.findChildren(QLabel):
+                txt = lbl.text().strip()
+                if txt and not any(c in txt for c in "▶⏳✕⏸—"):
+                    for a in mw.accounts:
+                        if a.get("name") == txt:
+                            selected.append(a.get("id", ""))
+                            break
+                    break
     return selected
-
-
-def _update_batch_buttons(mw: Any) -> None:
-    selected = _get_selected(mw)
-    n = len(selected)
-    for btn in [mw._batch_edit_btn, mw._batch_enqueue_btn,
-                mw._batch_stop_btn, mw._batch_delete_btn]:
-        btn.setEnabled(n > 0)
-    mw._batch_status.setText(f"(已选 {n}/{len(mw.accounts)})" if n else "")
-
-
-def _update_status_column(mw: Any) -> None:
-    """Refresh the status column for all accounts."""
-    tbl = mw._smart_tbl
-    if not tbl or not hasattr(mw, "launch_queue"):
-        return
-    lq = mw.launch_queue
-    runner = getattr(mw, "runner", None)
-
-    for row in range(tbl.rowCount()):
-        if row >= len(mw.accounts):
-            continue
-        a = mw.accounts[row]
-        aid = a.get("id", "")
-        running = lq.is_running(aid) or (runner and runner.is_running(aid))
-        queued = lq.is_queued(aid)
-        failures = a.get("consecutive_failures", 0)
-        status_text = ""
-        if running:
-            started = runner._start_times.get(aid, 0) if runner else 0
-            dur = int(time.time() - started) // 60 if started else 0
-            status_text = f"▶{dur}m" if dur else "▶"
-        elif queued:
-            status_text = "⏳"
-        elif failures >= 6:
-            status_text = "⏸30m"
-        elif failures:
-            status_text = f"❌×{failures}"
-        item = tbl.item(row, 2)
-        if item:
-            item.setText(status_text)
-
-
-def _rebuild_smart_table(mw: Any) -> None:
-    tbl = mw._smart_tbl
-    if not tbl:
-        return
-    DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    btn_col = 5 + len(DAY_KEYS)
-
-    # Filter accounts
-    ft = getattr(mw, "_smart_search", None)
-    search_text = ft.text().strip().lower() if ft and ft.text() else ""
-    filter_key = getattr(mw, "_smart_filter", "")
-
-    def _match_filter(a: Any) -> bool:
-        if not filter_key:
-            return True
-        aid = a.get("id", "")
-        lq = getattr(mw, "launch_queue", None)
-        runner = getattr(mw, "runner", None)
-        if filter_key == "running":
-            return (lq and lq.is_running(aid)) or (runner and runner.is_running(aid))
-        elif filter_key == "waiting":
-            return lq and lq.is_queued(aid)
-        elif filter_key == "error":
-            f = a.get("consecutive_failures", 0)
-            return 1 <= f < 6
-        elif filter_key == "paused":
-            return a.get("consecutive_failures", 0) >= 6
-        return True
-
-    accounts = [a for a in mw.accounts
-                if (not search_text or search_text in a.get("name", "").lower()
-                    or search_text in a.get("game_client", "").lower())
-                and _match_filter(a)]
-
-    tbl.setRowCount(len(accounts))
-    tbl.blockSignals(True)
-    for i, a in enumerate(accounts):
-        # Checkbox
-        cb = QCheckBox()
-        cb.stateChanged.connect(lambda: _update_batch_buttons(mw))
-        cw = QWidget()
-        cl = QHBoxLayout(cw)
-        cl.setContentsMargins(0, 0, 0, 0)
-        cl.setAlignment(Qt.AlignCenter)
-        cl.addWidget(cb)
-        tbl.setCellWidget(i, 0, cw)
-        # 账号名
-        tbl.setItem(i, 1, QTableWidgetItem(a.get("name", "")))
-        # 状态
-        tbl.setItem(i, 2, QTableWidgetItem(""))
-        # 默认关卡
-        tbl.setItem(i, 3, QTableWidgetItem(a.get("smart_stage", "")))
-        # 剿灭
-        anni = a.get("smart_annihilation", "")
-        anni_enabled = a.get("smart_annihilation_enabled", True)
-        anni_display = {"": "", "Annihilation": "当期",
-                        "Chernobog@Annihilation": "切城",
-                        "LungmenOutskirts@Annihilation": "外环",
-                        "LungmenDowntown@Annihilation": "市区"}.get(anni, "")
-        if anni_display:
-            anni_display = ("✔ " if anni_enabled else "✘ ") + anni_display
-        tbl.setItem(i, 4, QTableWidgetItem(anni_display))
-        # 一~日
-        for j, dk in enumerate(DAY_KEYS):
-            tbl.setItem(i, 5 + j, QTableWidgetItem(a.get(f"smart_{dk}", "")))
-        # Detail button
-        detail_btn = QPushButton("✎")
-        detail_btn.setFixedSize(24, 24)
-        detail_btn.setToolTip("编辑账号详情")
-        orig_idx = mw.accounts.index(a)
-        detail_btn.clicked.connect(lambda _, r=orig_idx: _open_detail(mw, r))
-        dw = QWidget()
-        dl = QHBoxLayout(dw)
-        dl.setContentsMargins(0, 0, 0, 0)
-        dl.setAlignment(Qt.AlignCenter)
-        dl.addWidget(detail_btn)
-        tbl.setCellWidget(i, btn_col, dw)
-
-    tbl.blockSignals(False)
-    _update_status_column(mw)
 
 
 def _open_detail(mw: Any, row: int) -> None:
     from ui.account_detail import open_account_detail
     open_account_detail(mw, row)
-    _rebuild_smart_table(mw)
+    _rebuild_list(mw)
