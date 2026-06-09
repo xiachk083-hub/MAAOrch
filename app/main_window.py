@@ -796,18 +796,15 @@ class MainWindow(QMainWindow):
         d.exec()
 
     def _health_check(self) -> None:
-        """Background health check on startup. Updates status bar indicator only."""
+        """Background health check on startup."""
         try:
             from services.health_check import run_health_check
             report = run_health_check(self.ctx)
             n = report.error_count + report.warn_count
             if n:
-                self._health_indicator.setText(f"⚠ {n}")
-                self._health_indicator.setStyleSheet("color:#e8a000;font-weight:bold")
-                self._log(f"环境检测: {report.error_count} 个错误, {report.warn_count} 个警告")
+                self._log(f"⚠ 环境检测: {report.error_count} 个错误, {report.warn_count} 个警告")
             else:
-                self._health_indicator.setText("✅")
-                self._health_indicator.setStyleSheet("color:#0a0")
+                self._log("✅ 环境检测: 全部正常")
         except Exception as e:
             self._log(f"环境检测失败: {e}")
 
@@ -836,8 +833,7 @@ class MainWindow(QMainWindow):
                         dp = Path(__file__).parent / "accounts" / a.get("id", "") / "depot.json"
                         if not dp.exists():
                             count += 1
-        txt = "📋 待办" + (f" {count}" if count else "")
-        self._todo_btn.setText(txt)
+        pass  # badge removed with tab bar
 
     def closeEvent(self, e) -> None:
         if not self.isMinimized():
