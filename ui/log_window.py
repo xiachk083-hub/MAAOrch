@@ -19,15 +19,50 @@ def show_log_window(mw: Any) -> None:
     log_text.setReadOnly(True)
     log_text.setMaximumBlockCount(2000)
     log_text.setFont(QFont("Consolas", 9))
-    # Load existing logs
-    lp = Path(__file__).parent.parent / "debug.log"
-    if lp.exists():
+    # Auto-refresh from debug.log (append only)
+    _last_pos = 0
+
+    def _refresh():
+        nonlocal _last_pos
+        if not d.isVisible():
+            return
         try:
-            data = lp.read_text(encoding="utf-8")
-            log_text.setPlainText(data)
-            log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
+            lp2 = Path(__file__).parent.parent / "debug.log"
+            if not lp2.exists():
+                return
+            size = lp2.stat().st_size
+            if size <= _last_pos:
+                return
+            with lp2.open("rb") as f:
+                f.seek(_last_pos)
+                new_data = f.read(size - _last_pos).decode("utf-8", errors="replace")
+                _last_pos = size
+                if new_data:
+                    log_text.appendPlainText(new_data)
+                    if auto_scroll.isChecked():
+                        log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
         except Exception:
             pass
+
+    # Initial load
+    try:
+        lp_initial = Path(__file__).parent.parent / "debug.log"
+        if lp_initial.exists():
+            _last_pos = lp_initial.stat().st_size
+            if _last_pos < 50000:
+                # Small file: load entirely
+                data = lp_initial.read_text(encoding="utf-8")
+                log_text.setPlainText(data)
+            else:
+                # Large file: load last 50000 bytes
+                with lp_initial.open("rb") as f:
+                    f.seek(max(0, _last_pos - 50000))
+                    data = f.read().decode("utf-8", errors="replace")
+                log_text.setPlainText(data)
+            log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
+    except Exception:
+        pass
+
     vl.addWidget(log_text, 1)
 
     btn_row = QHBoxLayout()
@@ -35,24 +70,10 @@ def show_log_window(mw: Any) -> None:
     auto_scroll.setChecked(True)
     btn_row.addWidget(auto_scroll)
     btn_row.addStretch()
-    clear_btn = QPushButton("🗑 清空")
+    clear_btn = QPushButton("清空")
     clear_btn.clicked.connect(lambda: log_text.clear())
     btn_row.addWidget(clear_btn)
     vl.addLayout(btn_row)
-
-    # Auto-refresh from debug.log
-    def _refresh():
-        if not d.isVisible():
-            return
-        try:
-            lp2 = Path(__file__).parent.parent / "debug.log"
-            if lp2.exists():
-                data = lp2.read_text(encoding="utf-8")
-                log_text.setPlainText(data)
-                if auto_scroll.isChecked():
-                    log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
-        except Exception:
-            pass
 
     timer = QTimer(d)
     timer.timeout.connect(_refresh)
