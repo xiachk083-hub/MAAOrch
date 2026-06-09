@@ -175,7 +175,7 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     cb = QCheckBox()
     cb.setFixedWidth(28)
     cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
-    cb.stateChanged.connect(lambda: _update_batch_buttons(mw))
+    cb.stateChanged.connect(lambda _=None: _update_batch_buttons(mw))
     hl.addWidget(cb)
 
     # Name
@@ -287,6 +287,8 @@ def _update_status(mw: Any) -> None:
 
 def _update_batch_buttons(mw: Any) -> None:
     """Update batch button states based on current selections."""
+    if not hasattr(mw, '_list_rows'):
+        return
     selected = _get_selected(mw)
     n = len(selected)
     for act in ("edit", "enq", "stop", "del"):
