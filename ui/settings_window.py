@@ -129,14 +129,16 @@ def open_settings(mw: Any) -> None:
     # ── MAA 源目录 ──
     g4 = QGroupBox("MAA 源目录")
     gl4 = QVBoxLayout(g4)
-    src_dir = Path(__file__).parent.parent / "maa" / "source"
+    from services.instance_pool import _find_maa_source
+    maa_path = _find_maa_source()
+    src_dir = maa_path if maa_path else (Path(__file__).parent.parent / "services" / "maa" / "source")
     src_row = QHBoxLayout()
     src_row.addWidget(QLabel(str(src_dir)))
     open_btn = QPushButton("📂 打开目录")
     open_btn.clicked.connect(lambda: __import__('os').startfile(str(src_dir)))
     src_row.addWidget(open_btn)
     src_row.addStretch()
-    exe_ok = (src_dir / "MAA.exe").exists()
+    exe_ok = src_dir and (src_dir / "MAA.exe").exists()
     src_row.addWidget(QLabel("✅ 已就绪" if exe_ok else "❌ 未找到 MAA.exe"))
     gl4.addLayout(src_row)
     vl.addWidget(g4)
