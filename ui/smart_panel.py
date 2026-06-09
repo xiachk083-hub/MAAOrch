@@ -175,9 +175,9 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     cb = QCheckBox()
     cb.setFixedWidth(28)
     cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
-    cb.toggled.connect(lambda checked, m=mw: _update_batch_buttons(m))
-    cb.clicked.connect(lambda: _update_batch_buttons(mw))
+    cb.toggled.connect(lambda: _update_batch_buttons(mw))
     hl.addWidget(cb)
+    row._checkbox = cb
 
     # Name
     nm = QLabel(a.get("name", ""))
@@ -308,14 +308,11 @@ def _get_selected(mw: Any) -> list[str]:
         return []
     selected = []
     for row_w in mw._list_rows:
-        try:
-            cbs = [c for c in row_w.children() if isinstance(c, QCheckBox)]
-            if cbs and cbs[0].isChecked():
-                aid = getattr(row_w, "_account_id", "")
-                if aid:
-                    selected.append(aid)
-        except RuntimeError:
-            continue
+        cb = getattr(row_w, "_checkbox", None)
+        if cb and cb.isChecked():
+            aid = getattr(row_w, "_account_id", "")
+            if aid:
+                selected.append(aid)
     return selected
 
 
