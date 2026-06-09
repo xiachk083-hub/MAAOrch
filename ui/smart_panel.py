@@ -170,19 +170,11 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     hl.setContentsMargins(12, 0, 12, 0)
     hl.setSpacing(0)
 
-    # Fake checkbox (QLabel) — bypasses Qt QCheckBox isChecked() bugs
-    chk = QLabel("☐")
-    chk.setFixedWidth(28)
-    chk.setAlignment(Qt.AlignCenter)
-    chk.setStyleSheet("color:#888;font-size:10pt")
-    chk._checked = False
-    def _toggle_chk(e):
-        chk._checked = not chk._checked
-        chk.setText("☑" if chk._checked else "☐")
-        chk.setStyleSheet("color:#498205;font-size:10pt" if chk._checked else "color:#888;font-size:10pt")
-    chk.mousePressEvent = _toggle_chk
-    hl.addWidget(chk)
-    row._checker = chk
+    # Checkbox
+    cb = QCheckBox()
+    cb.setFixedWidth(28)
+    hl.addWidget(cb)
+    row._checkbox = cb
 
     # Name
     nm = QLabel(a.get("name", ""))

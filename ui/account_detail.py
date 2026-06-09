@@ -159,10 +159,25 @@ def open_account_detail(mw: Any, row: int) -> None:
         mw._save()
         d.accept()
 
+    del_btn = QPushButton("🗑 删除账号")
+    del_btn.setStyleSheet("QPushButton{color:#e88;border:1px solid #5a2020;border-radius:5px;padding:5px 14px;font-size:9pt}QPushButton:hover{background:#5a2020;color:#fff}")
+    def _delete():
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(d, "确认", f"删除账号「{ac.get('name','')}」?") == QMessageBox.Yes:
+            mw.accounts.pop(row)
+            mw._save()
+            d.accept()
+    del_btn.clicked.connect(_delete)
+
     bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
     bb.accepted.connect(_save)
     bb.rejected.connect(d.reject)
-    vl.addWidget(bb)
+
+    btn_row = QHBoxLayout()
+    btn_row.addWidget(del_btn)
+    btn_row.addStretch()
+    btn_row.addWidget(bb)
+    vl.addLayout(btn_row)
 
     d.exec()
 
