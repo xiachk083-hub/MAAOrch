@@ -17,7 +17,7 @@ from services.emu_service import EmuService
 from services.config_injector import ConfigService
 from services.log_parser import LogService
 from services.instance_pool import MaintService
-from ui.dialogs import AccountDialog,TaskSettingsDialog
+from ui.dialogs import TaskSettingsDialog
 from network.api_server import ApiServer
 from services.pipeline_thread import PipelineThread
 from services.schedule_thread import ScheduleThread
@@ -483,23 +483,6 @@ class MainWindow(QMainWindow):
         if i is not None and i<len(self.groups) and QMessageBox.question(self,"确认",f"删除 {self.groups[i]['name']}?")==QMessageBox.Yes: self.groups.pop(i); self.selected_group_idx=min(i,len(self.groups)-1) if self.groups else None; self._save(); self._rgl()
 
     # Accounts
-    def _ra(self) -> None:
-        if not self.accounts: self.ad.setVisible(False); return
-        self.ad.setVisible(True)
-        search=getattr(self,'asrch',None); filter_text=search.text().strip().lower() if search and search.text() else ""
-        visible=[a for a in self.accounts if not filter_text or filter_text in a.get("name", "").lower()]
-        old = self.at.rowCount()
-        if old != len(visible):
-            self.at.setRowCount(len(visible))
-        for i,a in enumerate(visible):
-            ni=QTableWidgetItem(a.get("name", "")); ni._acc_id=a["id"]; self.at.setItem(i,0,ni); self.at.setItem(i,1,QTableWidgetItem(a.get("game_client","")))
-    def _on_acc_sel(self) -> None:
-        sel=self.at.currentRow()
-        if sel>=0:
-            it=self.at.item(sel,0)
-            if it and hasattr(it,'_acc_id'):
-                for j,a in enumerate(self.accounts):
-                    if a["id"]==it._acc_id: self._sad(j); break
     def _toggle_sidebar(self) -> None:
         if hasattr(self, '_side_bar') and self._side_bar:
             visible = not self._side_bar.isVisible()
@@ -538,38 +521,6 @@ class MainWindow(QMainWindow):
     def _show_maa_stats(self, w: dict) -> None: return self.logs.show_maa_stats(w)
     def _view_maa_log(self, w: dict) -> None: return self.logs.view_maa_log(w)
     def _scan(self, a: dict, cb) -> None: self.emu.scan(a, cb)
-    def _add_acc(self) -> None:
-        d=AccountDialog(self)
-        if d.exec()==QDialog.Accepted: self.accounts.append(Account.from_dict(d.r)); self._save(); self._ra()
-    def _del_acc(self) -> None:
-        row=self.at.currentRow()
-        if row<0: return
-        it=self.at.item(row,0)
-        if not it or not hasattr(it,'_acc_id'): return
-        aid=it._acc_id
-        for j,a in enumerate(self.accounts):
-            if a["id"]==aid:
-                if QMessageBox.question(self,"确认",f"删除 {a['name']}?")==QMessageBox.Yes:
-                    for w in self.warehouse:
-                        if w.get("account_ref")==a["id"]: w["account_ref"]=""
-                    self.accounts.pop(j); self._save(); self._ra()
-                return
-    def _ac_menu(self, pos) -> None:
-        row=self.at.rowAt(pos.y())
-        if row<0: return
-        it=self.at.item(row,0)
-        if not it or not hasattr(it,'_acc_id'): return
-        aid=it._acc_id
-        for j,a in enumerate(self.accounts):
-            if a["id"]==aid: orig=j; break
-        else: return
-        m=QMenu(); m.addAction("▶ 启动",lambda: self._la(orig)); m.addAction("📤 导出",lambda: self._export_acc(orig)); m.addAction("✕ 删除",lambda: self._del_acc()); m.exec(self.at.viewport().mapToGlobal(pos))
-    def _export_acc(self, row: int) -> None:
-        if row<0 or row>=len(self.accounts): return
-        a=self.accounts[row]
-        fp,_=QFileDialog.getSaveFileName(self,"导出账号",f"{a['name']}.json","JSON (*.json)")
-        if fp:
-            Path(fp).write_text(json.dumps({"name":a.get("name"),"game_client":a.get("game_client"),"adb_path":a.get("adb_path"),"adb_address":a.get("adb_address"),"connection_preset":a.get("connection_preset"),"touch_mode":a.get("touch_mode"),"account_switch":a.get("account_switch"),"emu_instance_index":a.get("emu_instance_index"),"emu_instance_name":a.get("emu_instance_name"),"emu_wait":a.get("emu_wait", 30),"task_settings":a.get("task_settings",{}),"post_action":a.get("post_action"),"task_pipeline":(progs[0].get("task_pipeline","") if (progs:=[w for w in self.warehouse if w.get("account_ref")==a["id"]]) else "")},ensure_ascii=False,indent=2),encoding="utf-8")
     def _la(self, row: int) -> None:
         """Manual single-account launch → enqueue with highest priority."""
         if row < 0 or row >= len(self.accounts):
