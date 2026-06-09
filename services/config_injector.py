@@ -2,7 +2,7 @@ from __future__ import annotations
 import json, re
 from pathlib import Path
 from datetime import datetime
-from infrastructure.task_constants import find_mumu_cli
+from infrastructure.task_constants import find_mumu_cli, CONNECT_CONFIG_MAP, TOUCH_MODE_MAP
 from app.service_context import ServiceContext
 
 class ConfigService:
@@ -54,8 +54,8 @@ class ConfigService:
             if ac.get("adb_address"): c["Connect.Address"]=ac["adb_address"]
             if ac.get("adb_path"): c["Connect.AdbPath"]=ac["adb_path"]
             pr=ac.get("connection_preset",""); to=ac.get("touch_mode","")
-            if pr: c["Connect.ConnectConfig"]={"MuMuPro":"MuMuEmulator12"}.get(pr,pr)
-            if to: c["Connect.TouchMode"]={"MiniTouch":"minitouch","MaaTouch":"maatouch","ADB":"adb"}.get(to,"minitouch")
+            if pr: c["Connect.ConnectConfig"]=CONNECT_CONFIG_MAP.get(pr,pr)
+            if to: c["Connect.TouchMode"]=TOUCH_MODE_MAP.get(to,"minitouch")
             c["Connect.AdbReplaced"]="True"; c["Connect.AutoDetect"]="False"; c["Connect.AlwaysAutoDetect"]="False"
             if ac.get("game_client"): c["Start.ClientType"]=ac["game_client"]
             sw=ac.get("account_switch","")
