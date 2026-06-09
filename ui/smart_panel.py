@@ -37,13 +37,13 @@ def build_smart_panel(mw: Any) -> QWidget:
     mw._smart_search.setPlaceholderText("搜索账号...")
     mw._smart_search.setFixedHeight(30)
     mw._smart_search.setStyleSheet("QLineEdit{background:transparent;color:#ddd;border:none;padding:0 6px;font-size:9pt}")
-    mw._smart_search.textChanged.connect(lambda: _rebuild_list(mw))
+    mw._smart_search.textChanged.connect(lambda: QTimer.singleShot(0, lambda: _rebuild_list(mw)))
     sf.addWidget(mw._smart_search, 1)
 
     add_btn = QPushButton("＋添加")
     add_btn.setFixedHeight(30)
     add_btn.setStyleSheet("QPushButton{background:#498205;color:#fff;border:none;border-radius:0 5px 5px 0;padding:0 14px;font-size:9pt;font-weight:bold}")
-    add_btn.clicked.connect(lambda: _add_account(mw))
+    add_btn.clicked.connect(lambda: QTimer.singleShot(0, lambda: _add_account(mw)))
     sf.addWidget(add_btn)
 
     vl.addLayout(sr)
@@ -167,7 +167,10 @@ def _rebuild_list(mw: Any) -> None:
             item.widget().deleteLater()
 
     ft = getattr(mw, "_smart_search", None)
-    st = ft.text().strip().lower() if ft and ft.text() else ""
+    try:
+        st = ft.text().strip().lower() if ft and ft.text() else ""
+    except RuntimeError:
+        st = ""
     fk = getattr(mw, "_smart_filter", "")
     mw._list_rows = []
 
