@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QCheckBox,
-    QScrollArea, QLineEdit, QFrame, QSizePolicy,
+    QScrollArea, QLineEdit, QFrame, QSizePolicy, QMenu,
 )
 from services.smart_scheduler import MATERIAL_STAGES, _arknights_now
 
@@ -235,8 +235,10 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     dl.addWidget(dt)
     hl.addWidget(dw)
 
-    # Hover effect
+    # Left click → detail, right click → menu
     row.mousePressEvent = lambda e, r=mw.accounts.index(a): _open_detail(mw, r)
+    row.setContextMenuPolicy(Qt.CustomContextMenu)
+    row.customContextMenuRequested.connect(lambda pos, r=mw.accounts.index(a): _show_row_menu(mw, r, row.mapToGlobal(pos)))
 
     return row
 
@@ -339,6 +341,23 @@ def _do_batch(mw: Any, action: str) -> None:
         from ui.batch_edit import open_batch_edit
         open_batch_edit(mw, selected)
     _rebuild_list(mw)
+
+
+def _show_row_menu(mw: Any, row: int, pos) -> None:
+    """Right-click menu for account row."""
+    menu = QMenu()
+    edit_a = menu.addAction("✎ 编辑")
+    del_a = menu.addAction("🗑 删除")
+    action = menu.exec(pos)
+    if action == edit_a:
+        _open_detail(mw, row)
+    elif action == del_a:
+        from PySide6.QtWidgets import QMessageBox
+        a = mw.accounts[row]
+        if QMessageBox.question(mw, "确认", f"删除账号「{a.get('name','')}」?") == QMessageBox.Yes:
+            mw.accounts.pop(row)
+            mw._save()
+            _rebuild_list(mw)
 
 
 def _open_detail(mw: Any, row: int) -> None:
