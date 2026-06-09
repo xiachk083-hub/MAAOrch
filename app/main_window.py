@@ -267,11 +267,13 @@ class MainWindow(QMainWindow):
         from ui.smart_panel import _do_batch
         from ui.side_bar import _toggle_smart, _run_smart_all
 
-        smart_cb = QCheckBox("智能调度")
-        smart_cb.setChecked(self.config.get("smart_global", {}).get("enabled", False))
-        smart_cb.toggled.connect(lambda v: _toggle_smart(self, v))
-        smart_cb.setFixedHeight(26)
-        bb.addWidget(smart_cb)
+        smart_btn = QPushButton("☐ 智能调度")
+        smart_btn.setCheckable(True)
+        smart_btn.setChecked(self.config.get("smart_global", {}).get("enabled", False))
+        smart_btn.setFixedHeight(26)
+        smart_btn.toggled.connect(lambda v: _toggle_smart(self, v))
+        smart_btn.toggled.connect(lambda v: smart_btn.setText("☑ 智能调度" if v else "☐ 智能调度"))
+        bb.addWidget(smart_btn)
 
         run_btn = QPushButton("▶ 立即调度全部")
         run_btn.setObjectName("startBtn")
