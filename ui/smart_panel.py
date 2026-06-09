@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QFrame, QLineEdit,
 )
-from smart_scheduler import MATERIAL_STAGES, _arknights_now
+from services.smart_scheduler import MATERIAL_STAGES, _arknights_now
 
 
 def build_smart_panel(mw: Any) -> QWidget:
@@ -177,7 +177,7 @@ def _open_settings(mw: Any) -> None:
 
 
 def _add_account(mw: Any) -> None:
-    from account import Account
+    from models.account import Account
     a = Account()
     a.name = f"账号{len(mw.accounts) + 1}"
     mw.accounts.append(a)

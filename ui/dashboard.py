@@ -12,10 +12,10 @@ from PySide6.QtWidgets import (
     QComboBox, QLineEdit, QSpinBox, QCheckBox, QFrame, QMenu, QInputDialog,
 )
 
-from task_constants import TASK_NAMES, EMU_PRESETS, CLIENT_TYPES, find_mumu_cli
-from utils import _find_maa_cli
-from dialogs import TaskSettingsDialog
-from ui.config_cards import refresh_config_cards
+from infrastructure.task_constants import TASK_NAMES, EMU_PRESETS, CLIENT_TYPES, find_mumu_cli
+from infrastructure.utils import _find_maa_cli
+from ui.dialogs import TaskSettingsDialog
+from ui.widgets.config_card import refresh_config_cards
 
 
 def clear_dashboard(mw: Any) -> None:
@@ -390,7 +390,7 @@ def _build_emu_adb_card(mw: Any, row: int) -> None:
             emu_path_edit.setText(str(cli))
             a.__setitem__("emu_path", str(cli))
             a.__setitem__("emu_add_cmd", "")
-            from task_constants import find_adb
+            from infrastructure.task_constants import find_adb
             adb_exe = find_adb()
             if adb_exe:
                 adb_p.setText(adb_exe)

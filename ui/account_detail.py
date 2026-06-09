@@ -5,7 +5,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QGroupBox, QFormLayout, QSpinBox,
                                QCheckBox, QComboBox, QLineEdit, QDialogButtonBox)
-from task_constants import EMU_PRESETS, TASK_NAMES, find_mumu_cli, detect_emu_instances
+from infrastructure.task_constants import EMU_PRESETS, TASK_NAMES, find_mumu_cli, detect_emu_instances
 
 
 def open_account_detail(mw: Any, row: int) -> None:
@@ -164,7 +164,7 @@ def _on_emu_changed(combo: QComboBox, ac: dict) -> None:
     idx = combo.currentData()
     if not idx:
         return
-    from task_constants import MUMU_INSTANCE_DIRS
+    from infrastructure.task_constants import MUMU_INSTANCE_DIRS
     port = 5555 + int(idx) * 2
     ac["adb_address"] = f"127.0.0.1:{port}"
     ac["connection_preset"] = "MuMuPro"
