@@ -42,7 +42,7 @@ def build_smart_panel(mw: Any) -> QWidget:
 
     add_btn = QPushButton("＋添加")
     add_btn.setFixedHeight(30)
-    add_btn.setStyleSheet("QPushButton{background:#498205;color:#fff;border:none;border-radius:0 5px 5px 0;padding:0 14px;font-size:9pt;font-weight:bold}")
+    add_btn.setStyleSheet("QPushButton{color:#498205;font-weight:bold;font-size:9pt;border:none;border-radius:0 5px 5px 0;padding:0 14px}")
     add_btn.clicked.connect(lambda: QTimer.singleShot(0, lambda: _add_account(mw)))
     sf.addWidget(add_btn)
 
