@@ -113,11 +113,16 @@ def _set_filter(mw: Any, key: str) -> None:
 
 
 def _add_account(mw: Any) -> None:
+    from PySide6.QtWidgets import QInputDialog
+    name, ok = QInputDialog.getText(mw, "新建账号", "账号名:", text=f"账号{len(mw.accounts)+1}")
+    if not ok or not name.strip():
+        return
     from models.account import Account
     a = Account()
-    a.name = f"账号{len(mw.accounts)+1}"
+    a.name = name.strip()
     mw.accounts.append(a)
     mw._save()
+    mw._log(f"已添加账号: {a.name}")
     _rebuild_list(mw)
 
 
@@ -300,21 +305,20 @@ def _update_status(mw: Any) -> None:
     """Update status labels for all visible rows in real-time."""
     for row_w in mw._list_rows:
         st = row_w.findChild(QLabel, "statusLabel")
-        nm = row_w.findChild(QLabel, "accountName")
-        if not st or not nm:
+        if not st:
             continue
-        txt = nm.text().strip()
-        # Find matching account
-        for a in mw.accounts:
-            if a.get("name") == txt:
-                aid = a.get("id", "")
-                lq = getattr(mw, "launch_queue", None)
-                rnr = getattr(mw, "runner", None)
-                running = (lq and lq.is_running(aid)) or (rnr and rnr.is_running(aid))
-                queued = lq and lq.is_queued(aid)
-                fails = a.get("consecutive_failures", 0)
-                _set_status_text(st, running, queued, fails, mw, aid)
-                break
+        aid = getattr(row_w, "_account_id", "")
+        if aid:
+            lq = getattr(mw, "launch_queue", None)
+            rnr = getattr(mw, "runner", None)
+            running = (lq and lq.is_running(aid)) or (rnr and rnr.is_running(aid))
+            queued = lq and lq.is_queued(aid)
+            # Find account by ID
+            for a in mw.accounts:
+                if a.get("id") == aid:
+                    fails = a.get("consecutive_failures", 0)
+                    _set_status_text(st, running, queued, fails, mw, aid)
+                    break
 
 
 def _get_selected(mw: Any) -> list[str]:
@@ -372,9 +376,17 @@ def _do_batch(mw: Any, action: str) -> None:
         indices = _get_selected_indices(mw)
         if not indices:
             return
+        removed_ids = set()
+        for idx in indices:
+            if 0 <= idx < len(mw.accounts):
+                removed_ids.add(mw.accounts[idx].get("id", ""))
         if QMessageBox.question(mw, "确认", f"删除 {len(indices)} 个?") == QMessageBox.Yes:
             for idx in indices:
-                mw.accounts.pop(idx)
+                if 0 <= idx < len(mw.accounts):
+                    mw.accounts.pop(idx)
+            # Clean up warehouse references
+            if removed_ids:
+                mw.warehouse[:] = [w for w in mw.warehouse if w.get("account_ref") not in removed_ids]
             mw._save()
     elif action == "edit":
         from ui.batch_edit import open_batch_edit

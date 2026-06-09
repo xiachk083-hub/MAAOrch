@@ -690,6 +690,13 @@ class MainWindow(QMainWindow):
             self.hide(); e.ignore()
         else:
             self._do_save(); e.accept(); QApplication.quit()
+
+    def changeEvent(self, e) -> None:
+        if e.type() == QEvent.WindowStateChange:
+            # Reduce polling when minimized
+            if hasattr(self, '_proc_timer'):
+                self._proc_timer.setInterval(10000 if self.isMinimized() else self.POLL_INTERVAL_MS)
+        super().changeEvent(e)
     def _tlog(self) -> None: show_log_window(self)
     def _settings(self) -> None: open_settings(self)
 if __name__=="__main__":
