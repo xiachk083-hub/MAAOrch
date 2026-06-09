@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QCheckBox, QPushButton)
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
 
 
 def build_side_bar(mw: Any) -> QFrame:
@@ -46,24 +46,6 @@ def build_side_bar(mw: Any) -> QFrame:
         mw._side_frames[key] = frame
 
     vl.addStretch()
-
-    # ── Smart scheduling controls ──
-    div = QFrame()
-    div.setFrameShape(QFrame.HLine)
-    div.setStyleSheet("color:#2a2a2a;max-height:1px")
-    vl.addWidget(div)
-
-    smart_cb = QCheckBox("智能调度")
-    smart_cb.setChecked(mw.config.get("smart_global", {}).get("enabled", False))
-    smart_cb.toggled.connect(lambda v: _toggle_smart(mw, v))
-    mw._side_smart_cb = smart_cb
-    vl.addWidget(smart_cb)
-
-    run_all_btn = QPushButton("▶ 立即调度全部")
-    run_all_btn.setObjectName("startBtn")
-    run_all_btn.setFixedHeight(26)
-    run_all_btn.clicked.connect(lambda: _run_smart_all(mw))
-    vl.addWidget(run_all_btn)
 
     # Refresh timer for counts
     def _refresh_counts():

@@ -91,51 +91,13 @@ def build_smart_panel(mw: Any) -> QWidget:
     scroll.setWidget(list_w)
     vl.addWidget(scroll, 1)
 
-    # ── Batch bar ──
-    br = QHBoxLayout()
-    br.setContentsMargins(12, 4, 12, 4)
-    br.setSpacing(8)
-    def _batch_handler(mw, action):
-        selected = _get_selected(mw)
-        if not selected: return
-        lq = getattr(mw, "launch_queue", None)
-        runner = getattr(mw, "runner", None)
-        if action == "enq" and lq:
-            for aid in selected: lq.enqueue(aid, "manual")
-            lq.tick()
-        elif action == "stop" and runner:
-            for aid in selected: runner.stop(aid)
-        elif action == "del":
-            from PySide6.QtWidgets import QMessageBox
-            if QMessageBox.question(mw, "确认", f"删除 {len(selected)} 个?") == QMessageBox.Yes:
-                mw.accounts[:] = [a for a in mw.accounts if a.get("id") not in selected]
-                mw._save()
-        elif action == "edit":
-            from ui.batch_edit import open_batch_edit
-            open_batch_edit(mw, selected)
-        _rebuild_list(mw)
-
-    for name, attr, act in [("批量设置","_batch_edit","edit"),("批量入队","_batch_enq","enq"),
-                             ("批量停止","_batch_stop","stop"),("批量删除","_batch_del","del")]:
-        btn = QPushButton(name)
-        btn.setEnabled(False)
-        btn.setFixedHeight(26)
-        btn.clicked.connect(lambda _, a=act: _batch_handler(mw, a))
-        setattr(mw, attr, btn)
-        br.addWidget(btn)
-    mw._batch_stat = QLabel("")
-    mw._batch_stat.setStyleSheet("color:#555;font-size:8pt")
-    br.addWidget(mw._batch_stat)
-    br.addStretch()
-    vl.addLayout(br)
-
     mw._smart_filter = ""
     mw._list_rows = []
     mw._set_smart_filter = lambda k: _set_filter(mw, k)
     _rebuild_list(mw)
 
     timer = QTimer(mw.smart_v)
-    timer.timeout.connect(lambda: _update_status(mw))
+    timer.timeout.connect(lambda: (_update_status(mw), _update_batch_buttons(mw)))
     timer.start(3000)
 
     return mw.smart_v
@@ -211,6 +173,7 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     cb = QCheckBox()
     cb.setFixedWidth(28)
     cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
+    cb.stateChanged.connect(lambda: _update_batch_buttons(mw))
     hl.addWidget(cb)
 
     # Name
@@ -318,6 +281,19 @@ def _update_status(mw: Any) -> None:
                 break
 
 
+def _update_batch_buttons(mw: Any) -> None:
+    """Update batch button states based on current selections."""
+    selected = _get_selected(mw)
+    n = len(selected)
+    for act in ("edit", "enq", "stop", "del"):
+        btn = getattr(mw, f"_batch_{act}_btn", None)
+        if btn:
+            btn.setEnabled(n > 0)
+    stat = getattr(mw, "_batch_stat", None)
+    if stat:
+        stat.setText(f"(已选 {n}/{len(mw.accounts)})" if n else "")
+
+
 def _get_selected(mw: Any) -> list[str]:
     selected = []
     for row_w in mw._list_rows:
@@ -331,6 +307,31 @@ def _get_selected(mw: Any) -> list[str]:
                         selected.append(a.get("id", ""))
                         break
     return selected
+
+
+def _do_batch(mw: Any, action: str) -> None:
+    """Batch action handler for main_window bottom bar."""
+    selected = _get_selected(mw)
+    if not selected:
+        return
+    lq = getattr(mw, "launch_queue", None)
+    runner = getattr(mw, "runner", None)
+    if action == "enq" and lq:
+        for aid in selected:
+            lq.enqueue(aid, "manual")
+        lq.tick()
+    elif action == "stop" and runner:
+        for aid in selected:
+            runner.stop(aid)
+    elif action == "del":
+        from PySide6.QtWidgets import QMessageBox
+        if QMessageBox.question(mw, "确认", f"删除 {len(selected)} 个?") == QMessageBox.Yes:
+            mw.accounts[:] = [a for a in mw.accounts if a.get("id") not in selected]
+            mw._save()
+    elif action == "edit":
+        from ui.batch_edit import open_batch_edit
+        open_batch_edit(mw, selected)
+    _rebuild_list(mw)
 
 
 def _open_detail(mw: Any, row: int) -> None:
