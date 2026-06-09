@@ -28,13 +28,20 @@ def build_side_bar(mw: Any) -> QFrame:
         ("⏸ 暂停", "paused"),
     ]
     mw._side_labels = {}
+    mw._side_frames = {}
     for label, key in status_items:
+        frame = QFrame()
+        frame.setStyleSheet("QFrame{border:none;border-left:0px solid transparent;padding:0}")
+        fl = QHBoxLayout(frame)
+        fl.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel(f"  {label}  0")
-        lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px")
+        lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px;background:transparent")
         lbl.setCursor(Qt.PointingHandCursor)
         lbl.mousePressEvent = lambda e, k=key: _filter_click(mw, k)
-        vl.addWidget(lbl)
+        fl.addWidget(lbl)
+        vl.addWidget(frame)
         mw._side_labels[key] = lbl
+        mw._side_frames[key] = frame
 
     vl.addStretch()
 
@@ -80,8 +87,14 @@ def _filter_click(mw: Any, key: str) -> None:
     """Set filter on smart_panel table."""
     if hasattr(mw, '_set_smart_filter'):
         mw._set_smart_filter(key)
-    for k, lbl in mw._side_labels.items():
+    for k in mw._side_labels:
+        lbl = mw._side_labels[k]
+        frame = mw._side_frames.get(k)
         if k == key:
-            lbl.setStyleSheet("color:#498205;font-weight:bold;font-size:9pt;padding:5px 8px;border-radius:4px;background:#49820515")
+            lbl.setStyleSheet("color:#e6e6e6;font-size:9pt;padding:5px 8px;border-radius:4px;background:#49820515")
+            if frame:
+                frame.setStyleSheet("QFrame{border:none;border-left:3px solid #498205;padding:0;margin-left:2px}")
         else:
-            lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px")
+            lbl.setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px;background:transparent")
+            if frame:
+                frame.setStyleSheet("QFrame{border:none;border-left:0px solid transparent;padding:0}")
