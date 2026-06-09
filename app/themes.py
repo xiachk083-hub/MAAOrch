@@ -10,13 +10,13 @@ QGroupBox{{border:none;margin-top:8px;padding-top:6px;background:transparent}}
 QGroupBox::title{{subcontrol-origin:margin;padding:0 4px;color:#555;font-size:9pt;border:none}}
 
 QPushButton{{background:transparent;color:#999;border:none;border-radius:4px;padding:4px 12px;min-height:24px;font-size:9pt}}
-QPushButton:hover{{background:#242424;color:#eee}}
+QPushButton:hover{{background:#242424;color:#498205}}
 QPushButton:pressed{{background:#2a2a2a}}
 QPushButton:disabled{{color:#444}}
 QPushButton#startBtn{{color:{G};font-weight:bold;min-height:26px;padding:4px 14px;font-size:9pt;background:transparent;border:none;border-radius:4px}}
-QPushButton#startBtn:hover{{background:#242424;color:#55a00a}}
+QPushButton#startBtn:hover{{background:#242424}}
 QPushButton#iconBtn{{background:transparent;color:#666;border:none;border-radius:4px;padding:2px 4px;font-size:11pt;min-height:20px}}
-QPushButton#iconBtn:hover{{background:#242424;color:#ddd}}
+QPushButton#iconBtn:hover{{background:#242424;color:#498205}}
 
 QFrame#sideBar QLabel{{color:#666;font-size:9pt;padding:5px 10px;border-radius:4px}}
 QFrame#sideBar QLabel:hover{{background:#242424;color:#ddd}}
@@ -61,7 +61,7 @@ QFrame#card{{border:1px solid #2a2a2a;border-radius:6px;padding:10px;margin-bott
 QStatusBar{{background:#1C1C1C;color:#555;border-top:1px solid #2a2a2a;padding:1px 6px;font-size:8pt}}
 QStatusBar QLabel{{color:#555;font-size:8pt}}
 QStatusBar QPushButton{{background:transparent;color:#555;border:none;border-radius:3px;padding:1px 4px;min-height:16px;font-size:8pt}}
-QStatusBar QPushButton:hover{{color:#ddd;background:#222}}
+QStatusBar QPushButton:hover{{color:#498205;background:#242424}}
 QToolTip{{background:#242424;color:#ddd;border:1px solid #2a2a2a;border-radius:4px;padding:4px 8px;font-size:9pt}}
 """
 
