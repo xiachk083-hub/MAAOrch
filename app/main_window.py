@@ -269,6 +269,7 @@ class MainWindow(QMainWindow):
         smart_cb = QCheckBox("智能调度")
         smart_cb.setChecked(self.config.get("smart_global", {}).get("enabled", False))
         smart_cb.toggled.connect(lambda v: _toggle_smart(self, v))
+        smart_cb.setFixedHeight(26)
         bb.addWidget(smart_cb)
 
         run_btn = QPushButton("▶ 立即调度全部")
