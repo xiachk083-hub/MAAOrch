@@ -170,14 +170,19 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     hl.setContentsMargins(12, 0, 12, 0)
     hl.setSpacing(0)
 
-    # Checkbox
-    cb = QCheckBox()
-    cb.setFixedWidth(28)
-    cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
-    row._checked = False
-    cb.toggled.connect(lambda checked: setattr(row, '_checked', checked))
-    hl.addWidget(cb)
-    row._checkbox = cb
+    # Fake checkbox (QLabel) — bypasses Qt QCheckBox isChecked() bugs
+    chk = QLabel("☐")
+    chk.setFixedWidth(28)
+    chk.setAlignment(Qt.AlignCenter)
+    chk.setStyleSheet("color:#888;font-size:10pt")
+    chk._checked = False
+    def _toggle_chk(e):
+        chk._checked = not chk._checked
+        chk.setText("☑" if chk._checked else "☐")
+        chk.setStyleSheet("color:#498205;font-size:10pt" if chk._checked else "color:#888;font-size:10pt")
+    chk.mousePressEvent = _toggle_chk
+    hl.addWidget(chk)
+    row._checker = chk
 
     # Name
     nm = QLabel(a.get("name", ""))
@@ -292,7 +297,8 @@ def _get_selected(mw: Any) -> list[str]:
         return []
     selected = []
     for row_w in mw._list_rows:
-        if getattr(row_w, '_checked', False):
+        chk = getattr(row_w, '_checker', None)
+        if chk and getattr(chk, '_checked', False):
             aid = getattr(row_w, "_account_id", "")
             if aid:
                 selected.append(aid)
