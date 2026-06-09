@@ -39,8 +39,9 @@ def _thread_excepthook(args):
 
 sys.excepthook = _global_excepthook
 
-from utils import is_admin, run_as_admin, setup_proxy
-from main_window import MainWindow
+from infrastructure.platform_helper import is_admin, run_as_admin
+from infrastructure.utils import setup_proxy
+from app.main_window import MainWindow
 
 def main():
     if not is_admin() and "--no-elevate" not in sys.argv:
