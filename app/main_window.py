@@ -231,7 +231,7 @@ class MainWindow(QMainWindow):
         self._sidebar_btn.clicked.connect(self._toggle_sidebar)
         tb.addWidget(self._sidebar_btn)
         title_lbl = QLabel("MAAOrch")
-        title_lbl.setStyleSheet("font-weight:bold;font-size:12pt;color:#666;letter-spacing:1px")
+        title_lbl.setStyleSheet("font-weight:600;font-size:13pt;color:#555")
         tb.addWidget(title_lbl)
         tb.addStretch()
         self._toolbar_launch_btn = QPushButton("▶ 启动队列")

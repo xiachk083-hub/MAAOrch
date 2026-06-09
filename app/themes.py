@@ -21,19 +21,19 @@ QPushButton#iconBtn:hover{{background:#242424;color:#ddd}}
 QFrame#sideBar QLabel{{color:#666;font-size:9pt;padding:5px 10px;border-radius:4px}}
 QFrame#sideBar QLabel:hover{{background:#242424;color:#ddd}}
 
-QLineEdit,QSpinBox,QComboBox{{background:transparent;color:#ddd;border:none;border-bottom:1px solid #2a2a2a;padding:4px 6px;min-height:22px;font-size:9pt}}
-QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border-bottom-color:#444}}
-QLineEdit:focus,QSpinBox:focus{{border-bottom:1px solid {G}}}
-QComboBox:disabled{{color:#444}}
-QComboBox::drop-down{{background:transparent;border:none;width:18px}}
+QLineEdit,QSpinBox,QComboBox{{background:#222;color:#ddd;border:1px solid #2a2a2a;border-radius:5px;padding:5px 10px;min-height:22px;font-size:9pt}}
+QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border-color:#3a3a3a}}
+QLineEdit:focus,QSpinBox:focus{{border:1px solid {G};background:#242420}}
+QComboBox:disabled{{color:#444;border-color:#222}}
+QComboBox::drop-down{{background:#222;border:none;width:20px;border-radius:0 5px 5px 0}}
 QComboBox QAbstractItemView{{background:#1C1C1C;color:#ddd;selection-background-color:{G}20;border:1px solid #2a2a2a;border-radius:4px;padding:2px}}
 
 QTableWidget{{background:transparent;color:#999;border:none;font-size:9pt;gridline-color:transparent}}
-QTableWidget::item{{padding:6px 8px;border:none}}
+QTableWidget::item{{padding:7px 8px;border:none}}
 QTableWidget::item:hover{{background:#232323}}
 QTableWidget::item:selected{{background:{G}18;color:#eee}}
-QHeaderView::section{{background:transparent;color:#555;border:none;border-bottom:1px solid #2a2a2a;padding:6px 8px;font-weight:bold;font-size:9pt}}
-QHeaderView::section:hover{{color:#888}}
+QHeaderView::section{{background:transparent;color:#666;border:none;border-bottom:1px solid #2a2a2a;padding:7px 8px;font-weight:bold;font-size:9pt}}
+QHeaderView::section:hover{{color:#999}}
 
 QPlainTextEdit{{background:#1C1C1C;color:#999;border:1px solid #2a2a2a;font-family:Consolas;font-size:11px;border-radius:4px;padding:6px}}
 
