@@ -7,7 +7,7 @@
           "$type": "StartUpTask",
           "AccountName": "",
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "StartUp"
         },
         {
@@ -40,7 +40,7 @@
           "StageResetMode": "Current",
           "UseWeeklySchedule": false,
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Fight"
         },
         {
@@ -87,7 +87,7 @@
             }
           ],
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Infrast"
         },
         {
@@ -109,7 +109,7 @@
           "Level4Time": 540,
           "Level5Time": 540,
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Recruit"
         },
         {
@@ -130,7 +130,7 @@
           "IsCreditFightAvailable": false,
           "IsVisitFriendsAvailable": true,
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Mall"
         },
         {
@@ -142,7 +142,7 @@
           "Mining": false,
           "SpecialAccess": false,
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Award"
         },
         {
@@ -181,7 +181,7 @@
           "StartWithSeed": false,
           "Seed": "",
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Roguelike"
         },
         {
@@ -193,7 +193,7 @@
           "MaxCraftCountPerRound": 16,
           "ClearStore": true,
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "Reclamation"
         },
         {
@@ -203,11 +203,11 @@
           "TriggerInterval": "EveryTime",
           "IsTriggered": true,
           "Name": "",
-          "IsEnable": true,
+          "IsEnable": false,
           "TaskType": "UserDataUpdate"
         }
       ],
-      "TaskSelectedIndex": -1,
+      "TaskSelectedIndex": 1,
       "DragItemIsChecked": {}
     }
   },
@@ -228,7 +228,7 @@
     "ShowUpdaterConsole": false
   },
   "AnnouncementInfo": {
-    "DoNotShowAgain": false,
+    "DoNotShowAgain": true,
     "DoNotShow": false
   },
   "GUI": {

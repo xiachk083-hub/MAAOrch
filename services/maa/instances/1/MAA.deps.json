@@ -57,7 +57,7 @@
       "sha512": "sha512-TwbgxAkXxY+vNEhNVx/QXjJ4vqxmepOjsgRvvImQPbHkHMMb4W+ahL3laMsxXKtNT7iMy+E1B3xkqao2hf1n3A==",
       "type": "package"
     },
-    "MAA/6.11.1": {
+    "MAA/6.12.0": {
       "path": "./",
       "serviceable": false,
       "sha512": "",
@@ -285,7 +285,7 @@
           "./JetBrains.Annotations.dll": {}
         }
       },
-      "MAA/6.11.1": {
+      "MAA/6.12.0": {
         "dependencies": {
           "CalcBinding": "2.5.2",
           "GlobalHotKey": "1.1.0",

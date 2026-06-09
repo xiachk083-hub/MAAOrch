@@ -511,3 +511,47 @@ MAA Team 仅受理用户通过 GitHub 平台依照 Issue 模板规范提交的�
 [2026-06-09 15:13:19.844][INF][ConfigurationHelper]    <2> D:\1-2\MAAOrch\services\maa\v6.11.1\config\gui.new.json saved
 [2026-06-09 15:13:19.844][INF][Bootstrapper]           <2> MaaAssistantArknights GUI exited
 [2026-06-09 15:13:19.845][INF][Bootstrapper]           <2> 
+[2026-06-09 15:25:08.931][INF][Bootstrapper]           <2> ===================================
+[2026-06-09 15:25:08.940][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+[2026-06-09 15:25:08.940][INF][Bootstrapper]           <2> Version v6.12.0-beta.1
+[2026-06-09 15:25:08.941][INF][Bootstrapper]           <2> Built at 2026-06-09T03:12:16.2197203+08:00
+[2026-06-09 15:25:08.942][INF][Bootstrapper]           <2> Maa ENV: Production
+[2026-06-09 15:25:08.942][INF][Bootstrapper]           <2> Command Line: D:\1-2\MAAOrch\services\maa\v6.11.1\MAA.dll
+[2026-06-09 15:25:08.942][INF][Bootstrapper]           <2> User Dir D:\1-2\MAAOrch\services\maa\v6.11.1\
+[2026-06-09 15:25:08.943][INF][Bootstrapper]           <2> ===================================
+[2026-06-09 15:25:09.019][INF][ConfigurationHelper]    <2> D:\1-2\MAAOrch\services\maa\v6.11.1\config\gui.json.bak saved
+[2026-06-09 15:25:10.093][INF][ConfigurationHelper]    <2> D:\1-2\MAAOrch\services\maa\v6.11.1\config\gui.new.json.bak saved
+[2026-06-09 15:25:10.194][INF][AsstProxy]              <2> AsstSetUserDir dirame: D:\1-2\MAAOrch\services\maa\v6.11.1\
+[2026-06-09 15:25:10.195][INF][AsstProxy]              <2> AsstSetUserDir ret: true
+[2026-06-09 15:25:10.969][INF][ItemListHelper]         <2> Loading item list from D:\1-2\MAAOrch\services\maa\v6.11.1\resource\item_index.json
+[2026-06-09 15:25:10.979][INF][ConfigurationHelper]    <2> Configuration Root.Configurations.Default.[1](FightTask).StagePlan has been set: `[""]` -> `[""]`, save scheduled
+[2026-06-09 15:25:10.994][INF][FightSettingsUserControlModel] <2> UpdateStageList Enter
+[2026-06-09 15:25:10.996][INF][ConfigurationHelper]    <2> Configuration Root.Configurations.Default.[1](FightTask).StagePlan has been set: `[""]` -> `[""]`, save scheduled
+[2026-06-09 15:25:10.998][INF][FightSettingsUserControlModel] <2> UpdateStageList Exit, 3 ms
+[2026-06-09 15:25:11.126][INF][AsstProxy]              <8> Using GPU NVIDIA GeForce RTX 3060 Laptop GPU (Driver 32.0.16.1047 2026-05-19)
+[2026-06-09 15:25:11.265][INF][AsstProxy]              <8> LoadResource Enter
+[2026-06-09 15:25:11.266][INF][AsstProxy]              <8> Moved D:\1-2\MAAOrch\services\maa\v6.11.1\cache\resource\tasks.json to D:\1-2\MAAOrch\services\maa\v6.11.1\cache\resource\tasks\tasks.json
+[2026-06-09 15:25:11.266][INF][AsstProxy]              <8> Load resource: D:\1-2\MAAOrch\services\maa\v6.11.1\resource
+[2026-06-09 15:25:11.266][INF][AsstProxy]              <8> AsstLoadResource dirname: D:\1-2\MAAOrch\services\maa\v6.11.1
+[2026-06-09 15:25:11.523][INF][AsstProxy]              <8> AsstLoadResource ret: true
+[2026-06-09 15:25:11.523][INF][AsstProxy]              <8> Load resource: D:\1-2\MAAOrch\services\maa\v6.11.1\cache\resource
+[2026-06-09 15:25:11.523][INF][AsstProxy]              <8> AsstLoadResource dirname: D:\1-2\MAAOrch\services\maa\v6.11.1\cache
+[2026-06-09 15:25:11.604][INF][AsstProxy]              <8> AsstLoadResource ret: true
+[2026-06-09 15:25:11.604][INF][AsstProxy]              <8> LoadResource Exit, 339 ms
+[2026-06-09 15:25:11.605][INF][RunningState]           <8> Init: false to true (called from Init)
+[2026-06-09 15:25:12.075][INF][HttpResponseLoggingExtension] <18> HTTP: NotModified GET https://api.maa.plus/MaaAssistantArknights/api/announcements/wpf.md "6a270925-1ad8" Mon, 08 Jun 2026 18:25:41 GMT 1046.371ms
+[2026-06-09 15:25:12.248][INF][WindowManager]          <2> Whether the window placement was set successfully: true
+[2026-06-09 15:25:12.301][INF][HttpResponseLoggingExtension] <2> HTTP: OK GET https://api.maa.plus/MaaAssistantArknights/api/version/summary.json "6a274922-262" Mon, 08 Jun 2026 22:58:42 GMT 1270.969ms
+[2026-06-09 15:25:12.301][INF][HttpResponseLoggingExtension] <2> HTTP: NotModified GET https://api.maa.plus/MaaAssistantArknights/api/resource/tasks.json "6a1e3bc5-6" Tue, 02 Jun 2026 02:11:17 GMT 1289.214ms
+[2026-06-09 15:25:12.302][INF][HttpResponseLoggingExtension] <2> HTTP: NotModified GET https://api.maa.plus/MaaAssistantArknights/api/gui/StageActivityV2.json "6a217280-3054" Thu, 04 Jun 2026 12:41:36 GMT 1296.436ms
+[2026-06-09 15:25:12.318][INF][FightSettingsUserControlModel] <2> UpdateStageList Enter
+[2026-06-09 15:25:12.321][INF][ConfigurationHelper]    <2> Configuration Root.Configurations.Default.[1](FightTask).StagePlan has been set: `[""]` -> `[""]`, save scheduled
+[2026-06-09 15:25:12.323][INF][FightSettingsUserControlModel] <2> UpdateStageList Exit, 4 ms
+[2026-06-09 15:25:12.389][INF][HttpResponseLoggingExtension] <2> HTTP: OK GET https://mirrorchyan.com/api/resources/MaaResource/latest null null 61.742ms
+[2026-06-09 15:25:12.391][INF][ResourceUpdater]        <2> {"code":0,"msg":"current resource latest version is 2026-06-08 13:49:00.000","data":{"version_name":"2026-06-08 13:49:00.000","version_number":246,"channel":"stable","os":"","arch":"","release_note":"placeholder"}}
+[2026-06-09 15:25:13.026][INF][Bootstrapper]           <2> Shutdown called by `OnClose`
+[2026-06-09 15:25:13.039][INF][ConfigurationHelper]    <2> D:\1-2\MAAOrch\services\maa\v6.11.1\config\gui.json saved
+[2026-06-09 15:25:13.040][INF][ConfigurationHelper]    <2> Waiting for save task to complete
+[2026-06-09 15:25:13.041][INF][ConfigurationHelper]    <2> D:\1-2\MAAOrch\services\maa\v6.11.1\config\gui.new.json saved
+[2026-06-09 15:25:13.041][INF][Bootstrapper]           <2> MaaAssistantArknights GUI exited
+[2026-06-09 15:25:13.041][INF][Bootstrapper]           <2> 
