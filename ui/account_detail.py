@@ -110,7 +110,7 @@ def open_account_detail(mw: Any, row: int) -> None:
         post_cbs[k] = cb
         post_row.addWidget(cb)
     post_row.addStretch()
-    gl2.addLabel("完成后:")
+    gl2.addWidget(QLabel("完成后:"))
     gl2.addLayout(post_row)
     vl.addWidget(g2)
 
