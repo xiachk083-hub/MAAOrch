@@ -292,9 +292,15 @@ def _get_selected(mw: Any) -> list[str]:
     selected = []
     for row_w in mw._list_rows:
         if getattr(row_w, '_checked', False):
+            # Try _account_id first, fallback to name lookup
             aid = getattr(row_w, "_account_id", "")
             if aid:
                 selected.append(aid)
+            else:
+                # Fallback: match by row index
+                idx = getattr(mw, '_list_rows', []).index(row_w)
+                if 0 <= idx < len(mw.accounts):
+                    selected.append(mw.accounts[idx].get("id", ""))
     return selected
 
 
