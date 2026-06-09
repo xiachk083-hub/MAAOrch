@@ -17,8 +17,9 @@ def build_side_bar(mw: Any) -> QFrame:
 
     # Header
     hdr = QLabel("  总览")
-    hdr.setStyleSheet("font-weight:bold;font-size:10pt;color:#666;padding:6px 4px 8px 4px")
-    vl.addWidget(hdr)
+    hdr.setStyleSheet("font-weight:bold;font-size:10pt;color:#666;padding:6px 4px 8px 4px;border-radius:4px")
+    hdr.setCursor(Qt.PointingHandCursor)
+    hdr.mousePressEvent = lambda e: _filter_click(mw, "")
 
     # Status filter items
     status_items = [
@@ -72,6 +73,14 @@ def _filter_click(mw: Any, key: str) -> None:
     """Set filter on smart_panel table."""
     if hasattr(mw, '_set_smart_filter'):
         mw._set_smart_filter(key)
+    # "总览" or empty key → clear all highlights
+    if not key:
+        for k in mw._side_labels:
+            mw._side_labels[k].setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px;background:transparent")
+            f2 = mw._side_frames.get(k)
+            if f2: f2.setStyleSheet("QFrame{border:none;border-left:0px solid transparent;padding:0}")
+        return
+
     for k in mw._side_labels:
         lbl = mw._side_labels[k]
         frame = mw._side_frames.get(k)
