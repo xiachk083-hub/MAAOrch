@@ -258,6 +258,42 @@ class MainWindow(QMainWindow):
 
         ml.addLayout(content_row, 1)
 
+        # ── Bottom bar: smart controls + batch operations ──
+        bb = QHBoxLayout()
+        bb.setContentsMargins(8, 2, 8, 2)
+        bb.setSpacing(6)
+
+        from ui.smart_panel import _do_batch, _get_selected
+        from ui.side_bar import _toggle_smart, _run_smart_all
+
+        smart_cb = QCheckBox("智能调度")
+        smart_cb.setChecked(self.config.get("smart_global", {}).get("enabled", False))
+        smart_cb.toggled.connect(lambda v: _toggle_smart(self, v))
+        bb.addWidget(smart_cb)
+
+        run_btn = QPushButton("▶ 立即调度全部")
+        run_btn.setObjectName("startBtn")
+        run_btn.setFixedHeight(26)
+        run_btn.clicked.connect(lambda: _run_smart_all(self))
+        bb.addWidget(run_btn)
+
+        bb.addStretch()
+
+        for name, act in [("批量设置","edit"),("批量入队","enq"),
+                          ("批量停止","stop"),("批量删除","del")]:
+            btn = QPushButton(name)
+            btn.setEnabled(False)
+            btn.setFixedHeight(26)
+            btn.clicked.connect(lambda _, a=act: _do_batch(self, a))
+            setattr(self, f"_batch_{act}_btn", btn)
+            bb.addWidget(btn)
+
+        self._batch_stat = QLabel("")
+        self._batch_stat.setStyleSheet("color:#555;font-size:8pt")
+        bb.addWidget(self._batch_stat)
+        bb.addStretch()
+        ml.addLayout(bb)
+
         # Status bar — log line + queue stats + action buttons
         sb2 = self.statusBar()
         self._log_lbl = QLabel(" 就绪")
