@@ -181,6 +181,8 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     nm.setObjectName("accountName")
     nm.setStyleSheet("color:#ccc;font-size:9pt;font-weight:500")
     hl.addWidget(nm, 1)
+    # Store account id on the row for reliable lookup
+    row._account_id = a.get("id", "")
 
     # Status
     st_lbl = QLabel("")
@@ -299,13 +301,9 @@ def _get_selected(mw: Any) -> list[str]:
     for row_w in mw._list_rows:
         cb = row_w.findChild(QCheckBox)
         if cb and cb.isChecked():
-            nm = row_w.findChild(QLabel, "accountName")
-            if nm:
-                txt = nm.text().strip()
-                for a in mw.accounts:
-                    if a.get("name") == txt:
-                        selected.append(a.get("id", ""))
-                        break
+            aid = getattr(row_w, "_account_id", "")
+            if aid:
+                selected.append(aid)
     return selected
 
 
