@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QCheckBox, QPushButton)
 
 
 def build_side_bar(mw: Any) -> QFrame:
@@ -47,6 +47,24 @@ def build_side_bar(mw: Any) -> QFrame:
 
     vl.addStretch()
 
+    # ── Smart scheduling controls ──
+    div = QFrame()
+    div.setFrameShape(QFrame.HLine)
+    div.setStyleSheet("color:#2a2a2a;max-height:1px")
+    vl.addWidget(div)
+
+    smart_cb = QCheckBox("智能调度")
+    smart_cb.setChecked(mw.config.get("smart_global", {}).get("enabled", False))
+    smart_cb.toggled.connect(lambda v: _toggle_smart(mw, v))
+    mw._side_smart_cb = smart_cb
+    vl.addWidget(smart_cb)
+
+    run_all_btn = QPushButton("▶ 立即调度全部")
+    run_all_btn.setObjectName("startBtn")
+    run_all_btn.setFixedHeight(26)
+    run_all_btn.clicked.connect(lambda: _run_smart_all(mw))
+    vl.addWidget(run_all_btn)
+
     # Refresh timer for counts
     def _refresh_counts():
         if not mw._side_labels:
@@ -68,6 +86,30 @@ def build_side_bar(mw: Any) -> QFrame:
     _refresh_counts()
 
     return sb
+
+
+def _toggle_smart(mw: Any, enabled: bool) -> None:
+    sg = mw.config.setdefault("smart_global", {})
+    sg["enabled"] = enabled
+    mw._save()
+    if enabled:
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
+
+
+def _run_smart_all(mw: Any) -> None:
+    if not mw.config.get("smart_global", {}).get("enabled", False):
+        mw._log("智能调度未启用")
+        return
+    if hasattr(mw, "launch_queue") and mw.launch_queue:
+        with mw.launch_queue._lock:
+            mw.launch_queue._pending.clear()
+            mw.launch_queue._active_emus.clear()
+        mw.launch_queue._save_queue()
+    mw._smart_force = True
+    setattr(mw, "_last_smart_minute", "")
+    mw._smart_tick()
+    mw._smart_force = False
 
 
 def _filter_click(mw: Any, key: str) -> None:

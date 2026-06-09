@@ -145,7 +145,7 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
         sync: If True, run init synchronously in current thread (caller must handle threading).
     """
     global _inst_init_task
-    src = _find_maa_source()
+    src = _find_maa_source(ctx.config if hasattr(ctx, 'config') else None)
     if not src:
         ctx.log("[实例] 未找到 MAA.exe — 请将 MAA 完整目录复制到 maa/source/（含 MAA.exe 及 resource/ 等）")
         return
@@ -239,12 +239,17 @@ def _ensure_instance_n(ctx, n: int) -> bool:
     return _create_instance(inst, src)
 
 
-def _find_maa_source() -> Path | None:
+def _find_maa_source(config: dict | None = None) -> Path | None:
     """Find MAA executable source for instance pool creation.
-    Priority: maa/source/ (user-managed) → maa/v*/ (versioned) → accounts/*/ (legacy)."""
+    Priority: config maa_source_path → maa/source/ (user-managed) → maa/v*/ (versioned) → accounts/*/ (legacy)."""
     root = Path(__file__).parent
     ver = root / "maa"
     src = ver / "source"
+    # 0. User-configured path from settings
+    if config:
+        user_path = config.get("maa_source_path", "")
+        if user_path and Path(user_path).joinpath("MAA.exe").exists():
+            return Path(user_path)
     # Ensure directory exists even on fresh clone (maa/ is not tracked by git)
     src.mkdir(parents=True, exist_ok=True)
     # 1. User-managed source
