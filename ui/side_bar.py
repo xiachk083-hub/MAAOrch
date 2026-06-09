@@ -24,10 +24,10 @@ def build_side_bar(mw: Any) -> QFrame:
 
     # Status filter items
     status_items = [
-        ("▶ 运行中", "running"),
-        ("⏳ 排队中", "waiting"),
-        ("❌ 错误", "error"),
-        ("⏸ 暂停", "paused"),
+        (" 运行中", "running"),
+        (" 排队中", "waiting"),
+        (" 错误", "error"),
+        (" 暂停", "paused"),
     ]
     mw._side_labels = {}
     mw._side_frames = {}
@@ -57,10 +57,10 @@ def build_side_bar(mw: Any) -> QFrame:
         waiting = len(lq._pending) if lq else 0
         errors = sum(1 for a in mw.accounts if a.get("consecutive_failures", 0) >= 1 and a.get("consecutive_failures", 0) < 6)
         paused = sum(1 for a in mw.accounts if a.get("consecutive_failures", 0) >= 6)
-        mw._side_labels["running"].setText(f"  ▶ 运行中  {running}")
-        mw._side_labels["waiting"].setText(f"  ⏳ 排队中  {waiting}")
-        mw._side_labels["error"].setText(f"  ❌ 错误  {errors}")
-        mw._side_labels["paused"].setText(f"  ⏸ 暂停  {paused}")
+        mw._side_labels["running"].setText(f"  运行中  {running}")
+        mw._side_labels["waiting"].setText(f"  排队中  {waiting}")
+        mw._side_labels["error"].setText(f"  错误  {errors}")
+        mw._side_labels["paused"].setText(f"  暂停  {paused}")
 
     timer = QTimer(sb)
     timer.timeout.connect(_refresh_counts)

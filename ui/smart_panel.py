@@ -285,16 +285,16 @@ def _set_status_text(lbl: QLabel, running: bool, queued: bool, fails: int, mw: A
         if rnr:
             s = rnr._start_times.get(aid, 0)
             if s: dur = f"{int(time.time()-s)//60}m"
-        lbl.setText(f"  ▶{dur}" if dur else "  ▶")
+        lbl.setText(f"运行{dur}" if dur else "运行")
         lbl.setStyleSheet("color:#498205;font-size:8pt;font-weight:bold")
     elif queued:
-        lbl.setText("  ⏳")
+        lbl.setText("排队")
         lbl.setStyleSheet("color:#e8a000;font-size:8pt")
     elif fails >= 6:
-        lbl.setText("  ⏸")
+        lbl.setText("暂停")
         lbl.setStyleSheet("color:#666;font-size:8pt")
     elif fails:
-        lbl.setText(f"  ✕{fails}")
+        lbl.setText(f"错误{fails}")
         lbl.setStyleSheet("color:#c04040;font-size:8pt")
     else:
         lbl.setText("")
@@ -357,11 +357,6 @@ def _do_batch(mw: Any, action: str) -> None:
     from PySide6.QtWidgets import QMessageBox
     selected = _get_selected(mw)
     if not selected:
-        # Count how many rows _get_selected checked
-        total = len(getattr(mw, '_list_rows', []))
-        checked = sum(1 for rw in getattr(mw, '_list_rows', []) if getattr(rw, '_checked', False))
-        mw._log(f"[批量] 按钮被点击, 检测到 {checked}/{total} 行勾选, selected={selected}")
-        QMessageBox.information(mw, "提示", f"没有勾选的账号\n(共 {total} 行, 检测到 {checked} 行勾选)")
         return
     lq = getattr(mw, "launch_queue", None)
     runner = getattr(mw, "runner", None)

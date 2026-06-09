@@ -25,7 +25,6 @@ from app.service_context import ServiceContext
 from models.account import Account
 from services.runner import AccountRunner
 from services.launch_queue import LaunchQueue
-from ui.dashboard import clear_dashboard, cleanup_emu_threads
 from ui.log_window import show_log_window
 from ui.settings_window import open_settings
 
@@ -496,12 +495,6 @@ class MainWindow(QMainWindow):
             else:
                 self.launch_queue.pause()
                 self._toolbar_launch_btn.setText("▶ 启动队列")
-
-    def _clear_dashboard(self) -> None:
-        clear_dashboard(self)
-
-    def _cleanup_emu_threads(self) -> None:
-        cleanup_emu_threads(self)
 
     def _sad(self, row: int) -> None:
         from ui.account_detail import open_account_detail
