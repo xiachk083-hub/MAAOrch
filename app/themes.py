@@ -28,12 +28,9 @@ QComboBox:disabled{{color:#444;border-color:#222}}
 QComboBox::drop-down{{background:#222;border:none;width:20px;border-radius:0 5px 5px 0}}
 QComboBox QAbstractItemView{{background:#1C1C1C;color:#ddd;selection-background-color:{G}20;border:1px solid #2a2a2a;border-radius:4px;padding:2px}}
 
-QTableWidget{{background:transparent;color:#999;border:none;font-size:9pt;gridline-color:transparent}}
-QTableWidget::item{{padding:7px 8px;border:none}}
-QTableWidget::item:hover{{background:#232323}}
-QTableWidget::item:selected{{background:{G}18;color:#eee}}
-QHeaderView::section{{background:transparent;color:#666;border:none;border-bottom:1px solid #2a2a2a;padding:7px 8px;font-weight:bold;font-size:9pt}}
-QHeaderView::section:hover{{color:#999}}
+QFrame#accountRow{{background:transparent;border:none;border-radius:0}}
+QFrame#accountRow:hover{{background:#222}}
+QFrame#accountList{{background:transparent}}
 
 QPlainTextEdit{{background:#1C1C1C;color:#999;border:1px solid #2a2a2a;font-family:Consolas;font-size:11px;border-radius:4px;padding:6px}}
 
