@@ -1,3 +1,4 @@
+A="#326cf3"
 G="#498205"
 BTN_DELETE='QPushButton{{background:transparent;color:#888;border:none}}QPushButton:hover{{background:#498205;color:#fff;border-radius:{r}px}}'
 
