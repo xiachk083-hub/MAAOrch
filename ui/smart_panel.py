@@ -175,7 +175,8 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     cb = QCheckBox()
     cb.setFixedWidth(28)
     cb.setStyleSheet("QCheckBox::indicator{width:14px;height:14px}")
-    cb.toggled.connect(lambda _=None: _update_batch_buttons(mw))
+    cb.toggled.connect(lambda checked, m=mw: _update_batch_buttons(m))
+    cb.clicked.connect(lambda: _update_batch_buttons(mw))
     hl.addWidget(cb)
 
     # Name
