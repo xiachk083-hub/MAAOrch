@@ -73,18 +73,12 @@ def _filter_click(mw: Any, key: str) -> None:
     """Set filter on smart_panel table."""
     if hasattr(mw, '_set_smart_filter'):
         mw._set_smart_filter(key)
-    # "总览" or empty key → clear all highlights
-    if not key:
-        for k in mw._side_labels:
-            mw._side_labels[k].setStyleSheet("color:#666;font-size:9pt;padding:5px 8px;border-radius:4px;background:transparent")
-            f2 = mw._side_frames.get(k)
-            if f2: f2.setStyleSheet("QFrame{border:none;border-left:0px solid transparent;padding:0}")
-        return
+    active = getattr(mw, '_smart_filter', '')
 
     for k in mw._side_labels:
         lbl = mw._side_labels[k]
         frame = mw._side_frames.get(k)
-        if k == key:
+        if k == active:
             lbl.setStyleSheet("color:#e6e6e6;font-size:9pt;padding:5px 8px;border-radius:4px;background:#49820515")
             if frame:
                 frame.setStyleSheet("QFrame{border:none;border-left:4px solid #498205;padding:0;margin-left:2px}")
