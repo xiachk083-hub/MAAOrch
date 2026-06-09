@@ -2,70 +2,70 @@ A="#326cf3"
 G="#2d5a3d"
 BTN_DELETE='QPushButton{{background:transparent;color:#888;border:none}}QPushButton:hover{{background:#326cf3;color:#fff;border-radius:{r}px}}'
 
-DARK_STYLE=f"""QMainWindow,QDialog{{background:#1c1c1c;color:#e6e6e6}}
-QLabel{{color:#e6e6e6;font-size:9pt}}
+DARK_STYLE=f"""QMainWindow,QDialog{{background:#1C1C1C;color:#e6e6e6}}
+QLabel{{color:#888;font-size:9pt}}
 QWidget{{font-family:'Microsoft YaHei UI','PingFang SC',sans-serif}}
 
-QGroupBox{{color:#e6e6e6;border:1px solid #2b2b30;border-radius:6px;margin-top:10px;padding-top:10px;background:#1e1e20}}
-QGroupBox::title{{subcontrol-origin:margin;padding:2px 6px;color:#888}}
+QGroupBox{{color:#888;border:none;border-top:1px solid #333;border-radius:0;margin-top:10px;padding-top:8px;background:transparent}}
+QGroupBox::title{{subcontrol-origin:margin;padding:0 6px;color:#888;font-size:9pt}}
 
-QPushButton{{background:#2b2b30;color:#ccc;border:1px solid #3a3a3a;border-radius:6px;padding:5px 16px;min-height:28px;font-size:9pt}}
-QPushButton:hover{{background:#333;border-color:#555}}
-QPushButton:pressed{{background:#252525}}
-QPushButton:disabled{{background:transparent;color:#555;border-color:#2b2b30}}
-QPushButton#startBtn{{background:{A};color:#fff;border-color:{A};font-weight:bold;min-height:28px;font-size:9pt}}
-QPushButton#startBtn:hover{{background:#4070f5}}
-QPushButton#stopBtn{{background:#5d2626;color:#d0a0a0;border-color:#7a2b2b}}
-QPushButton#stopBtn:hover{{background:#8e0000;color:#fff}}
-QPushButton#iconBtn{{background:transparent;color:#888;border:none;border-radius:5px;padding:3px 5px;font-size:11pt}}
-QPushButton#iconBtn:hover{{background:#2b2b30;color:#e6e6e6}}
+QPushButton{{background:transparent;color:#888;border:none;border-radius:5px;padding:4px 14px;min-height:26px;font-size:9pt}}
+QPushButton:hover{{background:#222;color:#e6e6e6}}
+QPushButton:pressed{{background:#2a2a2a}}
+QPushButton:disabled{{color:#555}}
+QPushButton#startBtn{{background:{A};color:#fff;font-weight:bold;min-height:28px;padding:4px 18px;font-size:9pt}}
+QPushButton#startBtn:hover{{background:#55a00a}}
+QPushButton#stopBtn{{color:#e6e6e6}}
+QPushButton#stopBtn:hover{{background:#3a1515;color:#e88}}
+QPushButton#iconBtn{{background:transparent;color:#666;border:none;border-radius:4px;padding:2px 4px;font-size:11pt}}
+QPushButton#iconBtn:hover{{background:#222;color:#e6e6e6}}
 
-QFrame#sideBar QLabel{{color:#888;font-size:9pt;padding:5px 8px;border-radius:5px}}
-QFrame#sideBar QLabel:hover{{background:#2b2b30;color:#e6e6e6}}
+QFrame#sideBar QLabel{{color:#666;font-size:9pt;padding:4px 8px;border-radius:4px}}
+QFrame#sideBar QLabel:hover{{background:#222;color:#e6e6e6}}
 
-QLineEdit,QSpinBox,QComboBox{{background:#2b2b30;color:#e6e6e6;border:1px solid #3a3a3a;border-radius:6px;padding:6px 10px;min-height:24px;font-size:9pt}}
-QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border-color:#555}}
-QLineEdit:focus,QSpinBox:focus{{border:1px solid {A};background:#25252a}}
-QComboBox:disabled,QSpinBox:disabled{{background:#1c1c1c;color:#666;border-color:#2b2b30}}
-QComboBox::drop-down{{background:#2b2b30;border:none;border-radius:6px;width:22px}}
-QComboBox QAbstractItemView{{background:#2b2b30;color:#e6e6e6;selection-background-color:{A};border:1px solid #3a3a3a;border-radius:6px;padding:4px}}
+QLineEdit,QSpinBox,QComboBox{{background:transparent;color:#e6e6e6;border:none;border-bottom:1px solid #333;border-radius:0;padding:4px 6px;min-height:22px;font-size:9pt}}
+QLineEdit:hover,QSpinBox:hover,QComboBox:hover{{border-bottom-color:#555}}
+QLineEdit:focus,QSpinBox:focus{{border-bottom:1px solid {A}}}
+QComboBox:disabled,QSpinBox:disabled{{color:#555}}
+QComboBox::drop-down{{background:transparent;border:none;width:20px}}
+QComboBox QAbstractItemView{{background:#1C1C1C;color:#e6e6e6;selection-background-color:{A}30;border:1px solid #333;border-radius:4px;padding:2px}}
 
-QTableWidget{{background:transparent;color:#ccc;border:1px solid #2b2b30;alternate-background-color:#1e1e20;font-size:9pt;border-radius:6px}}
+QTableWidget{{background:transparent;color:#888;border:none;alternate-background-color:#1e1e1e;font-size:9pt}}
 QTableWidget::item{{padding:4px 8px;border:none}}
-QTableWidget::item:selected{{background:{A}30;color:#e6e6e6}}
-QHeaderView::section{{background:transparent;color:#666;border:none;border-bottom:1px solid #2b2b30;padding:6px 10px;font-weight:bold;font-size:9pt}}
+QTableWidget::item:selected{{background:{A}25;color:#e6e6e6}}
+QHeaderView::section{{background:transparent;color:#666;border:none;border-bottom:1px solid #333;padding:4px 8px;font-weight:bold;font-size:9pt}}
 
-QPlainTextEdit{{background:#1c1c1c;color:#ccc;border:1px solid #2b2b30;font-family:Consolas;font-size:11px;border-radius:6px;padding:6px}}
+QPlainTextEdit{{background:#1C1C1C;color:#888;border:1px solid #333;font-family:Consolas;font-size:11px;border-radius:4px;padding:6px}}
 
-QMenu{{background:#2b2b30;color:#ccc;border:1px solid #3a3a3a;border-radius:6px;padding:4px;font-size:9pt}}
-QMenu::item{{padding:6px 28px 6px 12px;border-radius:4px}}
-QMenu::item:selected{{background:{A};color:#fff}}
-QMenu::separator{{height:1px;background:#3a3a3a;margin:4px 8px}}
-QMenuBar{{background:#1c1c1c;color:#888;border:none;border-bottom:1px solid #2b2b30}}
-QMenuBar::item{{padding:6px 14px}}
-QMenuBar::item:selected{{background:#2b2b30;color:#e6e6e6;border-radius:5px}}
+QMenu{{background:#1C1C1C;color:#888;border:1px solid #333;border-radius:5px;padding:4px;font-size:9pt}}
+QMenu::item{{padding:5px 24px 5px 10px;border-radius:3px}}
+QMenu::item:selected{{background:{A}30;color:#e6e6e6}}
+QMenu::separator{{height:1px;background:#333;margin:3px 6px}}
+QMenuBar{{background:#1C1C1C;color:#666;border:none;border-bottom:1px solid #333}}
+QMenuBar::item{{padding:5px 12px}}
+QMenuBar::item:selected{{background:#222;color:#e6e6e6;border-radius:4px}}
 
-QCheckBox{{color:#aaa;spacing:8px;font-size:9pt}}
-QCheckBox::indicator{{width:18px;height:18px;border:2px solid #3a3a3a;border-radius:5px;background:#2b2b30}}
-QCheckBox::indicator:hover{{border-color:#555}}
+QCheckBox{{color:#666;spacing:6px;font-size:9pt}}
+QCheckBox::indicator{{width:16px;height:16px;border:2px solid #444;border-radius:4px;background:transparent}}
+QCheckBox::indicator:hover{{border-color:{A}}}
 QCheckBox::indicator:checked{{background:{A};border-color:{A}}}
 
-QProgressBar{{border:1px solid #2b2b30;border-radius:6px;background:#2b2b30;color:#aaa;text-align:center;height:18px;font-size:8pt}}
-QProgressBar::chunk{{background:{A};border-radius:5px}}
+QProgressBar{{border:none;border-radius:0;background:#222;color:#666;text-align:center;height:14px;font-size:8pt}}
+QProgressBar::chunk{{background:{A};border-radius:0}}
 
 QScrollArea{{border:none;background:transparent}}
-QSplitter::handle{{background:#2b2b30;width:3px}}
-QSplitter::handle:hover{{background:#3a3a3a}}
-QListWidget{{background:transparent;color:#ccc;border:1px solid #2b2b30;border-radius:6px;font-size:9pt}}
-QListWidget::item{{padding:6px 10px;border-radius:4px}}
-QListWidget::item:hover{{background:#2b2b30}}
-QListWidget::item:selected{{background:{A}30;color:#e6e6e6}}
-QFrame#card{{background:transparent;border:1px solid #2b2b30;border-radius:8px;padding:12px;margin-bottom:6px}}
-QStatusBar{{background:#1c1c1c;color:#666;border-top:1px solid #2b2b30;padding:2px 8px;font-size:8pt}}
-QStatusBar QLabel{{color:#666;font-size:8pt}}
-QStatusBar QPushButton{{background:transparent;color:#666;border:none;border-radius:4px;padding:2px 6px;min-height:18px;font-size:8pt}}
-QStatusBar QPushButton:hover{{color:#e6e6e6;background:#2b2b30}}
-QToolTip{{background:#2b2b30;color:#e6e6e6;border:1px solid #3a3a3a;border-radius:5px;padding:4px 8px;font-size:9pt}}
+QSplitter::handle{{background:#333;width:2px}}
+QSplitter::handle:hover{{background:{A}50}}
+QListWidget{{background:transparent;color:#888;border:1px solid #333;border-radius:5px;font-size:9pt}}
+QListWidget::item{{padding:5px 8px;border-radius:3px}}
+QListWidget::item:hover{{background:#222}}
+QListWidget::item:selected{{background:{A}25;color:#e6e6e6}}
+QFrame#card{{background:transparent;border:1px solid #333;border-radius:6px;padding:10px;margin-bottom:4px}}
+QStatusBar{{background:#1C1C1C;color:#555;border-top:1px solid #333;padding:1px 6px;font-size:8pt}}
+QStatusBar QLabel{{color:#555;font-size:8pt}}
+QStatusBar QPushButton{{background:transparent;color:#555;border:none;border-radius:3px;padding:1px 4px;min-height:16px;font-size:8pt}}
+QStatusBar QPushButton:hover{{color:#e6e6e6;background:#222}}
+QToolTip{{background:#222;color:#e6e6e6;border:1px solid #333;border-radius:4px;padding:4px 8px;font-size:9pt}}
 """
 
 LIGHT_STYLE=f"""QMainWindow,QDialog{{background:#f3f3f3;color:#333}}
