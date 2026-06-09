@@ -159,6 +159,36 @@ def _rebuild_list(mw: Any) -> None:
 
     _update_status(mw)
 
+    # Empty state: show welcome card
+    if not mw._list_rows:
+        mw._list_header.hide()
+        welcome = QFrame()
+        welcome.setStyleSheet("QFrame{background:transparent;border:none}")
+        wl = QVBoxLayout(welcome)
+        wl.setAlignment(Qt.AlignCenter)
+        wl.setSpacing(12)
+        title = QLabel("欢迎使用 MAAOrch")
+        title.setStyleSheet("font-size:16pt;font-weight:bold;color:#666")
+        title.setAlignment(Qt.AlignCenter)
+        wl.addWidget(title)
+        desc = QLabel("多账号 MAA 编排调度器\n点击下方按钮添加你的第一个账号")
+        desc.setStyleSheet("font-size:10pt;color:#555;line-height:1.5")
+        desc.setAlignment(Qt.AlignCenter)
+        wl.addWidget(desc)
+        add_big = QPushButton("＋ 添加账号")
+        add_big.setObjectName("startBtn")
+        add_big.setFixedHeight(36)
+        add_big.setFixedWidth(160)
+        add_big.clicked.connect(lambda: QTimer.singleShot(0, lambda: _add_account(mw)))
+        wl.addWidget(add_big, 0, Qt.AlignCenter)
+        layout.insertWidget(layout.count() - 1, welcome)
+        mw._welcome_card = welcome
+    else:
+        mw._list_header.show()
+        if hasattr(mw, '_welcome_card') and mw._welcome_card:
+            mw._welcome_card.deleteLater()
+            mw._welcome_card = None
+
 
 def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFrame:
     row = QFrame()
