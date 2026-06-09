@@ -293,13 +293,8 @@ class MainWindow(QMainWindow):
         bb.addWidget(self._batch_stat)
         bb.addStretch()
         ml.addLayout(bb)
-        # Force initial batch button state + periodic refresh
         from ui.smart_panel import _update_batch_buttons
         _update_batch_buttons(self)
-        from PySide6.QtCore import QTimer
-        self._batch_timer = QTimer(self)
-        self._batch_timer.timeout.connect(lambda: _update_batch_buttons(self))
-        self._batch_timer.start(1500)
 
         # Status bar — log line + queue stats + action buttons
         sb2 = self.statusBar()
