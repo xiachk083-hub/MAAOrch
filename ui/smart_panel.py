@@ -236,10 +236,7 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     dl.addWidget(dt)
     hl.addWidget(dw)
 
-    # Left click → detail, right click → menu
-    row.mousePressEvent = lambda e, r=mw.accounts.index(a): (
-        _open_detail(mw, r) if e.button() == Qt.LeftButton else None
-    )
+    # Right click → menu (detail via ✎ button)
     row.setContextMenuPolicy(Qt.CustomContextMenu)
     row.customContextMenuRequested.connect(lambda pos, r=mw.accounts.index(a): _show_row_menu(mw, r, row.mapToGlobal(pos)))
 
