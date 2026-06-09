@@ -143,6 +143,16 @@ class MainWindow(QMainWindow):
         if self.config.get("check_update_on_start",True): QTimer.singleShot(3000,lambda: self.maint.check_updates(True))
         self.maint.start_auto_update_timer()
         QTimer.singleShot(5000, self._health_check)
+        # DWM dark title bar (Windows 10/11 dark mode)
+        try:
+            hwnd = int(self.winId())
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+            dark_mode = ctypes.c_int(1)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                ctypes.byref(dark_mode), ctypes.sizeof(dark_mode))
+        except Exception:
+            pass
 
     def _set_theme(self, m: str) -> None:
         style = {"Dark": DARK_STYLE, "Light": LIGHT_STYLE, "Notepaper": NOTEPAPER_STYLE}.get(m, DARK_STYLE)
@@ -157,6 +167,9 @@ class MainWindow(QMainWindow):
     def _log(self, msg: str) -> None:
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
         if hasattr(self,'log_text') and self.log_text: self.log_text.appendPlainText(line)
+        # Update status bar log line (last 120 chars)
+        if hasattr(self, '_log_lbl') and self._log_lbl:
+            self._log_lbl.setText(f"  {line[-120:]}")
         try:
             with _log_lock:
                 lp=Path(__file__).parent/"debug.log"
@@ -205,27 +218,69 @@ class MainWindow(QMainWindow):
         c = QWidget()
         self.setCentralWidget(c)
         ml = QVBoxLayout(c)
-        ml.setContentsMargins(8, 6, 8, 4)
-        ml.setSpacing(4)
+        ml.setContentsMargins(8, 4, 8, 4)
+        ml.setSpacing(2)
+
+        # Toolbar with sidebar toggle
+        tb = QHBoxLayout()
+        tb.setContentsMargins(0, 0, 0, 0)
+        tb.setSpacing(6)
+        self._sidebar_btn = QPushButton("☰")
+        self._sidebar_btn.setFixedSize(30, 28)
+        self._sidebar_btn.setToolTip("切换侧栏")
+        self._sidebar_btn.clicked.connect(self._toggle_sidebar)
+        tb.addWidget(self._sidebar_btn)
+        title_lbl = QLabel("MAAOrch")
+        title_lbl.setStyleSheet("font-weight:bold;font-size:11pt;color:#888")
+        tb.addWidget(title_lbl)
+        tb.addStretch()
+        # Queue launch button
+        self._toolbar_launch_btn = QPushButton("▶ 启动队列")
+        self._toolbar_launch_btn.setObjectName("startBtn")
+        self._toolbar_launch_btn.setFixedHeight(28)
+        self._toolbar_launch_btn.clicked.connect(self._on_toolbar_launch)
+        tb.addWidget(self._toolbar_launch_btn)
+        ml.addLayout(tb)
+
+        # Main content area: sidebar + smart panel
+        content_row = QHBoxLayout()
+        content_row.setSpacing(4)
+        content_row.setContentsMargins(0, 0, 0, 0)
+
+        # Sidebar
+        from ui.side_bar import build_side_bar
+        self._side_bar = build_side_bar(self)
+        content_row.addWidget(self._side_bar)
 
         # Smart scheduling panel (main view)
         from ui.smart_panel import build_smart_panel
         build_smart_panel(self)
-        ml.addWidget(self.smart_v, 1)
+        content_row.addWidget(self.smart_v, 1)
 
-        # Status bar
+        ml.addLayout(content_row, 1)
+
+        # Status bar — log line + queue stats + action buttons
         sb2 = self.statusBar()
-        self.sl = QLabel(" 就绪")
-        sb2.addWidget(self.sl)
+        self._log_lbl = QLabel(" 就绪")
+        self._log_lbl.setStyleSheet("color:#888;font-size:8pt")
+        sb2.addWidget(self._log_lbl, 1)
+        self.sl = QLabel("")
+        self.sl.setStyleSheet("color:#888;font-size:8pt")
+        sb2.addPermanentWidget(self.sl)
         self._qsb = QLabel("")
         sb2.addPermanentWidget(self._qsb)
-        self._health_indicator = QLabel("")
-        self._health_indicator.setToolTip("点击查看环境检测详情")
-        self._health_indicator.mousePressEvent = lambda e: self._health_dialog()
-        sb2.addPermanentWidget(self._health_indicator)
-        self._resource_lbl = QLabel("")
-        self._resource_lbl.setStyleSheet("color:#888;font-size:8pt")
-        sb2.addPermanentWidget(self._resource_lbl)
+        # Settings button
+        set_btn = QPushButton("⚙")
+        set_btn.setFixedSize(22, 20)
+        set_btn.setToolTip("设置")
+        set_btn.clicked.connect(lambda: open_settings(self))
+        sb2.addPermanentWidget(set_btn)
+        # Log button
+        log_btn = QPushButton("📋")
+        log_btn.setFixedSize(22, 20)
+        log_btn.setToolTip("日志")
+        log_btn.clicked.connect(lambda: show_log_window(self))
+        sb2.addPermanentWidget(log_btn)
 
         # Menu bar
         mb = self.menuBar()
@@ -410,6 +465,20 @@ class MainWindow(QMainWindow):
             if it and hasattr(it,'_acc_id'):
                 for j,a in enumerate(self.accounts):
                     if a["id"]==it._acc_id: self._sad(j); break
+    def _toggle_sidebar(self) -> None:
+        if hasattr(self, '_side_bar') and self._side_bar:
+            visible = not self._side_bar.isVisible()
+            self._side_bar.setVisible(visible)
+
+    def _on_toolbar_launch(self) -> None:
+        if hasattr(self, 'launch_queue') and self.launch_queue:
+            if self.launch_queue.is_paused:
+                self.launch_queue.resume()
+                self._toolbar_launch_btn.setText("⏸ 暂停队列")
+            else:
+                self.launch_queue.pause()
+                self._toolbar_launch_btn.setText("▶ 启动队列")
+
     def _clear_dashboard(self) -> None:
         clear_dashboard(self)
 
@@ -613,18 +682,12 @@ class MainWindow(QMainWindow):
                 self._qsb.setText(f"⏳{qc}")
             else:
                 self._qsb.setText("")
-            # Resource usage
-            if ac and hasattr(self, "runner") and self.runner:
-                self._resource_lbl.setText(self.runner.resource_summary)
-            else:
-                self._resource_lbl.setText("")
             # Status overview log (every 30 seconds)
             now = int(__import__("time").time())
             if now % 30 == 0:
                 total = len(self.accounts)
                 errors = sum(1 for a in self.accounts if a.get("consecutive_failures", 0) >= 6)
-                paused = sum(1 for a in self.accounts if a.get("consecutive_failures", 0) >= 6)
-                self._log(f"[状态] 运行中: {ac}/{total} | 队列: {qc} | 错误: {errors}" + (f" | 暂停: {paused}" if paused else ""))
+                self._log(f"[状态] 运行中: {ac}/{total} | 队列: {qc} | 错误: {errors}")
     def _smart_tick(self) -> None:
         sg = self.config.get("smart_global", {})
         if not sg.get("enabled", False) or not hasattr(self, "launch_queue"):
