@@ -115,20 +115,6 @@ class AccountRunner(QObject):
             else:
                 self.log_msg.emit(f"⚠ ADB 地址检测全部失败，保留原有值 {stored}")
         ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
-                idx = int(ac["emu_instance_index"])
-                preset = ac.get("connection_preset", "MuMuPro")
-                if preset == "MuMuEmulator12":
-                    port = 16384 + idx * 32
-                elif preset in ("MuMuPro", "MuMu"):
-                    port = 7555
-                elif preset in ("LDPlayer",):
-                    port = 5555 + idx * 2
-                elif preset in ("Nox",):
-                    port = 62001
-                else:
-                    port = 5555 + idx * 2
-                ac["adb_address"] = f"127.0.0.1:{port}"
-                ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
 
         # Auto-fill ADB path if empty (try mumu-cli sibling first, then find_adb)
         if not ac.get("adb_path"):
