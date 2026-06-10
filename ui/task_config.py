@@ -71,7 +71,7 @@ def open_task_config(mw: Any, ac: dict) -> None:
     it = ts.get("Infrast", {})
     mode_cb = QComboBox()
     mode_cb.addItem("常规模式", "Normal")
-    mode_cb.addItem("队列轮换", "Queued")
+    mode_cb.addItem("队列轮换", "Rotation")
     current_mode = it.get("mode", "Normal")
     mi = mode_cb.findData(current_mode)
     if mi >= 0: mode_cb.setCurrentIndex(mi)
