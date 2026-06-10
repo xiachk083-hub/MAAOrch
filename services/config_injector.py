@@ -416,30 +416,38 @@ class ConfigService:
                         c["TaskQueue"].append(item)
                 c["TaskSelectedIndex"] = 0
                 c.setdefault("DragItemIsChecked", {})
-                # Apply per-account task settings (任务配置)
-                ts_raw = ac.get("task_settings", {})
-                if ts_raw:
-                    tsm = {k.lower(): v for k, v in ts_raw.items()}
-                    for item in c.get("TaskQueue", []):
-                        tt = item.get("TaskType", "").lower()
-                        if tt in tsm:
-                            st = tsm[tt]
-                            if tt == "fight" and "use_expiring_medicine" in st:
-                                item["UseExpiringMedicine"] = st["use_expiring_medicine"]
-                            elif tt == "recruit" and "select" in st:
-                                sel = st["select"]
-                                item["Level3Choose"] = 3 in sel
-                                item["Level4Choose"] = 4 in sel
-                                item["Level5Choose"] = 5 in sel
-                            elif tt == "infrast" and "mode" in st:
-                                item["Mode"] = st["mode"]
-                            elif tt == "award":
-                                if "award" in st: item["Award"] = st["award"]
-                                if "mail" in st: item["Mail"] = st["mail"]
-                                if "free_gacha" in st: item["FreeGacha"] = st["free_gacha"]
-                                if "orundum" in st: item["Orundum"] = st["orundum"]
             else:
                 c.pop("TaskQueue", None)
+            # Apply per-account task settings (任务配置)
+            ts_raw = ac.get("task_settings", {})
+            if ts_raw:
+                tsm = {k.lower(): v for k, v in ts_raw.items()}
+                for item in c.get("TaskQueue", []):
+                    tt = item.get("TaskType", "").lower()
+                    if tt in tsm:
+                        st = tsm[tt]
+                        if tt == "fight" and "use_expiring_medicine" in st:
+                            item["UseExpiringMedicine"] = st["use_expiring_medicine"]
+                        elif tt == "recruit" and "select" in st:
+                            sel = st["select"]
+                            item["Level3Choose"] = 3 in sel
+                            item["Level4Choose"] = 4 in sel
+                            item["Level5Choose"] = 5 in sel
+                        elif tt == "infrast" and "mode" in st:
+                            item["Mode"] = st["mode"]
+                        elif tt == "award":
+                            if "award" in st: item["Award"] = st["award"]
+                            if "mail" in st: item["Mail"] = st["mail"]
+                            if "free_gacha" in st: item["FreeGacha"] = st["free_gacha"]
+                            if "orundum" in st: item["Orundum"] = st["orundum"]
+            # Inject fight_stage (默认关卡)
+            fs = ac.get("fight_stage", "")
+            if fs and "TaskQueue" in c:
+                for item in c["TaskQueue"]:
+                    if item.get("TaskType", "").lower() == "fight":
+                        item["StagePlan"] = [fs]
+                        item["IsStageManually"] = True
+                        break
             tmp = gj.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
