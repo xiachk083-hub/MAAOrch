@@ -271,7 +271,7 @@ class AccountRunner(QObject):
         self._start_times[aid] = time.time()
         self.ctx.proc_status.add(aid)
         try: pid_file.write_text(str(p.pid))
-        except: pass
+        except Exception: self.log_msg.emit(f"警告: 无法写入 PID 文件 {pid_file}")
         self.log_msg.emit(f"✓ 启动 MAA PID={p.pid}")
         self.account_started.emit(aid)
 
@@ -638,7 +638,19 @@ class AccountRunner(QObject):
             name = ac.get("name", aid) if ac else aid
             import re as _re
             safe_name = _re.sub(r'[^\w\-_]', '_', str(name))[:64]
-            diag_dir = Path(__file__).parent / "diagnostics" / f"{safe_name}_{ts}"
+            diag_root = Path(__file__).parent / "diagnostics"
+            diag_dir = diag_root / f"{safe_name}_{ts}"
+            # Cleanup: keep only latest 50 diagnostic dirs
+            try:
+                all_diags = sorted(diag_root.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)
+                for old in all_diags[50:]:
+                    try:
+                        import shutil as _su
+                        _su.rmtree(str(old))
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             diag_dir.mkdir(parents=True, exist_ok=True)
             # asst.log tail
             if ac:

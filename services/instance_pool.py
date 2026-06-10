@@ -90,13 +90,12 @@ def _init_maa_source(source: Path) -> bool:
         pass
     try:
         proc = subprocess.Popen([str(exe)], creationflags=subprocess.CREATE_NO_WINDOW)
-        for _ in range(120):
+        for _ in range(30):
             if gj.exists():
                 try:
                     data = json.loads(gj.read_text(encoding="utf-8"))
                     tq = data.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
                     if any("$type" in item for item in tq):
-                        _time.sleep(1)
                         proc.terminate()
                         proc.wait(5)
                         return True

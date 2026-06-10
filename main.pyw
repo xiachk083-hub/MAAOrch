@@ -21,8 +21,12 @@ def _global_excepthook(exc_type, exc_value, exc_tb):
     msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
     _write_crash(msg)
     try:
-        from PySide6.QtWidgets import QMessageBox
-        QMessageBox.critical(None, "异常崩溃", f"未捕获的异常:\n\n{exc_value}\n\n详情请查看 debug.log")
+        import threading
+        if threading.current_thread() is threading.main_thread():
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(None, "异常崩溃", f"未捕获的异常:\n\n{exc_value}\n\n详情请查看 debug.log")
+        else:
+            sys.__stderr__.write(f"[CRASH] {msg}\n")
     except Exception:
         sys.__stderr__.write(f"[CRASH] {msg}\n")
     sys.__excepthook__(exc_type, exc_value, exc_tb)
