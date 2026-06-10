@@ -29,7 +29,7 @@ class Account:
     loop_interval: int = 5
     loop_max_rounds: int = 10
     min_sanity: int = 0
-    stuck_timeout_min: int = 10
+    stuck_timeout_min: int = 60
     tags: str = ""
     round_robin_deficit: int = 0
     stamina_threshold_pct: int = 80

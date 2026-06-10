@@ -140,6 +140,15 @@ class LaunchQueue(QObject):
         if not ac:
             self._tick()
             return
+        
+        # Timeout (exit -3): re-enqueue at tail
+        if exit_code == -3:
+            import heapq as _hq
+            max_prio = max((e.sort_key[0] for e in self._pending), default=0)
+            self.enqueue(account_id, "retry", priority=max_prio + 1)
+            self._log(f"⏱ {ac.get('name', account_id)} 超时重排，位置 #{max_prio + 2}")
+            self._tick()
+            return
 
         # Round-robin: calculate recovery based on deficit
         deficit_cfg = self.ctx.config.get("deficit") if self.ctx.config.get("deficit") is not None else ac.get("round_robin_deficit", 0)

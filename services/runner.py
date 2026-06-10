@@ -451,6 +451,18 @@ class AccountRunner(QObject):
                         except: pass
                         tasks, sanity, drops = self._parse_log(aid)
                         self._cleanup(aid, -9, tasks, sanity, drops)
+                        return
+                # Total runtime timeout — re-enqueue at tail
+                started = self._start_times.get(aid, 0)
+                if started and time.time() - started > 3600:
+                    self.log_msg.emit(f"⏱ {ac.get('name', aid)} 运行超时 (>{timeout if timeout else 60}分钟)，重新排队")
+                    try: p.terminate(); p.wait(5)
+                    except: pass
+                    try: p.kill()
+                    except: pass
+                    tasks, sanity, drops = self._parse_log(aid)
+                    self._cleanup(aid, -3, tasks, sanity, drops)
+                    return
             return
         rc = p.poll()
         self._procs.pop(aid, None)
