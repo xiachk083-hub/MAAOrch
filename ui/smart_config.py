@@ -169,6 +169,17 @@ def open_smart_config(mw: Any) -> None:
     l5.addStretch()
     tabs.addTab(w5, "领取奖励")
 
+    # ── 完成后 ──
+    w6 = QWidget(); l6 = QVBoxLayout(w6); l6.setSpacing(6)
+    cur_post = sg.get("post_action", "ExitEmulator,ExitSelf")
+    post_set = set(cur_post.split(",")) if cur_post else set()
+    post_cbs = {}
+    for k, v in [("ExitArknights","退出游戏"),("ExitEmulator","关模拟器"),
+                  ("ExitSelf","退出MAA"),("BackToAndroidHome","返回主屏")]:
+        cb = QCheckBox(v); cb.setChecked(k in post_set); post_cbs[k] = cb; l6.addWidget(cb)
+    l6.addStretch()
+    tabs.addTab(w6, "完成后")
+
     def _save():
         nd = {
             "Fight": {"use_medicine": use_med.isChecked(), "use_expiring_medicine": exp_med.isChecked(),
@@ -198,6 +209,8 @@ def open_smart_config(mw: Any) -> None:
             "Award": {"award": aw.isChecked(), "mail": ml.isChecked(), "free_gacha": fg.isChecked(),
                       "orundum": oru.isChecked(), "mining": mi_cb.isChecked(), "special_access": sa.isChecked()},
         }
+        selected_post = [k for k,cb in post_cbs.items() if cb.isChecked()]
+        sg["post_action"] = ",".join(selected_post) if selected_post else ""
         sg["default_task_settings"] = nd
         mw.config["smart_global"] = sg
         from models.config_manager import save_config
