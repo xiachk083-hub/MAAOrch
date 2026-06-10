@@ -171,6 +171,10 @@ class MainWindow(QMainWindow):
     def _sl(self, msg: str) -> None: self.sl.setText((msg[:100]+"…") if len(msg)>100 else msg)
     def _log(self, msg: str) -> None:
         msg = str(msg).replace("\n", " ").replace("\r", " ")[:1000]
+        # Sanitize: hide api_token from log output
+        token = self.config.get("api_token", "")
+        if token and token in msg:
+            msg = msg.replace(token, "***")
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
         if hasattr(self,'log_text') and self.log_text: self.log_text.appendPlainText(line)
         # Update status bar log line (last 120 chars)

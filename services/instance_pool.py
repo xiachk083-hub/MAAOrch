@@ -377,7 +377,7 @@ class MaintService:
         if mw and hasattr(mw, "tray_icon"):
             mw.tray_icon.showMessage("流水线启动器", msg, QSystemTrayIcon.Critical if is_error else QSystemTrayIcon.Information, 3000)
         wh = self.ctx.config.get("webhook_url", "")
-        if wh:
+        if wh and wh.startswith("https://"):
             try:
                 data = json.dumps({"msg": msg, "type": "error" if is_error else "info", "time": datetime.now().isoformat()}).encode()
                 req = urllib.request.Request(wh, data=data, headers={"Content-Type": "application/json"}, method="POST")
@@ -636,10 +636,10 @@ class MaintService:
                     shutil.rmtree(str(update_dir))
                 update_dir.mkdir()
                 with zipfile.ZipFile(str(tmpf)) as zf:
-                    # GitHub zip wraps in a folder like MAAOrch-1.1.0/
+                    from infrastructure.utils import is_safe_zip_path
                     for member in zf.namelist():
                         p = Path(member)
-                        if any(part == ".." for part in p.parts) or p.is_absolute():
+                        if not is_safe_zip_path(member, update_dir.parent):
                             raise ValueError(f"zip slip: {member}")
                         # Strip the top-level folder
                         parts = member.split("/", 1)
