@@ -152,9 +152,8 @@ class LaunchQueue(QObject):
                     if cli:
                         try:
                             import subprocess as _sp
-                            from infrastructure.task_constants import CF
-                            _sp.run([cli, "control", "--vmindex", str(emu_idx), "quit"],
-                                    capture_output=True, timeout=10, creationflags=CF)
+                            _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                                      creationflags=_sp.CREATE_NO_WINDOW)
                         except Exception:
                             pass
             import heapq as _hq
