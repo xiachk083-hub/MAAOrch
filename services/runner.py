@@ -88,7 +88,17 @@ class AccountRunner(QObject):
             insts = detect_emu_instances()
             match = next((i for i in insts if i.get("index") == ac["emu_instance_index"]), None)
             if match and match.get("adb_port"):
-                ac["adb_address"] = f"127.0.0.1:{match['adb_port']}"
+                detected = f"127.0.0.1:{match['adb_port']}"
+                # Verify detected ADB address is reachable
+                adb = ac.get("adb_path", "") or "adb"
+                try:
+                    r = subprocess.run([adb, "connect", detected], capture_output=True, timeout=3, creationflags=CF)
+                    if r.returncode == 0 and b"connected" in (r.stdout + r.stderr).lower():
+                        ac["adb_address"] = detected
+                    else:
+                        self.log_msg.emit(f"⚠ 检测 ADB {detected} 不可达，保留原值")
+                except Exception:
+                    self.log_msg.emit(f"⚠ 检测 ADB {detected} 失败，保留原值")
             else:
                 idx = int(ac["emu_instance_index"])
                 preset = ac.get("connection_preset", "MuMuPro")
