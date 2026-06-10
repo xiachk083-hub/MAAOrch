@@ -99,6 +99,21 @@ class AccountRunner(QObject):
             ac["adb_address"] = f"127.0.0.1:{port}"
             ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
 
+        # Auto-fill ADB path if empty (try mumu-cli sibling first, then find_adb)
+        if not ac.get("adb_path"):
+            from infrastructure.task_constants import find_mumu_cli
+            cli = find_mumu_cli()
+            if cli:
+                from pathlib import Path as _P
+                cand = _P(cli).parent / "adb.exe"
+                if cand.exists():
+                    ac["adb_path"] = str(cand)
+            if not ac.get("adb_path"):
+                from infrastructure.task_constants import find_adb
+                adb_exe = find_adb()
+                if adb_exe:
+                    ac["adb_path"] = adb_exe
+
         # Get free MAA instance
         try:
             from services.instance_pool import MaintService
