@@ -266,13 +266,35 @@ class AccountRunner(QObject):
         aid = ac["id"]
         pid_file = Path(inst_dir) / ".pid"
         p = subprocess.Popen([str(exe)], shell=False)
-        p._inst_path = str(Path(inst_dir).resolve())  # track instance for _get_free_instance
+        p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
         self._start_times[aid] = time.time()
         self.ctx.proc_status.add(aid)
         try: pid_file.write_text(str(p.pid))
         except Exception: self.log_msg.emit(f"警告: 无法写入 PID 文件 {pid_file}")
         self.log_msg.emit(f"✓ 启动 MAA PID={p.pid}")
+        # Re-apply Infrast Mode after MAA initializes (MAA overwrites gui.new.json on start)
+        infra_mode = ac.get("task_settings", {}).get("Infrast", {}).get("mode", "")
+        if infra_mode:
+            def _rewrite_infra():
+                try:
+                    import json as _j, time as _t
+                    _t.sleep(3)
+                    gj = Path(inst_dir) / "config" / "gui.new.json"
+                    if not gj.exists(): return
+                    d = _j.loads(gj.read_text(encoding="utf-8"))
+                    tq = d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
+                    for item in tq:
+                        if item.get("TaskType", "").lower() == "infrast":
+                            if item.get("Mode", "") != infra_mode:
+                                item["Mode"] = infra_mode
+                                gj.write_text(_j.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+                                self.log_msg.emit(f"Infrast 模式已设为 {infra_mode}")
+                            break
+                except Exception:
+                    pass
+            import threading as _th
+            _th.Thread(target=_rewrite_infra, daemon=True).start()
         self.account_started.emit(aid)
 
     def _spawn(self, w: dict, ac: dict) -> None:
