@@ -216,6 +216,12 @@ class AccountRunner(QObject):
     # ── Internal: dispatch ──
 
     def _do_launch(self, ac: dict, inst: tuple[int, str]) -> None:
+        """Non-blocking launch: runs heavy work in background thread."""
+        import threading as _th
+        _th.Thread(target=self._launch_job, args=(ac, inst), daemon=True).start()
+
+    def _launch_job(self, ac: dict, inst: tuple[int, str]) -> None:
+        """Background thread: emulator launch, ADB wait, MAA launch."""
         emu_idx = ac.get("emu_instance_index", "")
         aid = ac["id"]
         inst_id, inst_dir = inst
