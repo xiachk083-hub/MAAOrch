@@ -145,13 +145,17 @@ class CreateAccountDialog(QDialog):
         a.id = make_id()
         a.name = self._name.text().strip() or generate_name(inst, getattr(self._mw, "accounts", []))
         a.emu_instance_index = inst["index"]
-        a.connection_preset = PRESET_MAP.get(inst.get("emu", ""), "General")
+        emu_type = inst.get("emu", "")
+        a.connection_preset = {"MuMu 12":"MuMuEmulator12","MuMu":"MuMuEmulator12","MuMu 6":"MuMu",
+                               "雷电 9":"LDPlayer","雷电":"LDPlayer","蓝叠":"BlueStacks",
+                               "夜神":"Nox","逍遥":"XYAZ"}.get(emu_type, "General")
         a.touch_mode = "MiniTouch"
         port = inst.get("adb_port", "")
         if port:
             a.adb_address = f"127.0.0.1:{port}"
         else:
-            a.adb_address = f"127.0.0.1:{5555 + int(inst.get('index',0)) * 2}"
+            idx = int(inst.get("index", 0))
+            a.adb_address = f"127.0.0.1:{16384 + idx * 32}"
 
         # Find adb
         adb_exe = find_adb()
