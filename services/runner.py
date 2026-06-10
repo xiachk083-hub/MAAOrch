@@ -84,9 +84,19 @@ class AccountRunner(QObject):
 
         # Auto-fill ADB address if empty but emu instance is set
         if not ac.get("adb_address") and ac.get("emu_instance_index"):
-            idx = ac["emu_instance_index"]
-            ac["adb_address"] = f"127.0.0.1:{5555 + int(idx) * 2}"
-            ac["connection_preset"] = ac.get("connection_preset", "MuMuPro")
+            idx = int(ac["emu_instance_index"])
+            preset = ac.get("connection_preset", "MuMuPro")
+            if preset == "MuMuEmulator12":
+                port = 16384 + idx * 32
+            elif preset in ("MuMuPro", "MuMu"):
+                port = 7555
+            elif preset in ("LDPlayer",):
+                port = 5555 + idx * 2
+            elif preset in ("Nox",):
+                port = 62001
+            else:
+                port = 5555 + idx * 2
+            ac["adb_address"] = f"127.0.0.1:{port}"
             ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
 
         # Get free MAA instance
