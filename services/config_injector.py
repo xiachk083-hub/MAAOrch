@@ -5,11 +5,6 @@ from datetime import datetime
 from infrastructure.task_constants import find_mumu_cli, CONNECT_CONFIG_MAP, TOUCH_MODE_MAP
 from app.service_context import ServiceContext
 
-_POST_BITMAP = {"ExitArknights":1,"ExitSelf":2,"ExitEmulator":4,"Shutdown":8,"BackToAndroidHome":16}
-def _post_bitmask(s: str) -> str:
-    """Convert post_action string like 'ExitEmulator,ExitSelf' to bitmask string '6'."""
-    if not s: return "0"
-    return str(sum(_POST_BITMAP.get(a.strip(),0) for a in s.split(",")))
 
 class ConfigService:
     """MAA config injection — writes gui.json / gui.new.json / TOML task configs."""
@@ -71,7 +66,7 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            if ac.get("post_action"): c["MainFunction.PostActions"]='"'+ac["post_action"]+'"'
+            if ac.get("post_action"): c["MainFunction.PostActions"] = "0"
             if ac.get("adb_retry",0)>0: c["Connect.RetryOnDisconnected"]="True"
             # Emulator: unchecked = MAA handles, checked = we handle
             if ac.get("emu_instance_index","") and not ac.get("emu_launch"):
@@ -249,7 +244,7 @@ class ConfigService:
                 c["Start.StartGame"] = "True"
                 smart_cfg = self.ctx.config.get("smart_global", {})
                 pa = smart_cfg.get("post_action", "") or ac.get("post_action", "")
-                c["MainFunction.PostActions"] = _post_bitmask(pa)
+                c["MainFunction.PostActions"] = "0"
             else:
                 c.pop("MainFunction.PostActions", None)
                 # Write connection settings for v6 (same as v5, after dot-key cleanup)
@@ -270,9 +265,7 @@ class ConfigService:
                     c["Start.ClientType"] = ac["game_client"]
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
-                post_val = ac.get("post_action", "")
-                if post_val:
-                    c["MainFunction.PostActions"] = f'"{post_val}"'
+                c["MainFunction.PostActions"] = "0"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx and not ac.get("emu_launch"):

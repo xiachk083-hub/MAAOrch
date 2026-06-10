@@ -442,6 +442,34 @@ class AccountRunner(QObject):
             return
         if p.poll() is None:
             self._update_status(aid)
+            # Task completion detection: check log for AllTasksCompleted
+            ac = self._active.get(aid)
+            if ac:
+                progs = self._progs.get(aid, [])
+                if progs:
+                    lp = self.ctx.logs.asst_log_path(progs[0]) if self.ctx.logs else None
+                    if lp and lp.exists():
+                        try:
+                            tail = lp.read_text(encoding="utf-8", errors="replace").split("\n")[-10:]
+                            if any("AllTasksCompleted" in line for line in tail):
+                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+                                sg = self.ctx.config.get("smart_global", {})
+                                pa = ac.get("post_action", "") or sg.get("post_action", "")
+                                if "ExitEmulator" in pa:
+                                    emu_idx = ac.get("emu_instance_index", "")
+                                    if emu_idx:
+                                        from infrastructure.task_constants import find_mumu_cli, CF
+                                        cli = find_mumu_cli()
+                                        if cli:
+                                            try: subprocess.run([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                                                              capture_output=True, timeout=10, creationflags=CF)
+                                            except Exception: pass
+                                try: p.terminate(); p.wait(5)
+                                except: pass
+                                try: p.kill()
+                                except: pass
+                                return
+                        except Exception: pass
             # Stuck detection: same task over timeout → kill
             ac = self._active.get(aid)
             if ac:
@@ -564,6 +592,23 @@ class AccountRunner(QObject):
         self.ctx.proc_status.discard(aid)
 
         name = ac.get("name", aid) if ac else aid
+        # MAAOrch-managed post_action on normal exit: close emulator
+        if exit_code == 0 and ac:
+            sg = self.ctx.config.get("smart_global", {})
+            pa = ac.get("post_action", "") or sg.get("post_action", "")
+            if "ExitEmulator" in pa:
+                emu_idx = ac.get("emu_instance_index", "")
+                if emu_idx:
+                    from infrastructure.task_constants import find_mumu_cli, CF
+                    import subprocess as _sp
+                    cli = find_mumu_cli()
+                    if cli:
+                        try:
+                            _sp.run([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                                    capture_output=True, timeout=10, creationflags=CF)
+                            self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
+                        except Exception as e:
+                            self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
         if ac:
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
