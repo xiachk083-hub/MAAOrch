@@ -248,7 +248,7 @@ class ConfigService:
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
                 smart_cfg = self.ctx.config.get("smart_global", {})
-                pa = ac.get("post_action", "") or smart_cfg.get("post_action", "")
+                pa = smart_cfg.get("post_action", "") or ac.get("post_action", "")
                 c["MainFunction.PostActions"] = _post_bitmask(pa)
             else:
                 c.pop("MainFunction.PostActions", None)
