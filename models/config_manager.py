@@ -29,6 +29,7 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
 
 def migrate_v4_to_v5(data: dict) -> dict:
     data.setdefault("accounts",[]); data.setdefault("check_update_on_start",True)
+    data.setdefault("node_id",""); data.setdefault("node_name","")
     for a in data.get("accounts",[]):
         a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch","")
         a.setdefault("emu_instance_index",""); a.setdefault("emu_launch",True); a.setdefault("emu_wait",30)

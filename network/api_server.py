@@ -52,6 +52,7 @@ class ApiServer(QThread):
                 if not s._check_auth(): return s._json({"error":"unauthorized"},401)
                 p=s.path.split("?")[0]
                 if p=="/api/status": return s._handle_status()
+                if p=="/api/node/info": return s._handle_node_info()
                 if p.startswith("/api/account/") and p.endswith("/status"): return s._handle_account_status(p)
                 if p.startswith("/api/account/") and p.endswith("/stats"): return s._handle_account_stats(p)
                 if p=="/api/stats": return s._handle_all_stats()
@@ -67,6 +68,8 @@ class ApiServer(QThread):
                 if p=="/api/pipeline/start": return s._handle_pipeline_start()
                 if p=="/api/pipeline/stop": return s._handle_pipeline_stop()
                 if p=="/api/pipeline/pause": return s._handle_pipeline_pause(body)
+                if p=="/api/node/register": return s._handle_node_register(body)
+                if p=="/api/node/heartbeat": return s._handle_node_heartbeat(body)
                 if p.startswith("/api/account/") and p.endswith("/launch"): return s._handle_account_launch(p)
                 if p=="/api/config/sync": return s._handle_config_sync(body)
                 if p=="/api/queue/enqueue": return s._handle_queue_enqueue(body)
@@ -83,6 +86,32 @@ class ApiServer(QThread):
                     accts.append({"name":a.get("name",""),"index":i,"running":running,"elapsed":elapsed,"adb":a.get("adb_address",""),"emu_index":a.get("emu_instance_index","")})
                 pipeline_running=mw.pipeline_thread.isRunning() if hasattr(mw,'pipeline_thread') and mw.pipeline_thread else False
                 s._json({"accounts":accts,"pipeline_running":pipeline_running})
+            def _handle_node_info(s):
+                import psutil as _ps
+                mem = _ps.virtual_memory()
+                cpu_count = _ps.cpu_count()
+                node_id = mw.config.get("node_id", "")
+                node_name = mw.config.get("node_name", "")
+                s._json({"node_id": node_id, "node_name": node_name,
+                         "version": "1.2.0", "parallel_max": mw.config.get("parallel_max", 3),
+                         "account_count": len(mw.accounts),
+                         "running_count": len(getattr(mw, "_proc_status", set())),
+                         "cpu_count": cpu_count, "memory_total_mb": mem.total // 1048576,
+                         "memory_available_mb": mem.available // 1048576})
+            def _handle_node_register(s, body):
+                daigan_url = body.get("daigan_url", "")
+                if daigan_url and daigan_url.startswith("https://"):
+                    mw.config["daigan_url"] = daigan_url
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    mw._log(f"节点已注册到: {daigan_url}")
+                s._json({"node_id": mw.config.get("node_id", ""), "status": "registered"})
+            def _handle_node_heartbeat(s, body):
+                import psutil as _ps
+                s._json({"node_id": mw.config.get("node_id", ""), "status": "ok",
+                         "ts": time.time(), "running": len(getattr(mw, "_proc_status", set())),
+                         "queued": getattr(mw.launch_queue, "pending_count", 0) if hasattr(mw, "launch_queue") else 0,
+                         "mem_avail_mb": _ps.virtual_memory().available // 1048576})
             def _handle_account_status(s,p):
                 try: idx=int(p.split("/")[3])
                 except: return s._json({"error":"bad index"},400)
