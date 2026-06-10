@@ -29,7 +29,7 @@ from ui.log_window import show_log_window
 from ui.settings_window import open_settings
 
 try:
-    from PySide6.QtCore import Qt,QThread,Signal,QTimer,QPointF,QSize,Slot
+    from PySide6.QtCore import Qt,QEvent,QThread,Signal,QTimer,QPointF,QSize,Slot
     from PySide6.QtGui import QFont,QPixmap,QPainter,QColor,QBrush,QPolygonF,QIcon
     from PySide6.QtWidgets import (
         QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,
