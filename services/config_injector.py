@@ -432,24 +432,61 @@ class ConfigService:
                     tt = item.get("TaskType", "").lower()
                     if tt in tsm:
                         st = tsm[tt]
-                        if tt == "fight" and "use_expiring_medicine" in st:
+                        if tt == "fight":
                             if not item.get("UseCustomAnnihilation", False):
-                                item["UseExpiringMedicine"] = st["use_expiring_medicine"]
+                                if "use_expiring_medicine" in st:
+                                    item["UseExpiringMedicine"] = st["use_expiring_medicine"]
                                 if "use_medicine" in st:
                                     item["UseMedicine"] = st["use_medicine"]
                                     item["MedicineCount"] = 999 if st["use_medicine"] else 0
-                        elif tt == "recruit" and "select" in st:
-                            sel = st["select"]
-                            item["Level3Choose"] = 3 in sel
-                            item["Level4Choose"] = 4 in sel
-                            item["Level5Choose"] = 5 in sel
-                        elif tt == "infrast" and "mode" in st:
-                            item["Mode"] = st["mode"]
+                                if "times" in st: item["Times"] = st["times"]
+                                if "stage_reset_mode" in st: item["StageResetMode"] = st["stage_reset_mode"]
+                                if "use_stone" in st: item["UseStone"] = st["use_stone"]
+                                if "stone" in st: item["StoneCount"] = st["stone"]
+                                if "hide_unavailable_stage" in st: item["HideUnavailableStage"] = st["hide_unavailable_stage"]
+                                if "enable_times_limit" in st: item["EnableTimesLimit"] = st["enable_times_limit"]
+                                if "medicine_expire_days" in st: item["MedicineExpireDays"] = st["medicine_expire_days"]
+                        elif tt == "recruit":
+                            if "select" in st:
+                                sel = st["select"]
+                                item["Level3Choose"] = 3 in sel
+                                item["Level4Choose"] = 4 in sel
+                                item["Level5Choose"] = 5 in sel
+                            if "confirm" in st: item["Confirm"] = st["confirm"]
+                            if "times" in st: item["MaxTimes"] = st["times"]
+                            if "refresh" in st: item["Refresh"] = st["refresh"]
+                            if "force_refresh" in st: item["ForceRefresh"] = st["force_refresh"]
+                            if "prefer_tag_enabled" in st: item["PreferTagEnabled"] = st["prefer_tag_enabled"]
+                            if "preserve_tag_enabled" in st: item["PreserveTagEnabled"] = st["preserve_tag_enabled"]
+                            if "preserve_tags" in st: item["PreserveTags"] = st["preserve_tags"]
+                            if "level3_time" in st: item["Level3Time"] = st["level3_time"]
+                            if "level4_time" in st: item["Level4Time"] = st["level4_time"]
+                            if "level5_time" in st: item["Level5Time"] = st["level5_time"]
+                        elif tt == "infrast":
+                            if "mode" in st: item["Mode"] = st["mode"]
+                            if "facilities" in st: item["RoomList"] = [{"Room": f} for f in st["facilities"]]
+                            if "drones" in st: item["UsesOfDrones"] = st["drones"]
+                            if "dorm_threshold" in st: item["DormThreshold"] = st["dorm_threshold"]
+                            if "dorm_trust_enabled" in st: item["DormTrustEnabled"] = st["dorm_trust_enabled"]
+                            if "originium_shard_auto" in st: item["OriginiumShardAuto"] = st["originium_shard_auto"]
+                            if "reception_clue" in st: item["ReceptionClue"] = st["reception_clue"]
+                            if "send_clue" in st: item["SendClue"] = st["send_clue"]
+                            if "continue_training" in st: item["ContinueTraining"] = st["continue_training"]
+                        elif tt == "mall":
+                            if "shopping" in st: item["Shopping"] = st["shopping"]
+                            if "blacklist" in st: item["BlackList"] = st["blacklist"]
+                            if "credit_fight" in st: item["CreditFight"] = st["credit_fight"]
+                            if "visit_friends" in st: item["VisitFriends"] = st["visit_friends"]
+                            if "first_list" in st: item["FirstList"] = st["first_list"]
+                            if "only_buy_discount" in st: item["OnlyBuyDiscount"] = st["only_buy_discount"]
+                            if "reserve_max_credit" in st: item["ReserveMaxCredit"] = st["reserve_max_credit"]
                         elif tt == "award":
                             if "award" in st: item["Award"] = st["award"]
                             if "mail" in st: item["Mail"] = st["mail"]
                             if "free_gacha" in st: item["FreeGacha"] = st["free_gacha"]
                             if "orundum" in st: item["Orundum"] = st["orundum"]
+                            if "mining" in st: item["Mining"] = st["mining"]
+                            if "special_access" in st: item["SpecialAccess"] = st["special_access"]
             # Inject fight_stage (默认关卡) — skip annihilation Fight items
             fs = ac.get("fight_stage", "")
             if fs and "TaskQueue" in c:
