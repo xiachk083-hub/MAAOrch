@@ -86,6 +86,7 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
                 continue
             if stage:
                 a["smart_stage"] = stage
+                a["fight_stage"] = stage
             if anni_mode_val == "启用":
                 a["smart_annihilation_enabled"] = True
                 a["smart_annihilation"] = {"自动选择": "", "当期剿灭": "Annihilation",
