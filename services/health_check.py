@@ -189,7 +189,7 @@ def run_health_check(ctx: Any) -> HealthReport:
         items.append(HealthItem("备份目录", "warn", "不存在", _fix_backup, "创建"))
 
     # 9. Log writable
-    lp = Path(__file__).parent / "debug.log"
+    lp = Path(__file__).parent.parent / "debug.log"
     try:
         lp.touch(exist_ok=True)
         items.append(HealthItem("日志文件", "ok", str(lp)))

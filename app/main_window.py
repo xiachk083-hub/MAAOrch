@@ -8,7 +8,6 @@ import threading
 
 from infrastructure.utils import (is_admin,run_as_admin,make_id,parse_maa_version,get_platform_key,_version_tuple,_rmtree_force,_find_maa_cli,setup_proxy)
 
-_log_lock = threading.Lock()
 from models.config_manager import (CONFIG_FILE,STARTUP_DIR,DEFAULT_CONFIG,migrate_v4_to_v5,load_config,save_config,set_auto_start)
 from app.themes import DARK_STYLE, LIGHT_STYLE, NOTEPAPER_STYLE, BTN_DELETE
 from services.update_service import UpdateCheckThread,DownloadThread,MaacliInstallThread,MaacliInstallDialog,UpdateDialog
@@ -50,8 +49,6 @@ class MainWindow(QMainWindow):
     VERSION = "1.2.0"
     POLL_INTERVAL_MS = 2000
     SAVE_DEBOUNCE_MS = 300
-    LOG_MAX_BYTES = 100 * 1024
-    LOG_KEEP_LINES = 200
     BACKUP_MAX_COUNT = 5
     EMU_WAIT_DEFAULT = 30
     ADB_RETRY_DEFAULT = 0
@@ -181,27 +178,16 @@ class MainWindow(QMainWindow):
         token = self.config.get("api_token", "")
         if token and token in msg:
             msg = msg.replace(token, "***")
+        from infrastructure.logger import Logger
+        if not hasattr(self, '_file_logger'):
+            self._file_logger = Logger("app")
+            self._file_logger.set_ui_callback(lambda _: None)
+        self._file_logger.info(msg)
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
         if hasattr(self,'log_text') and self.log_text: self.log_text.appendPlainText(line)
         # Update status bar log line (last 120 chars)
         if hasattr(self, '_log_lbl') and self._log_lbl:
             self._log_lbl.setText(f"  {line[-120:]}")
-        try:
-            with _log_lock:
-                lp=Path(__file__).parent/"debug.log"
-                if lp.exists() and lp.stat().st_size>self.LOG_MAX_BYTES:
-                    # Truncate efficiently: seek near end, find newline, truncate
-                    data=lp.read_bytes()
-                    mid=len(data)//2
-                    idx=data.find(b"\n", mid)
-                    if idx>0:
-                        lp.write_bytes(data[idx+1:])
-                    else:
-                        lp.write_text("", encoding="utf-8")
-                with lp.open("a",encoding="utf-8") as f: f.write(line+"\n")
-        except Exception:
-            try: print(line,file=__import__('sys').stderr)
-            except: pass
     def _save(self) -> None:
         if hasattr(self,'_save_timer') and self._save_timer:
             self._save_timer.stop()
