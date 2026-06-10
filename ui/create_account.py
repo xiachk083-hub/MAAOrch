@@ -141,6 +141,8 @@ class CreateAccountDialog(QDialog):
             return
 
         a = Account()
+        from infrastructure.utils import make_id
+        a.id = make_id()
         a.name = self._name.text().strip() or generate_name(inst, getattr(self._mw, "accounts", []))
         a.emu_instance_index = inst["index"]
         a.connection_preset = PRESET_MAP.get(inst.get("emu", ""), "General")
