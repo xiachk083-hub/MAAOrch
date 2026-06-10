@@ -82,22 +82,28 @@ class AccountRunner(QObject):
             self.log_msg.emit(f"{ac.get('name', aid)} 已在运行中")
             return False
 
-        # Auto-fill ADB address if empty but emu instance is set
-        if not ac.get("adb_address") and ac.get("emu_instance_index"):
-            idx = int(ac["emu_instance_index"])
-            preset = ac.get("connection_preset", "MuMuPro")
-            if preset == "MuMuEmulator12":
-                port = 16384 + idx * 32
-            elif preset in ("MuMuPro", "MuMu"):
-                port = 7555
-            elif preset in ("LDPlayer",):
-                port = 5555 + idx * 2
-            elif preset in ("Nox",):
-                port = 62001
+        # Dynamic ADB detection: refresh from actual emulator state at launch
+        if ac.get("emu_instance_index"):
+            from infrastructure.task_constants import detect_emu_instances
+            insts = detect_emu_instances()
+            match = next((i for i in insts if i.get("index") == ac["emu_instance_index"]), None)
+            if match and match.get("adb_port"):
+                ac["adb_address"] = f"127.0.0.1:{match['adb_port']}"
             else:
-                port = 5555 + idx * 2
-            ac["adb_address"] = f"127.0.0.1:{port}"
-            ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
+                idx = int(ac["emu_instance_index"])
+                preset = ac.get("connection_preset", "MuMuPro")
+                if preset == "MuMuEmulator12":
+                    port = 16384 + idx * 32
+                elif preset in ("MuMuPro", "MuMu"):
+                    port = 7555
+                elif preset in ("LDPlayer",):
+                    port = 5555 + idx * 2
+                elif preset in ("Nox",):
+                    port = 62001
+                else:
+                    port = 5555 + idx * 2
+                ac["adb_address"] = f"127.0.0.1:{port}"
+                ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
 
         # Auto-fill ADB path if empty (try mumu-cli sibling first, then find_adb)
         if not ac.get("adb_path"):
