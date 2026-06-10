@@ -223,8 +223,26 @@ class AccountRunner(QObject):
                     subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
                 except Exception as e:
                     self.log_msg.emit(f"启动模拟器失败: {e}")
+            # Wait for emulator to be ready (poll ADB connection)
+            adb = ac.get("adb_path", "") or "adb"
+            addr = ac.get("adb_address", "")
+            if addr:
+                wait = int(ac.get("emu_wait", 60))
+                deadline = time.time() + wait
+                self.log_msg.emit(f"等待模拟器就绪 (最长 {wait}s)...")
+                while time.time() < deadline:
+                    try:
+                        r = subprocess.run([adb, "connect", addr], capture_output=True, timeout=5, creationflags=CF)
+                        if r.returncode == 0 and b"connected" in r.stdout.lower():
+                            self.log_msg.emit(f"模拟器 #{emu_idx} 已就绪")
+                            break
+                    except Exception:
+                        pass
+                    time.sleep(2)
+                else:
+                    self.log_msg.emit(f"警告: 模拟器 #{emu_idx} 启动超时，继续尝试启动 MAA")
 
-        # ADB connection
+        # ADB connection (ensure connected before inject)
         adb = ac.get("adb_path", "") or "adb"
         addr = ac.get("adb_address", "")
         if addr:

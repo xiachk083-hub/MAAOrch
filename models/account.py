@@ -14,7 +14,7 @@ class Account:
     touch_mode: str = "MiniTouch"
     account_switch: str = ""
     emu_instance_index: str = ""
-    emu_launch: bool = False
+    emu_launch: bool = True
     emu_wait: int = 60
     adb_retry: int = 0
     start_minimized: bool = True
