@@ -31,10 +31,9 @@ def migrate_v4_to_v5(data: dict) -> dict:
     data.setdefault("accounts",[]); data.setdefault("check_update_on_start",True)
     for a in data.get("accounts",[]):
         a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch","")
-        a.setdefault("emu_path",""); a.setdefault("emu_launch",False); a.setdefault("emu_wait",30)
-        a.setdefault("emu_add_cmd",""); a.setdefault("emu_instance_index",""); a.setdefault("emu_instance_name","")
-        a.setdefault("post_action",""); a.setdefault("start_minimized",False); a.setdefault("start_directly",False)
-        a.setdefault("adb_fail_launch_emu",False); a.setdefault("adb_retry",0); a.setdefault("stats",{})
+        a.setdefault("emu_instance_index",""); a.setdefault("emu_launch",True); a.setdefault("emu_wait",30)
+        a.setdefault("post_action","ExitArknights,ExitEmulator,ExitSelf"); a.setdefault("start_minimized",True); a.setdefault("start_directly",True)
+        a.setdefault("adb_retry",0); a.setdefault("stats",{})
         a.setdefault("stuck_timeout_min",0); a.setdefault("tags",""); a.setdefault("round_robin_deficit",0)
         a.setdefault("smart_stage",""); a.setdefault("smart_annihilation","")
         for d in ["mon","tue","wed","thu","fri","sat","sun"]: a.setdefault(f"smart_{d}","")

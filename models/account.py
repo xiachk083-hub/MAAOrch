@@ -13,32 +13,25 @@ class Account:
     connection_preset: str = ""
     touch_mode: str = "MiniTouch"
     account_switch: str = ""
-    emu_path: str = ""
     emu_instance_index: str = ""
-    emu_instance_name: str = ""
-    emu_launch: bool = False
+    emu_launch: bool = True
     emu_wait: int = 30
-    emu_add_cmd: str = ""
-    adb_fail_launch_emu: bool = False
     adb_retry: int = 0
-    start_minimized: bool = False
-    start_directly: bool = False
-    sync_tasks: bool = False
-    post_action: str = ""
+    start_minimized: bool = True
+    start_directly: bool = True
+    post_action: str = "ExitArknights,ExitEmulator,ExitSelf"
     fight_stage: str = ""
     task_pipeline: str = ""
     task_settings: dict = field(default_factory=dict)
-    task_templates: dict = field(default_factory=dict)
-    pipe_templates: dict = field(default_factory=dict)
+    sync_tasks: bool = False
     stats: dict = field(default_factory=dict)
     loop_enabled: bool = False
     loop_interval: int = 5
     loop_max_rounds: int = 10
-    sanity_driven: bool = False
     min_sanity: int = 0
-    stuck_timeout_min: int = 10  # minutes without task progress → auto restart
-    tags: str = ""  # comma-separated, for search filtering
-    round_robin_deficit: int = 0  # 0=wait until full, N=launch when N points from full
+    stuck_timeout_min: int = 10
+    tags: str = ""
+    round_robin_deficit: int = 0
 
     # Smart scheduling fields
     smart_stage: str = ""

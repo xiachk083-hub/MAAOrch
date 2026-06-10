@@ -60,7 +60,7 @@ def open_account_detail(mw: Any, row: int) -> None:
     emu_combo.currentIndexChanged.connect(lambda: _on_emu_changed(emu_combo, ac))
     emu_row.addWidget(emu_combo)
     launch_cb = QCheckBox("自动启动")
-    launch_cb.setChecked(ac.get("emu_launch", False))
+    launch_cb.setChecked(ac.get("emu_launch", True))
     emu_row.addWidget(launch_cb)
     emu_row.addWidget(QLabel("等待:"))
     wait_sp = QSpinBox()
@@ -89,19 +89,16 @@ def open_account_detail(mw: Any, row: int) -> None:
     gl2.setSpacing(4)
     opt_row = QHBoxLayout()
     min_cb = QCheckBox("启动后最小化")
-    min_cb.setChecked(ac.get("start_minimized", False))
+    min_cb.setChecked(ac.get("start_minimized", True))
     opt_row.addWidget(min_cb)
     dir_cb = QCheckBox("直接运行")
-    dir_cb.setChecked(ac.get("start_directly", False))
+    dir_cb.setChecked(ac.get("start_directly", True))
     opt_row.addWidget(dir_cb)
-    emu_fail_cb = QCheckBox("ADB失败启模拟器")
-    emu_fail_cb.setChecked(ac.get("adb_fail_launch_emu", False))
-    opt_row.addWidget(emu_fail_cb)
     opt_row.addStretch()
     gl2.addLayout(opt_row)
 
     post_row = QHBoxLayout()
-    current_post = ac.get("post_action", "ExitArknights,ExitSelf")
+    current_post = ac.get("post_action", "ExitArknights,ExitEmulator,ExitSelf")
     post_set = set(current_post.split(",")) if current_post else set()
     post_cbs = {}
     for k, v in [("ExitArknights", "退出游戏"), ("ExitSelf", "退出MAA"),
@@ -149,7 +146,6 @@ def open_account_detail(mw: Any, row: int) -> None:
         ac["emu_wait"] = wait_sp.value()
         ac["start_minimized"] = min_cb.isChecked()
         ac["start_directly"] = dir_cb.isChecked()
-        ac["adb_fail_launch_emu"] = emu_fail_cb.isChecked()
         selected_post = [k for k, cb in post_cbs.items() if cb.isChecked()]
         ac["post_action"] = ",".join(selected_post) if selected_post else ""
         if not smart_enabled and progs:
@@ -186,20 +182,17 @@ def _on_emu_changed(combo: QComboBox, ac: dict) -> None:
     idx = combo.currentData()
     if not idx:
         return
-    from infrastructure.task_constants import MUMU_INSTANCE_DIRS
-    port = 5555 + int(idx) * 2
-    ac["adb_address"] = f"127.0.0.1:{port}"
-    ac["connection_preset"] = "MuMuPro"
+    ac["emu_instance_index"] = idx
+    ac["connection_preset"] = "MuMuEmulator12"
     ac["touch_mode"] = "MiniTouch"
-    for d in MUMU_INSTANCE_DIRS:
-        cfg_file = Path(d) / idx / "config.json"
-        if cfg_file.exists():
-            try:
-                import json
-                cfg = json.loads(cfg_file.read_text(encoding="utf-8"))
-                adb_path = Path(d).parent / "adb.exe"
-                if adb_path.exists():
-                    ac["adb_path"] = str(adb_path)
-            except Exception:
-                pass
-            break
+    ac["adb_address"] = f"127.0.0.1:{5555 + int(idx) * 2}"
+    from infrastructure.task_constants import find_adb, find_mumu_cli
+    adb_exe = find_adb()
+    if not adb_exe:
+        cli = find_mumu_cli()
+        if cli:
+            cand = Path(cli).parent / "adb.exe"
+            if cand.exists():
+                adb_exe = str(cand)
+    if adb_exe:
+        ac["adb_path"] = adb_exe
