@@ -73,5 +73,6 @@ def atomic_write(path: Path | str, content: str) -> None:
 
 def is_safe_zip_path(member_path: str, extract_dir: Path) -> bool:
     """Check zip member path against Zip Slip / path traversal attacks."""
+    p = Path(member_path)
     resolved = (extract_dir / member_path).resolve()
-    return not member_path.startswith("/") and ".." not in member_path.parts and resolved.is_relative_to(extract_dir)
+    return not member_path.startswith("/") and ".." not in p.parts and resolved.is_relative_to(extract_dir)
