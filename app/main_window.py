@@ -276,7 +276,11 @@ class MainWindow(QMainWindow):
         run_btn = QPushButton("▶ 立即调度全部")
         run_btn.setObjectName("startBtn")
         run_btn.setFixedHeight(26)
-        run_btn.clicked.connect(lambda: _run_smart_all(self))
+        from PySide6.QtWidgets import QMenu
+        run_menu = QMenu(run_btn)
+        run_menu.addAction("含剿灭", lambda: _run_smart_all(self, True))
+        run_menu.addAction("不含剿灭", lambda: _run_smart_all(self, False))
+        run_btn.setMenu(run_menu)
         bb.addWidget(run_btn)
 
         bb.addStretch()

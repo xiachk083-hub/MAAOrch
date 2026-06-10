@@ -79,7 +79,7 @@ def _toggle_smart(mw: Any, enabled: bool) -> None:
         QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
 
 
-def _run_smart_all(mw: Any) -> None:
+def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
     if not mw.config.get("smart_global", {}).get("enabled", False):
         mw._log("智能调度未启用")
         return
@@ -88,10 +88,23 @@ def _run_smart_all(mw: Any) -> None:
             mw.launch_queue._pending.clear()
             mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
-    mw._smart_force = True
-    setattr(mw, "_last_smart_minute", "")
-    mw._smart_tick()
-    mw._smart_force = False
+    tasks = ["StartUp", "Award"]
+    if include_anni:
+        tasks.append("Annihilation")
+    tasks.extend(["Fight", "Infrast", "Recruit", "Mall"])
+    plan = ",".join(tasks)
+    count = 0
+    for a in mw.accounts:
+        aid = a.get("id", "")
+        if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+            continue
+        if mw.launch_queue.is_queued(aid) or mw.launch_queue.is_running(aid):
+            continue
+        a["smart_plan"] = plan
+        mw.launch_queue.enqueue(aid, "force", priority=0)
+        count += 1
+    if count:
+        mw._log(f"▶ 强制调度{'含剿灭' if include_anni else '刷关'}: {count} 个账号已入队")
 
 
 def _filter_click(mw: Any, key: str) -> None:

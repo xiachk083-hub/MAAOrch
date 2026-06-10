@@ -52,7 +52,7 @@ def do_smart_tick(mw: Any) -> None:
                 a["smart_pending"] = True
             continue
         last_error = a.get("smart_last_error", 0)
-        if last_error and time.time() - last_error < 300 and not getattr(mw, "_smart_force", False):
+        if last_error and time.time() - last_error < 300:
             continue
         tasks = decide(a, sg)
         if tasks:
