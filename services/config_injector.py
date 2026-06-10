@@ -448,6 +448,13 @@ class ConfigService:
                         item["StagePlan"] = [fs]
                         item["IsStageManually"] = True
                         break
+            # Inject account_switch (账号切换)
+            sw = ac.get("account_switch", "")
+            if sw and "TaskQueue" in c:
+                for item in c["TaskQueue"]:
+                    if item.get("TaskType", "").lower() == "startup":
+                        item["AccountName"] = sw
+                        break
             tmp = gj.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
