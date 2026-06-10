@@ -475,6 +475,12 @@ class ConfigService:
                 if ap >= 0 and rp >= 0 and ap > rp:
                     tq.insert(rp, tq.pop(ap))
                     c["TaskQueue"] = tq
+            # Force Infrast mode from task_settings (belt-and-suspenders)
+            infra_mode = ac.get("task_settings", {}).get("Infrast", {}).get("mode", "")
+            if infra_mode and "TaskQueue" in c:
+                for item in c["TaskQueue"]:
+                    if item.get("TaskType", "").lower() == "infrast":
+                        item["Mode"] = infra_mode
             tmp = gj.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
