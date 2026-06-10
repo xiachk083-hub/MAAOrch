@@ -1,0 +1,13 @@
+
+[2026-06-10 15:37:06] [CRASH] [crash]
+Traceback (most recent call last):
+  File "D:\1-2\MAAOrch\main.pyw", line 107, in <module>
+    main()
+  File "D:\1-2\MAAOrch\main.pyw", line 101, in main
+    win = MainWindow()
+          ^^^^^^^^^^^^
+  File "D:\1-2\MAAOrch\app\main_window.py", line 76, in __init__
+    save_config(self.config)
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'save_config' where it is not associated with a value
+

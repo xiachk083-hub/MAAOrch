@@ -62,7 +62,6 @@ class MainWindow(QMainWindow):
         import uuid as _uuid
         if not self.config.get("node_id"):
             self.config["node_id"] = _uuid.uuid4().hex[:12]
-            from models.config_manager import save_config
             save_config(self.config)
         self.groups=self.config.get("groups",[]); self.warehouse=self.config.get("warehouse",[])
         self.accounts=self.config.get("accounts",[]); self.selected_group_idx=None
