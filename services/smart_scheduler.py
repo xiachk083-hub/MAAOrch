@@ -7,18 +7,14 @@ from typing import Any
 
 
 def _arknights_now() -> datetime:
-    """Return current time aligned to Arknights daily reset (04:00).
-    Game resets at 4am, so before 4am the game date is still 'yesterday'."""
     return datetime.now() - timedelta(hours=4)
 
-# Simple TTL cache for file I/O (30s)
 _io_cache: dict[str, tuple[float, Any]] = {}
 _io_cache_lock = threading.Lock()
 _IO_CACHE_TTL = 30
 
 
 def _cached_read_json(path: Path) -> Any:
-    """Read JSON file with 30s TTL cache."""
     key = str(path.resolve())
     now = _time.time()
     with _io_cache_lock:
@@ -56,29 +52,31 @@ def get_today_key() -> str:
     return ["mon","tue","wed","thu","fri","sat","sun"][_arknights_now().weekday()]
 
 
-_infrast_fired: set = set()  # tracks "YYYY-MM-DD/04:00" fired per day
+# Per-task fire tracking {"recruit": {"2026-06-10/04:00", ...}}
+_fired: dict[str, set] = {}
 
 
-def is_infrast_time(now: datetime | None = None, times: list[str] | None = None) -> bool:
-    if times is None:
-        times = ["04:00", "16:00"]
-    if now is None:
-        now = datetime.now()
-    h, m = now.hour, now.minute
+def _is_task_due(task_key: str, schedule_times: list[str]) -> bool:
+    """Check if a task should run at this time window (15-min window + 2h catch-up, once per window per day)."""
+    now = datetime.now()
     date_key = now.strftime("%Y-%m-%d")
-    for t in times:
+    h, m = now.hour, now.minute
+    fired_set = _fired.setdefault(task_key, set())
+    for t in schedule_times:
         try:
             th, tm = map(int, t.split(":"))
-            # Fire within 15-minute window
+            # 15-minute window
             if h == th and m >= tm and m < tm + 15:
-                _infrast_fired.add(f"{date_key}/{t}")
-                return True
-            # Catch-up: past the time but not yet fired today
-            run_key = f"{date_key}/{t}"
-            if run_key not in _infrast_fired:
+                fk = f"{date_key}/{t}"
+                if fk not in fired_set:
+                    fired_set.add(fk)
+                    return True
+            # Catch-up within 2h after the window
+            rk = f"{date_key}/{t}"
+            if rk not in fired_set:
                 target = now.replace(hour=th, minute=tm, second=0, microsecond=0)
                 if now > target and (now - target).total_seconds() < 7200:
-                    _infrast_fired.add(run_key)
+                    fired_set.add(rk)
                     return True
         except Exception:
             pass
@@ -87,52 +85,45 @@ def is_infrast_time(now: datetime | None = None, times: list[str] | None = None)
 
 def decide(account: dict, global_cfg: dict) -> list[str]:
     tasks: list[str] = []
-    now = datetime.now()
-    ak_now = _arknights_now()
-    today_key = get_today_key()
-    is_monday = ak_now.weekday() == 0
 
     tasks.append("StartUp")
     tasks.append("Award")
 
+    # 基建换班 — 4:00 / 16:00
     infrast_times = global_cfg.get("infrast_times", ["04:00", "16:00"])
-    is_afternoon = now.hour >= 15
-    if is_infrast_time(now, infrast_times):
+    if _is_task_due("infrast", infrast_times):
         tasks.append("Infrast")
-        if global_cfg.get("recruit_enabled", True):
-            tasks.append("Recruit")
-        if is_afternoon and global_cfg.get("mall_enabled", True):
-            tasks.append("Mall")
 
+    # 公开招募 — 4:00 daily
+    if _is_task_due("recruit", ["04:00"]):
+        tasks.append("Recruit")
+
+    # 信用商店 — 4:00 daily
+    if _is_task_due("mall", ["04:00"]):
+        tasks.append("Mall")
+
+    # 剿灭作战 — weekly, not yet done
     smart_annihilation = account.get("smart_annihilation", "")
     has_annihilation = False
-    if (is_monday and smart_annihilation
-        and global_cfg.get("annihilation_enabled", True)
-        and account.get("smart_annihilation_enabled", True)):
-        if not _is_annihilation_done_this_week(account["id"]):
-            tasks.append("Annihilation")
-            has_annihilation = True
+    if (smart_annihilation
+        and account.get("smart_annihilation_enabled", True)
+        and not _is_annihilation_done_this_week(account["id"])):
+        tasks.append("Annihilation")
+        has_annihilation = True
 
-    stage = account.get(f"smart_{today_key}", "") or account.get("smart_stage", "")
-    threshold = global_cfg.get("threshold", 80)
-    has_sanity = _check_sanity_above_threshold(account["id"], threshold)
-    materials_enabled = account.get("smart_materials_enabled", True)
-
-    material_stage = _get_material_stage(account, global_cfg) if materials_enabled else None
-
-    want_fight = bool(material_stage) or bool(has_sanity and stage) or has_annihilation
-    if want_fight and "Fight" not in tasks and "Annihilation" not in tasks:
+    # 刷关作战 — stamina threshold
+    pct = account.get("stamina_threshold_pct", 80)
+    if _check_sanity_above_threshold(account["id"], pct):
         tasks.append("Fight")
-    elif has_annihilation and "Fight" not in tasks and stage:
-        tasks.append("Fight")
+    elif account.get("smart_materials_enabled", True):
+        ms = _get_material_stage(account, global_cfg)
+        if ms:
+            tasks.append("Fight")
 
-    tasks.append("CloseDown")
     return tasks
 
 
 def mark_annihilation_done(account_id: str, tasks: list[dict]) -> None:
-    """Check if annihilation was completed and mark in stats.json."""
-    from pathlib import Path
     import json, datetime
     has_anni = any(
         t.get("name", "").lower() in ("fight", "annihilation")
@@ -150,7 +141,6 @@ def mark_annihilation_done(account_id: str, tasks: list[dict]) -> None:
         week = datetime.datetime.now().strftime("%Y-W%W")
         data.setdefault("weekly_annihilation", {})
         if data["weekly_annihilation"].get("week") != week:
-            # Check via asst.log for actual weekly total
             runs = data.get("runs", [])
             week_total = 0
             for r in runs:
@@ -195,7 +185,6 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
                 cur, mx = s.get("current", 0), s.get("max", 1)
                 if (cur / mx) * 100 >= threshold:
                     return True
-                # Data older than 30 min → stamina likely recovered
                 ts = r.get("ts", "")
                 if ts:
                     from datetime import datetime
@@ -205,15 +194,9 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
                             return True
                     except Exception:
                         pass
-                break  # recent low sanity, keep checking older records
+                break
     except Exception:
         pass
-    return True  # on error, launch anyway to collect fresh data
-
-
-def _has_expiring_medicine(account: dict, global_cfg: dict) -> bool:
-    if not global_cfg.get("expiring_medicine", True):
-        return False
     return True
 
 
