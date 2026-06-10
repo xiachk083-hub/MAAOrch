@@ -80,9 +80,6 @@ def _toggle_smart(mw: Any, enabled: bool) -> None:
 
 
 def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
-    if not mw.config.get("smart_global", {}).get("enabled", False):
-        mw._log("智能调度未启用")
-        return
     if hasattr(mw, "launch_queue") and mw.launch_queue:
         with mw.launch_queue._lock:
             mw.launch_queue._pending.clear()
