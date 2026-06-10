@@ -44,7 +44,7 @@ def open_task_config(mw: Any, ac: dict) -> None:
     l2.addWidget(QLabel("默认关卡:")); l2.addWidget(fs)
     ft = ts.get("Fight", {})
     exp_med = QCheckBox("优先吃快到期理智药")
-    exp_med.setChecked(ft.get("use_expiring_medicine", True))
+    exp_med.setChecked(ft.get("use_expiring_medicine", False))
     l2.addWidget(exp_med)
     l2.addStretch()
     tabs.addTab(w2, "刷关作战")
