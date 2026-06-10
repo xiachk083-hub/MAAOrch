@@ -98,7 +98,8 @@ def open_task_config(mw: Any, ac: dict) -> None:
         # Build task_settings
         new_ts = {}
         # Fight
-        new_ts["Fight"] = {"use_expiring_medicine": exp_med.isChecked()}
+        new_ts["Fight"] = {"use_medicine": exp_med.isChecked(),
+                           "use_expiring_medicine": exp_med.isChecked()}
         # Recruit
         selected_stars = [s for s, cb in star_cbs.items() if cb.isChecked()]
         new_ts["Recruit"] = {"select": selected_stars if selected_stars else [3, 4, 5],
