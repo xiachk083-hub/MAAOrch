@@ -31,22 +31,8 @@ def open_task_config(mw: Any, ac: dict) -> None:
     # ── 剿灭作战 ──
     w3 = QWidget(); l3 = QVBoxLayout(w3); l3.setSpacing(8)
     l3.addWidget(QLabel("剿灭关卡:"))
-    ann = QComboBox()
-    anni_map = {"当期剿灭":"Annihilation","切尔诺伯格":"Chernobog@Annihilation",
-                "龙门 外环":"LungmenOutskirts@Annihilation","龙门 市区":"LungmenDowntown@Annihilation",
-                "多索雷斯":"DossolesHoliday@Annihilation"}
-    current_anni = ac.get("smart_annihilation", "Annihilation")
-    # Find which display name matches, or add custom
-    found_display = None
-    for display, internal in anni_map.items():
-        ann.addItem(display, internal)
-        if internal == current_anni:
-            found_display = display
-    if found_display:
-        ann.setCurrentText(found_display)
-    else:
-        ann.addItem(current_anni, current_anni)
-        ann.setCurrentIndex(ann.count() - 1)
+    ann = QLineEdit(ac.get("smart_annihilation", "Annihilation"))
+    ann.setPlaceholderText("例如: Annihilation")
     l3.addWidget(ann)
     l3.addStretch()
     tabs.addTab(w3, "剿灭作战")
@@ -108,7 +94,7 @@ def open_task_config(mw: Any, ac: dict) -> None:
     def _save():
         ac["account_switch"] = sw.text().strip()
         ac["fight_stage"] = fs.text().strip()
-        ac["smart_annihilation"] = ann.currentData() or "Annihilation"
+        ac["smart_annihilation"] = ann.text().strip() or "Annihilation"
         # Build task_settings
         new_ts = {}
         # Fight
