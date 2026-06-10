@@ -100,7 +100,7 @@ class CreateAccountDialog(QDialog):
         self._post_cbs: dict[str, QCheckBox] = {}
         for k, v in [("ExitArknights","退出游戏"),("ExitEmulator","关模拟器"),("ExitSelf","退出MAA")]:
             cb = QCheckBox(v)
-            cb.setChecked(True)
+            cb.setChecked(k != "ExitArknights")
             self._post_cbs[k] = cb
             prow.addWidget(cb)
         prow.addStretch()

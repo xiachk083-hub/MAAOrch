@@ -19,7 +19,7 @@ class Account:
     adb_retry: int = 0
     start_minimized: bool = True
     start_directly: bool = True
-    post_action: str = "ExitArknights,ExitEmulator,ExitSelf"
+    post_action: str = "ExitEmulator,ExitSelf"
     fight_stage: str = ""
     task_pipeline: str = ""
     task_settings: dict = field(default_factory=dict)
