@@ -208,7 +208,7 @@ def _on_emu_changed(combo: QComboBox, ac: dict) -> None:
     ac["emu_instance_index"] = idx
     ac["connection_preset"] = "MuMuEmulator12"
     ac["touch_mode"] = "MiniTouch"
-    ac["adb_address"] = f"127.0.0.1:{5555 + int(idx) * 2}"
+    ac["adb_address"] = f"127.0.0.1:{16384 + int(idx) * 32}"
     adb_exe = find_adb()
     if not adb_exe:
         cli = find_mumu_cli()
