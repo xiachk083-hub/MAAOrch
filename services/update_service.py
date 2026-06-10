@@ -71,9 +71,9 @@ class DownloadThread(QThread):
             self.progress.emit(1,1); self.status.emit("解压...")
             tmp=tempfile.mkdtemp(prefix="maa_")
             with zipfile.ZipFile(tmpf.name) as zf:
+                from infrastructure.utils import is_safe_zip_path
                 for m in zf.infolist():
-                    p = Path(m.filename)
-                    if p.is_absolute() or any(part == ".." for part in p.parts):
+                    if not is_safe_zip_path(m.filename, Path(tmp)):
                         self.finished.emit(False, f"危险文件跳过: {m.filename}")
                         return
                 for m in zf.infolist():

@@ -4,8 +4,10 @@ from pathlib import Path
 from infrastructure.platform_helper import is_admin, run_as_admin, get_platform_key, find_maa_cli as _find_maa_cli
 
 
-def setup_proxy() -> None:
-    """Auto-detect proxy (Clash/v2ray/etc) for GitHub access. Call once at startup."""
+def setup_proxy(active: bool = False) -> None:
+    """Auto-detect proxy (Clash/v2ray/etc) for GitHub access. Only active when explicitly enabled."""
+    if not active:
+        return
     for p in [os.environ.get("HTTP_PROXY",""),os.environ.get("http_proxy",""),
               os.environ.get("HTTPS_PROXY",""),os.environ.get("https_proxy","")]:
         if p:
@@ -68,3 +70,8 @@ def atomic_write(path: Path | str, content: str) -> None:
     except Exception:
         pass
     tmp.replace(p)
+
+def is_safe_zip_path(member_path: str, extract_dir: Path) -> bool:
+    """Check zip member path against Zip Slip / path traversal attacks."""
+    resolved = (extract_dir / member_path).resolve()
+    return not member_path.startswith("/") and ".." not in member_path.parts and resolved.is_relative_to(extract_dir)

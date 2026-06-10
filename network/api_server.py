@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json,time,re,os
+import json,time,re,os,hmac
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Any
@@ -36,13 +36,17 @@ class ApiServer(QThread):
                 return True
             def _check_auth(s):
                 if not token: return s._json({"error":"token not configured"}, 403)
+                # CSRF: reject requests from non-local origins
+                ref = s.headers.get("Referer", "")
+                if ref and not ref.startswith("http://127.0.0.1") and not ref.startswith("http://localhost"):
+                    return s._json({"error":"forbidden"}, 403)
                 h=s.headers.get("x-agent-token","")
-                return h==token
+                return hmac.compare_digest(h, token)
             def _json(s,data,code=200):
-                s.send_response(code); s.send_header("Content-Type","application/json"); s.send_header("Access-Control-Allow-Origin","*"); s.end_headers()
+                s.send_response(code); s.send_header("Content-Type","application/json"); s.end_headers()
                 s.wfile.write(json.dumps(data,ensure_ascii=False).encode())
             def do_OPTIONS(s):
-                s.send_response(200);s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","x-agent-token,content-type");s.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");s.end_headers()
+                s.send_response(200);s.send_header("Content-Type","application/json");s.end_headers()
             def do_GET(s):
                 if not s._check_rate_limit(): return
                 if not s._check_auth(): return s._json({"error":"unauthorized"},401)
@@ -153,7 +157,8 @@ class ApiServer(QThread):
                 if not progs: return s._json({"error":"no MAA bound"},400)
                 try:
                     inst_path=Path(progs[0]["path"]).resolve()
-                    if "maa"+os.sep+"instances"+os.sep not in str(inst_path):
+                    parts=inst_path.parts
+                    if not any(parts[i:i+2]==("maa","instances") for i in range(len(parts)-1)):
                         return s._json({"error":"invalid path"},403)
                     d=inst_path.parent/"config"
                     d.mkdir(parents=True,exist_ok=True)

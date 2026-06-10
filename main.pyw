@@ -61,7 +61,7 @@ def main():
     import threading
     threading.excepthook = _thread_excepthook
 
-    setup_proxy()  # Auto-detect proxy before any network calls
+    setup_proxy(False)  # Proxy auto-detect disabled by default (opt-in via config)
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
