@@ -549,3 +549,13 @@
 {"t": "2026-06-10 20:33:19", "l": "INFO", "src": "app", "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
 {"t": "2026-06-10 20:33:19", "l": "INFO", "src": "app", "msg": "✓ 启动 MAA PID=23284"}
 {"t": "2026-06-10 20:33:39", "l": "INFO", "src": "app", "msg": "[资源] 系统可用内存 3.9GB 不足，暂停新启动"}
+{"t": "2026-06-10 20:37:31", "l": "INFO", "src": "app", "msg": "[完成] 阿仄仄仄 退出码=0 耗时=4m14s 🧠 StartUp,Award,Annihilation,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-10 20:37:31", "l": "INFO", "src": "app", "msg": "[账号] 阿仄仄仄 状态: completed (exit=0)"}
+{"t": "2026-06-10 20:37:33", "l": "INFO", "src": "app", "msg": "[资源] 内存已恢复 (5.3GB 可用)，继续启动"}
+{"t": "2026-06-10 20:37:45", "l": "INFO", "src": "app", "msg": "[完成] 樄耳东c 退出码=0 耗时=4m25s 🧠 StartUp,Award,Annihilation,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-10 20:37:45", "l": "INFO", "src": "app", "msg": "[账号] 樄耳东c 状态: completed (exit=0)"}
+{"t": "2026-06-10 20:37:57", "l": "INFO", "src": "app", "msg": "══ 启动 ══"}
+{"t": "2026-06-10 20:37:57", "l": "INFO", "src": "app", "msg": "[队列] 从历史恢复 0 个等待项"}
+{"t": "2026-06-10 20:37:57", "l": "INFO", "src": "app", "msg": "账号: 2 | 仓库: 0 | 分组: 0"}
+{"t": "2026-06-10 20:37:58", "l": "INFO", "src": "app", "msg": "API 服务已启动: http://127.0.0.1:19999"}
+{"t": "2026-06-10 20:38:02", "l": "INFO", "src": "app", "msg": "⚠ 环境检测: 0 个错误, 1 个警告"}
