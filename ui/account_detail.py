@@ -59,7 +59,7 @@ def open_account_detail(mw: Any, row: int) -> None:
         emu_combo.setCurrentIndex(emu_combo.count() - 1)
     emu_combo.currentIndexChanged.connect(lambda: _on_emu_changed(emu_combo, ac))
     emu_row.addWidget(emu_combo)
-    launch_cb = QCheckBox("自启")
+    launch_cb = QCheckBox("自动启动")
     launch_cb.setChecked(ac.get("emu_launch", False))
     emu_row.addWidget(launch_cb)
     emu_row.addWidget(QLabel("等待:"))

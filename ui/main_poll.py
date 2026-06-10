@@ -82,12 +82,12 @@ def do_smart_tick(mw: Any) -> None:
                 mw.launch_queue.enqueue(aid, "schedule", priority=1)
                 count += 1
     if count:
-        mw._log(f"\uD83E\uDDE0 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg}个缺配置跳过)" if skipped_no_cfg else ""))
+        mw._log(f"\U0001f9e0 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg} 个缺配置跳过)" if skipped_no_cfg else ""))
         mw.launch_queue.tick()
     else:
-        reasons = [f"{skipped_no_cfg}个缺配置"] if skipped_no_cfg else []
-        reasons.append("体力不足/无任务到达")
-        mw._log(f"\uD83E\uDDE0 智能调度: 暂无账号需要调度（{'，'.join(reasons)}）")
+        reasons = [f"{skipped_no_cfg} 个缺配置"] if skipped_no_cfg else []
+        reasons.append("体力不足 / 暂无任务")
+        mw._log(f"\U0001f9e0 智能调度: 暂无账号需要调度（{'，'.join(reasons)}）")
 
 
 def do_health_check(mw: Any) -> None:
@@ -97,11 +97,11 @@ def do_health_check(mw: Any) -> None:
         report = run_health_check(mw.ctx)
         n = report.error_count + report.warn_count
         if n:
-            mw._log(f"\u26A0 \u73AF\u5883\u68C0\u6D4B: {report.error_count} \u4E2A\u9519\u8BEF, {report.warn_count} \u4E2A\u8B66\u544A")
+            mw._log(f"\u26a0 环境检测: {report.error_count} 个错误, {report.warn_count} 个警告")
         else:
-            mw._log("\u2705 \u73AF\u5883\u68C0\u6D4B: \u5168\u90E8\u6B63\u5E38")
+            mw._log("\u2705 环境检测: 全部正常")
     except Exception as e:
-        mw._log(f"\u73AF\u5883\u68C0\u6D4B\u5931\u8D25: {e}")
+        mw._log(f"环境检测失败: {e}")
 
 
 def show_health_dialog(mw: Any) -> None:
@@ -120,22 +120,22 @@ def show_todo(mw: Any) -> None:
         aid = a.get("id", "")
         name = a.get("name", "").strip() or aid[:6]
         if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
-            issues.append((name, "未配置 ADB 地址或模拟器实例"))
+            issues.append((name, "未配置 ADB 或模拟器"))
         if mw.config.get("smart_global", {}).get("enabled", False):
             if not a.get("smart_stage", ""):
                 issues.append((name, "智能模式开启但未设默认关卡"))
     if not issues:
         from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(mw, "\uD83D\uDCCB \u914D\u7F6E\u5F85\u529E", "所有账号配置齐全，暂无待办项。")
+        QMessageBox.information(mw, "\U0001f4cb 配置待办", "所有账号配置齐全，暂无待办项。")
         return
     from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
     d = QDialog(mw)
-    d.setWindowTitle(f"\uD83D\uDCCB \u914D\u7F6E\u5F85\u529E ({len(issues)})")
+    d.setWindowTitle(f"\U0001f4cb 配置待办 ({len(issues)})")
     d.setMinimumSize(500, 350)
     l = QVBoxLayout(d)
     l.addWidget(QLabel("以下账号存在未完成的配置项："))
     for acct, issue in issues:
-        l.addWidget(QLabel(f"  \u26A0 {acct} \u2014 {issue}"))
+        l.addWidget(QLabel(f"  \u26a0 {acct} \u2014 {issue}"))
     btn = QPushButton("知道了")
     btn.clicked.connect(d.accept)
     l.addWidget(btn)
