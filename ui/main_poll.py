@@ -27,7 +27,7 @@ def do_poll(mw: Any) -> None:
 
 
 def do_smart_tick(mw: Any) -> None:
-    """Smart scheduler tick (every 1 minute)."""
+    """Smart scheduler tick (every 1 minute). Delegates task conditions to decide()."""
     sg = mw.config.get("smart_global", {})
     if not sg.get("enabled", False) or not hasattr(mw, "launch_queue"):
         return
@@ -36,9 +36,7 @@ def do_smart_tick(mw: Any) -> None:
     if getattr(mw, "_last_smart_minute", "") == minute_key:
         return
     mw._last_smart_minute = minute_key
-    from services.smart_scheduler import get_tasks_for_account, is_infrast_time
-    infrast_times = sg.get("infrast_times", ["04:00", "16:00"])
-    is_time_trigger = is_infrast_time(now, infrast_times)
+    from services.smart_scheduler import decide
     count = 0
     skipped_no_cfg = 0
     for a in mw.accounts:
@@ -50,43 +48,22 @@ def do_smart_tick(mw: Any) -> None:
             continue
         running = mw.launch_queue.is_running(aid) or (getattr(mw, "runner", None) and mw.runner.is_running(aid))
         if running:
-            if is_time_trigger and not a.get("smart_pending", False):
+            if not a.get("smart_pending", False):
                 a["smart_pending"] = True
             continue
         last_error = a.get("smart_last_error", 0)
         if last_error and time.time() - last_error < 300 and not getattr(mw, "_smart_force", False):
             continue
-        should_launch = False
-        if is_time_trigger or getattr(mw, "_smart_force", False):
-            should_launch = True
-        else:
-            from services.smart_scheduler import _check_sanity_above_threshold, _get_material_stage
-            threshold = sg.get("threshold", 80)
-            if _check_sanity_above_threshold(aid, threshold):
-                should_launch = True
-            elif a.get("smart_materials_enabled", True):
-                mat_stage = _get_material_stage(a, sg)
-                if mat_stage:
-                    should_launch = True
-        if should_launch:
-            if getattr(mw, "_smart_force", False):
-                tasks = ["StartUp", "Award", "Fight", "Infrast", "Recruit", "Mall", "CloseDown"]
-                if (hasattr(mw, "_smart_anni_cb") and mw._smart_anni_cb.isChecked()
-                    and a.get("smart_annihilation_enabled", True) and a.get("smart_annihilation", "")):
-                    tasks.insert(2, "Annihilation")
-            else:
-                tasks = get_tasks_for_account(a, sg)
-            if tasks:
-                plan_txt = ",".join(tasks)
-                a["smart_plan"] = plan_txt
-                mw.launch_queue.enqueue(aid, "schedule", priority=1)
-                count += 1
+        tasks = decide(a, sg)
+        if tasks:
+            plan_txt = ",".join(tasks)
+            a["smart_plan"] = plan_txt
+            mw.launch_queue.enqueue(aid, "schedule", priority=1)
+            count += 1
     if count:
         mw._log(f"\U0001f9e0 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg} 个缺配置跳过)" if skipped_no_cfg else ""))
         if mw.launch_queue.is_paused:
             mw.launch_queue.resume()
-            if hasattr(mw, '_toolbar_launch_btn'):
-                mw._toolbar_launch_btn.setText("⏸ 暂停队列")
     else:
         reasons = [f"{skipped_no_cfg} 个缺配置"] if skipped_no_cfg else []
         reasons.append("体力不足 / 暂无任务")

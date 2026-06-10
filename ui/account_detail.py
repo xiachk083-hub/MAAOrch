@@ -13,8 +13,7 @@ PRESET_MAP = {"MuMu 12":"MuMuEmulator12","MuMu":"MuMu","MuMu 6":"MuMu",
               "夜神":"Nox","逍遥":"XYAZ"}
 DEFAULT_TASKS = {"StartUp", "Award"}
 DAILY_TASKS   = {"StartUp", "Award", "Fight", "Recruit", "Infrast", "Mall"}
-FULL_TASKS    = {"StartUp", "Award", "Fight", "Recruit", "Infrast",
-                 "Mall", "Roguelike", "Reclamation"}
+FULL_TASKS    = {"StartUp", "Award", "Fight", "Recruit", "Infrast", "Mall"}
 
 
 def open_account_detail(mw: Any, row: int) -> None:
@@ -127,6 +126,14 @@ def open_account_detail(mw: Any, row: int) -> None:
     sync_cb = QCheckBox("启动时同步配置")
     sync_cb.setChecked(progs[0].get("sync_tasks",False) if progs else False)
     opt_row.addWidget(sync_cb); adv_widgets.append(sync_cb)
+    # Stamina threshold
+    stamina_lbl = QLabel("体力阈值:")
+    stamina_lbl.setStyleSheet("color:#999;font-size:8pt")
+    opt_row.addWidget(stamina_lbl); adv_widgets.append(stamina_lbl)
+    stamina_sp = QSpinBox()
+    stamina_sp.setRange(1, 100); stamina_sp.setValue(ac.get("stamina_threshold_pct", 80))
+    stamina_sp.setSuffix(" %"); stamina_sp.setFixedWidth(70)
+    opt_row.addWidget(stamina_sp); adv_widgets.append(stamina_sp)
     opt_row.addStretch()
     gl3.addLayout(opt_row)
 
@@ -158,6 +165,7 @@ def open_account_detail(mw: Any, row: int) -> None:
         ac["emu_wait"] = wait_sp.value()
         ac["start_minimized"] = min_cb.isChecked()
         ac["start_directly"] = dir_cb.isChecked()
+        ac["stamina_threshold_pct"] = stamina_sp.value()
         selected = [k for k,cb in post_cbs.items() if cb.isChecked()]
         ac["post_action"] = ",".join(selected) if selected else ""
         if progs:

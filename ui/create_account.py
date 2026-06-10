@@ -16,8 +16,7 @@ PRESET_MAP = {"MuMu 12":"MuMuEmulator12","MuMu":"MuMu","MuMu 6":"MuMu",
 
 DEFAULT_TASKS = {"StartUp", "Award"}
 DAILY_TASKS   = {"StartUp", "Award", "Fight", "Recruit", "Infrast", "Mall"}
-FULL_TASKS    = {"StartUp", "Award", "Fight", "Recruit", "Infrast",
-                 "Mall", "Roguelike", "Reclamation"}
+FULL_TASKS    = {"StartUp", "Award", "Fight", "Recruit", "Infrast", "Mall"}
 
 
 def generate_name(inst: dict, all_accounts: list) -> str:

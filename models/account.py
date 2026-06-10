@@ -32,6 +32,7 @@ class Account:
     stuck_timeout_min: int = 10
     tags: str = ""
     round_robin_deficit: int = 0
+    stamina_threshold_pct: int = 80
 
     # Smart scheduling fields
     smart_stage: str = ""
