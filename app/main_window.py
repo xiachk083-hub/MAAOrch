@@ -61,6 +61,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("MAAOrch"); self.setMinimumSize(960,620)
         self.config=load_config()
+        # Ensure node_id exists
+        import uuid as _uuid
+        if not self.config.get("node_id"):
+            self.config["node_id"] = _uuid.uuid4().hex[:12]
+            from models.config_manager import save_config
+            save_config(self.config)
         self.groups=self.config.get("groups",[]); self.warehouse=self.config.get("warehouse",[])
         self.accounts=self.config.get("accounts",[]); self.selected_group_idx=None
         self.pipeline_thread=None; self.schedule_thread=None; self.update_thread=None
