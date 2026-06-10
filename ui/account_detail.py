@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QGroupBox, QSpinBox, QCheckBox, QComboBox, QLineEdit,
     QDialogButtonBox, QWidget)
 from infrastructure.task_constants import TASK_NAMES, find_adb, find_mumu_cli, detect_emu_instances
+from ui.task_config import open_task_config as _open_task_config
 
 PRESET_MAP = {"MuMu 12":"MuMuEmulator12","MuMu":"MuMu","MuMu 6":"MuMu",
               "雷电 9":"LDPlayer","雷电":"LDPlayer","蓝叠":"BlueStacks",
@@ -107,6 +108,11 @@ def open_account_detail(mw: Any, row: int) -> None:
         task_row.addWidget(cb)
     task_row.addStretch()
     gl2.addLayout(task_row)
+    # Task config button
+    cfg_btn = QPushButton("任务配置")
+    cfg_btn.setFixedHeight(22)
+    cfg_btn.clicked.connect(lambda: _open_task_config(mw, ac))
+    gl2.addWidget(cfg_btn)
     vl.addWidget(g2)
 
     # ── 高级设置 (collapsed) ──
