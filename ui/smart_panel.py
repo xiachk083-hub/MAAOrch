@@ -277,16 +277,20 @@ def _set_status_text(lbl: QLabel, running: bool, queued: bool, fails: int, mw: A
         if rnr:
             s = rnr._start_times.get(aid, 0)
             if s: dur = f"{int(time.time()-s)//60}m"
-        lbl.setText(f"运行{dur}" if dur else "运行")
+        lbl.setText(f"\u25b6 运行{dur}" if dur else "\u25b6 运行")
         lbl.setStyleSheet("color:#498205;font-size:8pt;font-weight:bold")
     elif queued:
-        lbl.setText("排队")
+        lq = getattr(mw, "launch_queue", None)
+        qsz = len(lq._queue) if lq and hasattr(lq, '_queue') else 0
+        para_max = mw.config.get("parallel_max", 3) if hasattr(mw, 'config') else 3
+        lbl.setText(f"\u23f3 排队({qsz}/{para_max})")
         lbl.setStyleSheet("color:#e8a000;font-size:8pt")
     elif fails >= 6:
-        lbl.setText("暂停")
+        lbl.setText("\u23f8 暂停(重试超限)")
         lbl.setStyleSheet("color:#666;font-size:8pt")
     elif fails:
-        lbl.setText(f"错误{fails}")
+        reason = "连接失败" if fails <= 3 else "异常退出"
+        lbl.setText(f"\u2715 {reason}x{fails}")
         lbl.setStyleSheet("color:#c04040;font-size:8pt")
     else:
         lbl.setText("")
