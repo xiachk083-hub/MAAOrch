@@ -275,6 +275,7 @@ class MainWindow(QMainWindow):
 
         from ui.smart_panel import _do_batch
         from ui.side_bar import _toggle_smart, _run_smart_all
+        from ui.smart_config import open_smart_config as _open_smart_config
 
         smart_btn = QPushButton("智能调度")
         smart_btn.setCheckable(True)
@@ -282,6 +283,12 @@ class MainWindow(QMainWindow):
         smart_btn.setFixedHeight(26)
         smart_btn.toggled.connect(lambda v: _toggle_smart(self, v))
         bb.addWidget(smart_btn)
+
+        cfg_btn = QPushButton("⚙")
+        cfg_btn.setFixedHeight(26)
+        cfg_btn.setFixedWidth(30)
+        cfg_btn.clicked.connect(lambda: _open_smart_config(self))
+        bb.addWidget(cfg_btn)
 
         run_btn = QPushButton("▶ 立即调度全部")
         run_btn.setObjectName("startBtn")
