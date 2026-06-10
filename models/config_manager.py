@@ -33,7 +33,7 @@ def migrate_v4_to_v5(data: dict) -> dict:
     data.setdefault("node_id",""); data.setdefault("node_name","")
     for a in data.get("accounts",[]):
         a.setdefault("task_settings",{}); a.setdefault("sync_tasks",False); a.setdefault("account_switch","")
-        a.setdefault("emu_instance_index",""); a.setdefault("emu_launch",True); a.setdefault("emu_wait",60)
+        a.setdefault("emu_instance_index",""); a.setdefault("emu_launch",True); a["emu_wait"] = 60
         a.setdefault("post_action","ExitEmulator,ExitSelf"); a.setdefault("start_minimized",True); a.setdefault("start_directly",True)
         a.setdefault("adb_retry",0); a.setdefault("stats",{})
         a.setdefault("stuck_timeout_min",0); a.setdefault("tags",""); a.setdefault("round_robin_deficit",0)
