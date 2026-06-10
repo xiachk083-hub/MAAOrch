@@ -82,6 +82,13 @@ class AccountRunner(QObject):
             self.log_msg.emit(f"{ac.get('name', aid)} 已在运行中")
             return False
 
+        # Auto-fill ADB address if empty but emu instance is set
+        if not ac.get("adb_address") and ac.get("emu_instance_index"):
+            idx = ac["emu_instance_index"]
+            ac["adb_address"] = f"127.0.0.1:{5555 + int(idx) * 2}"
+            ac["connection_preset"] = ac.get("connection_preset", "MuMuPro")
+            ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
+
         # Get free MAA instance
         try:
             from services.instance_pool import MaintService

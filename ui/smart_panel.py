@@ -121,6 +121,25 @@ def _add_account(mw: Any) -> None:
     a = Account()
     a.name = name.strip()
     mw.accounts.append(a)
+    # Auto-detect first emulator instance and set ADB
+    from infrastructure.task_constants import detect_emu_instances
+    insts = detect_emu_instances()
+    if insts:
+        first = insts[0]
+        a.emu_instance_index = first["index"]
+        port = 5555 + int(first["index"]) * 2
+        a.adb_address = f"127.0.0.1:{port}"
+        a.connection_preset = "MuMuPro"
+        a.touch_mode = "MiniTouch"
+        from pathlib import Path as _P
+        for adb_candidate in [
+            _P("D:/MuMuPlayer/nx_main/adb.exe"),
+            _P("D:/Program Files/MuMuPlayer/adb.exe"),
+            _P("C:/Program Files/MuMuPlayer/adb.exe"),
+        ]:
+            if adb_candidate.exists():
+                a.adb_path = str(adb_candidate)
+                break
     mw._save()
     mw._log(f"已添加账号: {a.name}")
     _rebuild_list(mw)
