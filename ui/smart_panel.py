@@ -135,6 +135,14 @@ def _add_account(mw: Any) -> None:
         a.connection_preset = preset_map.get(emu_name, "General")
         a.touch_mode = "MiniTouch"
     adb_exe = find_adb()
+    if not adb_exe:
+        from infrastructure.task_constants import find_mumu_cli as _fmc
+        cli = _fmc()
+        if cli:
+            from pathlib import Path as _P
+            cand = _P(cli).parent / "adb.exe"
+            if cand.exists():
+                adb_exe = str(cand)
     if adb_exe:
         a.adb_path = adb_exe
     mw._save()
