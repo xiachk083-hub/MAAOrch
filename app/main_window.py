@@ -530,9 +530,7 @@ class MainWindow(QMainWindow):
 
     @Slot(str)
     def _on_account_started(self, aid: str) -> None:
-        a = next((x for x in self.accounts if x["id"] == aid), None)
-        if a:
-            self._sad(self.accounts.index(a))
+        pass
 
     def _on_account_finished(self, data: tuple) -> None:
         aid, exit_code, tasks = data
@@ -545,11 +543,9 @@ class MainWindow(QMainWindow):
                 a["smart_last_error"] = 0
             if a.get("smart_pending", False):
                 a["smart_pending"] = False
-                self._log(f"🧠 {a.get('name', aid)} 到点补跑")
+                self._log(f"\U0001f9e0 {a.get('name', aid)} \u5230\u70B9\u8865\u8DD1")
                 self.launch_queue.enqueue(aid, "schedule", priority=1)
                 self.launch_queue.tick()
-            if self._main_tab == "accounts":
-                self._sad(self.accounts.index(a))
 
     # Legacy launch helpers (kept for pipeline_thread / warehouse quick-launch)
     def _ls(self, w: dict) -> None:
