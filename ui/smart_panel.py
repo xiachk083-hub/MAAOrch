@@ -43,7 +43,7 @@ def build_smart_panel(mw: Any) -> QWidget:
     add_btn = QPushButton("+ 添加")
     add_btn.setFixedHeight(30)
     add_btn.setStyleSheet("QPushButton{color:#498205;font-weight:bold;font-size:9pt;border:none;border-radius:0 5px 5px 0;padding:0 14px}")
-    add_btn.clicked.connect(lambda: QTimer.singleShot(0, lambda: _add_account(mw)))
+    add_btn.clicked.connect(lambda: QTimer.singleShot(0, lambda: _create_account(mw)))
     sf.addWidget(add_btn)
 
     sr.addWidget(search_frame, 1)
@@ -112,42 +112,10 @@ def _set_filter(mw: Any, key: str) -> None:
     _rebuild_list(mw)
 
 
-def _add_account(mw: Any) -> None:
-    from PySide6.QtWidgets import QInputDialog
-    name, ok = QInputDialog.getText(mw, "新建账号", "账号名:", text=f"账号{len(mw.accounts)+1}")
-    if not ok or not name.strip():
-        return
-    from models.account import Account
-    a = Account()
-    a.name = name.strip()
-    mw.accounts.append(a)
-    from infrastructure.task_constants import detect_emu_instances, find_adb
-    insts = detect_emu_instances()
-    if insts:
-        first = insts[0]
-        a.emu_instance_index = first["index"]
-        port = first.get("adb_port", "")
-        if port:
-            a.adb_address = f"127.0.0.1:{port}"
-        # Map emu type to connection preset
-        emu_name = first.get("emu", "")
-        preset_map = {"MuMu 12":"MuMuEmulator12","MuMu":"MuMu","MuMu 6":"MuMu","雷电 9":"LDPlayer","雷电":"LDPlayer","蓝叠":"BlueStacks","夜神":"Nox","逍遥":"XYAZ"}
-        a.connection_preset = preset_map.get(emu_name, "General")
-        a.touch_mode = "MiniTouch"
-    adb_exe = find_adb()
-    if not adb_exe:
-        from infrastructure.task_constants import find_mumu_cli as _fmc
-        cli = _fmc()
-        if cli:
-            from pathlib import Path as _P
-            cand = _P(cli).parent / "adb.exe"
-            if cand.exists():
-                adb_exe = str(cand)
-    if adb_exe:
-        a.adb_path = adb_exe
-    mw._save()
-    mw._log(f"已添加账号: {a.name}")
-    _rebuild_list(mw)
+def _create_account(mw: Any) -> None:
+    from ui.create_account import CreateAccountDialog
+    dlg = CreateAccountDialog(mw)
+    dlg.exec()
 
 
 def _rebuild_list(mw: Any) -> None:
@@ -208,7 +176,7 @@ def _rebuild_list(mw: Any) -> None:
         add_big.setObjectName("startBtn")
         add_big.setFixedHeight(36)
         add_big.setFixedWidth(160)
-        add_big.clicked.connect(lambda: QTimer.singleShot(0, lambda: _add_account(mw)))
+        add_big.clicked.connect(lambda: QTimer.singleShot(0, lambda: _create_account(mw)))
         wl.addWidget(add_big, 0, Qt.AlignCenter)
         layout.insertWidget(layout.count() - 1, welcome)
         mw._welcome_card = welcome
