@@ -83,7 +83,10 @@ def do_smart_tick(mw: Any) -> None:
                 count += 1
     if count:
         mw._log(f"\U0001f9e0 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg} 个缺配置跳过)" if skipped_no_cfg else ""))
-        mw.launch_queue.tick()
+        if mw.launch_queue.is_paused:
+            mw.launch_queue.resume()
+            if hasattr(mw, '_toolbar_launch_btn'):
+                mw._toolbar_launch_btn.setText("⏸ 暂停队列")
     else:
         reasons = [f"{skipped_no_cfg} 个缺配置"] if skipped_no_cfg else []
         reasons.append("体力不足 / 暂无任务")
