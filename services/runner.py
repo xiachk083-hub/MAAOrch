@@ -166,12 +166,11 @@ class AccountRunner(QObject):
                 continue
             pid_file = inst_dir / ".pid"
             running = False
-            if pid_file.exists():
-                try:
-                    pid = int(pid_file.read_text().strip())
-                    running = _pid_exists(pid)
-                except Exception:
-                    pid_file.unlink(missing_ok=True)
+            try:
+                pid = int(pid_file.read_text().strip())
+                running = _pid_exists(pid)
+            except Exception:
+                pid_file.unlink(missing_ok=True)
             if not running:
                 return (i, str(inst_dir))
         return None
@@ -613,7 +612,7 @@ class AccountRunner(QObject):
         # Push to daigan
         if tasks and ac:
             daigan_url = self.ctx.config.get("daigan_url", "").strip()
-            if daigan_url:
+            if daigan_url and daigan_url.startswith("https://"):
                 try:
                     import urllib.request, json
                     payload = json.dumps({
@@ -637,7 +636,9 @@ class AccountRunner(QObject):
             from datetime import datetime as _dt
             ts = _dt.now().strftime("%Y%m%d_%H%M%S")
             name = ac.get("name", aid) if ac else aid
-            diag_dir = Path(__file__).parent / "diagnostics" / f"{name}_{ts}"
+            import re as _re
+            safe_name = _re.sub(r'[^\w\-_]', '_', str(name))[:64]
+            diag_dir = Path(__file__).parent / "diagnostics" / f"{safe_name}_{ts}"
             diag_dir.mkdir(parents=True, exist_ok=True)
             # asst.log tail
             if ac:

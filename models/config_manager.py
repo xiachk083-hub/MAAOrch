@@ -1,7 +1,7 @@
 import sys,json,os,re
 from pathlib import Path
 from datetime import datetime
-from infrastructure.utils import make_id, parse_maa_version
+from infrastructure.utils import atomic_write, make_id, parse_maa_version
 from models.account import Account
 
 CONFIG_FILE: Path = Path(__file__).parent/"config.json"
@@ -124,8 +124,7 @@ def save_config(data: dict) -> None:
     # Atomic write: write to temp file in same directory then rename
     tmp = CONFIG_FILE.with_name("config.json.tmp")
     try:
-        tmp.write_text(raw_json, encoding="utf-8")
-        tmp.replace(CONFIG_FILE)
+        atomic_write(CONFIG_FILE, raw_json)
         # Create backup copy after successful save
         try:
             bp = CONFIG_FILE.parent / "backups"

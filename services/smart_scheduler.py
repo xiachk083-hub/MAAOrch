@@ -132,7 +132,9 @@ def mark_annihilation_done(account_id: str, tasks: list[dict]) -> None:
     )
     if not has_anni:
         return
-    sp = Path(__file__).parent / "accounts" / account_id / "stats.json"
+    import re as _re
+    safe_id = _re.sub(r'[^\w.\-]', '_', account_id)
+    sp = Path(__file__).parent / "accounts" / safe_id / "stats.json"
     try:
         if sp.exists():
             data = json.loads(sp.read_text(encoding="utf-8"))
@@ -150,7 +152,8 @@ def mark_annihilation_done(account_id: str, tasks: list[dict]) -> None:
                             week_total += 1
             if week_total >= 1:
                 data["weekly_annihilation"] = {"week": week, "done": True}
-                sp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                from infrastructure.utils import atomic_write
+                atomic_write(sp, json.dumps(data, ensure_ascii=False, indent=2))
     except Exception:
         pass
 

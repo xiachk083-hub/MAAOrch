@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json,time,re
+import json,time,re,os
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Any
@@ -35,7 +35,7 @@ class ApiServer(QThread):
                     return False
                 return True
             def _check_auth(s):
-                if not token: return True
+                if not token: return s._json({"error":"token not configured"}, 403)
                 h=s.headers.get("x-agent-token","")
                 return h==token
             def _json(s,data,code=200):
@@ -146,13 +146,16 @@ class ApiServer(QThread):
                 else: s._json({"lines":[]})
             def _handle_config_sync(s,body):
                 acct_name=body.get("account_name",""); gui_json=body.get("gui_json")
-                if not acct_name or not gui_json: return s._json({"error":"missing fields"},400)
+                if not acct_name or not isinstance(gui_json,dict): return s._json({"error":"invalid fields"},400)
                 a=next((a for a in mw.accounts if a.get("name")==acct_name),None)
                 if not a: return s._json({"error":"account not found"},404)
                 progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
                 if not progs: return s._json({"error":"no MAA bound"},400)
                 try:
-                    d=Path(progs[0]["path"]).parent/"config"
+                    inst_path=Path(progs[0]["path"]).resolve()
+                    if "maa"+os.sep+"instances"+os.sep not in str(inst_path):
+                        return s._json({"error":"invalid path"},403)
+                    d=inst_path.parent/"config"
                     d.mkdir(parents=True,exist_ok=True)
                     (d/"gui.json").write_text(json.dumps(gui_json,ensure_ascii=False,indent=2),encoding="utf-8")
                     (d/"gui.new.json").write_text(json.dumps(gui_json,ensure_ascii=False,indent=2),encoding="utf-8")
