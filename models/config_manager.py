@@ -36,7 +36,7 @@ def migrate_v4_to_v5(data: dict) -> dict:
         a.setdefault("emu_instance_index",""); a.setdefault("emu_launch",True); a["emu_wait"] = 60
         a.setdefault("post_action","ExitEmulator,ExitSelf"); a.setdefault("start_minimized",True); a.setdefault("start_directly",True)
         a.setdefault("adb_retry",0); a.setdefault("stats",{})
-        a.setdefault("stuck_timeout_min",0); a.setdefault("tags",""); a.setdefault("round_robin_deficit",0)
+        a.setdefault("stuck_timeout_min",60); a.setdefault("tags",""); a.setdefault("round_robin_deficit",0)
         a.setdefault("stamina_threshold_pct",80)
         a.setdefault("smart_stage",""); a.setdefault("smart_annihilation","")
         for d in ["mon","tue","wed","thu","fri","sat","sun"]: a.setdefault(f"smart_{d}","")
