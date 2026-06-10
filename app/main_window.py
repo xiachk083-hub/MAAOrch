@@ -66,6 +66,14 @@ class MainWindow(QMainWindow):
             save_config(self.config)
         self.groups=self.config.get("groups",[]); self.warehouse=self.config.get("warehouse",[])
         self.accounts=self.config.get("accounts",[]); self.selected_group_idx=None
+        # Fix missing account IDs
+        for acc in self.accounts:
+            if not acc.get("id", ""):
+                from infrastructure.utils import make_id
+                acc["id"] = make_id()
+                self.config["modified"] = True
+        if self.config.pop("modified", None):
+            save_config(self.config)
         self.pipeline_thread=None; self.schedule_thread=None; self.update_thread=None
         self._main_tab="accounts"
         self._running_procs={}; self._proc_status=set(); self._restart_cnt=defaultdict(int); self._cli_procs={}
