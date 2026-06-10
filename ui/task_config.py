@@ -28,6 +28,25 @@ def open_task_config(mw: Any, ac: dict) -> None:
     l1.addStretch()
     tabs.addTab(w1, "启动游戏")
 
+    # ── 剿灭作战 ──
+    w3 = QWidget(); l3 = QVBoxLayout(w3); l3.setSpacing(8)
+    l3.addWidget(QLabel("剿灭关卡:"))
+    ann = QComboBox()
+    ann_list = ["Annihilation", "Chernobog@Annihilation",
+                "LungmenOutskirts@Annihilation", "LungmenDowntown@Annihilation",
+                "DossolesHoliday@Annihilation"]
+    current_anni = ac.get("smart_annihilation", "Annihilation")
+    for a in ann_list:
+        ann.addItem(a, a)
+    ci = ann.findData(current_anni)
+    if ci >= 0: ann.setCurrentIndex(ci)
+    elif current_anni:
+        ann.addItem(current_anni, current_anni)
+        ann.setCurrentIndex(ann.count() - 1)
+    l3.addWidget(ann)
+    l3.addStretch()
+    tabs.addTab(w3, "剿灭作战")
+
     # ── 刷关作战 ──
     w2 = QWidget(); l2 = QVBoxLayout(w2); l2.setSpacing(8)
     fs = QLineEdit(ac.get("fight_stage", ""))
@@ -39,22 +58,6 @@ def open_task_config(mw: Any, ac: dict) -> None:
     l2.addWidget(exp_med)
     l2.addStretch()
     tabs.addTab(w2, "刷关作战")
-
-    # ── 剿灭作战 ──
-    w3 = QWidget(); l3 = QVBoxLayout(w3); l3.setSpacing(8)
-    ann = QComboBox()
-    ann.setEditable(True)
-    current_anni = ac.get("smart_annihilation", "Annihilation")
-    for a in ["Annihilation", "Chernobog@Annihilation", "LungmenOutskirts@Annihilation",
-              "LungmenDowntown@Annihilation", "DossolesHoliday@Annihilation",
-              "Anni3", "Anni4"]:
-        ann.addItem(a)
-    ci = ann.findText(current_anni)
-    if ci >= 0: ann.setCurrentIndex(ci)
-    else: ann.setEditText(current_anni)
-    l3.addWidget(QLabel("剿灭关卡:")); l3.addWidget(ann)
-    l3.addStretch()
-    tabs.addTab(w3, "剿灭作战")
 
     # ── 公开招募 ──
     w4 = QWidget(); l4 = QVBoxLayout(w4); l4.setSpacing(8)
@@ -101,7 +104,7 @@ def open_task_config(mw: Any, ac: dict) -> None:
     def _save():
         ac["account_switch"] = sw.text().strip()
         ac["fight_stage"] = fs.text().strip()
-        ac["smart_annihilation"] = ann.currentText().strip()
+        ac["smart_annihilation"] = ann.currentData() or "Annihilation"
         # Build task_settings
         new_ts = {}
         # Fight
