@@ -434,6 +434,9 @@ class ConfigService:
                         st = tsm[tt]
                         if tt == "fight" and "use_expiring_medicine" in st:
                             item["UseExpiringMedicine"] = st["use_expiring_medicine"]
+                            if "use_medicine" in st:
+                                item["UseMedicine"] = st["use_medicine"]
+                                item["MedicineCount"] = 999 if st["use_medicine"] else 0
                         elif tt == "recruit" and "select" in st:
                             sel = st["select"]
                             item["Level3Choose"] = 3 in sel
