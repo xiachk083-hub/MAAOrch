@@ -34,9 +34,21 @@ def open_task_config(mw: Any, ac: dict) -> None:
 
     # ── 剿灭作战 ──
     w2 = QWidget(); l2 = QVBoxLayout(w2); l2.setSpacing(8)
-    ann = QLineEdit(ac.get("smart_annihilation", "Annihilation"))
-    ann.setPlaceholderText("例如: Annihilation")
     l2.addWidget(QLabel("剿灭关卡:"))
+    ann = QComboBox()
+    anni_map = {"当期剿灭":"Annihilation","切尔诺伯格":"Chernobog@Annihilation",
+                "龙门 外环":"LungmenOutskirts@Annihilation","龙门 市区":"LungmenDowntown@Annihilation",
+                "多索雷斯":"DossolesHoliday@Annihilation"}
+    current_anni = ac.get("smart_annihilation", "Annihilation")
+    found = False
+    for display, internal in anni_map.items():
+        ann.addItem(display, internal)
+        if internal == current_anni:
+            ann.setCurrentIndex(ann.count() - 1)
+            found = True
+    if not found:
+        ann.addItem(current_anni, current_anni)
+        ann.setCurrentIndex(ann.count() - 1)
     l2.addWidget(ann)
     l2.addStretch()
     tabs.addTab(w2, "剿灭作战")
@@ -257,7 +269,7 @@ def open_task_config(mw: Any, ac: dict) -> None:
     def _save():
         ac["account_switch"] = sw.text().strip()
         ac["fight_stage"] = fs.text().strip()
-        ac["smart_annihilation"] = ann.text().strip() or "Annihilation"
+        ac["smart_annihilation"] = ann.currentData() or "Annihilation"
         new_ts = {
             "Fight": {"use_medicine": use_med.isChecked(), "use_expiring_medicine": exp_med.isChecked(),
                       "times": times_sp.value(), "stage_reset_mode": srm.currentData(),
