@@ -425,7 +425,18 @@ class ConfigService:
             else:
                 c.pop("TaskQueue", None)
             # Apply per-account task settings (任务配置)
-            ts_raw = ac.get("task_settings", {})
+            # Merge: global defaults (smart_global.default_task_settings) + account overrides
+            global_ts = self.ctx.config.get("smart_global", {}).get("default_task_settings", {})
+            account_ts = ac.get("task_settings", {})
+            ts_raw = {}
+            all_keys = set()
+            for k in list(global_ts.keys()) + list(account_ts.keys()):
+                all_keys.add(k)
+            for k in all_keys:
+                if k in account_ts:
+                    ts_raw[k] = account_ts[k]
+                elif k in global_ts:
+                    ts_raw[k] = global_ts[k]
             if ts_raw:
                 tsm = {k.lower(): v for k, v in ts_raw.items()}
                 for item in c.get("TaskQueue", []):
