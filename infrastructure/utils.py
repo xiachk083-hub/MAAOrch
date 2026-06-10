@@ -57,4 +57,14 @@ def _find_maa_cli() -> str | None:
             if (d/n).exists(): return str(d/n)
     return None
 
-
+def atomic_write(path: Path | str, content: str) -> None:
+    """Atomic file write: temp + fsync + rename. Prevents partial writes on crash."""
+    p = Path(path)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    try:
+        with open(str(tmp), 'rb') as f:
+            os.fsync(f.fileno())
+    except Exception:
+        pass
+    tmp.replace(p)

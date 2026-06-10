@@ -42,6 +42,7 @@ class ConfigService:
     def inject(self, w: dict, ac: dict) -> None:
         p=w.get("path",""); md=Path(p).parent if p else None
         if not md or not md.exists(): return
+        if ".." in p: return
         cd=md/"config"; cd.mkdir(parents=True,exist_ok=True); pl=w.get("task_pipeline",""); ptasks=[t.strip().lower() for t in pl.split(",") if t.strip()] if pl else []
         def _wcfg(fn):
             gj=cd/fn; d={}

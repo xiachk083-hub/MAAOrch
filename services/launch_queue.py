@@ -267,7 +267,8 @@ class LaunchQueue(QObject):
                          "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
         try:
             import json
-            self._queue_path().write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            from infrastructure.utils import atomic_write
+            atomic_write(self._queue_path(), json.dumps(data, ensure_ascii=False))
         except Exception:
             pass
 

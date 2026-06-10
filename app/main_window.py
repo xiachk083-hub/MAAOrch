@@ -159,11 +159,18 @@ class MainWindow(QMainWindow):
     def _start_api_server(self) -> None:
         if self._api_server: self._api_server.stop_server(); self._api_server.quit(); self._api_server.wait(1000)
         port=self.config.get("api_port",19999); token=self.config.get("api_token","")
+        if not token:
+            import secrets
+            token = secrets.token_hex(16)
+            self.config["api_token"] = token
+            from models.config_manager import save_config
+            save_config(self.config)
         self._api_server=ApiServer(port,token,self)
         self._api_server.log_msg.connect(lambda m: self._log(m))
         self._api_server.start()
     def _sl(self, msg: str) -> None: self.sl.setText((msg[:100]+"…") if len(msg)>100 else msg)
     def _log(self, msg: str) -> None:
+        msg = str(msg).replace("\n", " ").replace("\r", " ")[:1000]
         ts=datetime.now().strftime("%H:%M:%S"); line=f"[{ts}] {msg}"
         if hasattr(self,'log_text') and self.log_text: self.log_text.appendPlainText(line)
         # Update status bar log line (last 120 chars)
@@ -555,6 +562,8 @@ class MainWindow(QMainWindow):
     def _ls(self, w: dict) -> None:
         try:
             args=w.get("args",[]); cwd=w.get("cwd","") or None; env={k:v for k,v in (w.get("env") or {}).items()} or None; exe=w["path"]; lm=w.get("launch_mode","gui")
+            # Sanitize args: reject path traversal, truncate to 256 chars
+            args=[str(a)[:256] for a in args if ".." not in str(a)]
             if w.get("account_ref") and lm=="cli":
                 ac=next((a for a in self.accounts if a["id"]==w["account_ref"]),None)
                 if ac:
