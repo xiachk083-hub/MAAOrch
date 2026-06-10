@@ -478,13 +478,14 @@ class ConfigService:
                 if ap >= 0 and rp >= 0 and ap > rp:
                     tq.insert(rp, tq.pop(ap))
                     c["TaskQueue"] = tq
-            # Force Infrast mode from task_settings — write to BOTH gui.new.json Mode AND gui.json Infrast.DefaultInfrast
+            # Force Infrast mode from task_settings — write to BOTH files
             infra_mode = ac.get("task_settings", {}).get("Infrast", {}).get("mode", "")
-            if infra_mode and "TaskQueue" in c:
-                for item in c["TaskQueue"]:
-                    if item.get("TaskType", "").lower() == "infrast":
-                        item["Mode"] = infra_mode
-                # gui.json: MAA v6 reads Infrast mode from Infrast.DefaultInfrast (not gui.new.json Mode)
+            if infra_mode:
+                if "TaskQueue" in c:
+                    for item in c["TaskQueue"]:
+                        if item.get("TaskType", "").lower() == "infrast":
+                            item["Mode"] = infra_mode
+                # gui.json: MAA reads Infrast mode from Infrast.DefaultInfrast (not gui.new.json Mode)
                 c["Infrast.DefaultInfrast"] = infra_mode
             tmp = gj.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
