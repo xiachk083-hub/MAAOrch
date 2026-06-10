@@ -47,10 +47,20 @@ def open_task_config(mw: Any, ac: dict) -> None:
     fs = QLineEdit(ac.get("fight_stage", ""))
     fs.setPlaceholderText("例如: 1-7")
     l3.addWidget(QLabel("默认关卡:")); l3.addWidget(fs)
-    exp_med = QCheckBox("吃体力药 (优先2天内过期)")
+    # Medicine: two independent checkboxes
+    med_row1 = QHBoxLayout()
+    use_med = QCheckBox("吃体力药")
+    use_med.setChecked(ft.get("use_medicine", False))
+    med_row1.addWidget(use_med)
+    exp_med = QCheckBox("优先吃快过期药")
     exp_med.setChecked(ft.get("use_expiring_medicine", False))
-    l3.addWidget(exp_med)
-    # Stage reset mode
+    med_row1.addWidget(exp_med)
+    med_day = QSpinBox(); med_day.setRange(1, 7); med_day.setValue(ft.get("medicine_expire_days", 2))
+    med_day.setSuffix(" 天"); med_day.setFixedWidth(65)
+    med_row1.addWidget(QLabel("过期:")); med_row1.addWidget(med_day)
+    med_row1.addStretch()
+    l3.addLayout(med_row1)
+    # Stage reset mode + times
     srm_row = QHBoxLayout()
     srm_row.addWidget(QLabel("关卡重置:"))
     srm = QComboBox()
@@ -58,33 +68,50 @@ def open_task_config(mw: Any, ac: dict) -> None:
     ci_srm = srm.findData(ft.get("stage_reset_mode", "Current"))
     if ci_srm >= 0: srm.setCurrentIndex(ci_srm)
     srm_row.addWidget(srm)
-    # Times
     srm_row.addWidget(QLabel("次数:"))
     times_sp = QSpinBox(); times_sp.setRange(1, 999); times_sp.setValue(ft.get("times", 99))
     srm_row.addWidget(times_sp)
+    limit_cb = QCheckBox("限制次数"); limit_cb.setChecked(ft.get("enable_times_limit", False))
+    srm_row.addWidget(limit_cb)
     srm_row.addStretch()
     l3.addLayout(srm_row)
-    # Stone
-    stone_row = QHBoxLayout()
-    use_st = QCheckBox("碎石")
-    use_st.setChecked(ft.get("use_stone", False))
-    stone_row.addWidget(use_st)
-    stone_sp = QSpinBox(); stone_sp.setRange(0, 999); stone_sp.setValue(ft.get("stone", 0))
-    stone_sp.setEnabled(use_st.isChecked())
-    use_st.toggled.connect(lambda c: stone_sp.setEnabled(c))
-    stone_row.addWidget(QLabel("数量:")); stone_row.addWidget(stone_sp)
-    med_day = QSpinBox(); med_day.setRange(1, 7); med_day.setValue(ft.get("medicine_expire_days", 2))
-    stone_row.addWidget(QLabel("过期天数:")); stone_row.addWidget(med_day)
-    stone_row.addStretch()
-    l3.addLayout(stone_row)
-    # Other
-    extra_row = QHBoxLayout()
+    # Drop targeting
+    drop_row = QHBoxLayout()
+    dt_cb = QCheckBox("指定掉落"); dt_cb.setChecked(ft.get("enable_target_drop", False))
+    drop_row.addWidget(dt_cb)
+    drop_id = QLineEdit(ft.get("drop_id", ""))
+    drop_id.setPlaceholderText("材料名")
+    drop_id.setEnabled(dt_cb.isChecked()); dt_cb.toggled.connect(lambda c: drop_id.setEnabled(c))
+    drop_row.addWidget(drop_id, 1)
+    drop_cnt = QSpinBox(); drop_cnt.setRange(0, 999); drop_cnt.setValue(ft.get("drop_count", 0))
+    drop_row.addWidget(QLabel("数量:")); drop_row.addWidget(drop_cnt)
+    drop_row.addStretch()
+    l3.addLayout(drop_row)
+    # Special modes
+    spec_row = QHBoxLayout()
+    grandet_cb = QCheckBox("搓玉模式"); grandet_cb.setChecked(ft.get("is_dr_grandet", False))
+    spec_row.addWidget(grandet_cb)
+    act_med_cb = QCheckBox("活动用过期药"); act_med_cb.setChecked(ft.get("use_expire_medicine_for_activity", False))
+    spec_row.addWidget(act_med_cb)
+    opt_cb = QCheckBox("可选关卡"); opt_cb.setChecked(ft.get("use_optional_stage", False))
+    spec_row.addWidget(opt_cb)
+    inv_cb = QCheckBox("仓库目标"); inv_cb.setChecked(ft.get("is_inventory_target", False))
+    spec_row.addWidget(inv_cb)
+    wk_cb = QCheckBox("每周计划"); wk_cb.setChecked(ft.get("use_weekly_schedule", False))
+    spec_row.addWidget(wk_cb)
+    spec_row.addStretch()
+    l3.addLayout(spec_row)
+    # Series
+    ser_row = QHBoxLayout()
+    hide_ser_cb = QCheckBox("隐藏系列"); hide_ser_cb.setChecked(ft.get("hide_series", False))
+    ser_row.addWidget(hide_ser_cb)
+    ser_row.addWidget(QLabel("系列号:"))
+    ser_sp = QSpinBox(); ser_sp.setRange(0, 10); ser_sp.setValue(ft.get("series", 0))
+    ser_row.addWidget(ser_sp)
     hide_cb = QCheckBox("隐藏不可用关卡"); hide_cb.setChecked(ft.get("hide_unavailable_stage", False))
-    extra_row.addWidget(hide_cb)
-    limit_cb = QCheckBox("限制次数"); limit_cb.setChecked(ft.get("enable_times_limit", False))
-    extra_row.addWidget(limit_cb)
-    extra_row.addStretch()
-    l3.addLayout(extra_row)
+    ser_row.addWidget(hide_cb)
+    ser_row.addStretch()
+    l3.addLayout(ser_row)
     l3.addStretch()
     tabs.addTab(w3, "刷关作战")
 
@@ -232,11 +259,16 @@ def open_task_config(mw: Any, ac: dict) -> None:
         ac["fight_stage"] = fs.text().strip()
         ac["smart_annihilation"] = ann.text().strip() or "Annihilation"
         new_ts = {
-            "Fight": {"use_medicine": exp_med.isChecked(), "use_expiring_medicine": exp_med.isChecked(),
+            "Fight": {"use_medicine": use_med.isChecked(), "use_expiring_medicine": exp_med.isChecked(),
                       "times": times_sp.value(), "stage_reset_mode": srm.currentData(),
-                      "use_stone": use_st.isChecked(), "stone": stone_sp.value(),
-                      "hide_unavailable_stage": hide_cb.isChecked(), "enable_times_limit": limit_cb.isChecked(),
-                      "medicine_expire_days": med_day.value()},
+                      "enable_times_limit": limit_cb.isChecked(), "hide_unavailable_stage": hide_cb.isChecked(),
+                      "medicine_expire_days": med_day.value(),
+                      "enable_target_drop": dt_cb.isChecked(), "drop_id": drop_id.text().strip(),
+                      "drop_count": drop_cnt.value(), "is_dr_grandet": grandet_cb.isChecked(),
+                      "use_expire_medicine_for_activity": act_med_cb.isChecked(),
+                      "use_optional_stage": opt_cb.isChecked(), "is_inventory_target": inv_cb.isChecked(),
+                      "use_weekly_schedule": wk_cb.isChecked(), "hide_series": hide_ser_cb.isChecked(),
+                      "series": ser_sp.value()},
             "Recruit": {"select": [s for s, c in star_cbs.items() if c.isChecked()] or [3, 4, 5],
                         "confirm": [s for s, c in star_cbs.items() if c.isChecked()] or [3, 4, 5],
                         "refresh": ref_cb.isChecked(), "force_refresh": force_ref.isChecked(),
