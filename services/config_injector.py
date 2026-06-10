@@ -241,7 +241,7 @@ class ConfigService:
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
                 smart_cfg = self.ctx.config.get("smart_global", {})
-                post = smart_cfg.get("post_action", "")
+                post = ac.get("post_action", "") or smart_cfg.get("post_action", "")
                 if post:
                     c["MainFunction.PostActions"] = f'"{post}"'
             else:
@@ -264,6 +264,9 @@ class ConfigService:
                     c["Start.ClientType"] = ac["game_client"]
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
+                post_val = ac.get("post_action", "")
+                if post_val:
+                    c["MainFunction.PostActions"] = f'"{post_val}"'
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx and not ac.get("emu_launch"):
