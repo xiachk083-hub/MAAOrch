@@ -32,15 +32,19 @@ def open_task_config(mw: Any, ac: dict) -> None:
     w3 = QWidget(); l3 = QVBoxLayout(w3); l3.setSpacing(8)
     l3.addWidget(QLabel("剿灭关卡:"))
     ann = QComboBox()
-    ann_list = ["Annihilation", "Chernobog@Annihilation",
-                "LungmenOutskirts@Annihilation", "LungmenDowntown@Annihilation",
-                "DossolesHoliday@Annihilation"]
+    anni_map = {"当期剿灭":"Annihilation","切尔诺伯格":"Chernobog@Annihilation",
+                "龙门 外环":"LungmenOutskirts@Annihilation","龙门 市区":"LungmenDowntown@Annihilation",
+                "多索雷斯":"DossolesHoliday@Annihilation"}
     current_anni = ac.get("smart_annihilation", "Annihilation")
-    for a in ann_list:
-        ann.addItem(a, a)
-    ci = ann.findData(current_anni)
-    if ci >= 0: ann.setCurrentIndex(ci)
-    elif current_anni:
+    # Find which display name matches, or add custom
+    found_display = None
+    for display, internal in anni_map.items():
+        ann.addItem(display, internal)
+        if internal == current_anni:
+            found_display = display
+    if found_display:
+        ann.setCurrentText(found_display)
+    else:
         ann.addItem(current_anni, current_anni)
         ann.setCurrentIndex(ann.count() - 1)
     l3.addWidget(ann)
