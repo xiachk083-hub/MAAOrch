@@ -15,7 +15,7 @@ class Account:
     account_switch: str = ""
     emu_instance_index: str = ""
     emu_launch: bool = True
-    emu_wait: int = 30
+    emu_wait: int = 60
     adb_retry: int = 0
     start_minimized: bool = True
     start_directly: bool = True

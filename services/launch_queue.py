@@ -240,7 +240,7 @@ class LaunchQueue(QObject):
         for idx, entry in enumerate(launch_now):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
                 continue
-            QTimer.singleShot(idx * 2500, lambda e=entry: self._do_launch(e))
+            QTimer.singleShot(idx * 5000, lambda e=entry: self._do_launch(e))
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
