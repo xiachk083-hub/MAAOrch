@@ -3,7 +3,7 @@ from datetime import datetime
 from dataclasses import dataclass, field
 
 
-@dataclass(order=True)
+@dataclass(order=True, frozen=True)
 class QueueEntry:
     """A launch request waiting in the queue."""
     sort_key: tuple  # (priority, not_before) — used by heapq
