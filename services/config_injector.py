@@ -433,19 +433,35 @@ class ConfigService:
                     if tt in tsm:
                         st = tsm[tt]
                         if tt == "fight":
-                            if not item.get("UseCustomAnnihilation", False):
-                                if "use_expiring_medicine" in st:
-                                    item["UseExpiringMedicine"] = st["use_expiring_medicine"]
+                            # Stone is ALWAYS forced off (anti-loss protection)
+                            item["UseStone"] = False
+                            item["StoneCount"] = 0
+                            item["UseStoneAllowSave"] = False
+                            if item.get("UseCustomAnnihilation", False):
+                                item["UseMedicine"] = True
+                                item["MedicineCount"] = 999
+                                item["UseExpiringMedicine"] = True
+                            else:
                                 if "use_medicine" in st:
                                     item["UseMedicine"] = st["use_medicine"]
                                     item["MedicineCount"] = 999 if st["use_medicine"] else 0
+                                if "use_expiring_medicine" in st:
+                                    item["UseExpiringMedicine"] = st["use_expiring_medicine"]
                                 if "times" in st: item["Times"] = st["times"]
                                 if "stage_reset_mode" in st: item["StageResetMode"] = st["stage_reset_mode"]
-                                if "use_stone" in st: item["UseStone"] = st["use_stone"]
-                                if "stone" in st: item["StoneCount"] = st["stone"]
                                 if "hide_unavailable_stage" in st: item["HideUnavailableStage"] = st["hide_unavailable_stage"]
                                 if "enable_times_limit" in st: item["EnableTimesLimit"] = st["enable_times_limit"]
                                 if "medicine_expire_days" in st: item["MedicineExpireDays"] = st["medicine_expire_days"]
+                                if "enable_target_drop" in st: item["EnableTargetDrop"] = st["enable_target_drop"]
+                                if "drop_id" in st: item["DropId"] = st["drop_id"]
+                                if "drop_count" in st: item["DropCount"] = st["drop_count"]
+                                if "is_dr_grandet" in st: item["IsDrGrandet"] = st["is_dr_grandet"]
+                                if "use_expire_medicine_for_activity" in st: item["UseExpireMedicineForActivity"] = st["use_expire_medicine_for_activity"]
+                                if "use_optional_stage" in st: item["UseOptionalStage"] = st["use_optional_stage"]
+                                if "is_inventory_target" in st: item["IsInventoryTarget"] = st["is_inventory_target"]
+                                if "use_weekly_schedule" in st: item["UseWeeklySchedule"] = st["use_weekly_schedule"]
+                                if "hide_series" in st: item["HideSeries"] = st["hide_series"]
+                                if "series" in st: item["Series"] = st["series"]
                         elif tt == "recruit":
                             if "select" in st:
                                 sel = st["select"]
