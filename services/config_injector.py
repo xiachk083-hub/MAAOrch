@@ -446,11 +446,12 @@ class ConfigService:
                             if "mail" in st: item["Mail"] = st["mail"]
                             if "free_gacha" in st: item["FreeGacha"] = st["free_gacha"]
                             if "orundum" in st: item["Orundum"] = st["orundum"]
-            # Inject fight_stage (默认关卡)
+            # Inject fight_stage (默认关卡) — skip annihilation Fight items
             fs = ac.get("fight_stage", "")
             if fs and "TaskQueue" in c:
                 for item in c["TaskQueue"]:
-                    if item.get("TaskType", "").lower() == "fight":
+                    tt = item.get("TaskType", "").lower()
+                    if tt == "fight" and not item.get("UseCustomAnnihilation", False):
                         item["StagePlan"] = [fs]
                         item["IsStageManually"] = True
                         break
