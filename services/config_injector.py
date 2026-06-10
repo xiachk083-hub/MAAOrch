@@ -433,7 +433,13 @@ class ConfigService:
             for k in list(global_ts.keys()) + list(account_ts.keys()):
                 all_keys.add(k)
             for k in all_keys:
-                if k in account_ts:
+                if k in account_ts and k in global_ts:
+                    gv = dict(global_ts[k]) if isinstance(global_ts[k], dict) else {}
+                    av = dict(account_ts[k]) if isinstance(account_ts[k], dict) else {}
+                    merged = gv
+                    merged.update(av)
+                    ts_raw[k] = merged
+                elif k in account_ts:
                     ts_raw[k] = account_ts[k]
                 elif k in global_ts:
                     ts_raw[k] = global_ts[k]
