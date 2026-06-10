@@ -426,12 +426,17 @@ class ConfigService:
                 c.pop("TaskQueue", None)
             # Apply per-account task settings (任务配置)
             ts_raw = ac.get("task_settings", {})
+            import sys as _sys
+            print(f"[INJECT_DEBUG] ts_raw={dict(ts_raw)}", flush=True)
+            print(f"[INJECT_DEBUG] use_v6={use_v6} tq_count={len(c.get('TaskQueue',[]))}", flush=True)
             if ts_raw:
                 tsm = {k.lower(): v for k, v in ts_raw.items()}
                 for item in c.get("TaskQueue", []):
                     tt = item.get("TaskType", "").lower()
                     if tt in tsm:
                         st = tsm[tt]
+                        if tt == "infrast":
+                            print(f"[INJECT_DEBUG] Infrast found, mode_in_st={'mode' in st} st_mode={st.get('mode','N/A')}", flush=True)
                         if tt == "fight" and "use_expiring_medicine" in st:
                             item["UseExpiringMedicine"] = st["use_expiring_medicine"]
                             if "use_medicine" in st:
