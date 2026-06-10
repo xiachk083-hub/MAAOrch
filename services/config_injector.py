@@ -426,9 +426,13 @@ class ConfigService:
                 c.pop("TaskQueue", None)
             # Apply per-account task settings (任务配置)
             ts_raw = ac.get("task_settings", {})
-            import sys as _sys
-            print(f"[INJECT_DEBUG] ts_raw={dict(ts_raw)}", flush=True)
-            print(f"[INJECT_DEBUG] use_v6={use_v6} tq_count={len(c.get('TaskQueue',[]))}", flush=True)
+            _dl = Path(__file__).parent.parent / "debug.log"
+            try:
+                with _dl.open("a", encoding="utf-8") as _f:
+                    _f.write(f"[INJECT_DEBUG] ts_raw={dict(ts_raw)}\n")
+                    _f.write(f"[INJECT_DEBUG] use_v6={use_v6} tq_count={len(c.get('TaskQueue',[]))}\n")
+            except Exception:
+                pass
             if ts_raw:
                 tsm = {k.lower(): v for k, v in ts_raw.items()}
                 for item in c.get("TaskQueue", []):
@@ -436,7 +440,11 @@ class ConfigService:
                     if tt in tsm:
                         st = tsm[tt]
                         if tt == "infrast":
-                            print(f"[INJECT_DEBUG] Infrast found, mode_in_st={'mode' in st} st_mode={st.get('mode','N/A')}", flush=True)
+                            try:
+                                with _dl.open("a", encoding="utf-8") as _f:
+                                    _f.write(f"[INJECT_DEBUG] Infrast found, mode_in_st={'mode' in st} st_mode={st.get('mode','N/A')}\n")
+                            except Exception:
+                                pass
                         if tt == "fight" and "use_expiring_medicine" in st:
                             item["UseExpiringMedicine"] = st["use_expiring_medicine"]
                             if "use_medicine" in st:
