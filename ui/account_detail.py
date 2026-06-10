@@ -144,7 +144,7 @@ def open_account_detail(mw: Any, row: int) -> None:
     gl3.addLayout(opt_row)
 
     post_row = QHBoxLayout()
-    cur_post = ac.get("post_action","ExitArknights,ExitEmulator,ExitSelf")
+    cur_post = ac.get("post_action","ExitEmulator,ExitSelf")
     post_set = set(cur_post.split(",")) if cur_post else set()
     post_cbs = {}
     for k, v in [("ExitArknights","退出游戏"),("ExitEmulator","关模拟器"),

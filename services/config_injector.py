@@ -5,6 +5,12 @@ from datetime import datetime
 from infrastructure.task_constants import find_mumu_cli, CONNECT_CONFIG_MAP, TOUCH_MODE_MAP
 from app.service_context import ServiceContext
 
+_POST_BITMAP = {"ExitArknights":1,"ExitSelf":2,"ExitEmulator":4,"Shutdown":8,"BackToAndroidHome":16}
+def _post_bitmask(s: str) -> str:
+    """Convert post_action string like 'ExitEmulator,ExitSelf' to bitmask string '6'."""
+    if not s: return "0"
+    return str(sum(_POST_BITMAP.get(a.strip(),0) for a in s.split(",")))
+
 class ConfigService:
     """MAA config injection — writes gui.json / gui.new.json / TOML task configs."""
 
@@ -242,9 +248,8 @@ class ConfigService:
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
                 smart_cfg = self.ctx.config.get("smart_global", {})
-                post = ac.get("post_action", "") or smart_cfg.get("post_action", "")
-                if post:
-                    c["MainFunction.PostActions"] = f'"{post}"'
+                pa = ac.get("post_action", "") or smart_cfg.get("post_action", "")
+                c["MainFunction.PostActions"] = _post_bitmask(pa)
             else:
                 c.pop("MainFunction.PostActions", None)
                 # Write connection settings for v6 (same as v5, after dot-key cleanup)
