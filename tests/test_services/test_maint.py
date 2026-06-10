@@ -44,7 +44,7 @@ class TestConfigMigrationMaint:
         result = cmod.migrate_v4_to_v5(data)
         a = result["accounts"][0]
         assert a["emu_launch"] is True
-        assert a["emu_wait"] == 30
+        assert a["emu_wait"] == 60
         assert a["sync_tasks"] is False
         assert a["start_minimized"] is True
         assert a["adb_retry"] == 0
