@@ -77,6 +77,8 @@ def load_config() -> dict:
                 data.setdefault("maa_version", "")
                 data.setdefault("maa_instances", 0)
                 data.setdefault("smart_global", dict(DEFAULT_CONFIG["smart_global"]))
+                sg = data["smart_global"]
+                sg["post_action"] = DEFAULT_CONFIG["smart_global"]["post_action"]
                 for a in data.get("accounts",[]):
                     raw=a.get("adb_address","")
                     if raw and not raw.startswith("127.0.0.1:"):
