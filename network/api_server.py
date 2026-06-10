@@ -170,7 +170,7 @@ class ApiServer(QThread):
                     if kv.startswith("lines="):
                         try: lines=int(kv.split("=")[1])
                         except: pass
-                lp=Path(__file__).parent/"debug.log"
+                lp=Path(__file__).parent.parent/"debug.log"
                 if lp.exists():
                     try:
                         content=lp.read_text(encoding="utf-8",errors="replace").strip().split("\n")[-lines:]

@@ -3,18 +3,11 @@ from pathlib import Path
 from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent))
 
-# ── Error logging ──
-CRASH_LOG = Path(__file__).parent / "debug.log"
-_LOG_LOCK = __import__('threading').Lock()
+from infrastructure.logger import Logger
+_LOG = Logger("crash")
 
 def _write_crash(msg: str) -> None:
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    try:
-        with _LOG_LOCK:
-            with CRASH_LOG.open("a", encoding="utf-8") as f:
-                f.write(f"\n[{ts}] [CRASH]\n{msg}\n")
-    except Exception:
-        pass
+    _LOG.error(msg)
 
 def _global_excepthook(exc_type, exc_value, exc_tb):
     """Catch all unhandled Python exceptions and log them."""

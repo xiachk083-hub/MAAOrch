@@ -1,15 +1,19 @@
 from __future__ import annotations
+import json
 from typing import Any
 from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QCheckBox,
-                               QPushButton, QPlainTextEdit, QLabel)
+                                QPushButton, QPlainTextEdit, QLabel)
+
+
+_LOG_FILE = Path(__file__).parent.parent / "events.log"
 
 
 def show_log_window(mw: Any) -> None:
     d = QDialog(mw)
-    d.setWindowTitle("📋 MAAOrch 日志")
+    d.setWindowTitle("MAAOrch 日志")
     d.setMinimumSize(600, 400)
     d.resize(700, 450)
     vl = QVBoxLayout(d)
@@ -19,47 +23,53 @@ def show_log_window(mw: Any) -> None:
     log_text.setReadOnly(True)
     log_text.setMaximumBlockCount(2000)
     log_text.setFont(QFont("Consolas", 9))
-    # Auto-refresh from debug.log (append only)
     _last_pos = 0
+
+    def _read_events(from_pos: int) -> tuple[str, int]:
+        """Read new events from events.log since from_pos. Returns (text, new_pos)."""
+        if not _LOG_FILE.exists():
+            return "", from_pos
+        size = _LOG_FILE.stat().st_size
+        if size <= from_pos:
+            return "", from_pos
+        with _LOG_FILE.open("rb") as f:
+            f.seek(from_pos)
+            raw = f.read(size - from_pos).decode("utf-8", errors="replace")
+        lines = []
+        for line in raw.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+                ts = ev.get("t", "")
+                lv = ev.get("l", "INFO")
+                src = ev.get("src", "?")
+                msg = ev.get("msg", "")
+                lines.append(f"[{ts}] [{lv:<5}] [{src}] {msg}")
+            except Exception:
+                lines.append(line)
+        return "\n".join(lines) + ("\n" if lines else ""), size
 
     def _refresh():
         nonlocal _last_pos
         if not d.isVisible():
             return
         try:
-            lp2 = Path(__file__).parent.parent / "debug.log"
-            if not lp2.exists():
-                return
-            size = lp2.stat().st_size
-            if size <= _last_pos:
-                return
-            with lp2.open("rb") as f:
-                f.seek(_last_pos)
-                new_data = f.read(size - _last_pos).decode("utf-8", errors="replace")
-                _last_pos = size
-                if new_data:
-                    log_text.appendPlainText(new_data)
-                    if auto_scroll.isChecked():
-                        log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
+            text, _last_pos = _read_events(_last_pos)
+            if text:
+                log_text.appendPlainText(text)
+                if auto_scroll.isChecked():
+                    log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
         except Exception:
             pass
 
     # Initial load
     try:
-        lp_initial = Path(__file__).parent.parent / "debug.log"
-        if lp_initial.exists():
-            _last_pos = lp_initial.stat().st_size
-            if _last_pos < 50000:
-                # Small file: load entirely
-                data = lp_initial.read_text(encoding="utf-8")
-                log_text.setPlainText(data)
-            else:
-                # Large file: load last 50000 bytes
-                with lp_initial.open("rb") as f:
-                    f.seek(max(0, _last_pos - 50000))
-                    data = f.read().decode("utf-8", errors="replace")
-                log_text.setPlainText(data)
-            log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
+        text, _last_pos = _read_events(0)
+        if text:
+            log_text.setPlainText(text)
+        log_text.verticalScrollBar().setValue(log_text.verticalScrollBar().maximum())
     except Exception:
         pass
 

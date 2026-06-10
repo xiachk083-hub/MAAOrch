@@ -90,8 +90,8 @@ def load_config() -> dict:
                 return data
     except Exception as e:
         try:
-            with (Path(__file__).parent/"debug.log").open("a",encoding="utf-8") as f:
-                f.write(f"[ERR] load_config: {e}\n")
+            from infrastructure.logger import Logger
+            Logger("config").error(f"load_config: {e}")
         except:
             pass
         # Try loading the most recent backup before giving up
@@ -140,8 +140,8 @@ def save_config(data: dict) -> None:
             pass
     except Exception as e:
         try:
-            with (Path(__file__).parent/"debug.log").open("a",encoding="utf-8") as f:
-                f.write(f"[ERR] save_config: {e}\n")
+            from infrastructure.logger import Logger
+            Logger("config").error(f"save_config: {e}")
         except:
             pass
 
