@@ -83,3 +83,8 @@
 {"t": "2026-06-10 15:35:30", "l": "INFO", "src": "app", "msg": "[状态] 运行中: 1/2 | 队列: 0 | 错误: 0"}
 {"t": "2026-06-10 15:36:00", "l": "INFO", "src": "app", "msg": "[状态] 运行中: 1/2 | 队列: 0 | 错误: 0"}
 {"t": "2026-06-10 15:36:30", "l": "INFO", "src": "app", "msg": "[状态] 运行中: 1/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-10 15:36:58", "l": "INFO", "src": "app", "msg": "[资源] 内存已恢复 (4.1GB 可用)，继续启动"}
+{"t": "2026-06-10 15:36:58", "l": "INFO", "src": "app", "msg": "[完成] 樄耳东c 退出码=0 耗时=3m24s 🧠 StartUp,Award,Annihilation,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-10 15:36:58", "l": "INFO", "src": "app", "msg": "[账号] 樄耳东c 状态: completed (exit=0)"}
+{"t": "2026-06-10 15:37:00", "l": "INFO", "src": "app", "msg": "[状态] 运行中: 0/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-10 15:37:06", "l": "ERROR", "src": "crash", "msg": "Traceback (most recent call last):   File \"D:\\1-2\\MAAOrch\\main.pyw\", line 107, in <module>     main()   File \"D:\\1-2\\MAAOrch\\main.pyw\", line 101, in main     win = MainWindow()           ^^^^^^^^^^^^   File \"D:\\1-2\\MAAOrch\\app\\main_window.py\", line 76, in __init__     save_config(self.config)     ^^^^^^^^^^^ UnboundLocalError: cannot access local variable 'save_config' where it is not associated with a value "}
