@@ -458,6 +458,19 @@ class ConfigService:
                     if item.get("TaskType", "").lower() == "startup":
                         item["AccountName"] = sw
                         break
+            # Reorder: Annihilation Fight before Regular Fight
+            tq = c.get("TaskQueue", [])
+            if len(tq) >= 2:
+                ap = rp = -1
+                for i, item in enumerate(tq):
+                    if item.get("TaskType", "").lower() == "fight":
+                        if item.get("UseCustomAnnihilation", False):
+                            ap = i
+                        else:
+                            rp = i
+                if ap >= 0 and rp >= 0 and ap > rp:
+                    tq.insert(rp, tq.pop(ap))
+                    c["TaskQueue"] = tq
             tmp = gj.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
