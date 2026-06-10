@@ -83,23 +83,38 @@ class AccountRunner(QObject):
             return False
 
         # Dynamic ADB detection: refresh from actual emulator state at launch
+        adb = ac.get("adb_path", "") or "adb"
+        candidates = []
         if ac.get("emu_instance_index"):
             from infrastructure.task_constants import detect_emu_instances
             insts = detect_emu_instances()
             match = next((i for i in insts if i.get("index") == ac["emu_instance_index"]), None)
             if match and match.get("adb_port"):
-                detected = f"127.0.0.1:{match['adb_port']}"
-                # Verify detected ADB address is reachable
-                adb = ac.get("adb_path", "") or "adb"
+                candidates.append(f"127.0.0.1:{match['adb_port']}")
+            # Add formula ports as fallbacks
+            idx = int(ac["emu_instance_index"])
+            preset = ac.get("connection_preset", "")
+            if preset in ("MuMuEmulator12", "MuMuPro", "MuMu"):
+                candidates.append(f"127.0.0.1:{16384 + idx * 32}")
+            candidates.append(f"127.0.0.1:{5555 + idx * 2}")
+            # Also add the stored value as last resort
+            stored = ac.get("adb_address", "")
+            if stored and stored not in candidates:
+                candidates.append(stored)
+            # Test each candidate in order
+            for cand in candidates:
+                if not cand:
+                    continue
                 try:
-                    r = subprocess.run([adb, "connect", detected], capture_output=True, timeout=3, creationflags=CF)
+                    r = subprocess.run([adb, "connect", cand], capture_output=True, timeout=3, creationflags=CF)
                     if r.returncode == 0 and b"connected" in (r.stdout + r.stderr).lower():
-                        ac["adb_address"] = detected
-                    else:
-                        self.log_msg.emit(f"⚠ 检测 ADB {detected} 不可达，保留原值")
+                        ac["adb_address"] = cand
+                        break
                 except Exception:
-                    self.log_msg.emit(f"⚠ 检测 ADB {detected} 失败，保留原值")
+                    continue
             else:
+                self.log_msg.emit(f"⚠ ADB 地址检测全部失败，保留原有值 {stored}")
+        ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
                 idx = int(ac["emu_instance_index"])
                 preset = ac.get("connection_preset", "MuMuPro")
                 if preset == "MuMuEmulator12":
