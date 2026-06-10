@@ -240,21 +240,6 @@ class AccountRunner(QObject):
         exe = Path(inst_dir) / "MAA.exe"
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
-        # Copy clean config from source MAA (resets any config pollution from previous runs)
-        try:
-            from services.instance_pool import _find_maa_source
-            src = _find_maa_source(self.ctx.config)
-            if src:
-                src_cfg = src / "config"
-                if src_cfg.exists():
-                    import shutil as _su
-                    for fn in ("gui.json", "gui.new.json"):
-                        sf = src_cfg / fn
-                        df = config_dir / fn
-                        if sf.exists():
-                            _su.copy2(str(sf), str(df))
-        except Exception:
-            pass
         try:
             if smart_enabled:
                 plan_txt = ac.get("smart_plan", "")
