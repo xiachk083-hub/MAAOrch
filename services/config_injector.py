@@ -497,6 +497,15 @@ class ConfigService:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType", "").lower() == "infrast":
                         item["Mode"] = infra_mode
+            # Final verification before write
+            try:
+                with _dl.open("a", encoding="utf-8") as _f:
+                    _f.write(f"[INJECT_DEBUG] WRITE CHECK fn={fn} use_v6={use_v6}\n")
+                    for _i in c.get("TaskQueue", []):
+                        if _i.get("TaskType", "").lower() == "infrast":
+                            _f.write(f"[INJECT_DEBUG] WRITE CHECK: Infrast Mode={_i.get('Mode','N/A')}\n")
+            except Exception:
+                pass
             tmp = gj.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
