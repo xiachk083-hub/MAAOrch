@@ -40,7 +40,7 @@ def build_smart_panel(mw: Any) -> QWidget:
     mw._smart_search.textChanged.connect(lambda: QTimer.singleShot(0, lambda: _rebuild_list(mw)))
     sf.addWidget(mw._smart_search, 1)
 
-    add_btn = QPushButton("＋添加")
+    add_btn = QPushButton("+ 添加")
     add_btn.setFixedHeight(30)
     add_btn.setStyleSheet("QPushButton{color:#498205;font-weight:bold;font-size:9pt;border:none;border-radius:0 5px 5px 0;padding:0 14px}")
     add_btn.clicked.connect(lambda: QTimer.singleShot(0, lambda: _add_account(mw)))
@@ -180,7 +180,7 @@ def _rebuild_list(mw: Any) -> None:
         desc.setStyleSheet("font-size:10pt;color:#555;line-height:1.5")
         desc.setAlignment(Qt.AlignCenter)
         wl.addWidget(desc)
-        add_big = QPushButton("＋ 添加账号")
+        add_big = QPushButton("+ 添加账号")
         add_big.setObjectName("startBtn")
         add_big.setFixedHeight(36)
         add_big.setFixedWidth(160)

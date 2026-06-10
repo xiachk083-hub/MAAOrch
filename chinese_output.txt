@@ -1,0 +1,444 @@
+===== ui\smart_panel.py =====
+  L37:     mw._smart_search.setPlaceholderText("搜索账号...")
+  L43:     add_btn = QPushButton("＋添加")
+  L59:     cols = [("", 28), ("账号", 0), ("状态", 55), ("关卡", 70), ("剿灭", 65)]
+  L69:     for d in ["一","二","三","四","五","六","日"]:
+  L117:     name, ok = QInputDialog.getText(mw, "新建账号", "账号名:", text=f"账号{len(mw.accounts)+1}")
+  L125:     mw._log(f"已添加账号: {a.name}")
+  L175:         title = QLabel("欢迎使用 MAAOrch")
+  L179:         desc = QLabel("多账号 MAA 编排调度器\n点击下方按钮添加你的第一个账号")
+  L183:         add_big = QPushButton("＋ 添加账号")
+  L244:     ad = {"":"—","Annihilation":"当期","Chernobog@Annihilation":"切城",
+  L245:           "LungmenOutskirts@Annihilation":"外环","LungmenDowntown@Annihilation":"市区"}.get(anni, "")
+  L288:         lbl.setText(f"运行{dur}" if dur else "运行")
+  L291:         lbl.setText("排队")
+  L294:         lbl.setText("暂停")
+  L297:         lbl.setText(f"错误{fails}")
+  L378:         if QMessageBox.question(mw, "确认", f"删除 {len(indices)} 个?") == QMessageBox.Yes:
+  L395:     edit_a = menu.addAction("✎ 编辑")
+  L396:     del_a = menu.addAction("🗑 删除")
+  L403:         if QMessageBox.question(mw, "确认", f"删除账号「{a.get('name','')}」?") == QMessageBox.Yes:
+
+===== ui\side_bar.py =====
+  L19:     hdr = QLabel("  总览")
+  L27:         (" 运行中", "running"),
+  L28:         (" 排队中", "waiting"),
+  L29:         (" 错误", "error"),
+  L30:         (" 暂停", "paused"),
+  L60:         mw._side_labels["running"].setText(f"  运行中  {running}")
+  L61:         mw._side_labels["waiting"].setText(f"  排队中  {waiting}")
+  L62:         mw._side_labels["error"].setText(f"  错误  {errors}")
+  L63:         mw._side_labels["paused"].setText(f"  暂停  {paused}")
+  L84:         mw._log("智能调度未启用")
+
+===== ui\account_detail.py =====
+  L17:     d.setWindowTitle(f"账号详情 — {ac.get('name', '')}")
+  L22:     # ── 基本信息 ──
+  L25:     name_edit.setPlaceholderText("账号名")
+  L26:     name_row.addWidget(QLabel("账号名:"))
+  L29:     for k, v in {"Official": "官服", "Bilibili": "B服", "YoStarEN": "国际服",
+  L30:                   "YoStarJP": "日服", "YoStarKR": "韩服", "txwy": "繁中"}.items():
+  L35:     name_row.addWidget(QLabel("客户端:"))
+  L39:     # ── 连接 ──
+  L40:     g1 = QGroupBox("连接")
+  L62:     launch_cb = QCheckBox("自启")
+  L65:     emu_row.addWidget(QLabel("等待:"))
+  L69:     wait_sp.setSuffix(" 秒")
+  L72:     gl1.addRow("模拟器:", emu_row)
+  L75:     preset_name = '通用'
+  L80:     preset_label = QLabel(f"连接预设: {preset_name} (自动)")
+  L81:     touch_label = QLabel(f"触摸: {ac.get('touch_mode', 'MiniTouch')} (自动)")
+  L86:     # ── 启动 ──
+  L87:     g2 = QGroupBox("启动")
+  L91:     min_cb = QCheckBox("启动后最小化")
+  L94:     dir_cb = QCheckBox("直接运行")
+  L97:     emu_fail_cb = QCheckBox("ADB失败启模拟器")
+  L107:     for k, v in [("ExitArknights", "退出游戏"), ("ExitSelf", "退出MAA"),
+  L108:                   ("ExitEmulator", "关模拟器"), ("BackToAndroidHome", "返回主屏")]:
+  L114:     gl2.addWidget(QLabel("完成后:"))
+  L118:     # ── 任务 (仅非智能调度时可用) ──
+  L121:         g3 = QGroupBox("任务")
+  L136:         sync_cb = QCheckBox("启动时同步")
+  L162:     del_btn = QPushButton("🗑 删除账号")
+  L166:         if QMessageBox.question(d, "确认", f"删除账号「{ac.get('name','')}」?") == QMessageBox.Yes:
+
+===== ui\settings_window.py =====
+  L16:     mw._log("🔄 实例池重建完成")
+  L21:     d.setWindowTitle("设置")
+  L28:     # ── MAA 实例 ──
+  L29:     g = QGroupBox("MAA 实例")
+  L32:     ver_row.addWidget(QLabel(f"版本: {cfg.get('maa_version', '未安装')}"))
+  L34:     dl_btn = QPushButton("⚡更新")
+  L40:     par_row.addWidget(QLabel("并行上限:"))
+  L46:     par_row.addWidget(QLabel("个实例"))
+  L48:     rebuild_btn = QPushButton("🔄 重建实例")
+  L104:     sum_row.addWidget(QLabel(f"实例池: {instances} 个"))
+  L112:     # ── 外观 ──
+  L113:     g2 = QGroupBox("外观")
+  L118:     gl2.addRow("主题:", theme_cb)
+  L119:     tray_cb = QCheckBox("启动时最小化到托盘")
+  L124:     # ── 网络 ──
+  L125:     g3 = QGroupBox("网络")
+  L130:     gl3.addRow("API 端口:", api_port_sp)
+  L132:     api_token_edit.setPlaceholderText("留空不验证")
+  L136:     update_cb = QCheckBox("启动时检查")
+  L139:     auto_dl_cb = QCheckBox("自动下载")
+  L143:     gl3.addRow("更新检查:", update_row)
+  L146:     webhook_edit.setPlaceholderText("企业微信/钉钉/自定义 URL")
+  L150:     # ── MAA 源目录 ──
+  L151:     g4 = QGroupBox("MAA 源目录")
+  L156:     src_path_edit.setPlaceholderText("选择 MAA 目录...")
+  L160:     browse_btn = QPushButton("浏览…")
+  L175:         folder = QFileDialog.getExistingDirectory(d, "选择 MAA 目录", str(edit.text()))
+  L181:             QMessageBox.warning(d, "提示", "所选目录未找到 MAA.exe")
+
+===== ui\log_window.py =====
+  L12:     d.setWindowTitle("📋 MAAOrch 日志")
+  L69:     auto_scroll = QCheckBox("自动滚动")
+  L73:     clear_btn = QPushButton("清空")
+
+===== ui\batch_edit.py =====
+  L14:     d.setWindowTitle(f"批量设置 — 已选 {len(selected)} 个账号")
+  L19:     vl.addWidget(QLabel("只填要修改的字段，留空=不修改",
+  L23:     # 默认关卡
+  L25:     stage_edit.setPlaceholderText("留空不修改")
+  L27:     stage_row.addWidget(QLabel("默认关卡:"))
+  L31:     # 剿灭
+  L33:     anni_row.addWidget(QLabel("剿灭:"))
+  L35:     anni_mode.addItems(["不修改", "启用", "禁用"])
+  L38:     anni_stage.addItems(["自动选择", "当期剿灭", "切尔诺伯格", "龙门外环", "龙门市区"])
+  L43:     # 周批量
+  L45:     week_row.addWidget(QLabel("周一~周日:"))
+  L47:     week_edit.setPlaceholderText("统一设为...")
+  L49:     week_btn = QPushButton("应用到全部")
+  L53:     # 完成后
+  L55:     post_row.addWidget(QLabel("完成后:"))
+  L57:     for k, v in [("ExitArknights", "退出游戏"), ("ExitSelf", "退出MAA"),
+  L58:                   ("ExitEmulator", "关模拟器")]:
+  L65:     # 客户端
+  L67:     client_row.addWidget(QLabel("客户端:"))
+  L69:     client_cb.addItems(["不修改", "官服", "B服"])
+  L89:             if anni_mode_val == "启用":
+  L91:                 a["smart_annihilation"] = {"自动选择": "", "当期剿灭": "Annihilation",
+  L92:                                             "切尔诺伯格": "Chernobog@Annihilation",
+  L93:                                             "龙门外环": "LungmenOutskirts@Annihilation",
+  L94:                                             "龙门市区": "LungmenDowntown@Annihilation"}.get(anni_stage_val, "")
+  L95:             elif anni_mode_val == "禁用":
+  L102:             if client_val == "官服":
+  L104:             elif client_val == "B服":
+
+===== ui\toast.py =====
+
+===== ui\main_poll.py =====
+  L26:             mw._log(f"[状态] 运行中: {ac}/{total} | 队列: {qc} | 错误: {errors}")
+  L85:         mw._log(f"\uD83E\uDDE0 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg}个缺配置跳过)" if skipped_no_cfg else ""))
+  L88:         reasons = [f"{skipped_no_cfg}个缺配置"] if skipped_no_cfg else []
+  L89:         reasons.append("体力不足/无任务到达")
+  L90:         mw._log(f"\uD83E\uDDE0 智能调度: 暂无账号需要调度（{'，'.join(reasons)}）")
+  L118:         issues.append(("系统", "未下载 MAA，请将 MAA 放到 maa/source/"))
+  L123:             issues.append((name, "未配置 ADB 地址或模拟器实例"))
+  L126:                 issues.append((name, "智能模式开启但未设默认关卡"))
+  L129:         QMessageBox.information(mw, "\uD83D\uDCCB \u914D\u7F6E\u5F85\u529E", "所有账号配置齐全，暂无待办项。")
+  L136:     l.addWidget(QLabel("以下账号存在未完成的配置项："))
+  L139:     btn = QPushButton("知道了")
+
+===== app\main_window.py =====
+  L44:     ctypes.windll.user32.MessageBoxW(0,"pip install PySide6","错误",0); sys.exit(1)
+  L106:         self._build_ui(); self.maint.restore_geometry(); self._log("══ 启动 ══")
+  L141:         self._log(f"账号: {len(self.accounts)} | 仓库: {len(self.warehouse)} | 分组: {len(self.groups)}")
+  L213:             try: self._log(f"备份失败: {e}")
+  L236:         self._toolbar_launch_btn = QPushButton("▶ 启动队列")
+  L269:         smart_btn = QPushButton("智能调度")
+  L276:         run_btn = QPushButton("▶ 立即调度全部")
+  L284:         for name, act in [("批量设置","edit"),("批量入队","enq"),
+  L285:                           ("批量停止","stop"),("批量删除","del")]:
+  L296:         self._log_lbl = QLabel(" 就绪")
+  L308:         set_btn.setToolTip("设置")
+  L315:         log_btn.setToolTip("日志")
+  L321:         tm = mb.addMenu("工具")
+  L322:         tm.addAction("检查更新", lambda: self.maint.check_updates())
+  L323:         tm.addAction("检查 MAAOrch 更新", lambda: self.maint.check_orch_update())
+  L325:         tm.addAction("🔍 环境检测与修复", lambda: self._health_dialog())
+  L326:         tm.addAction("设置", lambda: open_settings(self))
+  L327:         tm.addAction("日志", lambda: show_log_window(self))
+  L329:         tm.addAction("退出", self.maint._quit_app)
+  L377:         fs,_=QFileDialog.getOpenFileNames(self,"选择","","可执行文件 (*.exe);;所有文件 (*.*)"); ex={w["path"] for w in self.warehouse}
+  L391:         if QMessageBox.question(self,"确认",f"删除 {Path(w['path']).stem}?")==QMessageBox.Yes:
+  L397:         w=items[row]; m=QMenu(); m.addAction("▶ 启动",lambda: self._ls(w)); m.addAction("⚙ 设置",lambda: self._ed_wh(w))
+  L398:         if w.get("maa_type")!="general": m.addAction("检查更新",lambda: self.maint.cu_single(w))
+  L399:         m.addSeparator(); m.addAction("删除",lambda: self._rm_wh(row)); m.exec(self.wt.viewport().mapToGlobal(pos))
+  L401:         d=QDialog(self); d.setWindowTitle("程序设置"); d.setFixedSize(450,350); l=QVBoxLayout(d)
+  L402:         g1=QGroupBox("基本"); fl1=QFormLayout(g1); ae=QLineEdit(" ".join(w.get("args",[]))); fl1.addRow("参数:",ae); l.addWidget(g1)
+  L404:         mt=QComboBox(); mt.addItems(["general","maa","maa-cli"]); mt.setCurrentText(w.get("maa_type","general")); fl2.addRow("类型:",mt)
+  L405:         lm=QComboBox(); lm.addItems(["gui","cli"]); lm.setCurrentText(w.get("launch_mode","gui")); fl2.addRow("启动:",lm)
+  L410:         fl2.addRow("账号:",ac); pe=QLineEdit(w.get("task_pipeline","")); pe.setPlaceholderText("startup,fight,..."); fl2.addRow("流水线:",pe); l.addWidget(g2)
+  L411:         g3=QGroupBox("守护"); fl3=QFormLayout(g3); gc=QCheckBox("崩溃重启"); gc.setChecked(w.get("guard_enabled",False)); fl3.addRow(gc); l.addWidget(g3)
+  L424:         if not refs: self.gt.hide(); self.ph.setText("暂无"); self.ph.show(); return
+  L446:         m=QMenu(); m.addAction("▶ 启动",lambda: self._ls(w)); m.addAction("⚙ 设置",lambda: self._ed_wh(w)); m.addAction("从分组移除",lambda: self._rm_pg(row)); m.exec(self.gt.viewport().mapToGlobal(pos))
+  L460:             lb=QLabel(f"#{i+1} {g['name']}  {ic} {c}个"); lb.setAttribute(Qt.WA_TransparentForMouseEvents); rl2.addWidget(lb,1)
+  L471:         g=self.groups[idx]; self.gs.show(); self.gn.setText(g.get("name","")); self.gm.setCurrentText("并行" if g.get("mode")=="parallel" else "串行"); self._rgt()
+  L474:         if i is not None and i<len(self.groups): self.groups[i]["name"]=self.gn.text() or "未命名"; self._save(); self._rgl()
+  L477:         if i is not None and i<len(self.groups): self.groups[i]["mode"]="parallel" if self.gm.currentText()=="并行" else "sequential"; self._save()
+  L479:         n=len(self.groups)+1; self.groups.append({"name":f"新分组 {n}","mode":"parallel","post_delay":3,"programs":[]}); self._save(); self._rgl(); self.selected_group_idx=len(self.groups)-1; self.gl_.setCurrentRow(self.selected_group_idx)
+  L482:         if i is not None and i<len(self.groups) and QMessageBox.question(self,"确认",f"删除 {self.groups[i]['name']}?")==QMessageBox.Yes: self.groups.pop(i); self.selected_group_idx=min(i,len(self.groups)-1) if self.groups else None; self._save(); self._rgl()
+  L494:                 self._toolbar_launch_btn.setText("⏸ 暂停队列")
+  L497:                 self._toolbar_launch_btn.setText("▶ 启动队列")
+  L527:         self._log("══ 全部账号入队 ══")
+  L548:                 self._log(f"🧠 {a.get('name', aid)} 到点补跑")
+  L576:             self._log(f"✓ 启动 {Path(w['path']).stem} PID={p.pid}")
+  L577:         except Exception as e: self._log(f"❌ 失败: {e}"); QMessageBox.critical(self,"失败",str(e))
+  L593:             self._log("已启动 MAA 主程序")
+  L594:         except Exception as e: self._log(f"❌ 启动失败: {e}")
+  L606:                 self._log(f"无流水线分组，跳过 {n} 个账号的自动启动" if n else "无流水线分组")
+  L610:         self._log("流水线启动")
+  L628:             self.pipeline_thread.program_started.connect(lambda n,ok: self._log(f"启动 {n}" if ok else f"失败 {n}"))
+  L635:             self._log(f"启动模拟器 #{emu_idx} ({name})")
+  L637:             except Exception as e: self._log(f"启动失败: {e}")
+  L638:             self.sl.setText(f"模拟器 {i+1}/{len(to_launch)}")
+  L648:                 self.pipeline_thread.resume(); self._log("流水线已继续")
+  L650:                 self.pipeline_thread.pause(); self._log("流水线已暂停")
+
+===== app\themes.py =====
+
+===== services\runner.py =====
+  L58:             issues.append(f"⚠ {name}: 未填写 ADB 地址")
+  L64:                 issues.append(f"❌ {name}: MAA 程序不存在 — {p}")
+  L66:                 issues.append(f"❌ {name}: 程序路径为空")
+  L70:             issues.append(f"⚠ {name}: 开启了自启模拟器但未选择实例")
+  L77:             self.log_msg.emit(f"无效账号索引: {row}")
+  L82:             self.log_msg.emit(f"{ac.get('name', aid)} 已在运行中")
+  L91:                 self.log_msg.emit(f"{ac.get('name', aid)} 无空闲 MAA 实例")
+  L94:             self.log_msg.emit(f"{ac.get('name', aid)} MAA 实例池不可用")
+  L97:         self.log_msg.emit(f"[启动] ADB({ac.get('adb_address','?')}) Emu({ac.get('emu_instance_index','?')}) 实例#{inst[0]}")
+  L101:         self.log_msg.emit(f"[启动] {ac.get('name', aid)}")
+  L190:                 self.log_msg.emit(f"启动模拟器 #{emu_idx}")
+  L194:                     self.log_msg.emit(f"启动模拟器失败: {e}")
+  L201:             except Exception as e: self.log_msg.emit(f"ADB 连接失败 {addr}: {e}")
+  L222:                 self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
+  L226:             self.log_msg.emit(f"注入配置: {config_dir}/")
+  L230:             self.log_msg.emit(f"启动失败: {e}")
+  L244:         self.log_msg.emit(f"✓ 启动 MAA PID={p.pid}")
+  L266:         self.log_msg.emit(f"✓ 启动 {Path(w['path']).stem} PID={p.pid}")
+  L281:             self.log_msg.emit("maa-cli 未安装")
+  L301:         self.log_msg.emit(f"✓ 启动 maa-cli PID={p.pid}")
+  L342:                     self.log_msg.emit(f"[资源] {name} 内存超限 ({mem_mb:.0f}MB > {self.MAX_PROC_MEM_MB}MB)")
+  L352:                 self.log_msg.emit(f"[资源] 系统可用内存 {free_gb:.1f}GB 不足，暂停新启动")
+  L354:                 self.log_msg.emit(f"[资源] 内存已恢复 ({free_gb:.1f}GB 可用)，继续启动")
+  L375:                         self.log_msg.emit(f"⚠ {ac.get('name', aid)} 任务卡死 ({int(elapsed/60)}分钟)，自动重启")
+  L421:                                 st_map = {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息", "CloseDown": "关闭"}
+  L427:                                         self.log_msg.emit(f"[MAA] {name} 当前任务: {task_name}")
+  L434:                         for k, v in {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息"}.items():
+  L439:                                     self.log_msg.emit(f"[MAA] {name} 当前任务: {v}")
+  L444:                         self.log_msg.emit(f"[MAA] {name} 错误: {err}")
+  L445:                         if "运行终止" in err or ("重启" in err and "安卓" in err):
+  L446:                             self.log_msg.emit(f"[MAA] {name} 检测到致命错误，强行终止进程以便重试")
+  L453:                         self.status_msg.emit("MAA: 切换任务...")
+  L481:             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
+  L485:         if tasks and any(t.get("status") == "完成" for t in tasks):
+  L494:             self.log_msg.emit(f"[账号] {name} 状态: error (exit={exit_code}) 连续失败={failures}")
+  L495:             self.ctx.notify(f"进程异常退出 (code={exit_code})", True)
+  L508:                 self.log_msg.emit(f"[限流] {name} 每分钟重启 {len(rts)} 次，暂停5分钟")
+  L512:                 self.log_msg.emit(f"[暂停] {name} 连续失败 {failures} 次，暂停30分钟")
+  L513:                 self.ctx.notify(f"{name} 连续失败暂停", True)
+  L516:                 self.log_msg.emit(f"[资源] 系统过载，{name} 延迟重试")
+  L526:                 self.log_msg.emit(f"[重试] {name} {delay}s后重试 (exp backoff {failures})")
+  L538:                 self.log_msg.emit(f"[账号] {name} 状态: completed (exit={exit_code})")
+  L543:             errs = [t for t in tasks if t.get("status") == "失败"]
+  L544:             done = [t for t in tasks if t.get("status") == "完成"]
+  L546:                 msg_parts.append(f"任务失败: {errs[0].get('name')}")
+  L548:                 msg_parts.append(f"MAA 完成: {len(done)} 个任务")
+  L553:             msg_parts.append(f"理智 {cur}/{mx}  ({h}h{m:02d}m回满)")
+  L565:                 self.log_msg.emit(f"保存统计失败: {e}")
+  L598:                     self.log_msg.emit(f"[daigan] 推送成功 → {daigan_url}")
+  L600:                     self.log_msg.emit(f"[daigan] 推送失败: {e}")
+  L633:             self.log_msg.emit(f"[诊断] {name} 已保存到 {diag_dir}")
+  L635:             self.log_msg.emit(f"[诊断] 保存失败: {e}")
+
+===== services\smart_scheduler.py =====
+  L38:     "固源岩": {"stage": "1-7", "fallback": "1-7"},
+  L39:     "装置":   {"stage": "S3-4", "fallback": "1-7"},
+  L40:     "聚酸酯": {"stage": "S3-3", "fallback": "1-7"},
+  L41:     "糖":     {"stage": "S3-1", "fallback": "1-7"},
+  L42:     "异铁":   {"stage": "S3-2", "fallback": "1-7"},
+  L43:     "酮凝集": {"stage": "S3-5", "fallback": "1-7"},
+  L44:     "醇":     {"stage": "4-4",  "fallback": "1-7"},
+  L45:     "扭转醇": {"stage": "7-9",  "fallback": "1-7"},
+  L46:     "轻锰矿": {"stage": "7-13", "fallback": "1-7"},
+  L47:     "研磨石": {"stage": "7-12", "fallback": "1-7"},
+  L49:     "固源岩组":{"stage": "2-4",  "fallback": "1-7"},
+  L50:     "龙门币": {"stage": "CE-6", "fallback": "CE-5", "days": ["wed","sat","sun"], "fallback_days": ["mon","tue","thu","fri"]},
+  L51:     "作战记录":{"stage": "LS-6", "fallback": "LS-5", "days": ["mon","thu","fri","sun"], "fallback_days": ["tue","wed","sat"]},
+  L139:         and t.get("status") == "完成"
+  L159:                         if tn.lower() in ("fight", "annihilation") and ts == "完成":
+
+===== services\launch_queue.py =====
+  L77:         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
+  L79:         self.log_msg.emit(f"[队列] {name} 入队 ({src_map.get(source, source)}){nb_str}")
+  L110:         """Short text for status bar: '排队: 小号(理智), 材料号(定时)'."""
+  L114:         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
+  L119:         return "排队: " + ", ".join(parts[:3])
+  L127:                 return "即将启动"
+  L192:                     self.skipped.emit(entry.account_id, "已在运行")
+  L203:                     self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
+  L215:                             self.skipped.emit(entry.account_id, "理智不足")
+  L295:         self.ctx.log(f"[队列] 从历史恢复 {len(data)} 个等待项")
+
+===== services\instance_pool.py =====
+  L150:         ctx.log("[实例] 未找到 MAA.exe — 请将 MAA 完整目录复制到 maa/source/（含 MAA.exe 及 resource/ 等）")
+  L161:         ctx.log("[实例] 源 MAA 已变化，删除旧实例...")
+  L174:                 ctx.log("[实例] maa/source/ 已更新，重建实例池...")
+  L183:         ctx.log("[MAA] 正在初始化 MAA 默认配置...")
+  L185:             ctx.log("[MAA] MAA 初始化失败，部分功能可能不可用")
+  L201:             ctx.log(f"[实例] 创建 #{i}...")
+  L205:                 ctx.log(f"[实例] #{i} 完成（软链接 resource/externals/Python）")
+  L207:                 ctx.log(f"[实例] #{i} 创建失败")
+  L278:         svc.ctx.log("[调度] 每日批量入队")
+  L329:             self.ctx.log(f"MAA {tag} 已下载，正在创建实例...")
+  L335:         f, _ = QFileDialog.getOpenFileName(self.ctx._mw, "选择", "", "MAA (*.exe);;所有文件 (*.*)")
+  L360:                 self.ctx.log(f"[maa-cli] 退出码: {rc}")
+  L363:                 self.ctx.notify("MAA CLI 已退出" if rc == 0 else "MAA CLI 异常退出", rc != 0)
+  L373:             self.ctx.set_status(f"运行中 ({elapsed // 60}m{elapsed % 60}s)")
+  L378:             mw.tray_icon.showMessage("流水线启动器", msg, QSystemTrayIcon.Critical if is_error else QSystemTrayIcon.Information, 3000)
+  L387:                     self.ctx.log(f"Webhook 失败: {e}")
+  L396:             try: self.ctx.log(f"自动检查更新失败: {e}")
+  L418:             self.ctx.log(f"检测到资源更新: MAA {tag} ({len(ups)} 个: {names}{more})")
+  L419:             self.ctx.notify(f"MAA {tag} 可用 ({len(ups)} 个待更新)", False)
+  L447:                 QMessageBox.information(self.ctx._mw, "提示", "无 MAA 程序")
+  L453:                     QMessageBox.warning(self.ctx._mw, "失败", r.get("error", ""))
+  L462:                     QMessageBox.information(self.ctx._mw, "提示", f"已是最新 {tag}")
+  L465:                 self.ctx.log(f"MAA {tag} 可用")
+  L467:             if QMessageBox.question(self.ctx._mw, "更新", f"更新 {len(ups)} 个?") == QMessageBox.Yes:
+  L527:         mw.tray_icon.setToolTip("流水线启动器")
+  L543:         m.addAction("显示", self.show_tray)
+  L544:         m.addAction("退出", self._quit_app)
+  L588:                 QMessageBox.information(self.ctx._mw, "检查更新", f"检查失败: {r.get('error', '')}")
+  L598:                 QMessageBox.information(self.ctx._mw, "检查更新", f"已是最新版本 {tag}")
+  L602:             msg = f"MAAOrch {tag} 可用\n当前版本: {self.ctx._mw.VERSION}\n\n是否下载更新？\n\n下载后会自动替换并重启"
+  L603:             if QMessageBox.question(self.ctx._mw, "更新", msg) != QMessageBox.Yes:
+  L607:             self.ctx.log(f"下载 MAAOrch {tag}...")
+  L617:                 self.ctx.log(f"下载中: {dl_url[:60]}...")
+  L629:                             self.ctx.log(f"下载中: {pct}% ({len(data)//1024//1024}MB/{total//1024//1024}MB)")
+  L669:                 self.ctx.log(f"更新准备完成，重启中...")
+  L674:                 self.ctx.log(f"下载更新失败: {e}")
+  L675:                 QMessageBox.warning(self.ctx._mw, "更新失败", f"下载或解压失败:\n{e}")
+
+===== services\config_injector.py =====
+  L177:                         self.ctx.log(f"inject关卡: {fs} → {fn}")
+  L180:                 self.ctx.log(f"inject关卡: {fs} 但TaskQueue不存在于 {fn}")
+
+===== services\health_check.py =====
+  L27:     fix_label: str = "修复"
+  L59:         items.append(HealthItem("Python 版本", "ok", f"{v.major}.{v.minor}.{v.micro}"))
+  L61:         items.append(HealthItem("Python 版本", "error", f"{v.major}.{v.minor}.{v.micro}，需要 >= 3.10"))
+  L71:             return "安装成功" if r.returncode == 0 else f"失败: {r.stderr[:200]}"
+  L72:         items.append(HealthItem("PySide6", "error", "未安装", _fix_pyside, "一键安装"))
+  L80:                 items.append(HealthItem("配置文件", "ok", "config.json 正常"))
+  L82:                 items.append(HealthItem("配置文件", "error", "config.json 为空或损坏"))
+  L84:             items.append(HealthItem("配置文件", "error", str(e)))
+  L86:         items.append(HealthItem("配置文件", "ok", "新安装，config.json 待创建"))
+  L91:         items.append(HealthItem("MAA 版本", "ok", ver))
+  L93:         items.append(HealthItem("MAA 版本", "warn", "版本号未识别（旧版遗留），请点击修复"))
+  L100:                     return f"已更新为 {v}"
+  L101:             return "未找到 MAA 版本号"
+  L102:         items.append(HealthItem("MAA 版本", "warn", "installed", _fix_maa_ver, "修复"))
+  L107:                 return "已启动下载"
+  L108:             return "无法下载"
+  L109:         items.append(HealthItem("MAA 版本", "warn", "未下载 MAA", _fix_maa, "下载 MAA"))
+  L114:         items.append(HealthItem("MAA 源目录", "ok", "maa/source/ 已就绪"))
+  L116:         items.append(HealthItem("MAA 源目录", "warn",
+  L117:             "请将 MAA 完整目录复制到 maa/source/（含 MAA.exe 及 resource/ 等）"))
+  L126:                 items.append(HealthItem("MAA 源配置", "ok", "已初始化"))
+  L130:                     return "初始化成功" if ok else "初始化失败"
+  L131:                 items.append(HealthItem("MAA 源配置", "warn", "需初始化", _fix_source_init, "初始化"))
+  L133:             items.append(HealthItem("MAA 源配置", "warn", f"目录 {ver} 不存在"))
+  L135:         items.append(HealthItem("MAA 源配置", "warn", "版本号未识别，无法检测配置"))
+  L141:         items.append(HealthItem("MAA 实例", "ok", f"{len(instances)} 个实例"))
+  L143:         items.append(HealthItem("MAA 实例", "warn", "无实例（需先下载 MAA）"))
+  L148:         items.append(HealthItem("账号配置", "warn", "未添加账号"))
+  L151:         items.append(HealthItem("账号配置", "ok" if ok_count == total else "warn",
+  L152:                                 f"{total} 个账号，{ok_count} 个已配置 ADB/模拟器"))
+  L177:         items.append(HealthItem("ADB", "ok", "已找到"))
+  L179:         items.append(HealthItem("ADB", "warn", "未在 PATH 中找到，可手动指定账号 adb_path"))
+  L184:         items.append(HealthItem("备份目录", "ok", str(bp)))
+  L188:             return f"已创建 {bp}"
+  L189:         items.append(HealthItem("备份目录", "warn", "不存在", _fix_backup, "创建"))
+  L195:         items.append(HealthItem("日志文件", "ok", str(lp)))
+  L197:         items.append(HealthItem("日志文件", "error", f"不可写: {e}"))
+  L202:         items.append(HealthItem("pip", "ok", "已找到"))
+  L204:         items.append(HealthItem("pip", "warn", "未在 PATH 中找到，部分修复不可用"))
+  L215:     d.setWindowTitle("🔍 环境检测与修复")
+  L221:     title = QLabel("🔍 环境检测与修复")
+  L226:     tbl.setHorizontalHeaderLabels(["状态", "检查项", "操作"])
+  L247:                 btn.setText("修复中...")
+  L260:     recheck = QPushButton("🔄 重新检测")
+  L264:     close_btn = QPushButton("关闭")
+
+===== services\log_parser.py =====
+  L138:         if QMessageBox.question(self.ctx._mw, "切换版本", f"将下载最新 {channel} 版 MAA\n并替换当前版本\n\n是否继续？") != QMessageBox.Yes:
+  L140:         self.ctx.log(f"切换 MAA 版本: {channel}")
+  L141:         self.ctx.set_status(f"下载 {channel} 版...")
+  L145:                 QMessageBox.critical(self.ctx._mw, "失败", r.get("error", ""))
+  L146:                 self.ctx.set_status("就绪")
+  L151:                 QMessageBox.warning(self.ctx._mw, "失败", "无可用包")
+  L152:                 self.ctx.set_status("就绪")
+  L159:                 self.ctx.log(f"MAA 已切换至: {tag}")
+  L163:             self.ctx.set_status("就绪")
+  L184:         task_map = {"StartUp": "开始唤醒", "Fight": "刷关作战", "Recruit": "公开招募", "Infrast": "基建换班", "Mall": "信用商店", "Award": "领取奖励", "Roguelike": "肉鸽探索", "Reclamation": "生息演算", "CloseDown": "关闭游戏"}
+  L215:                             chain_status[tc]["status"] = "失败"
+  L216:                             chain_status[tc]["error"] = "超过最大重试次数"
+  L235:                         if t["status"] == "运行中":
+  L236:                             t["status"] = "完成"
+  L245:                         if chain_status[tc]["status"] == "运行中":
+  L246:                             chain_status[tc]["status"] = "完成"
+  L254:                             chain_status[tc]["status"] = "运行中"
+  L258:                         cur_task = {"name": task_map[tc], "start": ts, "status": "运行中", "drops": "", "error": ""}
+  L267:                     if t["status"] == "运行中":
+  L268:                         t["status"] = "失败"
+  L275:                     if t["status"] == "运行中":
+  L276:                         t["status"] = "完成"
+  L291:         d.setWindowTitle("MAA 运行统计")
+  L296:             l.addWidget(QLabel("📊 MAA 运行统计 (历史记录)", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
+  L298:             tabs.addTab(self._stats_table(runs[-15:], "最近"), "最近")
+  L299:             tabs.addTab(self._stats_table(self._daily_runs(runs), "今日"), "今日")
+  L300:             tabs.addTab(self._stats_table(self._weekly_runs(runs), "本周"), "本周")
+  L309:                 l.addWidget(QLabel(f"💊 上次结束理智: {cur}/{mx}  恢复至满需 {h}h{m:02d}m"))
+  L311:             l.addWidget(QLabel("📊 MAA 运行统计 (实时解析)", font=QFont("Microsoft YaHei UI", 13, QFont.Bold)))
+  L318:             tw.setHorizontalHeaderLabels(["任务", "状态", "详情"])
+  L327:                 if "失败" in sts:
+  L329:                 elif "完成" in sts:
+  L334:             l.addWidget(QLabel("当前运行:"))
+  L339:                 l.addWidget(QLabel(f"🎒 掉落: {drop_text}"))
+  L346:                 l.addWidget(QLabel(f"💊 理智: {cur}/{mx}  恢复至满需 {h}h{m:02d}m"))
+  L348:             l.addWidget(QLabel("暂无运行数据\n等待 MAA 执行任务后自动生成"))
+  L353:         refresh_btn = QPushButton("🔄 从日志刷新")
+  L357:         br.addWidget(QPushButton("关闭", clicked=d.accept))
+  L368:         tw.setHorizontalHeaderLabels(["时间", "任务结果", "掉落/理智"])
+  L376:             task_text = "  ".join(f"{'✅' if v == '完成' else '❌' if v == '失败' else '⏳'}{k}" for k, v in r.get("tasks", {}).items())
+  L392:         vl.addWidget(QLabel(f"  {title}: {count} 次运行"))
+  L409:             QMessageBox.information(self.ctx._mw, "日志", "暂无日志文件")
+  L414:             QMessageBox.information(self.ctx._mw, "日志", "无法读取日志")
+  L417:         d.setWindowTitle("MAA 日志")
+  L425:         l.addWidget(QPushButton("关闭", clicked=d.accept))
+
+===== infrastructure\task_constants.py =====
+  L5: TASK_NAMES={"StartUp":"启动游戏","Fight":"刷关作战","Recruit":"公开招募","Infrast":"基建换班",
+  L6:     "Mall":"信用商店","Award":"领取奖励","Roguelike":"肉鸽探索","Reclamation":"生息演算","closedown":"关闭游戏"}
+  L10:     "Recruit":{"select":[3,4,5],"confirm":[3,4,5],"times":4,"refresh":True,"force_refresh":True,"prefer_tag_enabled":True,"preserve_tag_enabled":False,"preserve_tags":"支援机械","level3_time":540,"level4_time":540,"level5_time":540},
+  L12:     "Mall":{"shopping":True,"credit_fight":False,"visit_friends":True,"first_list":"招聘许可","blacklist":"碳;家具","only_buy_discount":False,"reserve_max_credit":False},
+  L20:     {"name":"MuMu 12(默认)","type":"MuMuEmulator12","ports":[str(16384+i*32) for i in range(100)],"detect":"MuMu 12"},
+  L21:     {"name":"MuMu 6(默认)","type":"MuMu","ports":["7555"],"detect":"MuMu 6"},
+  L23:     {"name":"雷电 9(默认)","type":"LDPlayer","ports":["5555"],"detect":"雷电 9"},
+  L24:     {"name":"雷电 4","type":"LDPlayer","ports":["5555"],"detect":"雷电 9"},
+  L25:     {"name":"蓝叠 国际版","type":"BlueStacks","ports":["5555"],"detect":"蓝叠"},
+  L26:     {"name":"蓝叠 中国版","type":"BlueStacks","ports":["5555"],"detect":"蓝叠"},
+  L27:     {"name":"夜神","type":"Nox","ports":["62001"],"detect":"夜神"},
+  L28:     {"name":"逍遥","type":"XYAZ","ports":["21503"],"detect":"逍遥"},
+  L29:     {"name":"自定义","type":"General","ports":["5555"],"detect":""},
+  L162:                     instances.append({"emu":"雷电 9","name":vm.name,"index":idx,"adb_port":port,"path":str(vm)})
+  L190: CLIENT_TYPES={"Official":"官服","Bilibili":"B服","YoStarEN":"国际服","YoStarJP":"日服","YoStarKR":"韩服","txwy":"繁中"}
+
+===== infrastructure\utils.py =====
+
+===== main.pyw =====
+  L25:         QMessageBox.critical(None, "异常崩溃", f"未捕获的异常:\n\n{exc_value}\n\n详情请查看 debug.log")
+

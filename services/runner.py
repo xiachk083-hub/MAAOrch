@@ -505,11 +505,11 @@ class AccountRunner(QObject):
 
             # Check restart rate limit
             if len(rts) > self.MAX_RESTART_PER_MIN:
-                self.log_msg.emit(f"[限流] {name} 每分钟重启 {len(rts)} 次，暂停5分钟")
+                self.log_msg.emit(f"[限流] {name} 每分钟重启 {len(rts)} 次，暂停 5 分钟")
                 from PySide6.QtCore import QTimer
                 QTimer.singleShot(300000, lambda: self._restart_times.pop(aid, None))
             elif failures >= 6:
-                self.log_msg.emit(f"[暂停] {name} 连续失败 {failures} 次，暂停30分钟")
+                self.log_msg.emit(f"[暂停] {name} 连续失败 {failures} 次，暂停 30 分钟")
                 self.ctx.notify(f"{name} 连续失败暂停", True)
             # Check global resource overload
             elif self._overloaded:
@@ -523,7 +523,7 @@ class AccountRunner(QObject):
             else:
                 # Exponential backoff: 5s, 10s, 20s, 40s, 80s... capped at 300s
                 delay = min(300, 5 * (2 ** (failures - 1)))
-                self.log_msg.emit(f"[重试] {name} {delay}s后重试 (exp backoff {failures})")
+                self.log_msg.emit(f"[重试] {name} {delay}s 后重试 (exp backoff {failures})")
                 from PySide6.QtCore import QTimer
                 from datetime import datetime, timedelta
                 q = getattr(self.ctx._mw, "launch_queue", None)
