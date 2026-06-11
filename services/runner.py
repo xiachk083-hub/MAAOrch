@@ -45,6 +45,7 @@ class AccountRunner(QObject):
         self._restart_times: dict[str, list[float]] = {}  # account_id → [timestamps]
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
+        self._log_positions: dict[str, int] = {}      # account_id → asst.log read position
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -314,6 +315,9 @@ class AccountRunner(QObject):
     def _spawn_instance(self, exe: Path, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
         pid_file = Path(inst_dir) / ".pid"
+        # Clear stale log to prevent AllTasksCompleted false detection on next run
+        try: (Path(inst_dir) / "debug" / "asst.log").write_text("")
+        except: pass
         p = subprocess.Popen([str(exe)], shell=False)
         p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
@@ -473,21 +477,30 @@ class AccountRunner(QObject):
                 lp = Path(p._inst_path) / "debug" / "asst.log"
                 if lp.exists():
                     try:
-                        tail = lp.read_text(encoding="utf-8", errors="replace").split("\n")[-10:]
-                        if any("AllTasksCompleted" in line for line in tail):
-                            self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
-                            emu_idx = ac.get("emu_instance_index", "")
-                            if emu_idx:
-                                from infrastructure.task_constants import find_mumu_cli, CF
-                                cli = find_mumu_cli()
-                                if cli:
-                                    try: subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
-                                    except Exception: pass
-                            try: p.terminate(); p.wait(5)
-                            except: pass
-                            try: p.kill()
-                            except: pass
-                            return
+                        current_size = lp.stat().st_size
+                        last_pos = self._log_positions.get(aid, 0)
+                        if current_size > last_pos:
+                            with lp.open("r", encoding="utf-8", errors="replace") as _f:
+                                _f.seek(last_pos)
+                                new_content = _f.read(current_size - last_pos)
+                            self._log_positions[aid] = current_size
+                            if "AllTasksCompleted" in new_content:
+                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+                                emu_idx = ac.get("emu_instance_index", "")
+                                if emu_idx:
+                                    from infrastructure.task_constants import find_mumu_cli
+                                    cli = find_mumu_cli()
+                                    if cli:
+                                        try:
+                                            subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
+                                            self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
+                                        except Exception as e:
+                                            self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
+                                try: p.terminate(); p.wait(5)
+                                except: pass
+                                try: p.kill()
+                                except: pass
+                                return
                     except Exception: pass
             # Stuck detection: same task over timeout → kill
             ac = self._active.get(aid)
