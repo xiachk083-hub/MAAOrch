@@ -82,38 +82,21 @@ class AccountRunner(QObject):
             self.log_msg.emit(f"{ac.get('name', aid)} 已在运行中")
             return False
 
-        # Dynamic ADB detection: refresh from actual emulator state at launch
-        adb = ac.get("adb_path", "") or "adb"
-        candidates = []
-        if ac.get("emu_instance_index"):
-            from infrastructure.task_constants import detect_emu_instances
-            insts = detect_emu_instances()
-            match = next((i for i in insts if i.get("index") == ac["emu_instance_index"]), None)
-            if match and match.get("adb_port"):
-                candidates.append(f"127.0.0.1:{match['adb_port']}")
-            # Add formula ports as fallbacks
+        # Auto-fill ADB address if empty (formula-based, no active detection)
+        if not ac.get("adb_address") and ac.get("emu_instance_index"):
             idx = int(ac["emu_instance_index"])
-            preset = ac.get("connection_preset", "")
-            if preset in ("MuMuEmulator12", "MuMuPro", "MuMu"):
-                candidates.append(f"127.0.0.1:{16384 + idx * 32}")
-            candidates.append(f"127.0.0.1:{5555 + idx * 2}")
-            # Also add the stored value as last resort
-            stored = ac.get("adb_address", "")
-            if stored and stored not in candidates:
-                candidates.append(stored)
-            # Test each candidate in order
-            for cand in candidates:
-                if not cand:
-                    continue
-                try:
-                    r = subprocess.run([adb, "connect", cand], capture_output=True, timeout=3, creationflags=CF)
-                    if r.returncode == 0 and b"connected" in (r.stdout + r.stderr).lower():
-                        ac["adb_address"] = cand
-                        break
-                except Exception:
-                    continue
+            preset = ac.get("connection_preset", "MuMuPro")
+            if preset == "MuMuEmulator12":
+                port = 16384 + idx * 32
+            elif preset in ("MuMuPro", "MuMu"):
+                port = 7555
+            elif preset in ("LDPlayer",):
+                port = 5555 + idx * 2
+            elif preset in ("Nox",):
+                port = 62001
             else:
-                self.log_msg.emit(f"⚠ ADB 地址检测全部失败，保留原有值 {stored}")
+                port = 5555 + idx * 2
+            ac["adb_address"] = f"127.0.0.1:{port}"
         ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
 
         # Auto-fill ADB path if empty (try mumu-cli sibling first, then find_adb)
@@ -246,7 +229,8 @@ class AccountRunner(QObject):
                 try:
                     import json as _json
                     r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
-                                      capture_output=True, text=True, timeout=5, creationflags=CF)
+                                      capture_output=True, text=True, timeout=5, creationflags=CF,
+                                      encoding="utf-8", errors="replace")
                     if r.returncode == 0:
                         data = _json.loads(r.stdout)
                         if data.get("is_android_started") or data.get("is_process_started"):
