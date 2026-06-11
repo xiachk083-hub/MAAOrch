@@ -47,6 +47,7 @@ class AccountRunner(QObject):
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
         self._log_positions: dict[str, int] = {}      # account_id → asst.log read position
         self._adb_fail_count: dict[str, int] = {}     # account_id → consecutive ADB ping failures
+        self._adb_restart_count: dict[str, int] = {}  # account_id → consecutive ADB-restart cycles
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -85,6 +86,27 @@ class AccountRunner(QObject):
         if aid in self._active:
             self.log_msg.emit(f"{ac.get('name', aid)} 已在运行中")
             return False
+
+        # Validate config before proceeding
+        if not ac.get("adb_address") and not ac.get("emu_instance_index"):
+            self.log_msg.emit(f"{ac.get('name', aid)} 未配置 ADB 地址和模拟器索引，跳过")
+            return False
+        if not ac.get("adb_path"):
+            from infrastructure.task_constants import find_mumu_cli
+            cli = find_mumu_cli()
+            if cli:
+                from pathlib import Path as _P
+                cand = _P(cli).parent / "adb.exe"
+                if cand.exists():
+                    ac["adb_path"] = str(cand)
+            if not ac.get("adb_path"):
+                from infrastructure.task_constants import find_adb
+                adb_exe = find_adb()
+                if adb_exe:
+                    ac["adb_path"] = adb_exe
+                else:
+                    self.log_msg.emit(f"{ac.get('name', aid)} 未找到 adb.exe，跳过")
+                    return False
 
         # Auto-fill ADB address if empty (formula-based, no active detection)
         if not ac.get("adb_address") and ac.get("emu_instance_index"):
@@ -227,6 +249,15 @@ class AccountRunner(QObject):
         emu_idx = ac.get("emu_instance_index", "")
         aid = ac["id"]
         inst_id, inst_dir = inst
+        self._adb_restart_count.pop(aid, None)  # reset ADB restart count on fresh launch
+        _deadline = time.time() + 120  # total timeout: 2 minutes for entire launch
+
+        def _check_deadline(phase: str) -> bool:
+            if time.time() > _deadline:
+                self.log_msg.emit(f"[超时] {ac.get('name', aid)} {phase} 超时，放弃启动")
+                self._cleanup(aid, -2, [])
+                return True
+            return False
 
         # Launch emulator if needed
         if ac.get("emu_launch") and emu_idx:
@@ -287,6 +318,9 @@ class AccountRunner(QObject):
                 else:
                     self.log_msg.emit(f"警告: Android 开机超时，继续尝试启动 MAA")
 
+        if _check_deadline("ADB连接"):
+            return
+
         # ADB server health check (kill zombie servers from other adb.exe)
         adb = ac.get("adb_path", "") or "adb"
         try:
@@ -310,6 +344,9 @@ class AccountRunner(QObject):
                     pass
                 time.sleep(2)
             time.sleep(1)  # stability delay
+
+        if _check_deadline("注入配置"):
+            return
 
         # Inject config and launch
         self._launch_for_instance(ac, inst_dir)
@@ -570,20 +607,30 @@ class AccountRunner(QObject):
                             self._adb_fail_count[aid] = fail
                             subprocess.run([adb_path, "connect", addr], capture_output=True, timeout=3, creationflags=CF)
                             if fail >= 3:
-                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 断连，关闭模拟器并重启 MAA")
+                                restart_count = self._adb_restart_count.get(aid, 0) + 1
+                                self._adb_restart_count[aid] = restart_count
                                 self._adb_fail_count.pop(aid, None)
-                                try: p.terminate(); p.wait(3)
-                                except: pass
-                                try: p.kill()
-                                except: pass
-                                # Shutdown emulator
-                                if emu_idx:
-                                    cli = find_mumu_cli()
-                                    if cli:
-                                        subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
-                                                      capture_output=True, timeout=10, creationflags=CF)
-                                tasks, sanity, drops = self._parse_log(aid)
-                                self._cleanup(aid, -8, tasks, sanity, drops)
+                                if restart_count >= 3:
+                                    self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 连续断连 {restart_count} 次，暂停")
+                                    try: p.terminate(); p.wait(3)
+                                    except: pass
+                                    try: p.kill()
+                                    except: pass
+                                    tasks, sanity, drops = self._parse_log(aid)
+                                    self._cleanup(aid, -9, tasks, sanity, drops)
+                                else:
+                                    self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 断连 (#{restart_count})，关模拟器重启 MAA")
+                                    try: p.terminate(); p.wait(3)
+                                    except: pass
+                                    try: p.kill()
+                                    except: pass
+                                    if emu_idx:
+                                        cli = find_mumu_cli()
+                                        if cli:
+                                            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                                                          capture_output=True, timeout=10, creationflags=CF)
+                                    tasks, sanity, drops = self._parse_log(aid)
+                                    self._cleanup(aid, -8, tasks, sanity, drops)
                                 return
                     except Exception:
                         pass
