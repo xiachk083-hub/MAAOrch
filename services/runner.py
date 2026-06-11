@@ -162,7 +162,8 @@ class AccountRunner(QObject):
                 continue
             inst_path = str(inst_dir)
             already_used = any(
-                getattr(p, "_inst_path", None) == inst_path
+                (p is not None and getattr(p, "_inst_path", None) == inst_path)
+                or (isinstance(p, str) and p == inst_path)
                 for p in self._procs.values()
             )
             if already_used:
@@ -214,6 +215,9 @@ class AccountRunner(QObject):
 
     def _do_launch(self, ac: dict, inst: tuple[int, str]) -> None:
         """Non-blocking launch: runs heavy work in background thread."""
+        aid = ac["id"]
+        inst_id, inst_dir = inst
+        self._procs[aid] = inst_dir  # reserve: store path string as placeholder
         import threading as _th
         _th.Thread(target=self._launch_job, args=(ac, inst), daemon=True).start()
 
@@ -611,6 +615,7 @@ class AccountRunner(QObject):
     def _cleanup(self, aid: str, exit_code: int, tasks: list[dict], sanity: dict | None = None, drops: dict | None = None) -> None:
         ac = self._active.pop(aid, None)
         old_progs = self._progs.pop(aid, None)
+        self._procs.pop(aid, None)
         started = self._start_times.pop(aid, None)
         duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)
