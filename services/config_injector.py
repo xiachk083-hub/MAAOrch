@@ -268,12 +268,17 @@ class ConfigService:
                 c["MainFunction.PostActions"] = "0"
 
             emu_idx = ac.get("emu_instance_index", "")
-            if emu_idx and not ac.get("emu_launch"):
+            if emu_idx:
                 cli = find_mumu_cli()
                 if cli:
                     c["Start.EmulatorPath"] = str(cli)
-                    c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
-                    c["Start.OpenEmulatorAfterLaunch"] = "True"
+                    if ac.get("emu_launch"):
+                        # MAAOrch 已启动模拟器 → MAA 别动
+                        c["Start.OpenEmulatorAfterLaunch"] = "False"
+                    else:
+                        # MAAOrch 不托管 → MAA 负责启动
+                        c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
+                        c["Start.OpenEmulatorAfterLaunch"] = "True"
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
