@@ -69,7 +69,7 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            if ac.get("post_action"): c["MainFunction.PostActions"] = "4"
+            if ac.get("post_action"): c["MainFunction.PostActions"] = "12"
             if ac.get("adb_retry",0)>0: c["Connect.RetryOnDisconnected"]="True"
             # Emulator: unchecked = MAA handles, checked = we handle
             if ac.get("emu_instance_index","") and not ac.get("emu_launch"):
@@ -245,7 +245,7 @@ class ConfigService:
                     c["Start.ClientType"] = ac["game_client"]
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
-                c["MainFunction.PostActions"] = "4"
+                c["MainFunction.PostActions"] = "12"
             else:
                 c.pop("MainFunction.PostActions", None)
                 # Write connection settings for v6 (same as v5, after dot-key cleanup)
@@ -266,7 +266,7 @@ class ConfigService:
                     c["Start.ClientType"] = ac["game_client"]
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
-                c["MainFunction.PostActions"] = "4"
+                c["MainFunction.PostActions"] = "12"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
