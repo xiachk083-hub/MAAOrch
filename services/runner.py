@@ -318,6 +318,7 @@ class AccountRunner(QObject):
         # Clear stale log to prevent AllTasksCompleted false detection on next run
         try: (Path(inst_dir) / "debug" / "asst.log").write_text("")
         except: pass
+        self._log_positions[aid] = 0
         p = subprocess.Popen([str(exe)], shell=False)
         p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
@@ -479,11 +480,13 @@ class AccountRunner(QObject):
                     try:
                         current_size = lp.stat().st_size
                         last_pos = self._log_positions.get(aid, 0)
+                        self._log.debug(f"[asst.log] {aid}: pos {last_pos} → {current_size}, changed={current_size > last_pos}")
                         if current_size > last_pos:
                             with lp.open("r", encoding="utf-8", errors="replace") as _f:
                                 _f.seek(last_pos)
                                 new_content = _f.read(current_size - last_pos)
                             self._log_positions[aid] = current_size
+                            self._log.debug(f"[asst.log] head={repr(new_content[:200])}")
                             if "AllTasksCompleted" in new_content:
                                 self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
                                 emu_idx = ac.get("emu_instance_index", "")
