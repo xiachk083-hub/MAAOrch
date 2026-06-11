@@ -146,19 +146,6 @@ class LaunchQueue(QObject):
         
         # Timeout (exit -3): re-enqueue at tail
         if exit_code == -3:
-            # Kill emulator
-            if ac:
-                emu_idx = ac.get("emu_instance_index", "")
-                if emu_idx:
-                    from infrastructure.task_constants import find_mumu_cli
-                    cli = find_mumu_cli()
-                    if cli:
-                        try:
-                            import subprocess as _sp
-                            _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
-                                      creationflags=_sp.CREATE_NO_WINDOW)
-                        except Exception:
-                            pass
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
             self.enqueue(account_id, "retry", priority=max_prio + 1)

@@ -488,21 +488,7 @@ class AccountRunner(QObject):
                             self._log_positions[aid] = current_size
                             self._log.debug(f"[asst.log] head={repr(new_content[:200])}")
                             if "AllTasksCompleted" in new_content:
-                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
-                                emu_idx = ac.get("emu_instance_index", "")
-                                self._log.debug(f"[关模拟器] aid={aid} emu_idx='{emu_idx}'")
-                                if emu_idx:
-                                    from infrastructure.task_constants import find_mumu_cli
-                                    cli = find_mumu_cli()
-                                    self._log.debug(f"[关模拟器] cli={cli}")
-                                    if cli:
-                                        try:
-                                            subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"], creationflags=subprocess.CREATE_NO_WINDOW)
-                                            self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
-                                        except Exception as e:
-                                            self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
-                                else:
-                                    self._log.debug(f"[关模拟器] emu_idx为空，跳过")
+                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成 (MAA 将自行退出)")
                                 try: p.terminate(); p.wait(5)
                                 except: pass
                                 try: p.kill()
@@ -631,25 +617,9 @@ class AccountRunner(QObject):
         self.ctx.proc_status.discard(aid)
 
         name = ac.get("name", aid) if ac else aid
-        # MAAOrch-managed post_action: close emulator on success or completed tasks
-        should_close = exit_code == 0 if ac else False
-        if not should_close and ac and tasks:
-            should_close = any(t.get("status") == "完成" for t in tasks)
-        self._log.debug(f"[关模拟器/cleanup] aid={aid} exit_code={exit_code} should_close={should_close}")
-        if should_close and ac:
-            emu_idx = ac.get("emu_instance_index", "")
-            self._log.debug(f"[关模拟器/cleanup] emu_idx='{emu_idx}'")
-            if emu_idx:
-                from infrastructure.task_constants import find_mumu_cli
-                import subprocess as _sp
-                cli = find_mumu_cli()
-                if cli:
-                    try:
-                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
-                                  creationflags=_sp.CREATE_NO_WINDOW)
-                        self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
-                    except Exception as e:
-                        self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
+        # MAA handles its own exit via PostActions="6" (ExitEmulator + ExitSelf)
+        if exit_code == 0 and ac:
+            self._log.debug(f"[完成] {name} MAA 自行退出 (PostActions=6)")
         if ac:
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
