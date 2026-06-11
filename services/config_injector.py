@@ -77,12 +77,12 @@ class ConfigService:
                 cli=find_mumu_cli()
                 if cli:
                     c["Start.EmulatorPath"]=str(cli)
+                    c["Start.EmulatorAddCommand"]=f'control --vmindex {ac["emu_instance_index"]} launch'
                     if ac.get("emu_launch"):
                         c["Start.OpenEmulatorAfterLaunch"]="False"
                     else:
-                        c["Start.EmulatorAddCommand"]=f'control --vmindex {ac["emu_instance_index"]} launch'
                         c["Start.OpenEmulatorAfterLaunch"]="True"
-                        if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
+                    if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
             # Account switch in TaskQueue
             sw=ac.get("account_switch","")
             if sw and "TaskQueue" in c:
@@ -280,13 +280,10 @@ class ConfigService:
                 cli = find_mumu_cli()
                 if cli:
                     c["Start.EmulatorPath"] = str(cli)
+                    c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
                     if ac.get("emu_launch"):
-                        # MAAOrch 已启动模拟器 → MAA 别动
                         c["Start.OpenEmulatorAfterLaunch"] = "False"
-                        c.pop("Start.EmulatorAddCommand", None)
                     else:
-                        # MAAOrch 不托管 → MAA 负责启动
-                        c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
                         c["Start.OpenEmulatorAfterLaunch"] = "True"
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])

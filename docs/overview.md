@@ -555,4 +555,5 @@ asst.log (MAA 运行日志)
 | 排队默认暂停 | 队列启动时 paused，智能调度首次 enqueue 自动 resume |
 | subprocess gbk 修复 | 中文 Windows 必须加 `encoding="utf-8", errors="replace"` |
 | API token 自动生成 | 启动时检查，空则生成随机 token，hmac.compare_digest 鉴权 |
+| `EmulatorAddCommand` 始终写入 | 只要有 `emu_instance_index` 就写 `control --vmindex N launch`。即使 `emu_launch=True`（MAAOrch 启动），PostActions=12 退出模拟器时 MAA 也需要 VM index |
 | mumu-cli `shutdown` 非 `quit` | `quit` 子命令不存在 |

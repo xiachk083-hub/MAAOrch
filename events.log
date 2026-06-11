@@ -975,3 +975,228 @@
 {"t": "2026-06-11 17:54:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25948, "elapsed": 3295.0, "msg": "[状态] 运行中: 0/2 | 队列: 0 | 错误: 0"}
 {"t": "2026-06-11 17:55:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25948, "elapsed": 3325.0, "msg": "[状态] 运行中: 0/2 | 队列: 0 | 错误: 0"}
 {"t": "2026-06-11 17:55:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25948, "elapsed": 3355.0, "msg": "[状态] 运行中: 0/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:04:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 0.7, "msg": "══ 启动 ══"}
+{"t": "2026-06-11 18:04:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 0.7, "msg": "[队列] 从历史恢复 0 个等待项"}
+{"t": "2026-06-11 18:04:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 0.7, "msg": "账号: 2 | 仓库: 0 | 分组: 0"}
+{"t": "2026-06-11 18:04:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 1.0, "msg": "API 服务已启动: http://127.0.0.1:19999"}
+{"t": "2026-06-11 18:04:47", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 5.7, "msg": "⚠ 环境检测: 0 个错误, 1 个警告"}
+{"t": "2026-06-11 18:04:53", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 11.0, "msg": "[队列] 阿仄仄仄 入队 (force)"}
+{"t": "2026-06-11 18:04:53", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 11.0, "msg": "[队列] 樄耳东c 入队 (force)"}
+{"t": "2026-06-11 18:04:53", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 11.0, "msg": "▶ 强制调度刷关: 2 个账号已入队"}
+{"t": "2026-06-11 18:04:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 12.3, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:04:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 12.3, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:04:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 12.4, "msg": "启动模拟器 #0"}
+{"t": "2026-06-11 18:04:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 12.7, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:04:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 17.3, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:04:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 17.3, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:04:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 17.4, "msg": "启动模拟器 #1"}
+{"t": "2026-06-11 18:04:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 17.6, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:05:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 18.7, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:05:05", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 23.8, "msg": "模拟器 #0 ADB 已连接"}
+{"t": "2026-06-11 18:05:05", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 23.8, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:05:10", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 28.8, "msg": "模拟器 #1 ADB 已连接"}
+{"t": "2026-06-11 18:05:10", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 28.8, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:05:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 38.4, "msg": "Android 开机完成"}
+{"t": "2026-06-11 18:05:21", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 39.4, "msg": "🧠 智能调度: StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 18:05:21", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 30492, "elapsed": 39.5, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:05:21", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 30492, "elapsed": 39.5, "msg": "写入 gui.new.json (use_v6=True, tasks=9, infra_mode=Normal)"}
+{"t": "2026-06-11 18:05:21", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 39.5, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 18:05:21", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 39.5, "msg": "✓ 启动 MAA PID=24592"}
+{"t": "2026-06-11 18:05:31", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 49.3, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:05:38", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 56.4, "msg": "🧠 智能调度: StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 18:05:38", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 30460, "elapsed": 56.4, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:05:38", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 30460, "elapsed": 56.5, "msg": "写入 gui.new.json (use_v6=True, tasks=9, infra_mode=Normal)"}
+{"t": "2026-06-11 18:05:38", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 56.5, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 18:05:38", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 56.5, "msg": "✓ 启动 MAA PID=24828"}
+{"t": "2026-06-11 18:05:44", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 62.1, "msg": "[资源] 系统可用内存 3.8GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:05:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 72.2, "msg": "[ADB] 阿仄仄仄 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:05:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 72.3, "msg": "[完成] 阿仄仄仄 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 18:05:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 72.3, "msg": "[账号] 阿仄仄仄 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:05:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 72.3, "msg": "[队列] 阿仄仄仄 入队 (retry) → 18:05"}
+{"t": "2026-06-11 18:05:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 72.3, "msg": "[重试] 阿仄仄仄 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:06:04", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 82.1, "msg": "[资源] 内存已恢复 (4.0GB 可用)，继续启动"}
+{"t": "2026-06-11 18:06:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 90.4, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:06:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 90.4, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:06:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 90.5, "msg": "模拟器 #0 已在运行"}
+{"t": "2026-06-11 18:06:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 90.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:06:14", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 92.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:06:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 102.1, "msg": "[ADB] 樄耳东c 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:06:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 102.3, "msg": "[完成] 樄耳东c 退出码=-8 耗时=0m45s 🧠 StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 18:06:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 102.3, "msg": "[账号] 樄耳东c 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:06:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 102.3, "msg": "[队列] 樄耳东c 入队 (retry) → 18:06"}
+{"t": "2026-06-11 18:06:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 102.3, "msg": "[重试] 樄耳东c 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:06:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 102.3, "msg": "[资源] 内存已恢复 (4.2GB 可用)，继续启动"}
+{"t": "2026-06-11 18:06:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 108.1, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:06:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 120.4, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:06:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 120.4, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:06:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 120.5, "msg": "模拟器 #1 已在运行"}
+{"t": "2026-06-11 18:06:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 120.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:06:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 121.0, "msg": "警告: 模拟器 #0 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:06:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 121.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:06:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 121.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:06:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 128.2, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:06:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 28888, "elapsed": 128.2, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:06:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 28888, "elapsed": 128.2, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:06:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 128.2, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 18:06:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 128.2, "msg": "✓ 启动 MAA PID=29220"}
+{"t": "2026-06-11 18:06:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 132.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:07:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 138.2, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:07:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 151.0, "msg": "警告: 模拟器 #1 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:07:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 151.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:07:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 151.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:07:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 158.1, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:07:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 11948, "elapsed": 158.1, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:07:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 11948, "elapsed": 158.2, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:07:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 158.3, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 18:07:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 158.3, "msg": "✓ 启动 MAA PID=23624"}
+{"t": "2026-06-11 18:07:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 160.3, "msg": "[ADB] 阿仄仄仄 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:07:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 160.5, "msg": "[完成] 阿仄仄仄 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:07:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 160.5, "msg": "[账号] 阿仄仄仄 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:07:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 160.5, "msg": "[队列] 阿仄仄仄 入队 (retry) → 18:07"}
+{"t": "2026-06-11 18:07:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 160.5, "msg": "[重试] 阿仄仄仄 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:07:24", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 162.1, "msg": "[资源] 内存已恢复 (4.0GB 可用)，继续启动"}
+{"t": "2026-06-11 18:07:26", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 164.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:07:28", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 166.1, "msg": "[资源] 内存已恢复 (4.0GB 可用)，继续启动"}
+{"t": "2026-06-11 18:07:28", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 166.2, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:07:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 168.3, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:07:32", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 170.2, "msg": "[资源] 内存已恢复 (4.0GB 可用)，继续启动"}
+{"t": "2026-06-11 18:07:34", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 172.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:07:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 180.4, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:07:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 180.4, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:07:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 180.5, "msg": "模拟器 #0 已在运行"}
+{"t": "2026-06-11 18:07:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 180.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:07:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 190.2, "msg": "[ADB] 樄耳东c 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:07:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 190.3, "msg": "[完成] 樄耳东c 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:07:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 190.3, "msg": "[账号] 樄耳东c 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:07:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 190.3, "msg": "[队列] 樄耳东c 入队 (retry) → 18:07"}
+{"t": "2026-06-11 18:07:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 190.3, "msg": "[重试] 樄耳东c 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:07:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 190.3, "msg": "[资源] 内存已恢复 (4.2GB 可用)，继续启动"}
+{"t": "2026-06-11 18:08:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 198.1, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:08:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 210.4, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:08:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 210.4, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:08:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 210.5, "msg": "模拟器 #1 已在运行"}
+{"t": "2026-06-11 18:08:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 210.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:08:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 211.0, "msg": "警告: 模拟器 #0 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:08:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 211.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:08:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 211.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:08:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 218.1, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:08:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 7244, "elapsed": 218.1, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:08:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 7244, "elapsed": 218.1, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:08:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 218.1, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 18:08:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 218.1, "msg": "✓ 启动 MAA PID=25152"}
+{"t": "2026-06-11 18:08:26", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 224.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:08:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 228.2, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:08:34", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 232.1, "msg": "[资源] 内存已恢复 (4.1GB 可用)，继续启动"}
+{"t": "2026-06-11 18:08:40", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 238.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:08:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 241.0, "msg": "警告: 模拟器 #1 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:08:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 241.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:08:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 241.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:08:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 3168, "elapsed": 248.1, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:08:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 3168, "elapsed": 248.2, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:08:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 248.3, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:08:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 248.3, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 18:08:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 248.3, "msg": "✓ 启动 MAA PID=14720"}
+{"t": "2026-06-11 18:08:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 250.2, "msg": "[ADB] 阿仄仄仄 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:08:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 250.3, "msg": "[完成] 阿仄仄仄 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:08:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 250.3, "msg": "[账号] 阿仄仄仄 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:08:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 250.3, "msg": "[队列] 阿仄仄仄 入队 (retry) → 18:08"}
+{"t": "2026-06-11 18:08:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 250.3, "msg": "[重试] 阿仄仄仄 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:08:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 250.4, "msg": "[资源] 内存已恢复 (4.1GB 可用)，继续启动"}
+{"t": "2026-06-11 18:08:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 252.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:09:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 258.2, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:09:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 270.4, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:09:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 270.4, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:09:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 270.5, "msg": "模拟器 #0 已在运行"}
+{"t": "2026-06-11 18:09:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 270.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:09:18", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 276.1, "msg": "[资源] 内存已恢复 (4.0GB 可用)，继续启动"}
+{"t": "2026-06-11 18:09:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 280.2, "msg": "[ADB] 樄耳东c 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:09:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 280.3, "msg": "[完成] 樄耳东c 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:09:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 280.3, "msg": "[账号] 樄耳东c 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:09:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 280.3, "msg": "[队列] 樄耳东c 入队 (retry) → 18:09"}
+{"t": "2026-06-11 18:09:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 280.3, "msg": "[重试] 樄耳东c 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:09:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 288.1, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:09:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 300.4, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:09:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 300.4, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:09:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 300.5, "msg": "模拟器 #1 已在运行"}
+{"t": "2026-06-11 18:09:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 300.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:09:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 301.0, "msg": "警告: 模拟器 #0 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:09:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 301.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:09:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 301.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:09:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 308.1, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:09:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 17784, "elapsed": 308.1, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:09:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 17784, "elapsed": 308.2, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:09:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 308.2, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 18:09:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 308.2, "msg": "✓ 启动 MAA PID=24668"}
+{"t": "2026-06-11 18:10:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 318.2, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:10:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 331.0, "msg": "警告: 模拟器 #1 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:10:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 331.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:10:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 331.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:10:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 28508, "elapsed": 338.1, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:10:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 28508, "elapsed": 338.2, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:10:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 338.3, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:10:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 338.3, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 18:10:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 338.3, "msg": "✓ 启动 MAA PID=29852"}
+{"t": "2026-06-11 18:10:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 340.3, "msg": "[ADB] 阿仄仄仄 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:10:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 340.4, "msg": "[完成] 阿仄仄仄 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:10:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 340.4, "msg": "[账号] 阿仄仄仄 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:10:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 340.4, "msg": "[队列] 阿仄仄仄 入队 (retry) → 18:10"}
+{"t": "2026-06-11 18:10:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 340.4, "msg": "[重试] 阿仄仄仄 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:10:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 348.2, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:10:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 360.4, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:10:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 360.4, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:10:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 360.5, "msg": "模拟器 #0 已在运行"}
+{"t": "2026-06-11 18:10:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 360.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:10:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 370.2, "msg": "[ADB] 樄耳东c 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:10:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 370.3, "msg": "[完成] 樄耳东c 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:10:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 370.3, "msg": "[账号] 樄耳东c 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:10:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 370.3, "msg": "[队列] 樄耳东c 入队 (retry) → 18:10"}
+{"t": "2026-06-11 18:10:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 370.3, "msg": "[重试] 樄耳东c 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:11:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 378.1, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:11:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 390.4, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:11:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 390.4, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:11:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 390.6, "msg": "模拟器 #1 已在运行"}
+{"t": "2026-06-11 18:11:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 390.6, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:11:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 391.0, "msg": "警告: 模拟器 #0 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:11:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 391.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:11:13", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 391.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:11:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 398.1, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:11:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 16052, "elapsed": 398.2, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:11:20", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 16052, "elapsed": 398.2, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:11:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 398.2, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 18:11:20", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 398.2, "msg": "✓ 启动 MAA PID=17904"}
+{"t": "2026-06-11 18:11:26", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 404.1, "msg": "[资源] 系统可用内存 3.9GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:11:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 408.3, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:11:40", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 418.2, "msg": "[资源] 内存已恢复 (4.0GB 可用)，继续启动"}
+{"t": "2026-06-11 18:11:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 421.1, "msg": "警告: 模拟器 #1 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:11:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 421.1, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:11:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 421.1, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:11:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 428.2, "msg": "🧠 智能调度: StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:11:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 29632, "elapsed": 428.3, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:11:50", "l": "INFO", "src": "injector", "func": "_write:574", "tid": 29632, "elapsed": 428.3, "msg": "写入 gui.new.json (use_v6=True, tasks=10, infra_mode=Normal)"}
+{"t": "2026-06-11 18:11:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 428.3, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 18:11:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 428.3, "msg": "✓ 启动 MAA PID=28472"}
+{"t": "2026-06-11 18:11:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 430.3, "msg": "[ADB] 阿仄仄仄 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:11:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 430.4, "msg": "[完成] 阿仄仄仄 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:11:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 430.4, "msg": "[账号] 阿仄仄仄 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:11:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 430.4, "msg": "[队列] 阿仄仄仄 入队 (retry) → 18:11"}
+{"t": "2026-06-11 18:11:52", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 430.4, "msg": "[重试] 阿仄仄仄 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:11:58", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 436.1, "msg": "[资源] 系统可用内存 4.0GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:12:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 438.2, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:12:10", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 448.1, "msg": "[资源] 内存已恢复 (4.1GB 可用)，继续启动"}
+{"t": "2026-06-11 18:12:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 450.4, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:12:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 450.4, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:12:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 450.5, "msg": "模拟器 #0 已在运行"}
+{"t": "2026-06-11 18:12:12", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 450.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:12:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 460.2, "msg": "[ADB] 樄耳东c 断连超过30s，重启 MAA"}
+{"t": "2026-06-11 18:12:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 460.4, "msg": "[完成] 樄耳东c 退出码=-8 耗时=0m32s 🧠 StartUp,Award,Annihilation,Fight"}
+{"t": "2026-06-11 18:12:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 460.4, "msg": "[账号] 樄耳东c 状态: completed (exit=-8)"}
+{"t": "2026-06-11 18:12:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 460.4, "msg": "[队列] 樄耳东c 入队 (retry) → 18:12"}
+{"t": "2026-06-11 18:12:22", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 460.4, "msg": "[重试] 樄耳东c 5s 后重试 (exp backoff 0)"}
+{"t": "2026-06-11 18:12:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 468.1, "msg": "[状态] 运行中: 1/2 | 队列: 1 | 错误: 0"}
+{"t": "2026-06-11 18:12:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 480.4, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:12:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 480.4, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:12:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 480.5, "msg": "模拟器 #1 已在运行"}
+{"t": "2026-06-11 18:12:42", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 480.5, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:12:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 481.0, "msg": "警告: 模拟器 #0 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:12:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 481.0, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:12:43", "l": "INFO", "src": "app", "func": "_log:192", "tid": 30512, "elapsed": 481.0, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
