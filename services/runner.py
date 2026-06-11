@@ -691,7 +691,7 @@ class AccountRunner(QObject):
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             self._log.info(f"[清理] {name} exit={exit_code} smart_plan当前={plan or '<空>'}")
-            if exit_code != -8:
+            if exit_code == 0:
                 ac["smart_plan"] = ""
 
         is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
