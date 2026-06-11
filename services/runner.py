@@ -640,7 +640,6 @@ class AccountRunner(QObject):
             emu_idx = ac.get("emu_instance_index", "")
             self._log.debug(f"[关模拟器/cleanup] emu_idx='{emu_idx}'")
             if emu_idx:
-            if emu_idx:
                 from infrastructure.task_constants import find_mumu_cli
                 import subprocess as _sp
                 cli = find_mumu_cli()
