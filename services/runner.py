@@ -476,16 +476,13 @@ class AccountRunner(QObject):
                         tail = lp.read_text(encoding="utf-8", errors="replace").split("\n")[-10:]
                         if any("AllTasksCompleted" in line for line in tail):
                             self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
-                            sg = self.ctx.config.get("smart_global", {})
-                            pa = ac.get("post_action", "") or sg.get("post_action", "")
-                            if "ExitEmulator" in pa:
-                                emu_idx = ac.get("emu_instance_index", "")
-                                if emu_idx:
-                                    from infrastructure.task_constants import find_mumu_cli, CF
-                                    cli = find_mumu_cli()
-                                    if cli:
-                                        try: subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
-                                        except Exception: pass
+                            emu_idx = ac.get("emu_instance_index", "")
+                            if emu_idx:
+                                from infrastructure.task_constants import find_mumu_cli, CF
+                                cli = find_mumu_cli()
+                                if cli:
+                                    try: subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
+                                    except Exception: pass
                             try: p.terminate(); p.wait(5)
                             except: pass
                             try: p.kill()
@@ -619,22 +616,18 @@ class AccountRunner(QObject):
         if not should_close and ac and tasks:
             should_close = any(t.get("status") == "完成" for t in tasks)
         if should_close and ac:
-            sg = self.ctx.config.get("smart_global", {})
-            pa = ac.get("post_action", "") or sg.get("post_action", "")
-            if "ExitEmulator" in pa:
-                emu_idx = ac.get("emu_instance_index", "")
-                if emu_idx:
-                    from infrastructure.task_constants import find_mumu_cli, CF
-                    import subprocess as _sp
-                    cli = find_mumu_cli()
-                    if cli:
-                        try:
-                            import subprocess as _sp
-                            _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"],
-                                      creationflags=_sp.CREATE_NO_WINDOW)
-                            self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
-                        except Exception as e:
-                            self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
+            emu_idx = ac.get("emu_instance_index", "")
+            if emu_idx:
+                from infrastructure.task_constants import find_mumu_cli
+                import subprocess as _sp
+                cli = find_mumu_cli()
+                if cli:
+                    try:
+                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                                  creationflags=_sp.CREATE_NO_WINDOW)
+                        self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
+                    except Exception as e:
+                        self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
         if ac:
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
@@ -674,22 +667,10 @@ class AccountRunner(QObject):
             # Check global resource overload
             elif self._overloaded:
                 self.log_msg.emit(f"[资源] 系统过载，{name} 延迟重试")
-                from PySide6.QtCore import QTimer
-                from datetime import datetime, timedelta
-                q = getattr(self.ctx._mw, "launch_queue", None)
-                if q and ac:
-                    QTimer.singleShot(60000, lambda a=aid: q.enqueue(a, "schedule", priority=1,
-                                        not_before=datetime.now() + timedelta(seconds=60)))
             else:
                 # Exponential backoff: 5s, 10s, 20s, 40s, 80s... capped at 300s
                 delay = min(300, 5 * (2 ** (failures - 1)))
                 self.log_msg.emit(f"[重试] {name} {delay}s 后重试 (exp backoff {failures})")
-                from PySide6.QtCore import QTimer
-                from datetime import datetime, timedelta
-                q = getattr(self.ctx._mw, "launch_queue", None)
-                if q and ac:
-                    QTimer.singleShot(delay * 1000, lambda a=aid: q.enqueue(a, "schedule", priority=1,
-                                        not_before=datetime.now() + timedelta(seconds=delay)))
 
         else:
             if ac:
