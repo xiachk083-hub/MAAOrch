@@ -515,7 +515,7 @@ class AccountRunner(QObject):
                                 except: pass
                                 return
                     except Exception: pass
-            # ADB keepalive: ping + reconnect on failure
+            # ADB keepalive: ping + reconnect (don't kill MAA)
             ac = self._active.get(aid)
             if ac:
                 addr = ac.get("adb_address", "")
@@ -523,24 +523,19 @@ class AccountRunner(QObject):
                 if addr:
                     try:
                         r = subprocess.run([adb_path, "-s", addr, "shell", "echo", "ping"],
-                                          capture_output=True, timeout=5, creationflags=CF)
+                                          capture_output=True, timeout=3, creationflags=CF)
                         if r.returncode == 0:
-                            self._adb_fail_count.pop(aid, None)
+                            if aid in self._adb_fail_count:
+                                self._adb_fail_count.pop(aid, None)
+                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 已恢复")
                         else:
                             fail = self._adb_fail_count.get(aid, 0) + 1
                             self._adb_fail_count[aid] = fail
-                            subprocess.run([adb_path, "connect", addr],
-                                          capture_output=True, timeout=5, creationflags=CF)
-                            if fail >= 3:
-                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 断连，重启 MAA")
-                                self._adb_fail_count.pop(aid, None)
-                                try: p.terminate(); p.wait(3)
-                                except: pass
-                                try: p.kill()
-                                except: pass
-                                tasks, sanity, drops = self._parse_log(aid)
-                                self._cleanup(aid, -8, tasks, sanity, drops)
-                                return
+                            if fail <= 2:
+                                subprocess.run([adb_path, "connect", addr],
+                                              capture_output=True, timeout=3, creationflags=CF)
+                    except Exception:
+                        pass
                     except Exception:
                         pass
             # Stuck detection: same task over timeout → kill
