@@ -46,6 +46,7 @@ class AccountRunner(QObject):
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
         self._log_positions: dict[str, int] = {}      # account_id → asst.log read position
+        self._adb_fail_count: dict[str, int] = {}     # account_id → consecutive ADB ping failures
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -551,6 +552,40 @@ class AccountRunner(QObject):
                     tasks, sanity, drops = self._parse_log(aid)
                     self._cleanup(aid, -3, tasks, sanity, drops)
                     return
+            # ADB keepalive: ping → reconnect → kill MAA + shutdown emulator
+            ac = self._active.get(aid)
+            if ac:
+                addr = ac.get("adb_address", "")
+                adb_path = ac.get("adb_path", "") or "adb"
+                emu_idx = ac.get("emu_instance_index", "")
+                if addr:
+                    try:
+                        r = subprocess.run([adb_path, "-s", addr, "shell", "echo", "ping"],
+                                          capture_output=True, timeout=3, creationflags=CF)
+                        if r.returncode == 0:
+                            self._adb_fail_count.pop(aid, None)
+                        else:
+                            fail = self._adb_fail_count.get(aid, 0) + 1
+                            self._adb_fail_count[aid] = fail
+                            subprocess.run([adb_path, "connect", addr], capture_output=True, timeout=3, creationflags=CF)
+                            if fail >= 3:
+                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 断连，关闭模拟器并重启 MAA")
+                                self._adb_fail_count.pop(aid, None)
+                                try: p.terminate(); p.wait(3)
+                                except: pass
+                                try: p.kill()
+                                except: pass
+                                # Shutdown emulator
+                                if emu_idx:
+                                    cli = find_mumu_cli()
+                                    if cli:
+                                        subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                                                      capture_output=True, timeout=10, creationflags=CF)
+                                tasks, sanity, drops = self._parse_log(aid)
+                                self._cleanup(aid, -8, tasks, sanity, drops)
+                                return
+                    except Exception:
+                        pass
             return
         rc = p.poll()
         self._procs.pop(aid, None)
