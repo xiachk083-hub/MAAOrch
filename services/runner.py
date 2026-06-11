@@ -268,8 +268,15 @@ class AccountRunner(QObject):
         adb = ac.get("adb_path", "") or "adb"
         addr = ac.get("adb_address", "")
         if addr:
-            try: subprocess.run([adb, "connect", addr], capture_output=True, creationflags=CF, timeout=5)
-            except Exception as e: self.log_msg.emit(f"ADB 连接失败 {addr}: {e}")
+            for _attempt in range(3):
+                try:
+                    r = subprocess.run([adb, "connect", addr], capture_output=True, creationflags=CF, timeout=5)
+                    if r.returncode == 0:
+                        break
+                except Exception:
+                    pass
+                time.sleep(2)
+            time.sleep(1)  # stability delay
 
         # Inject config and launch
         self._launch_for_instance(ac, inst_dir)
