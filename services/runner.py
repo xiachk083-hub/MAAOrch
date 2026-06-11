@@ -490,15 +490,19 @@ class AccountRunner(QObject):
                             if "AllTasksCompleted" in new_content:
                                 self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
                                 emu_idx = ac.get("emu_instance_index", "")
+                                self._log.debug(f"[关模拟器] aid={aid} emu_idx='{emu_idx}'")
                                 if emu_idx:
                                     from infrastructure.task_constants import find_mumu_cli
                                     cli = find_mumu_cli()
+                                    self._log.debug(f"[关模拟器] cli={cli}")
                                     if cli:
                                         try:
                                             subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
                                             self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
                                         except Exception as e:
                                             self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
+                                else:
+                                    self._log.debug(f"[关模拟器] emu_idx为空，跳过")
                                 try: p.terminate(); p.wait(5)
                                 except: pass
                                 try: p.kill()
@@ -631,8 +635,11 @@ class AccountRunner(QObject):
         should_close = exit_code == 0 if ac else False
         if not should_close and ac and tasks:
             should_close = any(t.get("status") == "完成" for t in tasks)
+        self._log.debug(f"[关模拟器/cleanup] aid={aid} exit_code={exit_code} should_close={should_close}")
         if should_close and ac:
             emu_idx = ac.get("emu_instance_index", "")
+            self._log.debug(f"[关模拟器/cleanup] emu_idx='{emu_idx}'")
+            if emu_idx:
             if emu_idx:
                 from infrastructure.task_constants import find_mumu_cli
                 import subprocess as _sp
