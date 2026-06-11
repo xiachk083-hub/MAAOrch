@@ -166,6 +166,18 @@ class LaunchQueue(QObject):
             self._tick()
             return
 
+        # Retry on error: exponential backoff, re-enqueue at tail
+        if exit_code != 0 and exit_code != -9 and ac:
+            failures = ac.get("consecutive_failures", 0)
+            delay = min(300, 5 * (2 ** (failures - 1))) if failures > 0 else 5
+            from datetime import datetime, timedelta
+            max_prio = max((e.sort_key[0] for e in self._pending), default=0)
+            self.enqueue(account_id, "retry", priority=max_prio + 1,
+                        not_before=datetime.now() + timedelta(seconds=delay))
+            self._log(f"[重试] {ac.get('name', account_id)} {delay}s 后重试 (exp backoff {failures})")
+            self._tick()
+            return
+
         # Round-robin: calculate recovery based on deficit
         deficit_cfg = self.ctx.config.get("deficit") if self.ctx.config.get("deficit") is not None else ac.get("round_robin_deficit", 0)
         if deficit_cfg >= 0:
