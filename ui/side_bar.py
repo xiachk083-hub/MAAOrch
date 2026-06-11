@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
+    QRadioButton, QButtonGroup)
 
 
 def build_side_bar(mw: Any) -> QFrame:
@@ -47,6 +48,38 @@ def build_side_bar(mw: Any) -> QFrame:
 
     vl.addStretch()
 
+    # Schedule mode selector
+    mode_sep = QFrame()
+    mode_sep.setFrameShape(QFrame.HLine); mode_sep.setStyleSheet("color:#333;margin:4px 0")
+    vl.addWidget(mode_sep)
+    mode_lbl = QLabel("  调度模式")
+    mode_lbl.setStyleSheet("color:#888;font-size:8pt;padding:2px 4px")
+    vl.addWidget(mode_lbl)
+    mode_group = QButtonGroup(sb)
+    mode_btns = {}
+    for txt, key in [("日常", "daily"), ("肉鸽", "roguelike"), ("生息", "reclamation")]:
+        rb = QRadioButton(f"  {txt}")
+        rb.setStyleSheet("color:#aaa;font-size:8pt;padding:2px 6px")
+        if mw.config.get("schedule_mode", "daily") == key:
+            rb.setChecked(True)
+        mode_group.addButton(rb, {"daily":0,"roguelike":1,"reclamation":2}[key])
+        vl.addWidget(rb)
+        mode_btns[key] = rb
+    def _on_mode_changed(btn_id: int):
+        mode_map = {0:"daily", 1:"roguelike", 2:"reclamation"}
+        new_mode = mode_map.get(btn_id, "daily")
+        mw.config["schedule_mode"] = new_mode
+        mw._save()
+        mw._log(f"[模式] 切换为 {new_mode}")
+        # Trigger smart scheduler if enabled
+        sg = mw.config.get("smart_global", {})
+        if sg.get("enabled", False):
+            QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
+    mode_group.idChanged.connect(_on_mode_changed)
+
+    mw._mode_group = mode_group
+    mw._mode_btns = mode_btns
+
     # Refresh timer for counts
     def _refresh_counts():
         if not mw._side_labels:
@@ -85,11 +118,20 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
             mw.launch_queue._pending.clear()
             mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
-    tasks = ["StartUp"]
-    if include_anni:
-        tasks.append("Annihilation")
-    tasks.extend(["Fight", "Infrast", "Recruit", "Mall", "Award"])
+    mode = mw.config.get("schedule_mode", "daily")
+    if mode == "daily":
+        tasks = ["StartUp"]
+        if include_anni:
+            tasks.append("Annihilation")
+        tasks.extend(["Fight", "Infrast", "Recruit", "Mall", "Award"])
+    elif mode == "roguelike":
+        tasks = ["StartUp", "Roguelike"]
+    elif mode == "reclamation":
+        tasks = ["StartUp", "Reclamation"]
+    else:
+        tasks = ["StartUp", "Award"]
     plan = ",".join(tasks)
+    label_map = {"daily":"日常", "roguelike":"肉鸽", "reclamation":"生息"}
     count = 0
     for a in mw.accounts:
         aid = a.get("id", "")
@@ -98,10 +140,10 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
         if mw.launch_queue.is_queued(aid) or mw.launch_queue.is_running(aid):
             continue
         a["smart_plan"] = plan
-        mw.launch_queue.enqueue(aid, "force", priority=0, persist_plan=True)
+        mw.launch_queue.enqueue(aid, "force", priority=0, persist_plan=(mode != "daily"))
         count += 1
     if count:
-        mw._log(f"▶ 强制调度{'含剿灭' if include_anni else '刷关'}: {count} 个账号已入队")
+        mw._log(f"▶ {label_map.get(mode, '')}调度: {count} 个账号已入队")
         from PySide6.QtCore import QTimer
         QTimer.singleShot(200, mw.launch_queue.tick)
 

@@ -354,6 +354,7 @@ class AccountRunner(QObject):
     def _launch_for_instance(self, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
         smart_enabled = self.ctx.config.get("smart_global", {}).get("enabled", False)
+        mode = self.ctx.config.get("schedule_mode", "daily")
         exe = Path(inst_dir) / "MAA.exe"
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -362,6 +363,14 @@ class AccountRunner(QObject):
                 plan_txt = ac.get("smart_plan", "")
                 if plan_txt:
                     task_list = plan_txt.split(",")
+                elif mode == "roguelike":
+                    task_list = ["StartUp", "Roguelike"]
+                    plan_txt = "StartUp,Roguelike"
+                    ac["smart_plan"] = plan_txt
+                elif mode == "reclamation":
+                    task_list = ["StartUp", "Reclamation"]
+                    plan_txt = "StartUp,Reclamation"
+                    ac["smart_plan"] = plan_txt
                 else:
                     from services.smart_scheduler import get_tasks_for_account
                     task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
