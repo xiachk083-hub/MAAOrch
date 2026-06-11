@@ -207,8 +207,12 @@ def open_task_config(mw: Any, ac: dict) -> None:
     infra_row = QHBoxLayout()
     dt_cb = QCheckBox("宿舍信任"); dt_cb.setChecked(it.get("dorm_trust_enabled", True))
     infra_row.addWidget(dt_cb)
+    dfs_cb = QCheckBox("过滤未进驻"); dfs_cb.setChecked(it.get("dorm_filter_not_stationed", True))
+    infra_row.addWidget(dfs_cb)
     os_cb = QCheckBox("自动搓玉"); os_cb.setChecked(it.get("originium_shard_auto", True))
     infra_row.addWidget(os_cb)
+    rmb_cb = QCheckBox("会客留言板"); rmb_cb.setChecked(it.get("reception_message_board", True))
+    infra_row.addWidget(rmb_cb)
     rc_cb = QCheckBox("会客线索"); rc_cb.setChecked(it.get("reception_clue", True))
     infra_row.addWidget(rc_cb)
     sc_cb = QCheckBox("送线索"); sc_cb.setChecked(it.get("send_clue", True))
@@ -247,8 +251,17 @@ def open_task_config(mw: Any, ac: dict) -> None:
     disc_row.addWidget(od_cb)
     rm_cb = QCheckBox("保留信用点"); rm_cb.setChecked(mt.get("reserve_max_credit", False))
     disc_row.addWidget(rm_cb)
+    sib_cb = QCheckBox("满库存忽略黑名单"); sib_cb.setChecked(mt.get("shopping_ignore_blacklist", False))
+    disc_row.addWidget(sib_cb)
     disc_row.addStretch()
     l6.addLayout(disc_row)
+    freq_row = QHBoxLayout()
+    cfo_cb = QCheckBox("每日信用战"); cfo_cb.setChecked(mt.get("credit_fight_once_a_day", True))
+    freq_row.addWidget(cfo_cb)
+    vfo_cb = QCheckBox("每日访问好友"); vfo_cb.setChecked(mt.get("visit_friends_once_a_day", False))
+    freq_row.addWidget(vfo_cb)
+    freq_row.addStretch()
+    l6.addLayout(freq_row)
     l6.addStretch()
     tabs.addTab(w6, "信用商店")
 
@@ -264,6 +277,98 @@ def open_task_config(mw: Any, ac: dict) -> None:
     sa_cb = QCheckBox("特殊权限"); sa_cb.setChecked(at.get("special_access", False)); l7.addWidget(sa_cb)
     l7.addStretch()
     tabs.addTab(w7, "领取奖励")
+
+    # ── 肉鸽探索 ──
+    w8 = QWidget(); l8 = QVBoxLayout(w8); l8.setSpacing(6)
+    rt = ts.get("Roguelike", {})
+    theme_row = QHBoxLayout()
+    theme_row.addWidget(QLabel("主题:"))
+    rl_theme = QComboBox()
+    for txt, val in [("傀影", "Phantom"), ("水月", "Mizuki"), ("萨米", "Sami"), ("萨卡兹", "Sarkaz"), ("界园", "JieGarden")]:
+        rl_theme.addItem(txt, val)
+    ci = rl_theme.findData(rt.get("theme", "Sarkaz"))
+    if ci >= 0: rl_theme.setCurrentIndex(ci)
+    theme_row.addWidget(rl_theme)
+    theme_row.addWidget(QLabel("难度:"))
+    rl_diff = QSpinBox(); rl_diff.setRange(0, 15); rl_diff.setValue(rt.get("difficulty", 15))
+    theme_row.addWidget(rl_diff)
+    theme_row.addWidget(QLabel("模式:"))
+    rl_mode = QComboBox()
+    rl_mode.addItem("经验", "Exp"); rl_mode.addItem("投资", "Investment")
+    ci = rl_mode.findData(rt.get("mode", "Exp"))
+    if ci >= 0: rl_mode.setCurrentIndex(ci)
+    theme_row.addWidget(rl_mode)
+    theme_row.addStretch()
+    l8.addLayout(theme_row)
+    squad_row = QHBoxLayout()
+    squad_row.addWidget(QLabel("分队:"))
+    rl_squad = QLineEdit(rt.get("squad", "")); rl_squad.setPlaceholderText("分队名")
+    squad_row.addWidget(rl_squad)
+    squad_row.addWidget(QLabel("职业:"))
+    rl_roles = QLineEdit(rt.get("roles", "")); rl_roles.setPlaceholderText("术师/近卫...")
+    squad_row.addWidget(rl_roles)
+    squad_row.addWidget(QLabel("核心干员:"))
+    rl_core = QLineEdit(rt.get("core_char", "")); rl_core.setPlaceholderText("干员名")
+    squad_row.addWidget(rl_core)
+    squad_row.addStretch()
+    l8.addLayout(squad_row)
+    inv_row = QHBoxLayout()
+    rl_inv = QCheckBox("投资"); rl_inv.setChecked(rt.get("investment", True))
+    inv_row.addWidget(rl_inv)
+    rl_inv_cnt = QSpinBox(); rl_inv_cnt.setRange(0, 9999); rl_inv_cnt.setValue(rt.get("invest_count", 999))
+    inv_row.addWidget(QLabel("投资次数:")); inv_row.addWidget(rl_inv_cnt)
+    rl_stop_max = QCheckBox("满级停"); rl_stop_max.setChecked(rt.get("stop_when_level_max", False))
+    inv_row.addWidget(rl_stop_max)
+    rl_stop_dep = QCheckBox("满投资停"); rl_stop_dep.setChecked(rt.get("stop_when_deposit_full", False))
+    inv_row.addWidget(rl_stop_dep)
+    rl_stop_boss = QCheckBox("止步Boss"); rl_stop_boss.setChecked(rt.get("stop_at_final_boss", False))
+    inv_row.addWidget(rl_stop_boss)
+    inv_row.addStretch()
+    l8.addLayout(inv_row)
+    adv_row = QHBoxLayout()
+    rl_use_sup = QCheckBox("借干员"); rl_use_sup.setChecked(rt.get("use_support", False))
+    adv_row.addWidget(rl_use_sup)
+    rl_seed_en = QCheckBox("固定种子"); rl_seed_en.setChecked(rt.get("start_with_seed", False))
+    adv_row.addWidget(rl_seed_en)
+    rl_seed = QLineEdit(rt.get("seed", "")); rl_seed.setPlaceholderText("种子号")
+    rl_seed.setEnabled(rl_seed_en.isChecked()); rl_seed_en.toggled.connect(lambda c: rl_seed.setEnabled(c))
+    adv_row.addWidget(rl_seed)
+    adv_row.addStretch()
+    l8.addLayout(adv_row)
+    l8.addStretch()
+    tabs.addTab(w8, "肉鸽探索")
+
+    # ── 生息演算 ──
+    w9 = QWidget(); l9 = QVBoxLayout(w9); l9.setSpacing(6)
+    rct = ts.get("Reclamation", {})
+    rc_theme_row = QHBoxLayout()
+    rc_theme_row.addWidget(QLabel("主题:"))
+    rc_theme = QComboBox()
+    rc_theme.addItem("沙洲遗闻", "Tales"); rc_theme.addItem("火蓝之心", "FireBlue")
+    ci = rc_theme.findData(rct.get("theme", "Tales"))
+    if ci >= 0: rc_theme.setCurrentIndex(ci)
+    rc_theme_row.addWidget(rc_theme)
+    rc_theme_row.addWidget(QLabel("模式:"))
+    rc_mode = QComboBox()
+    rc_mode.addItem("存档发展", "ProsperityInSave"); rc_mode.addItem("无存档", "ProsperityNoSave")
+    ci = rc_mode.findData(rct.get("mode", "ProsperityInSave"))
+    if ci >= 0: rc_mode.setCurrentIndex(ci)
+    rc_theme_row.addWidget(rc_mode)
+    rc_theme_row.addStretch()
+    l9.addLayout(rc_theme_row)
+    rc_craft_row = QHBoxLayout()
+    rc_craft_row.addWidget(QLabel("打造工具:"))
+    rc_tool = QLineEdit(rct.get("tool_to_craft", "")); rc_tool.setPlaceholderText("工具名")
+    rc_craft_row.addWidget(rc_tool)
+    rc_craft_row.addWidget(QLabel("每轮最大:"))
+    rc_craft_cnt = QSpinBox(); rc_craft_cnt.setRange(1, 99); rc_craft_cnt.setValue(rct.get("max_craft_count", 16))
+    rc_craft_row.addWidget(rc_craft_cnt)
+    rc_clr = QCheckBox("清理仓库"); rc_clr.setChecked(rct.get("clear_store", False))
+    rc_craft_row.addWidget(rc_clr)
+    rc_craft_row.addStretch()
+    l9.addLayout(rc_craft_row)
+    l9.addStretch()
+    tabs.addTab(w9, "生息演算")
 
     # ── Buttons ──
     def _save():
@@ -290,15 +395,32 @@ def open_task_config(mw: Any, ac: dict) -> None:
             "Infrast": {"mode": mode_cb.currentData(),
                         "facilities": [f for f, c in fac_cbs.items() if c.isChecked()] or _INFRAST_FACILITIES,
                         "drones": drone_cb.currentData(), "dorm_threshold": dorm_sp.value(),
-                        "dorm_trust_enabled": dt_cb.isChecked(), "originium_shard_auto": os_cb.isChecked(),
+                        "dorm_trust_enabled": dt_cb.isChecked(), "dorm_filter_not_stationed": dfs_cb.isChecked(),
+                        "originium_shard_auto": os_cb.isChecked(),
+                        "reception_message_board": rmb_cb.isChecked(),
                         "reception_clue": rc_cb.isChecked(), "send_clue": sc_cb.isChecked(),
                         "continue_training": ct_cb.isChecked()},
             "Mall": {"shopping": shop_cb.isChecked(), "blacklist": bl_txt.text().strip(),
                      "credit_fight": cf_cb.isChecked(), "visit_friends": vf_cb.isChecked(),
                      "first_list": fl_txt.text().strip(), "only_buy_discount": od_cb.isChecked(),
-                     "reserve_max_credit": rm_cb.isChecked()},
+                     "reserve_max_credit": rm_cb.isChecked(),
+                     "shopping_ignore_blacklist": sib_cb.isChecked(),
+                     "credit_fight_once_a_day": cfo_cb.isChecked(),
+                     "visit_friends_once_a_day": vfo_cb.isChecked()},
             "Award": {"award": aw.isChecked(), "mail": ml.isChecked(), "free_gacha": fg.isChecked(),
                       "orundum": oru.isChecked(), "mining": mi_cb.isChecked(), "special_access": sa_cb.isChecked()},
+            "Roguelike": {"theme": rl_theme.currentData(), "mode": rl_mode.currentData(),
+                          "difficulty": rl_diff.value(), "squad": rl_squad.text().strip(),
+                          "roles": rl_roles.text().strip(), "core_char": rl_core.text().strip(),
+                          "investment": rl_inv.isChecked(), "invest_count": rl_inv_cnt.value(),
+                          "stop_when_level_max": rl_stop_max.isChecked(),
+                          "stop_when_deposit_full": rl_stop_dep.isChecked(),
+                          "stop_at_final_boss": rl_stop_boss.isChecked(),
+                          "use_support": rl_use_sup.isChecked(),
+                          "start_with_seed": rl_seed_en.isChecked(), "seed": rl_seed.text().strip()},
+            "Reclamation": {"theme": rc_theme.currentData(), "mode": rc_mode.currentData(),
+                            "tool_to_craft": rc_tool.text().strip(),
+                            "max_craft_count": rc_craft_cnt.value(), "clear_store": rc_clr.isChecked()},
         }
         ac["task_settings"] = new_ts
         progs = [w for w in mw.warehouse if w.get("account_ref") == ac.get("id","")]
