@@ -275,6 +275,7 @@ class ConfigService:
                     if ac.get("emu_launch"):
                         # MAAOrch 已启动模拟器 → MAA 别动
                         c["Start.OpenEmulatorAfterLaunch"] = "False"
+                        c.pop("Start.EmulatorAddCommand", None)
                     else:
                         # MAAOrch 不托管 → MAA 负责启动
                         c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
