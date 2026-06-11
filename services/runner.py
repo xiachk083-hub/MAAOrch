@@ -491,7 +491,7 @@ class AccountRunner(QObject):
                             except: pass
                             try: p.kill()
                             except: pass
-                                return
+                            return
                         except Exception: pass
             # Stuck detection: same task over timeout → kill
             ac = self._active.get(aid)
