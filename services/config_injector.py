@@ -4,6 +4,9 @@ from pathlib import Path
 from datetime import datetime
 from infrastructure.task_constants import find_mumu_cli, CONNECT_CONFIG_MAP, TOUCH_MODE_MAP
 from app.service_context import ServiceContext
+from infrastructure.logger import Logger
+
+_CONFIG_LOG = Logger("injector")
 
 
 class ConfigService:
@@ -563,6 +566,7 @@ class ConfigService:
                 # gui.json: MAA reads Infrast mode from Infrast.DefaultInfrast (not gui.new.json Mode)
                 c["Infrast.DefaultInfrast"] = infra_mode
             tmp = gj.with_suffix(".json.tmp")
+            _CONFIG_LOG.info(f"写入 {fn} (use_v6={use_v6}, tasks={len(c.get('TaskQueue',[]))}, infra_mode={infra_mode})")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
 

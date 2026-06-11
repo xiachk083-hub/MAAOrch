@@ -16,6 +16,9 @@ from PySide6.QtCore import QObject, Signal, QTimer
 from app.service_context import ServiceContext
 from models.stats import RunStats
 from models.queue_entry import QueueEntry
+from infrastructure.logger import Logger
+
+_QUEUE_LOG = Logger("queue")
 
 
 class LaunchQueue(QObject):
@@ -211,17 +214,20 @@ class LaunchQueue(QObject):
 
                 # ① Already running?
                 if self.is_running(entry.account_id):
+                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 已在运行")
                     self.skipped.emit(entry.account_id, "已在运行")
                     continue
 
                 # ② Not yet time? Push back, stop checking this priority level
                 if now < entry.not_before:
+                    _QUEUE_LOG.debug(f"延迟 {entry.account_id}: 未到时间 ({entry.not_before})")
                     remaining.append(entry)
                     continue
 
                 # ③ Emulator occupied? Keep in queue
                 emu_idx = self._get_emu_key(entry.account_id)
                 if emu_idx and emu_idx in self._active_emus:
+                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被占用")
                     self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
                     remaining.append(entry)
                     continue
@@ -234,6 +240,7 @@ class LaunchQueue(QObject):
                         s = st.get_last_sanity()
                         min_s = ac.get("min_sanity", 0)
                         if s and s.get("current", 0) < min_s:
+                            _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 理智不足 ({s.get('current',0)}/{s.get('max',1)})")
                             self.skipped.emit(entry.account_id, "理智不足")
                             continue
 

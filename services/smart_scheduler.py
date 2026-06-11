@@ -4,6 +4,9 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from infrastructure.logger import Logger
+
+_SCHED_LOG = Logger("scheduler")
 
 
 def _arknights_now() -> datetime:
@@ -120,6 +123,8 @@ def decide(account: dict, global_cfg: dict) -> list[str]:
         if ms:
             tasks.append("Fight")
 
+    name = account.get("name", account.get("id", "?"))
+    _SCHED_LOG.debug(f"{name}: decide → {tasks}")
     return tasks
 
 

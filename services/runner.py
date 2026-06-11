@@ -45,6 +45,8 @@ class AccountRunner(QObject):
         self._restart_times: dict[str, list[float]] = {}  # account_id → [timestamps]
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
+        from infrastructure.logger import Logger
+        self._log = Logger("runner")
 
     # ── Public API ──
 
