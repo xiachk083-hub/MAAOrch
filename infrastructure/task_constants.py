@@ -3,16 +3,16 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 
 TASK_NAMES={"StartUp":"启动游戏","Fight":"刷关作战","Recruit":"公开招募","Infrast":"基建换班",
-    "Mall":"信用商店","Award":"领取奖励","Roguelike":"肉鸽探索","Reclamation":"生息演算","closedown":"关闭游戏"}
+    "Mall":"信用商店","Award":"领取奖励","Annihilation":"剿灭作战","Roguelike":"肉鸽探索","Reclamation":"生息演算","UserDataUpdate":"数据更新"}
 TASK_DEFAULTS={
     "StartUp":{"client_type":"Official"},
-    "Fight":{"stage":"","medicine":0,"times":99,"use_expiring_medicine":True,"medicine_expire_days":2,"use_stone":False,"stone":0,"enable_times_limit":False,"stage_reset_mode":"Current","annihilation_stage":"Annihilation","use_custom_annihilation":False,"hide_unavailable_stage":False},
-    "Recruit":{"select":[3,4,5],"confirm":[3,4,5],"times":4,"refresh":True,"force_refresh":True,"prefer_tag_enabled":True,"preserve_tag_enabled":False,"preserve_tags":"支援机械","level3_time":540,"level4_time":540,"level5_time":540},
-    "Infrast":{"mode":"Normal","facilities":["Trade","Mfg","Control","Power","Reception","Office","Dorm"],"drones":"Money","dorm_threshold":30,"dorm_trust_enabled":True,"originium_shard_auto":True,"reception_clue":True,"send_clue":True,"continue_training":False,"filename":""},
-    "Mall":{"shopping":True,"credit_fight":False,"visit_friends":True,"first_list":"招聘许可","blacklist":"碳;家具","only_buy_discount":False,"reserve_max_credit":False},
-    "Award":{"award":True,"mail":False,"free_gacha":False,"orundum":False,"mining":False,"special_access":False},
-    "Roguelike":{"theme":"Sarkaz","mode":0,"difficulty":15,"squad":"","roles":"","core_char":"","start_count":99999,"investment":True,"invest_count":999,"stop_when_level_max":False,"stop_when_deposit_full":False,"use_support":False,"start_with_seed":False,"seed":""},
-    "Reclamation":{"theme":"Tales","mode":"ProsperityInSave","tool_to_craft":"","max_craft_count":16,"clear_store":False},
+    "Fight":{"stage":"","medicine":0,"times":99,"use_expiring_medicine":True,"medicine_expire_days":2,"use_stone":False,"stone":0,"enable_times_limit":False,"enable_target_drop":False,"drop_id":"","drop_count":0,"is_inventory_target":False,"is_dr_grandet":False,"use_optional_stage":False,"use_stone_allow_save":False,"use_weekly_schedule":False,"hide_series":False,"series":0,"stage_reset_mode":"Current","annihilation_stage":"Annihilation","use_custom_annihilation":False,"hide_unavailable_stage":False},
+    "Recruit":{"select":[3,4,5],"confirm":[3,4,5],"times":4,"refresh":True,"force_refresh":True,"prefer_tag_enabled":True,"preserve_tag_enabled":False,"preserve_tags":"支援机械","extra_tag_mode":0,"level3_prefer_tags":"","level3_time":540,"level4_time":540,"level5_time":540},
+    "Infrast":{"mode":"Normal","facilities":["Trade","Mfg","Control","Power","Reception","Office","Dorm"],"drones":"Money","dorm_threshold":30,"dorm_trust_enabled":True,"dorm_filter_not_stationed":True,"originium_shard_auto":True,"reception_message_board":True,"reception_clue":True,"send_clue":True,"continue_training":False,"filename":""},
+    "Mall":{"shopping":True,"credit_fight":False,"visit_friends":True,"first_list":"招聘许可","blacklist":"碳;家具","only_buy_discount":False,"reserve_max_credit":False,"shopping_ignore_blacklist":False,"credit_fight_once_a_day":True,"visit_friends_once_a_day":False},
+    "Award":{"award":True,"mail":True,"free_gacha":False,"orundum":True,"mining":False,"special_access":False},
+    "Roguelike":{"theme":"Sarkaz","mode":"Exp","difficulty":15,"squad":"","squad_collectible":"","roles":"","core_char":"","start_count":99999,"investment":True,"invest_count":999,"invest_with_more_score":False,"collectible_start_awards":"HotWater, Hope, Idea","collectible_shopping":False,"start_with_elite_two":False,"start_with_elite_two_only":False,"expected_collapsal_paradigms":"","monthly_squad_auto_iterate":True,"monthly_squad_check_comms":True,"deep_exploration_auto_iterate":True,"find_playtime_target":"Ling","use_support":False,"use_support_non_friend":False,"refresh_trader_with_dice":False,"squad_is_foldartal":False,"sami_first_floor_foldartal":False,"sami_first_floor_foldartals":"","sami_new_squad_2_starting_foldartal":False,"sami_new_squad_2_starting_foldartals":"","stop_when_deposit_full":False,"stop_at_final_boss":False,"stop_when_level_max":False,"start_with_seed":False,"seed":""},
+    "Reclamation":{"theme":"Tales","mode":"ProsperityInSave","tool_to_craft":"","increment_mode":0,"max_craft_count":16,"clear_store":False},
 }
 CONNECT_CONFIG_MAP = {"MuMuPro": "MuMuEmulator12"}
 TOUCH_MODE_MAP = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}
