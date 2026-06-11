@@ -484,15 +484,14 @@ class AccountRunner(QObject):
                                     from infrastructure.task_constants import find_mumu_cli, CF
                                     cli = find_mumu_cli()
                                     if cli:
-                                        try: subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"],
-                                                            creationflags=subprocess.CREATE_NO_WINDOW)
+                                        try: subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
                                         except Exception: pass
                             try: p.terminate(); p.wait(5)
                             except: pass
                             try: p.kill()
                             except: pass
                             return
-                        except Exception: pass
+                    except Exception: pass
             # Stuck detection: same task over timeout → kill
             ac = self._active.get(aid)
             if ac:
