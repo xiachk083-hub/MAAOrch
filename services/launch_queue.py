@@ -149,7 +149,8 @@ class LaunchQueue(QObject):
         if exit_code == -3:
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
-            self.enqueue(account_id, "retry", priority=max_prio + 1)
+            self.enqueue(account_id, "retry", priority=max_prio + 1,
+                        persist_plan=ac.get("_persist_plan", False))
             self.ctx.log(f"⏱ {ac.get('name', account_id)} 超时重排，位置 #{max_prio + 2}")
             self._tick()
             return
@@ -167,7 +168,8 @@ class LaunchQueue(QObject):
                              creationflags=_sp.CREATE_NO_WINDOW)
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
-            self.enqueue(account_id, "retry", priority=max_prio + 1)
+            self.enqueue(account_id, "retry", priority=max_prio + 1,
+                        persist_plan=ac.get("_persist_plan", False))
             self.ctx.log(f"[ADB] {ac.get('name', account_id)} 模拟器已重启，重排")
             self._tick()
             return
@@ -190,7 +192,8 @@ class LaunchQueue(QObject):
             from datetime import datetime, timedelta
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
             self.enqueue(account_id, "retry", priority=max_prio + 1,
-                        not_before=datetime.now() + timedelta(seconds=delay))
+                        not_before=datetime.now() + timedelta(seconds=delay),
+                        persist_plan=ac.get("_persist_plan", False))
             self.ctx.log(f"[重试] {ac.get('name', account_id)} {delay}s 后重试 (exp backoff {failures})")
             self._tick()
             return

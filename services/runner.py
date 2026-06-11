@@ -750,7 +750,8 @@ class AccountRunner(QObject):
             mode = self.ctx.config.get("schedule_mode", "daily")
             if exit_code == 0 and (not ac.get("_persist_plan") or mode != "daily"):
                 ac["smart_plan"] = ""
-            ac.pop("_persist_plan", None)
+            if exit_code == 0:
+                ac.pop("_persist_plan", None)
 
         is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):
