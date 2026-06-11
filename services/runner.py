@@ -46,7 +46,7 @@ class AccountRunner(QObject):
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
         self._log_positions: dict[str, int] = {}      # account_id → asst.log read position
-        self._adb_down_since: dict[str, float] = {}    # account_id → time of first ADB failure
+        self._adb_fail_count: dict[str, int] = {}     # account_id → consecutive ADB ping failures
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -525,16 +525,15 @@ class AccountRunner(QObject):
                         r = subprocess.run([adb_path, "-s", addr, "shell", "echo", "ping"],
                                           capture_output=True, timeout=5, creationflags=CF)
                         if r.returncode == 0:
-                            self._adb_down_since.pop(aid, None)
+                            self._adb_fail_count.pop(aid, None)
                         else:
-                            now = time.time()
-                            if aid not in self._adb_down_since:
-                                self._adb_down_since[aid] = now
+                            fail = self._adb_fail_count.get(aid, 0) + 1
+                            self._adb_fail_count[aid] = fail
                             subprocess.run([adb_path, "connect", addr],
                                           capture_output=True, timeout=5, creationflags=CF)
-                            if now - self._adb_down_since[aid] > 30:
-                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} 断连超过30s，重启 MAA")
-                                self._adb_down_since.pop(aid, None)
+                            if fail >= 3:
+                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 断连，重启 MAA")
+                                self._adb_fail_count.pop(aid, None)
                                 try: p.terminate(); p.wait(3)
                                 except: pass
                                 try: p.kill()
@@ -674,7 +673,8 @@ class AccountRunner(QObject):
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
-            ac["smart_plan"] = ""
+            if exit_code != -8:
+                ac["smart_plan"] = ""
 
         is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):
