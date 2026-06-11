@@ -85,10 +85,10 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
             mw.launch_queue._pending.clear()
             mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
-    tasks = ["StartUp", "Award"]
+    tasks = ["StartUp"]
     if include_anni:
         tasks.append("Annihilation")
-    tasks.extend(["Fight", "Infrast", "Recruit", "Mall"])
+    tasks.extend(["Fight", "Infrast", "Recruit", "Mall", "Award"])
     plan = ",".join(tasks)
     count = 0
     for a in mw.accounts:
