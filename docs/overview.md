@@ -556,4 +556,5 @@ asst.log (MAA 运行日志)
 | subprocess gbk 修复 | 中文 Windows 必须加 `encoding="utf-8", errors="replace"` |
 | API token 自动生成 | 启动时检查，空则生成随机 token，hmac.compare_digest 鉴权 |
 | `EmulatorAddCommand` 始终写入 | 只要有 `emu_instance_index` 就写 `control --vmindex N launch`。即使 `emu_launch=True`（MAAOrch 启动），PostActions=12 退出模拟器时 MAA 也需要 VM index |
+| ADB 连接失败尝试启动模拟器 | MAA v6 此复选框不存于 gui.json/gui.new.json（内部管理），需用户在 MAA 原版 GUI 手动勾选一次，之后 MAA 会记住 |
 | mumu-cli `shutdown` 非 `quit` | `quit` 子命令不存在 |
