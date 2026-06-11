@@ -169,6 +169,17 @@ class LaunchQueue(QObject):
         # Retry on error: exponential backoff, re-enqueue at tail
         if exit_code != 0 and exit_code != -9 and ac:
             failures = ac.get("consecutive_failures", 0)
+            # Restart emulator on repeated failures (3+)
+            if failures >= 3:
+                emu_idx = ac.get("emu_instance_index", "")
+                if emu_idx:
+                    from infrastructure.task_constants import find_mumu_cli
+                    cli = find_mumu_cli()
+                    if cli:
+                        import subprocess as _sp
+                        self.ctx.log(f"[重启] {ac.get('name', account_id)} 连续失败 {failures} 次，重启模拟器 #{emu_idx}")
+                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=_sp.CREATE_NO_WINDOW)
+                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=_sp.CREATE_NO_WINDOW)
             delay = min(300, 5 * (2 ** (failures - 1))) if failures > 0 else 5
             from datetime import datetime, timedelta
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
