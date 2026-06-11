@@ -69,7 +69,12 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            if ac.get("post_action"): c["MainFunction.PostActions"] = "12"
+            # Only write PostActions if we have mumu-cli for emulator shutdown
+            emu_cli_ok = False
+            if ac.get("emu_instance_index","") and find_mumu_cli():
+                emu_cli_ok = True
+            if ac.get("post_action") and (emu_cli_ok or not ac.get("emu_instance_index")):
+                c["MainFunction.PostActions"] = "12"
             c["Connect.RetryOnDisconnected"]="True"
             c["Connect.AllowADBRestart"]="True"
             c["Connect.AllowADBHardRestart"]="True"
@@ -270,7 +275,6 @@ class ConfigService:
                     c["Start.ClientType"] = ac["game_client"]
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
-                c["MainFunction.PostActions"] = "12"
                 c["Connect.RetryOnDisconnected"] = "True"
                 c["Connect.AllowADBRestart"] = "True"
                 c["Connect.AllowADBHardRestart"] = "True"
@@ -287,6 +291,11 @@ class ConfigService:
                         c["Start.OpenEmulatorAfterLaunch"] = "True"
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
+
+            # PostActions: only write if we have mumu-cli for emulator shutdown
+            emu_cli_ok = bool(emu_idx and find_mumu_cli())
+            if ac.get("post_action") and (emu_cli_ok or not emu_idx):
+                c["MainFunction.PostActions"] = "12"
 
             if use_v6:
                 task_set = {t.lower() for t in task_list}
