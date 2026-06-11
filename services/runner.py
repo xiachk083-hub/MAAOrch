@@ -46,7 +46,6 @@ class AccountRunner(QObject):
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
         self._log_positions: dict[str, int] = {}      # account_id → asst.log read position
-        self._adb_fail_count: dict[str, int] = {}     # account_id → consecutive ADB ping failures
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -515,29 +514,6 @@ class AccountRunner(QObject):
                                 except: pass
                                 return
                     except Exception: pass
-            # ADB keepalive: ping + reconnect (don't kill MAA)
-            ac = self._active.get(aid)
-            if ac:
-                addr = ac.get("adb_address", "")
-                adb_path = ac.get("adb_path", "") or "adb"
-                if addr:
-                    try:
-                        r = subprocess.run([adb_path, "-s", addr, "shell", "echo", "ping"],
-                                          capture_output=True, timeout=3, creationflags=CF)
-                        if r.returncode == 0:
-                            if aid in self._adb_fail_count:
-                                self._adb_fail_count.pop(aid, None)
-                                self.log_msg.emit(f"[ADB] {ac.get('name', aid)} ADB 已恢复")
-                        else:
-                            fail = self._adb_fail_count.get(aid, 0) + 1
-                            self._adb_fail_count[aid] = fail
-                            if fail <= 2:
-                                subprocess.run([adb_path, "connect", addr],
-                                              capture_output=True, timeout=3, creationflags=CF)
-                    except Exception:
-                        pass
-                    except Exception:
-                        pass
             # Stuck detection: same task over timeout → kill
             ac = self._active.get(aid)
             if ac:
