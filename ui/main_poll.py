@@ -36,6 +36,7 @@ def do_smart_tick(mw: Any) -> None:
     if getattr(mw, "_last_smart_minute", "") == minute_key:
         return
     mw._last_smart_minute = minute_key
+    mode = mw.config.get("schedule_mode", "daily")
     from services.smart_scheduler import decide
     count = 0
     skipped_no_cfg = 0
@@ -54,21 +55,33 @@ def do_smart_tick(mw: Any) -> None:
         last_error = a.get("smart_last_error", 0)
         if last_error and time.time() - last_error < 300:
             continue
-        tasks = decide(a, sg)
+        if mode == "daily":
+            tasks = decide(a, sg)
+        elif mode == "roguelike":
+            tasks = ["StartUp", "Roguelike"]
+        elif mode == "reclamation":
+            tasks = ["StartUp", "Reclamation"]
+        else:
+            tasks = decide(a, sg)
         if tasks:
             plan_txt = ",".join(tasks)
-            mw._log(f"[智能] {a.get('name', aid)} decide覆盖smart_plan: {plan_txt}")
+            mw._log(f"[智能] {a.get('name', aid)} {mode}调度: {plan_txt}")
             a["smart_plan"] = plan_txt
             mw.launch_queue.enqueue(aid, "schedule", priority=1)
             count += 1
     if count:
-        mw._log(f"\U0001f9e0 智能调度: {count} 个账号已入队" + (f" ({skipped_no_cfg} 个缺配置跳过)" if skipped_no_cfg else ""))
+        label_map = {"daily":"", "roguelike":"肉鸽", "reclamation":"生息"}
+        mode_lbl = label_map.get(mode, "")
+        mw._log(f"\U0001f9e0 {mode_lbl}调度: {count} 个账号已入队" + (f" ({skipped_no_cfg} 个缺配置跳过)" if skipped_no_cfg else ""))
         if mw.launch_queue.is_paused:
             mw.launch_queue.resume()
     else:
         reasons = [f"{skipped_no_cfg} 个缺配置"] if skipped_no_cfg else []
-        reasons.append("体力不足 / 暂无任务")
-        mw._log(f"\U0001f9e0 智能调度: 暂无账号需要调度（{'，'.join(reasons)}）")
+        if mode == "daily":
+            reasons.append("体力不足 / 暂无任务")
+        else:
+            reasons.append("全部已在运行")
+        mw._log(f"\U0001f9e0 调度: {'，'.join(reasons)}")
 
 
 def do_health_check(mw: Any) -> None:

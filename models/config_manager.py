@@ -12,6 +12,7 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
     "daigan_url":"",
     "parallel_max":1,"daily_batch_time":"",
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
+    "schedule_mode":"daily",
     "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[],
     "maa_version":"","maa_instances":0,"maa_instances_version":"",
     "smart_global":{"threshold":80,"expiring_medicine":True,"medicine_days":2,"annihilation_enabled":True,
@@ -76,6 +77,7 @@ def load_config() -> dict:
             if ver>=5:
                 data.setdefault("maa_version", "")
                 data.setdefault("maa_instances", 0)
+                data.setdefault("schedule_mode", "daily")
                 data.setdefault("smart_global", dict(DEFAULT_CONFIG["smart_global"]))
                 sg = data["smart_global"]
                 sg["post_action"] = DEFAULT_CONFIG["smart_global"]["post_action"]
