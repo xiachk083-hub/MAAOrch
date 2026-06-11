@@ -102,6 +102,8 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
         count += 1
     if count:
         mw._log(f"▶ 强制调度{'含剿灭' if include_anni else '刷关'}: {count} 个账号已入队")
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(200, mw.launch_queue.tick)
 
 
 def _filter_click(mw: Any, key: str) -> None:

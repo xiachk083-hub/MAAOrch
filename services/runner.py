@@ -331,6 +331,7 @@ class AccountRunner(QObject):
                     plan_txt = ",".join(task_list)
                     ac["smart_plan"] = plan_txt
                 self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
+                self._log.info(f"[注入] {ac.get('name', aid)} smart_plan_raw={ac.get('smart_plan','<空>')} task_list={task_list}")
                 self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
             else:
                 self.ctx.cfg.inject_smart(["StartUp", "Award"], ac, str(config_dir))
@@ -689,6 +690,7 @@ class AccountRunner(QObject):
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
+            self._log.info(f"[清理] {name} exit={exit_code} smart_plan当前={plan or '<空>'}")
             if exit_code != -8:
                 ac["smart_plan"] = ""
 

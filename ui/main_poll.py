@@ -57,6 +57,7 @@ def do_smart_tick(mw: Any) -> None:
         tasks = decide(a, sg)
         if tasks:
             plan_txt = ",".join(tasks)
+            mw._log(f"[智能] {a.get('name', aid)} decide覆盖smart_plan: {plan_txt}")
             a["smart_plan"] = plan_txt
             mw.launch_queue.enqueue(aid, "schedule", priority=1)
             count += 1
