@@ -286,8 +286,18 @@ class AccountRunner(QObject):
                 else:
                     self.log_msg.emit(f"警告: Android 开机超时，继续尝试启动 MAA")
 
-        # ADB connection (ensure connected before inject)
+        # ADB server health check (kill zombie servers from other adb.exe)
         adb = ac.get("adb_path", "") or "adb"
+        try:
+            r = subprocess.run([adb, "devices"], capture_output=True, text=True, timeout=5, creationflags=CF)
+            if "protocol fault" in r.stderr.lower() or "connection reset" in r.stderr.lower():
+                self.log_msg.emit("ADB server 异常，重启中...")
+                subprocess.run([adb, "kill-server"], capture_output=True, timeout=5, creationflags=CF)
+                subprocess.run([adb, "start-server"], capture_output=True, timeout=5, creationflags=CF)
+        except:
+            pass
+
+        # ADB connection (ensure connected before inject)
         addr = ac.get("adb_address", "")
         if addr:
             for _attempt in range(3):

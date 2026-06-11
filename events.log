@@ -1843,3 +1843,39 @@
 {"t": "2026-06-11 18:31:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 24688, "elapsed": 74.8, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
 {"t": "2026-06-11 18:32:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 24688, "elapsed": 104.8, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
 {"t": "2026-06-11 18:32:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 24688, "elapsed": 134.8, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:33:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 24688, "elapsed": 164.8, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:33:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 24688, "elapsed": 194.8, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 18:33:40", "l": "INFO", "src": "app", "func": "_log:192", "tid": 24688, "elapsed": 204.7, "msg": "[资源] 内存已恢复 (4.6GB 可用)，继续启动"}
+{"t": "2026-06-11 18:33:49", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 0.8, "msg": "══ 启动 ══"}
+{"t": "2026-06-11 18:33:49", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 0.8, "msg": "[队列] 从历史恢复 0 个等待项"}
+{"t": "2026-06-11 18:33:49", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 0.8, "msg": "账号: 2 | 仓库: 0 | 分组: 0"}
+{"t": "2026-06-11 18:33:49", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 1.1, "msg": "API 服务已启动: http://127.0.0.1:19999"}
+{"t": "2026-06-11 18:33:53", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 4.3, "msg": "[队列] 阿仄仄仄 入队 (force)"}
+{"t": "2026-06-11 18:33:53", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 4.3, "msg": "[队列] 樄耳东c 入队 (force)"}
+{"t": "2026-06-11 18:33:53", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 4.3, "msg": "▶ 强制调度刷关: 2 个账号已入队"}
+{"t": "2026-06-11 18:33:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 5.5, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 18:33:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 5.5, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 18:33:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 5.6, "msg": "启动模拟器 #0"}
+{"t": "2026-06-11 18:33:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 5.8, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:33:54", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 5.9, "msg": "⚠ 环境检测: 0 个错误, 1 个警告"}
+{"t": "2026-06-11 18:33:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 10.5, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 18:33:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 10.5, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 18:33:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 10.6, "msg": "启动模拟器 #1"}
+{"t": "2026-06-11 18:33:59", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 10.8, "msg": "等待模拟器 ADB 连接 (最长 30s)..."}
+{"t": "2026-06-11 18:34:15", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 26.8, "msg": "[资源] 系统可用内存 3.8GB 不足，暂停新启动"}
+{"t": "2026-06-11 18:34:25", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 36.4, "msg": "警告: 模拟器 #0 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:34:25", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 36.4, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:34:25", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 36.4, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:34:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 41.3, "msg": "警告: 模拟器 #1 ADB 连接超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:34:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 41.3, "msg": "等待 Android 开机完成..."}
+{"t": "2026-06-11 18:34:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 41.3, "msg": "警告: Android 开机超时，继续尝试启动 MAA"}
+{"t": "2026-06-11 18:34:32", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 43.5, "msg": "🧠 智能调度: StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 18:34:32", "l": "INFO", "src": "injector", "func": "_write:571", "tid": 4172, "elapsed": 43.5, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:34:32", "l": "INFO", "src": "injector", "func": "_write:571", "tid": 4172, "elapsed": 43.5, "msg": "写入 gui.new.json (use_v6=True, tasks=9, infra_mode=Normal)"}
+{"t": "2026-06-11 18:34:32", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 43.5, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 18:34:32", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 43.6, "msg": "✓ 启动 MAA PID=27700"}
+{"t": "2026-06-11 18:34:37", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 48.4, "msg": "🧠 智能调度: StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 18:34:37", "l": "INFO", "src": "injector", "func": "_write:571", "tid": 23396, "elapsed": 48.5, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 18:34:37", "l": "INFO", "src": "injector", "func": "_write:571", "tid": 23396, "elapsed": 48.5, "msg": "写入 gui.new.json (use_v6=True, tasks=9, infra_mode=Normal)"}
+{"t": "2026-06-11 18:34:37", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 48.5, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 18:34:37", "l": "INFO", "src": "app", "func": "_log:192", "tid": 25740, "elapsed": 48.5, "msg": "✓ 启动 MAA PID=30704"}
