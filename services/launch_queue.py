@@ -155,7 +155,7 @@ class LaunchQueue(QObject):
                     if cli:
                         try:
                             import subprocess as _sp
-                            _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                            _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
                                       creationflags=_sp.CREATE_NO_WINDOW)
                         except Exception:
                             pass
@@ -178,7 +178,7 @@ class LaunchQueue(QObject):
                     if cli:
                         import subprocess as _sp
                         self.ctx.log(f"[重启] {ac.get('name', account_id)} 连续失败 {failures} 次，重启模拟器 #{emu_idx}")
-                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=_sp.CREATE_NO_WINDOW)
+                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"], creationflags=_sp.CREATE_NO_WINDOW)
                         _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=_sp.CREATE_NO_WINDOW)
             delay = min(300, 5 * (2 ** (failures - 1))) if failures > 0 else 5
             from datetime import datetime, timedelta
