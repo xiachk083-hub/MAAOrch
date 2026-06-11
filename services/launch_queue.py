@@ -153,8 +153,17 @@ class LaunchQueue(QObject):
             self._tick()
             return
 
+        # ADB disconnect (exit -8): immediate re-launch, no backoff
+        if exit_code == -8:
+            import heapq as _hq
+            max_prio = max((e.sort_key[0] for e in self._pending), default=0)
+            self.enqueue(account_id, "retry", priority=max_prio + 1)
+            self.ctx.log(f"[ADB] {ac.get('name', account_id)} ADB 断连，立即重排")
+            self._tick()
+            return
+
         # Retry on error: exponential backoff, re-enqueue at tail
-        if exit_code != 0 and exit_code != -9 and ac:
+        if exit_code != 0 and exit_code not in (-9, -8) and ac:
             failures = ac.get("consecutive_failures", 0)
             # Restart emulator on repeated failures (3+)
             if failures >= 3:
