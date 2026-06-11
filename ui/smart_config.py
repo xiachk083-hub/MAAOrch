@@ -124,7 +124,9 @@ def open_smart_config(mw: Any) -> None:
     l3.addLayout(dr_row)
     chk_row = QHBoxLayout()
     dt = QCheckBox("宿舍信任"); dt.setChecked(it.get("dorm_trust_enabled",True)); chk_row.addWidget(dt)
+    dfs = QCheckBox("过滤未进驻"); dfs.setChecked(it.get("dorm_filter_not_stationed",True)); chk_row.addWidget(dfs)
     os = QCheckBox("自动搓玉"); os.setChecked(it.get("originium_shard_auto",True)); chk_row.addWidget(os)
+    rmb = QCheckBox("会客留言板"); rmb.setChecked(it.get("reception_message_board",True)); chk_row.addWidget(rmb)
     rc = QCheckBox("会客线索"); rc.setChecked(it.get("reception_clue",True)); chk_row.addWidget(rc)
     sc = QCheckBox("送线索"); sc.setChecked(it.get("send_clue",True)); chk_row.addWidget(sc)
     ct = QCheckBox("继续训练"); ct.setChecked(it.get("continue_training",False)); chk_row.addWidget(ct)
@@ -152,8 +154,14 @@ def open_smart_config(mw: Any) -> None:
     d_row = QHBoxLayout()
     od = QCheckBox("仅买折扣"); od.setChecked(mt.get("only_buy_discount",False)); d_row.addWidget(od)
     rm = QCheckBox("保留信用点"); rm.setChecked(mt.get("reserve_max_credit",False)); d_row.addWidget(rm)
+    sib = QCheckBox("满库存忽略黑名单"); sib.setChecked(mt.get("shopping_ignore_blacklist",False)); d_row.addWidget(sib)
     d_row.addStretch()
     l4.addLayout(d_row)
+    freq_row = QHBoxLayout()
+    cfo = QCheckBox("每日信用战"); cfo.setChecked(mt.get("credit_fight_once_a_day",True)); freq_row.addWidget(cfo)
+    vfo = QCheckBox("每日访问好友"); vfo.setChecked(mt.get("visit_friends_once_a_day",False)); freq_row.addWidget(vfo)
+    freq_row.addStretch()
+    l4.addLayout(freq_row)
     l4.addStretch()
     tabs.addTab(w4, "信用商店")
 
@@ -199,13 +207,18 @@ def open_smart_config(mw: Any) -> None:
             "Infrast": {"mode": mc.currentData(),
                         "facilities": [f for f,c in fac_cbs.items() if c.isChecked()] or _INFRAST_FACILITIES,
                         "drones": dc.currentData(), "dorm_threshold": ds.value(),
-                        "dorm_trust_enabled": dt.isChecked(), "originium_shard_auto": os.isChecked(),
+                        "dorm_trust_enabled": dt.isChecked(), "dorm_filter_not_stationed": dfs.isChecked(),
+                        "originium_shard_auto": os.isChecked(),
+                        "reception_message_board": rmb.isChecked(),
                         "reception_clue": rc.isChecked(), "send_clue": sc.isChecked(),
                         "continue_training": ct.isChecked()},
             "Mall": {"shopping": shop.isChecked(), "blacklist": bl.text().strip(),
                      "credit_fight": cf2.isChecked(), "visit_friends": vf.isChecked(),
                      "first_list": fl.text().strip(), "only_buy_discount": od.isChecked(),
-                     "reserve_max_credit": rm.isChecked()},
+                     "reserve_max_credit": rm.isChecked(),
+                     "shopping_ignore_blacklist": sib.isChecked(),
+                     "credit_fight_once_a_day": cfo.isChecked(),
+                     "visit_friends_once_a_day": vfo.isChecked()},
             "Award": {"award": aw.isChecked(), "mail": ml.isChecked(), "free_gacha": fg.isChecked(),
                       "orundum": oru.isChecked(), "mining": mi_cb.isChecked(), "special_access": sa.isChecked()},
         }
