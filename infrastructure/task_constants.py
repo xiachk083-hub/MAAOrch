@@ -1,4 +1,4 @@
-import os,json,subprocess,time
+import os,json,subprocess,time,functools
 from pathlib import Path
 from PySide6.QtCore import QThread, Signal
 
@@ -51,6 +51,7 @@ MUMU_CLI_CANDIDATES=[
 if (ev:=os.environ.get("MUMU_CLI_HOME","")):
     MUMU_CLI_CANDIDATES.insert(0,str(Path(ev)/"mumu-cli.exe"))
 
+@functools.lru_cache(maxsize=1)
 def find_mumu_cli() -> str | None:
     # Check known paths + USERPROFILE
     extra=[str(Path(os.environ.get("USERPROFILE","."))/"MuMuPlayer"/"nx_main"/"mumu-cli.exe")]
@@ -78,6 +79,9 @@ def find_mumu_cli() -> str | None:
         except PermissionError: pass
         except Exception: pass
     return None
+
+def clear_mumu_cli_cache() -> None:
+    find_mumu_cli.cache_clear()
 
 def find_adb() -> str | None:
     """Find adb.exe near mumu-cli or by scanning drives."""
