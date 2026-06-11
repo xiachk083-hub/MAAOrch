@@ -747,7 +747,8 @@ class AccountRunner(QObject):
             plan_log = f" 🧠 {plan}" if plan else ""
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             self._log.info(f"[清理] {name} exit={exit_code} smart_plan当前={plan or '<空>'}")
-            if exit_code == 0 and not ac.get("_persist_plan"):
+            mode = self.ctx.config.get("schedule_mode", "daily")
+            if exit_code == 0 and (not ac.get("_persist_plan") or mode != "daily"):
                 ac["smart_plan"] = ""
             ac.pop("_persist_plan", None)
 

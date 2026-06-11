@@ -195,8 +195,8 @@ class LaunchQueue(QObject):
             self._tick()
             return
 
-        # Normal completion with persist_plan → re-enqueue immediately
-        if exit_code == 0 and ac.get("_persist_plan"):
+        # Normal completion with persist_plan → re-enqueue immediately (daily mode only)
+        if exit_code == 0 and ac.get("_persist_plan") and self.ctx.config.get("schedule_mode", "daily") == "daily":
             import heapq as _hq
             ac["smart_plan"] = ac.get("smart_plan", "")  # keep plan
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
