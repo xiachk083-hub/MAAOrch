@@ -497,7 +497,7 @@ class AccountRunner(QObject):
                                     self._log.debug(f"[关模拟器] cli={cli}")
                                     if cli:
                                         try:
-                                            subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"], creationflags=subprocess.CREATE_NO_WINDOW)
+                                            subprocess.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"], creationflags=subprocess.CREATE_NO_WINDOW)
                                             self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
                                         except Exception as e:
                                             self.log_msg.emit(f"[完成后] 关模拟器失败: {e}")
@@ -645,7 +645,7 @@ class AccountRunner(QObject):
                 cli = find_mumu_cli()
                 if cli:
                     try:
-                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "quit"],
+                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
                                   creationflags=_sp.CREATE_NO_WINDOW)
                         self.log_msg.emit(f"[完成后] 关闭模拟器 #{emu_idx}")
                     except Exception as e:
