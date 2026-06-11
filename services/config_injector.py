@@ -384,6 +384,11 @@ class ConfigService:
                             item["UseMedicine"] = False
                             item["StagePlan"] = [day_stage] if day_stage else []
                             item["IsStageManually"] = bool(day_stage)
+                    # Move Award to the end (reward collecting always last)
+                    award_idx = next((i for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "award"), None)
+                    if award_idx is not None:
+                        award_item = clean_tq.pop(award_idx)
+                        clean_tq.append(award_item)
                     c["TaskQueue"] = clean_tq
                     c["TaskSelectedIndex"] = 0
                     c.setdefault("DragItemIsChecked", {})
