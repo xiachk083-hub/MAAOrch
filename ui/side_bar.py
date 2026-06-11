@@ -98,7 +98,7 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
         if mw.launch_queue.is_queued(aid) or mw.launch_queue.is_running(aid):
             continue
         a["smart_plan"] = plan
-        mw.launch_queue.enqueue(aid, "force", priority=0)
+        mw.launch_queue.enqueue(aid, "force", priority=0, persist_plan=True)
         count += 1
     if count:
         mw._log(f"▶ 强制调度{'含剿灭' if include_anni else '刷关'}: {count} 个账号已入队")

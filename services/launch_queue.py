@@ -67,11 +67,12 @@ class LaunchQueue(QObject):
     # ── Public API ──
 
     def enqueue(self, account_id: str, source: str = "manual",
-                priority: int = 0, not_before: datetime | None = None) -> None:
+                priority: int = 0, not_before: datetime | None = None,
+                persist_plan: bool = False) -> None:
         """Add an account to the launch queue. Priority: 0=manual, 1=schedule, 2=sanity."""
         with self._lock:
             self._pending = [e for e in self._pending if e.account_id != account_id]
-            entry = QueueEntry.make(account_id, source, priority, not_before)
+            entry = QueueEntry.make(account_id, source, priority, not_before, persist_plan)
             heapq = self._import_heapq()
             heapq.heappush(self._pending, entry)
             self._save_queue()
@@ -194,6 +195,16 @@ class LaunchQueue(QObject):
             self._tick()
             return
 
+        # Normal completion with persist_plan → re-enqueue immediately
+        if exit_code == 0 and ac.get("_persist_plan"):
+            import heapq as _hq
+            ac["smart_plan"] = ac.get("smart_plan", "")  # keep plan
+            max_prio = max((e.sort_key[0] for e in self._pending), default=0)
+            self.enqueue(account_id, "force", priority=max_prio + 1, persist_plan=True)
+            self.ctx.log(f"[继续] {ac.get('name', account_id)} 强制任务完成，继续下一轮")
+            self._tick()
+            return
+
         # Round-robin: calculate recovery based on deficit
         deficit_cfg = self.ctx.config.get("deficit") if self.ctx.config.get("deficit") is not None else ac.get("round_robin_deficit", 0)
         if deficit_cfg >= 0:
@@ -301,6 +312,11 @@ class LaunchQueue(QObject):
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
+        # Store persist_plan on account so cleanup knows to keep smart_plan
+        for a in self.ctx.accounts:
+            if a["id"] == entry.account_id:
+                a["_persist_plan"] = entry.persist_plan
+                break
         if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
             self.ctx._mw.runner.launch_by_id(entry.account_id)
         self.launched.emit(entry.account_id)
