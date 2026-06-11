@@ -241,11 +241,26 @@ class AccountRunner(QObject):
         if ac.get("emu_launch") and emu_idx:
             cli = find_mumu_cli()
             if cli:
-                self.log_msg.emit(f"启动模拟器 #{emu_idx}")
+                # Check if emulator already running before launching
+                already_running = False
                 try:
-                    subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
-                except Exception as e:
-                    self.log_msg.emit(f"启动模拟器失败: {e}")
+                    import json as _json
+                    r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
+                                      capture_output=True, text=True, timeout=5, creationflags=CF)
+                    if r.returncode == 0:
+                        data = _json.loads(r.stdout)
+                        if data.get("is_android_started") or data.get("is_process_started"):
+                            already_running = True
+                except Exception:
+                    pass
+                if already_running:
+                    self.log_msg.emit(f"模拟器 #{emu_idx} 已在运行")
+                else:
+                    self.log_msg.emit(f"启动模拟器 #{emu_idx}")
+                    try:
+                        subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
+                    except Exception as e:
+                        self.log_msg.emit(f"启动模拟器失败: {e}")
             # Wait for emulator to be ready (poll ADB connection)
             adb = ac.get("adb_path", "") or "adb"
             addr = ac.get("adb_address", "")
