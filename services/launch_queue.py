@@ -153,12 +153,21 @@ class LaunchQueue(QObject):
             self._tick()
             return
 
-        # ADB disconnect (exit -8): immediate re-launch, no backoff
+        # ADB disconnect (exit -8): restart emulator + re-launch, no backoff
         if exit_code == -8:
+            emu_idx = ac.get("emu_instance_index", "")
+            if emu_idx:
+                from infrastructure.task_constants import find_mumu_cli
+                cli = find_mumu_cli()
+                if cli:
+                    self.ctx.log(f"[ADB] {ac.get('name', account_id)} 重启模拟器 #{emu_idx}")
+                    import subprocess as _sp
+                    _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "launch"],
+                             creationflags=_sp.CREATE_NO_WINDOW)
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
             self.enqueue(account_id, "retry", priority=max_prio + 1)
-            self.ctx.log(f"[ADB] {ac.get('name', account_id)} ADB 断连，立即重排")
+            self.ctx.log(f"[ADB] {ac.get('name', account_id)} 模拟器已重启，重排")
             self._tick()
             return
 
