@@ -441,7 +441,7 @@ class AccountRunner(QObject):
         maa_mem = 0
         for aid in list(self._procs.keys()):
             p = self._procs.get(aid)
-            if not p:
+            if not p or isinstance(p, str):
                 continue
             try:
                 pp = psutil.Process(p.pid)
@@ -472,7 +472,7 @@ class AccountRunner(QObject):
 
     def _check_one(self, aid: str) -> None:
         p = self._procs.get(aid)
-        if p is None:
+        if p is None or isinstance(p, str):
             return
         if p.poll() is None:
             self._update_status(aid)
@@ -591,7 +591,7 @@ class AccountRunner(QObject):
                         if "运行终止" in err or ("重启" in err and "安卓" in err):
                             self.log_msg.emit(f"[MAA] {name} 检测到致命错误，强行终止进程以便重试")
                             p = self._procs.get(aid)
-                            if p:
+                            if p and not isinstance(p, str):
                                 try: p.kill()
                                 except: pass
                             return

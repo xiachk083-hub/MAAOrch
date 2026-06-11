@@ -689,3 +689,39 @@
 {"t": "2026-06-11 16:29:45", "l": "INFO", "src": "app", "func": "_log:192", "tid": 28060, "elapsed": 748.6, "msg": "[完成] 樄耳东c 退出码=0 耗时=0m5s 🧠 StartUp,Award,Fight,Infrast,Recruit,Mall"}
 {"t": "2026-06-11 16:29:45", "l": "INFO", "src": "app", "func": "_log:192", "tid": 28060, "elapsed": 748.6, "msg": "[账号] 樄耳东c 状态: completed (exit=0)"}
 {"t": "2026-06-11 16:29:57", "l": "INFO", "src": "app", "func": "_log:192", "tid": 28060, "elapsed": 760.6, "msg": "[资源] 系统可用内存 3.7GB 不足，暂停新启动"}
+{"t": "2026-06-11 16:35:21", "l": "INFO", "src": "app", "func": "_log:192", "tid": 28060, "elapsed": 1084.6, "msg": "[完成] 阿仄仄仄 退出码=0 耗时=5m41s 🧠 StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 16:35:21", "l": "INFO", "src": "app", "func": "_log:192", "tid": 28060, "elapsed": 1084.6, "msg": "[账号] 阿仄仄仄 状态: completed (exit=0)"}
+{"t": "2026-06-11 16:35:23", "l": "INFO", "src": "app", "func": "_log:192", "tid": 28060, "elapsed": 1086.6, "msg": "[资源] 内存已恢复 (7.2GB 可用)，继续启动"}
+{"t": "2026-06-11 16:35:34", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 0.8, "msg": "══ 启动 ══"}
+{"t": "2026-06-11 16:35:34", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 0.8, "msg": "[队列] 从历史恢复 0 个等待项"}
+{"t": "2026-06-11 16:35:34", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 0.9, "msg": "账号: 2 | 仓库: 0 | 分组: 0"}
+{"t": "2026-06-11 16:35:35", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 1.2, "msg": "API 服务已启动: http://127.0.0.1:19999"}
+{"t": "2026-06-11 16:35:39", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 5.6, "msg": "[队列] 阿仄仄仄 入队 (force)"}
+{"t": "2026-06-11 16:35:39", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 5.6, "msg": "[队列] 樄耳东c 入队 (force)"}
+{"t": "2026-06-11 16:35:39", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 5.6, "msg": "▶ 强制调度刷关: 2 个账号已入队"}
+{"t": "2026-06-11 16:35:39", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 5.9, "msg": "⚠ 环境检测: 0 个错误, 1 个警告"}
+{"t": "2026-06-11 16:35:40", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 6.8, "msg": "[启动] ADB(127.0.0.1:16384) Emu(0) 实例#1"}
+{"t": "2026-06-11 16:35:40", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 6.8, "msg": "[启动] 阿仄仄仄"}
+{"t": "2026-06-11 16:35:40", "l": "ERROR", "src": "crash", "func": "_write_crash:10", "tid": 27280, "elapsed": 6.9, "msg": "Traceback (most recent call last):   File \"D:\\1-2\\MAAOrch\\app\\main_window.py\", line 672, in _poll     self.maint.poll()   File \"D:\\1-2\\MAAOrch\\services\\instance_pool.py\", line 366, in poll     self.ctx._mw.runner.check_processes()   File \"D:\\1-2\\MAAOrch\\services\\runner.py\", line 469, in check_processes     self._check_resources()   File \"D:\\1-2\\MAAOrch\\services\\runner.py\", line 447, in _check_resources     pp = psutil.Process(p.pid)                         ^^^^^ AttributeError: 'str' object has no attribute 'pid' "}
+{"t": "2026-06-11 16:35:40", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 6.9, "msg": "启动模拟器 #0"}
+{"t": "2026-06-11 16:35:41", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 7.1, "msg": "等待模拟器就绪 (最长 30s)..."}
+{"t": "2026-06-11 16:35:45", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 11.3, "msg": "模拟器 #0 已就绪"}
+{"t": "2026-06-11 16:35:45", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 11.8, "msg": "[启动] ADB(127.0.0.1:16416) Emu(1) 实例#2"}
+{"t": "2026-06-11 16:35:45", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 11.8, "msg": "[启动] 樄耳东c"}
+{"t": "2026-06-11 16:35:45", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 11.9, "msg": "启动模拟器 #1"}
+{"t": "2026-06-11 16:35:46", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 12.1, "msg": "等待模拟器就绪 (最长 30s)..."}
+{"t": "2026-06-11 16:35:46", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 12.4, "msg": "🧠 智能调度: StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 16:35:46", "l": "INFO", "src": "injector", "func": "_write:567", "tid": 8320, "elapsed": 12.4, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 16:35:46", "l": "INFO", "src": "injector", "func": "_write:567", "tid": 8320, "elapsed": 12.4, "msg": "写入 gui.new.json (use_v6=True, tasks=9, infra_mode=Normal)"}
+{"t": "2026-06-11 16:35:46", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 12.4, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\1\\config/"}
+{"t": "2026-06-11 16:35:46", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 12.5, "msg": "✓ 启动 MAA PID=5564"}
+{"t": "2026-06-11 16:35:50", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 16.3, "msg": "模拟器 #1 已就绪"}
+{"t": "2026-06-11 16:35:51", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 17.4, "msg": "🧠 智能调度: StartUp,Award,Fight,Infrast,Recruit,Mall"}
+{"t": "2026-06-11 16:35:51", "l": "INFO", "src": "injector", "func": "_write:567", "tid": 25500, "elapsed": 17.5, "msg": "写入 gui.json (use_v6=False, tasks=0, infra_mode=Normal)"}
+{"t": "2026-06-11 16:35:51", "l": "INFO", "src": "injector", "func": "_write:567", "tid": 25500, "elapsed": 17.6, "msg": "写入 gui.new.json (use_v6=True, tasks=9, infra_mode=Normal)"}
+{"t": "2026-06-11 16:35:51", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 17.6, "msg": "注入配置: D:\\1-2\\MAAOrch\\services\\maa\\instances\\2\\config/"}
+{"t": "2026-06-11 16:35:51", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 17.7, "msg": "✓ 启动 MAA PID=26256"}
+{"t": "2026-06-11 16:36:18", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 44.9, "msg": "[资源] 系统可用内存 1.9GB 不足，暂停新启动"}
+{"t": "2026-06-11 16:36:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 56.9, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 16:37:00", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 86.9, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
+{"t": "2026-06-11 16:37:30", "l": "INFO", "src": "app", "func": "_log:192", "tid": 27280, "elapsed": 116.9, "msg": "[状态] 运行中: 2/2 | 队列: 0 | 错误: 0"}
