@@ -70,15 +70,19 @@ class ConfigService:
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
             if ac.get("post_action"): c["MainFunction.PostActions"] = "12"
-            if ac.get("adb_retry",0)>0: c["Connect.RetryOnDisconnected"]="True"
-            # Emulator: unchecked = MAA handles, checked = we handle
-            if ac.get("emu_instance_index","") and not ac.get("emu_launch"):
+            c["Connect.RetryOnDisconnected"]="True"
+            c["Connect.AllowADBRestart"]="True"
+            c["Connect.AllowADBHardRestart"]="True"
+            if ac.get("emu_instance_index",""):
                 cli=find_mumu_cli()
                 if cli:
                     c["Start.EmulatorPath"]=str(cli)
-                    c["Start.EmulatorAddCommand"]=f'control --vmindex {ac["emu_instance_index"]} launch'
-                    c["Start.OpenEmulatorAfterLaunch"]="True"
-                    if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
+                    if ac.get("emu_launch"):
+                        c["Start.OpenEmulatorAfterLaunch"]="False"
+                    else:
+                        c["Start.EmulatorAddCommand"]=f'control --vmindex {ac["emu_instance_index"]} launch'
+                        c["Start.OpenEmulatorAfterLaunch"]="True"
+                        if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
             # Account switch in TaskQueue
             sw=ac.get("account_switch","")
             if sw and "TaskQueue" in c:
@@ -267,6 +271,9 @@ class ConfigService:
                 c["Start.RunDirectly"] = "True"
                 c["Start.StartGame"] = "True"
                 c["MainFunction.PostActions"] = "12"
+                c["Connect.RetryOnDisconnected"] = "True"
+                c["Connect.AllowADBRestart"] = "True"
+                c["Connect.AllowADBHardRestart"] = "True"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
