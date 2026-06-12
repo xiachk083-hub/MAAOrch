@@ -12,9 +12,9 @@ class ApiServer(QThread):
         super().__init__(); self.port=port; self.token=token; self.mw=mw; self._httpd=None
     def run(self) -> None:
         mw=self.mw; token=self.token
-        # Simple rate limiter: max 60 req/min per IP
+        # Simple rate limiter: max 200 req/min per IP (higher for localhost)
         _rate_buckets: dict[str,list[float]] = {}
-        def _check_rate(ip: str, limit: int = 60) -> bool:
+        def _check_rate(ip: str, limit: int = 200) -> bool:
             now = time.time()
             bucket = _rate_buckets.get(ip, [])
             bucket = [t for t in bucket if t > now - 60]
@@ -282,7 +282,7 @@ class ApiServer(QThread):
             def _handle_get_config(s):
                 try:
                     cfg=mw.config
-                    s._json({"ok":True,"config":{"ma_version":cfg.get("ma_version",""),"parallel_max":cfg.get("parallel_max",3),"appearance_mode":cfg.get("appearance_mode","dark"),"schedule_mode":cfg.get("schedule_mode","daily"),"smart_global":cfg.get("smart_global",{})}})
+                    s._json({"ok":True,"config":{"maa_version":cfg.get("maa_version",""),"parallel_max":cfg.get("parallel_max",3),"appearance_mode":cfg.get("appearance_mode","Dark"),"schedule_mode":cfg.get("schedule_mode","daily"),"maa_instances":cfg.get("maa_instances",0),"api_port":cfg.get("api_port",19999),"smart_global":cfg.get("smart_global",{})}})
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_get_smart(s):
                 try:
