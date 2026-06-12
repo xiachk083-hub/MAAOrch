@@ -128,11 +128,21 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
         se = w.get("smart_stage")
         if se:
             se.setText(ac.get("smart_stage", ""))
-        # Anni mode
+        # Anni mode + stage
         am = w.get("anni_mode")
         if am:
             enabled = ac.get("smart_annihilation_enabled", True)
             am.setCurrentText("启用" if enabled else "禁用")
+        ans = w.get("anni_stage")
+        if ans:
+            stage_val = ac.get("smart_annihilation", "")
+            stage_map = {"": "自动选择", "Annihilation": "当期剿灭",
+                         "Chernobog@Annihilation": "切尔诺伯格",
+                         "LungmenOutskirts@Annihilation": "龙门外环",
+                         "LungmenDowntown@Annihilation": "龙门市区"}
+            mapped = stage_map.get(stage_val, "自动选择")
+            idx = ans.findText(mapped)
+            if idx >= 0: ans.setCurrentIndex(idx)
         # Week stage: use current mon as representative
         we = w.get("week_all")
         if we:
