@@ -63,6 +63,9 @@ class ApiServer(QThread):
                 if p=="/api/config": return s._handle_get_config()
                 if p=="/api/settings/smart": return s._handle_get_smart()
                 if p=="/api/emulators": return s._handle_emulators()
+                # Static file serving for Web UI
+                if p=="/" or p.startswith("/ui/web/"):
+                    return s._serve_static(p)
                 s._json({"error":"not found"},404)
             def do_POST(s):
                 if not s._check_rate_limit(): return
@@ -87,7 +90,8 @@ class ApiServer(QThread):
                 if p=="/api/config": return s._handle_save_config(body)
                 if p=="/api/settings/smart": return s._handle_save_smart(body)
                 if p=="/api/action/stop_all": return s._handle_stop_all()
-                if p=="/api/action/smart_all": return s._handle_smart_all(body)
+			if p=="/api/action/smart_all": return s._handle_smart_all(body)
+				if p=="/api/instance/rebuild": return s._handle_rebuild()
                 s._json({"error":"not found"},404)
             def _handle_status(s):
                 accts=[]
@@ -367,6 +371,33 @@ class ApiServer(QThread):
                     include_anni=body.get("include_anni",True)
                     only_anni=body.get("only_anni",False)
                     _run_smart_all(mw,include_anni,only_anni)
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _serve_static(s, path):
+                try:
+                    import os, mimetypes
+                    web_dir = os.path.join(os.path.dirname(__file__), "..", "ui", "web")
+                    if path == "/":
+                        path = "/index.html"
+                    file_path = os.path.normpath(os.path.join(web_dir, path.lstrip("/")))
+                    if not file_path.startswith(os.path.normpath(web_dir)):
+                        return s._json({"error":"forbidden"},403)
+                    if not os.path.isfile(file_path):
+                        file_path = os.path.join(web_dir, "index.html")
+                    content = open(file_path, "rb").read()
+                    mime = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                    s.send_response(200)
+                    s.send_header("Content-Type", mime)
+                    s.send_header("Content-Length", str(len(content)))
+                    s.end_headers()
+                    s.wfile.write(content)
+                except Exception as e:
+                    s._json({"error":str(e)},500)
+            def _handle_rebuild(s):
+                try:
+                    from services.instance_pool import ensure_maa_instances_async
+                    import threading
+                    threading.Thread(target=lambda: ensure_maa_instances_async(mw.ctx, True), daemon=True).start()
                     s._json({"ok":True})
                 except Exception as e: s._json({"error":str(e)},500)
         try:
