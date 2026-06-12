@@ -64,6 +64,18 @@ class LaunchQueue(QObject):
     def stop(self) -> None:
         self._tick_timer.stop()
 
+    def stop_all(self) -> int:
+        """Stop all running accounts immediately. Returns count."""
+        count = 0
+        for aid in list(self._active_emus.values()):
+            if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
+                self.ctx._mw.runner.stop(aid)
+                count += 1
+        self._active_emus.clear()
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(200, self._tick)
+        return count
+
     # ── Public API ──
 
     def enqueue(self, account_id: str, source: str = "manual",

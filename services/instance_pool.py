@@ -6,7 +6,8 @@ from typing import Any
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPixmap, QPainter, QColor, QBrush, QPolygonF, QIcon
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QMessageBox, QApplication, QSystemTrayIcon, QMenu, QFileDialog
-from infrastructure.utils import parse_maa_version, get_platform_key, _version_tuple, make_id
+from infrastructure.utils import parse_maa_version, get_platform_key, _version_tuple, make_id, atomic_write
+from infrastructure.task_constants import find_mumu_cli
 
 from services.update_service import UpdateCheckThread, UpdateDialog
 from ui.widgets.config_card import refresh_config_cards
@@ -49,6 +50,29 @@ def _create_instance(inst: Path, source: Path) -> bool:
             dst_config.mkdir(exist_ok=True)
         for sub in ("cache", "data", "debug"):
             (inst / sub).mkdir(exist_ok=True)
+        # Auto-write EmulatorPath so users can open MAA GUI without "path empty" errors
+        if cli := find_mumu_cli():
+            gj_path = inst / "config" / "gui.json"
+            if gj_path.exists():
+                import json
+                try:
+                    d = json.loads(gj_path.read_text(encoding="utf-8"))
+                    c = d["Configurations"]["Default"]
+                    c["Start.EmulatorPath"] = str(cli)
+                    c["Start.EmulatorAddCommand"] = f"control --vmindex {inst.name} launch"
+                    atomic_write(gj_path, json.dumps(d, ensure_ascii=False, indent=2))
+                except Exception:
+                    pass
+            gnj_path = inst / "config" / "gui.new.json"
+            if gnj_path.exists():
+                import json
+                try:
+                    d2 = json.loads(gnj_path.read_text(encoding="utf-8"))
+                    c2 = d2["Configurations"]["Default"]
+                    c2.setdefault("connection", {})["EmulatorPath"] = str(cli)
+                    atomic_write(gnj_path, json.dumps(d2, ensure_ascii=False, indent=2))
+                except Exception:
+                    pass
         return True
     except Exception:
         return False
