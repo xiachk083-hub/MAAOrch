@@ -76,7 +76,7 @@ def build_side_bar(mw: Any) -> QFrame:
         sg = mw.config.get("smart_global", {})
         if sg.get("enabled", False):
             QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
-    mode_group.idChanged.connect(_on_mode_changed)
+    mode_group.idClicked.connect(_on_mode_changed)
 
     mw._mode_group = mode_group
     mw._mode_btns = mode_btns
