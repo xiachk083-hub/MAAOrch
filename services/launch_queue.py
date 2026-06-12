@@ -273,10 +273,6 @@ class LaunchQueue(QObject):
         """Check queue and launch all eligible accounts (parallel across different emus)."""
         if self._paused:
             return
-        # Resource overloaded? Keep queue intact, don't launch
-        if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'runner'):
-            if self.ctx._mw.runner._overloaded:
-                return
         with self._lock:
             now = datetime.now()
             heapq = self._import_heapq()
@@ -330,6 +326,13 @@ class LaunchQueue(QObject):
             # Push back remaining entries
             for entry in remaining:
                 heapq.heappush(self._pending, entry)
+
+            # Resource overloaded? Push back all to_launch entries, don't start anything new
+            if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'runner'):
+                if self.ctx._mw.runner._overloaded:
+                    for entry in to_launch:
+                        heapq.heappush(self._pending, entry)
+                    return
 
             # Determine which entries to launch (still under lock)
             launch_now = []
