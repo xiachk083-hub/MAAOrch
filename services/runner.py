@@ -360,22 +360,20 @@ class AccountRunner(QObject):
         config_dir.mkdir(parents=True, exist_ok=True)
         try:
             if smart_enabled:
-                plan_txt = ac.get("smart_plan", "")
-                if plan_txt:
-                    task_list = plan_txt.split(",")
+                from services.dispatch_pool import get_template, remove_dispatch
+                did = ac.get("dispatch_id", "")
+                if did:
+                    task_list = get_template(did)
+                    if task_list is None:
+                        task_list = ["StartUp", "Award"]
                 elif mode == "roguelike":
                     task_list = ["StartUp", "Roguelike"]
-                    plan_txt = "StartUp,Roguelike"
-                    ac["smart_plan"] = plan_txt
                 elif mode == "reclamation":
                     task_list = ["StartUp", "Reclamation"]
-                    plan_txt = "StartUp,Reclamation"
-                    ac["smart_plan"] = plan_txt
                 else:
                     from services.smart_scheduler import get_tasks_for_account
                     task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
-                    plan_txt = ",".join(task_list)
-                    ac["smart_plan"] = plan_txt
+                plan_txt = ",".join(task_list)
                 self.log_msg.emit(f"🧠 智能调度: {plan_txt}")
                 self._log.info(f"[注入] {ac.get('name', aid)} smart_plan_raw={ac.get('smart_plan','<空>')} task_list={task_list}")
                 self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
@@ -748,9 +746,12 @@ class AccountRunner(QObject):
             self.log_msg.emit(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             self._log.info(f"[清理] {name} exit={exit_code} smart_plan当前={plan or '<空>'}")
             mode = self.ctx.config.get("schedule_mode", "daily")
-            if exit_code == 0 and (not ac.get("_persist_plan") or mode != "daily"):
-                ac["smart_plan"] = ""
             if exit_code == 0:
+                from services.dispatch_pool import remove_dispatch
+                remove_dispatch(ac.get("dispatch_id", ""))
+                ac["dispatch_id"] = ""
+                if not ac.get("_persist_plan") or mode != "daily":
+                    ac["smart_plan"] = ""
                 ac.pop("_persist_plan", None)
 
         is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
