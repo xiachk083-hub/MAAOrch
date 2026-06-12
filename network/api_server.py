@@ -351,7 +351,7 @@ class ApiServer(QThread):
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_save_config(s,body):
                 try:
-                    for field in ("ma_version","parallel_max","appearance_mode","schedule_mode"):
+                    for field in ("maa_version","parallel_max","appearance_mode","schedule_mode"):
                         if field in body: mw.config[field]=body[field]
                     if "smart_global" in body: mw.config["smart_global"]=body["smart_global"]
                     from models.config_manager import save_config
@@ -360,7 +360,8 @@ class ApiServer(QThread):
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_save_smart(s,body):
                 try:
-                    mw.config["smart_global"]=body
+                    sg = mw.config.setdefault("smart_global", {})
+                    sg.update(body)
                     from models.config_manager import save_config
                     save_config(mw.config)
                     s._json({"ok":True})

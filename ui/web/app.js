@@ -47,8 +47,9 @@ function navigate(page) {
 async function refreshSidebar() {
   try {
     const s = await apiGet('/status');
+    const runningCount = s.accounts ? s.accounts.filter(a => a.running).length : 0;
     const q = await apiGet('/queue');
-    document.getElementById('queue-summary').textContent = `运行: ${s.running || 0} | 队列: ${q.pending_count || 0}`;
+    document.getElementById('queue-summary').textContent = `运行: ${runningCount} | 队列: ${q.pending_count || 0}`;
     const accts = await apiGet('/accounts');
     if (accts.ok) {
       const vms = {};
@@ -153,20 +154,24 @@ async function renderStats(container) {
     const a = await apiGet('/accounts');
     const total = a.ok ? a.accounts.length : 0;
     const running = a.ok ? a.accounts.filter(x => x.running).length : 0;
+    const todayRuns = r.accounts ? r.accounts.reduce((s,ac) => s + (ac.total_runs||0), 0) : 0;
     container.innerHTML = `<div class="stat-grid">
       <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">总账号</div></div>
       <div class="stat-card"><div class="stat-value">${running}</div><div class="stat-label">运行中</div></div>
-      <div class="stat-card"><div class="stat-value">${(r.stats||{}).total_runs || 0}</div><div class="stat-label">今日运行</div></div>
-      <div class="stat-card"><div class="stat-value">${(r.stats||{}).total_drops || 0}</div><div class="stat-label">今日掉落</div></div>
+      <div class="stat-card"><div class="stat-value">${todayRuns}</div><div class="stat-label">运行次数</div></div>
     </div>
-    <div style="margin-top:12px">${r.detail ? r.detail.map(d => `<div style="font-size:11px;color:var(--text2);padding:2px 0">${d.name}: ${d.runs || 0} 次, 掉落 ${d.drops || 0}</div>`).join('') : ''}</div>`;
+    <div style="margin-top:12px">${r.accounts ? r.accounts.filter(ac => ac.total_runs > 0).map(ac =>
+      `<div style="font-size:11px;color:var(--text2);padding:2px 0">${ac.account_name}: ${ac.total_runs} 次</div>`
+    ).join('') : '<div style="color:var(--text3)">暂无运行记录</div>'}</div>`;
   } catch(e) { container.innerHTML = `<div class="error">加载失败</div>`; }
 }
 
 async function renderSettings(container) {
   try {
-    const cfg = await apiGet('/config');
-    const smart = await apiGet('/settings/smart');
+    const r = await apiGet('/config');
+    const cfg = r.config || {};
+    const sr = await apiGet('/settings/smart');
+    const smart = sr.smart_global || {};
     container.innerHTML = `<div class="tabs" id="settings-tabs">
       <div class="tab active" data-tab="general">通用</div>
       <div class="tab" data-tab="smart">智能调度</div>
