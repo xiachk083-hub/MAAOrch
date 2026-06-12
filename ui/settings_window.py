@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 from pathlib import Path
+import json
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QGridLayout,
@@ -14,6 +15,23 @@ def _rebuild_instances(mw: Any) -> None:
     from services.instance_pool import ensure_maa_instances_async
     ensure_maa_instances_async(mw.ctx, force=True)
     mw._log("🔄 实例池重建完成")
+
+
+def _check_latest(mw: Any) -> None:
+    import json as _json, urllib.request as _ur
+    try:
+        resp = _ur.urlopen(
+            "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/releases/latest",
+            timeout=5)
+        data = _json.loads(resp.read())
+        tag = data.get("tag_name", "?")
+        mw._log(f"最新 MAA 版本: {tag}")
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(None, "检查更新", f"最新版本: {tag}")
+    except Exception as ex:
+        mw._log(f"检查更新失败: {ex}")
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.warning(None, "检查更新", f"检查失败: {ex}")
 
 
 def open_settings(mw: Any) -> None:
@@ -108,6 +126,39 @@ def open_settings(mw: Any) -> None:
     sum_row.addWidget(QLabel(f"❌ {instances - r_cnt - rd_cnt}"))
     gl.addLayout(sum_row)
     vl.addWidget(g)
+
+    # ── 📦 版本管理 ──
+    gv = QGroupBox("📦 版本管理")
+    gvl = QVBoxLayout(gv)
+    vr = QHBoxLayout()
+    vr.addWidget(QLabel(f"当前版本: {cfg.get('maa_version', '未安装')}"))
+    vr.addStretch()
+    chk = QPushButton("🔍 检查更新")
+    chk.clicked.connect(lambda: _check_latest(mw))
+    vr.addWidget(chk)
+    gvl.addLayout(vr)
+    ig = QGridLayout()
+    ig.setSpacing(4)
+    ri = 0
+    for i in range(1, instances + 1):
+        inst_dir = pool / str(i)
+        exe = inst_dir / "MAA.exe"
+        if not exe.exists():
+            continue
+        fp = inst_dir / "config" / "gui.new.json"
+        if not fp.exists():
+            fp = inst_dir / "config" / "gui.json"
+        ver = "?"
+        if fp.exists():
+            try:
+                ver = json.loads(fp.read_text(encoding='utf-8')).get("VersionUpdate", {}).get("version", "?")
+            except Exception:
+                pass
+        run = "▶" if (inst_dir / ".pid").exists() else "⏹"
+        ig.addWidget(QLabel(f"#{i} ✅ v{ver} {run}"), ri, 0)
+        ri += 1
+    gvl.addLayout(ig)
+    vl.addWidget(gv)
 
     # ── 外观 ──
     g2 = QGroupBox("外观")
