@@ -58,6 +58,11 @@ class ApiServer(QThread):
                 if p=="/api/stats": return s._handle_all_stats()
                 if p=="/api/queue": return s._handle_queue_status()
                 if p=="/api/logs": return s._handle_logs(s.path)
+                if p=="/api/accounts": return s._handle_accounts()
+                if p.startswith("/api/account/") and p.endswith("/config"): return s._handle_account_config(p)
+                if p=="/api/config": return s._handle_get_config()
+                if p=="/api/settings/smart": return s._handle_get_smart()
+                if p=="/api/emulators": return s._handle_emulators()
                 s._json({"error":"not found"},404)
             def do_POST(s):
                 if not s._check_rate_limit(): return
@@ -74,6 +79,15 @@ class ApiServer(QThread):
                 if p=="/api/config/sync": return s._handle_config_sync(body)
                 if p=="/api/queue/enqueue": return s._handle_queue_enqueue(body)
                 if p=="/api/queue/dequeue": return s._handle_queue_dequeue(body)
+                if p=="/api/account": return s._handle_create_account(body)
+                if p.startswith("/api/account/") and p.endswith("/edit"): return s._handle_edit_account(p, body)
+                if p.startswith("/api/account/") and p.endswith("/delete"): return s._handle_delete_account(p)
+                if p.startswith("/api/account/") and p.endswith("/config"): return s._handle_save_account_config(p, body)
+                if p=="/api/queue/clear": return s._handle_queue_clear()
+                if p=="/api/config": return s._handle_save_config(body)
+                if p=="/api/settings/smart": return s._handle_save_smart(body)
+                if p=="/api/action/stop_all": return s._handle_stop_all()
+                if p=="/api/action/smart_all": return s._handle_smart_all(body)
                 s._json({"error":"not found"},404)
             def _handle_status(s):
                 accts=[]
@@ -237,6 +251,124 @@ class ApiServer(QThread):
                 if not aid: return s._json({"error":"invalid account"},400)
                 lq.dequeue(aid)
                 s._json({"ok":True,"account_id":aid,"pending_count":lq.pending_count})
+            def _handle_accounts(s):
+                try:
+                    data=[]
+                    for a in mw.accounts:
+                        aid=a.get("id","")
+                        running=mw.launch_queue.is_running(aid) if hasattr(mw,'launch_queue') else False
+                        queued=mw.launch_queue.is_queued(aid) if hasattr(mw,'launch_queue') else False
+                        data.append({"id":aid,"name":a.get("name",""),"game_client":a.get("game_client",""),"emu_instance_index":a.get("emu_instance_index",""),"adb_address":a.get("adb_address",""),"running":running,"queued":queued,"failures":a.get("consecutive_failures",0),"dispatch_id":a.get("dispatch_id","")})
+                    s._json({"ok":True,"accounts":data})
+                except Exception as e: s._json({"ok":False,"error":str(e)})
+            def _handle_account_config(s,p):
+                try:
+                    idx=int(p.split("/")[3])
+                    if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                    a=mw.accounts[idx]
+                    s._json({"ok":True,"account_id":a["id"],"task_settings":a.get("task_settings",{})})
+                except ValueError: s._json({"error":"bad index"},400)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_get_config(s):
+                try:
+                    cfg=mw.config
+                    s._json({"ok":True,"config":{"ma_version":cfg.get("ma_version",""),"parallel_max":cfg.get("parallel_max",3),"appearance_mode":cfg.get("appearance_mode","dark"),"schedule_mode":cfg.get("schedule_mode","daily"),"smart_global":cfg.get("smart_global",{})}})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_get_smart(s):
+                try:
+                    s._json({"ok":True,"smart_global":mw.config.get("smart_global",{})})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_emulators(s):
+                try:
+                    from infrastructure.task_constants import detect_emu_instances
+                    instances=detect_emu_instances()
+                    s._json({"ok":True,"emulators":instances})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_create_account(s,body):
+                try:
+                    import uuid as _uuid
+                    new_id=_uuid.uuid4().hex[:12]
+                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"adb_address":body.get("adb_address",""),"emu_instance_index":body.get("emu_instance_index",""),"task_settings":body.get("task_settings",{}),"dispatch_id":body.get("dispatch_id",""),"consecutive_failures":0}
+                    mw.accounts.append(acct)
+                    mw.config["accounts"]=mw.accounts
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True,"id":new_id})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_edit_account(s,p,body):
+                try:
+                    idx=int(p.split("/")[3])
+                    if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                    a=mw.accounts[idx]
+                    for field in ("name","game_client","adb_address","emu_instance_index","dispatch_id"):
+                        if field in body: a[field]=body[field]
+                    mw.config["accounts"]=mw.accounts
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except ValueError: s._json({"error":"bad index"},400)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_delete_account(s,p):
+                try:
+                    idx=int(p.split("/")[3])
+                    if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                    del mw.accounts[idx]
+                    mw.config["accounts"]=mw.accounts
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except ValueError: s._json({"error":"bad index"},400)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_save_account_config(s,p,body):
+                try:
+                    idx=int(p.split("/")[3])
+                    if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                    mw.accounts[idx]["task_settings"]=body.get("task_settings",{})
+                    mw.config["accounts"]=mw.accounts
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except ValueError: s._json({"error":"bad index"},400)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_queue_clear(s):
+                try:
+                    lq=getattr(mw,"launch_queue",None)
+                    if not lq: return s._json({"error":"queue not available"},500)
+                    lq._pending.clear()
+                    lq._save_queue()
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_save_config(s,body):
+                try:
+                    for field in ("ma_version","parallel_max","appearance_mode","schedule_mode"):
+                        if field in body: mw.config[field]=body[field]
+                    if "smart_global" in body: mw.config["smart_global"]=body["smart_global"]
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_save_smart(s,body):
+                try:
+                    mw.config["smart_global"]=body
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_stop_all(s):
+                try:
+                    lq=getattr(mw,"launch_queue",None)
+                    if not lq: return s._json({"error":"queue not available"},500)
+                    count=lq.stop_all()
+                    s._json({"ok":True,"stopped":count})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_smart_all(s,body):
+                try:
+                    from ui.side_bar import _run_smart_all
+                    include_anni=body.get("include_anni",True)
+                    only_anni=body.get("only_anni",False)
+                    _run_smart_all(mw,include_anni,only_anni)
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
         try:
             self._httpd=HTTPServer(("127.0.0.1",self.port),Handler)
             self.log_msg.emit(f"API 服务已启动: http://127.0.0.1:{self.port}")
