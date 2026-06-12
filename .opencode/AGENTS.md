@@ -36,3 +36,12 @@
 - mumu-cli 子命令是 shutdown 不是 quit
 - subprocess 必须加 encoding="utf-8", errors="replace"
 - 所有改动须与现有 68 个测试兼容
+
+### 实体关系模型
+- **账号** = (模拟器VM, 服务器APP, 手动登录的角色)
+- 账号绑**模拟器 VM + 服务器 APP**（不是绑 MAA 实例）
+- `game_client` 决定 MAA 启动哪个 APK（Bilibili / Official 是不同的 APK）
+- `emu_instance_index` 标记账号在哪个 VM 上
+- `account_switch` 是 APP 内的账号标识
+- **MAA 是无状态工具**，谁都可以配它去连模拟器操作
+- 用户手动在模拟器里打开方舟 APK → 登录账号 → MAAOrch 只记录"这个 VM 的某个服上登了什么号"
