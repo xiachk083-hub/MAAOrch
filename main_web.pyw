@@ -84,6 +84,21 @@ def main():
     url = f"http://127.0.0.1:{port}/"
     webbrowser.open(url)
 
+    # Start Go ADB monitor if available
+    adb_monitor_proc = None
+    adb_monitor_exe = Path(__file__).parent / "services" / "adb_monitor" / "adb_monitor.exe"
+    if adb_monitor_exe.exists():
+        try:
+            import subprocess as _sp
+            adb_monitor_proc = _sp.Popen(
+                [str(adb_monitor_exe)],
+                creationflags=_sp.CREATE_NO_WINDOW,
+                stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+            )
+            _LOG.info("ADB monitor 已启动 (端口 19998)")
+        except Exception as e:
+            _LOG.error(f"ADB monitor 启动失败: {e}")
+
     has_webview = False
     try:
         import webview
@@ -95,6 +110,9 @@ def main():
         try:
             if hasattr(api, 'stop_server'):
                 api.stop_server()
+            if adb_monitor_proc:
+                adb_monitor_proc.terminate()
+                adb_monitor_proc.wait(3)
             for aid in list(runner._active.keys()):
                 runner.stop(aid)
         except Exception as e:
