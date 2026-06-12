@@ -116,6 +116,11 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
         container.addLayout(pr); widgets["post_cbs"] = pcs
 
         container.addStretch()
+        try:
+            from infrastructure.logger import Logger
+            Logger("batch_edit").info(f"建字段 {ac.get('name','?')}: smart_stage={ac.get('smart_stage','<空>')} post_action={ac.get('post_action','<空>')}")
+        except Exception:
+            pass
         return widgets
 
     def _load(ac: dict, w: dict) -> None:
@@ -153,34 +158,53 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
             return
         ac = accounts[idx]
         w = field_widgets
+        saved = {}
         se = w.get("smart_stage")
         if se and se.text().strip():
             ac["smart_stage"] = se.text().strip()
+            saved["smart_stage"] = se.text().strip()
         if se and se.text().strip():
             ac["fight_stage"] = se.text().strip()
         am = w.get("anni_mode")
         ans = w.get("anni_stage")
-        if am and am.currentText() == "启用":
-            ac["smart_annihilation_enabled"] = True
-            stage_map = {"自动选择": "", "当期剿灭": "Annihilation",
-                         "切尔诺伯格": "Chernobog@Annihilation",
-                         "龙门外环": "LungmenOutskirts@Annihilation",
-                         "龙门市区": "LungmenDowntown@Annihilation"}
-            ac["smart_annihilation"] = stage_map.get(ans.currentText() if ans else "", "")
-        elif am and am.currentText() == "禁用":
-            ac["smart_annihilation_enabled"] = False
+        if am:
+            if am.currentText() == "启用":
+                ac["smart_annihilation_enabled"] = True
+                saved["annihilation"] = "启用"
+                stage_map = {"自动选择": "", "当期剿灭": "Annihilation",
+                             "切尔诺伯格": "Chernobog@Annihilation",
+                             "龙门外环": "LungmenOutskirts@Annihilation",
+                             "龙门市区": "LungmenDowntown@Annihilation"}
+                ac["smart_annihilation"] = stage_map.get(ans.currentText() if ans else "", "")
+            elif am.currentText() == "禁用":
+                ac["smart_annihilation_enabled"] = False
+                saved["annihilation"] = "禁用"
+            else:
+                saved["annihilation"] = "不修改"
         we = w.get("week_all")
         if we and we.text().strip():
             for dk in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]:
                 ac[f"smart_{dk}"] = we.text().strip()
+            saved["week_all"] = we.text().strip()
         cc = w.get("client")
         if cc:
-            if cc.currentText() == "官服": ac["game_client"] = "Official"
-            elif cc.currentText() == "B服": ac["game_client"] = "Bilibili"
+            if cc.currentText() == "官服":
+                ac["game_client"] = "Official"
+                saved["client"] = "官服"
+            elif cc.currentText() == "B服":
+                ac["game_client"] = "Bilibili"
+                saved["client"] = "B服"
         pcs = w.get("post_cbs", {})
         selected_post = [k for k, cb in pcs.items() if cb.isChecked()]
         if selected_post:
             ac["post_action"] = ",".join(selected_post)
+            saved["post_action"] = ",".join(selected_post)
+        if saved:
+            try:
+                from infrastructure.logger import Logger
+                Logger("batch_edit").info(f"保存 {ac.get('name','?')} 页{idx}: {saved}")
+            except Exception:
+                pass
 
     def _go(idx: int) -> None:
         """Navigate to page idx."""
