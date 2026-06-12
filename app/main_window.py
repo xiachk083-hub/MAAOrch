@@ -124,24 +124,9 @@ class MainWindow(QMainWindow):
         self.launch_queue._restore()
         self.launch_queue.tick()
         self.maint.setup_tray(); self.maint.start_schedule()
-        # Auto-init MAA instance pool from existing account installations
-        raw_ver = self.config.get("maa_version", "")
-        if not raw_ver or raw_ver == "installed":
-            maas = sorted(Path(__file__).parent.glob("maa/source/MAA.exe"))
-            if not maas:
-                maas = sorted(Path(__file__).parent.glob("maa/v*/MAA.exe"))
-            if not maas:
-                maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
-            if maas:
-                from infrastructure.utils import parse_maa_version
-                v = parse_maa_version(str(maas[0]))
-                if v:
-                    self.config["maa_version"] = v
-            if not self.config.get("maa_version", "") or self.config.get("maa_version", "") == "installed":
-                self.config["maa_version"] = ""
-            self.config["maa_instances"] = 0
-        from services.instance_pool import ensure_maa_instances_async
-        ensure_maa_instances_async(self.ctx)
+        # Defer heavy init (MAA detection, instances, monitoring) to avoid blocking UI
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(100, self._heavy_init)
         self._proc_timer=QTimer(self); self._proc_timer.timeout.connect(self._poll); self._proc_timer.start(self.POLL_INTERVAL_MS)
         def _safe_update_emu(r):
             try:
@@ -170,6 +155,28 @@ class MainWindow(QMainWindow):
             pass
         from ui.onboarding import check_onboarding
         QTimer.singleShot(100, lambda: check_onboarding(self))
+
+    def _heavy_init(self) -> None:
+        """Deferred initialization: MAA detection, instances, monitoring."""
+        from pathlib import Path
+        # Auto-init MAA version
+        raw_ver = self.config.get("maa_version", "")
+        if not raw_ver or raw_ver == "installed":
+            maas = sorted(Path(__file__).parent.glob("maa/source/MAA.exe"))
+            if not maas:
+                maas = sorted(Path(__file__).parent.glob("maa/v*/MAA.exe"))
+            if not maas:
+                maas = sorted(Path(__file__).parent.glob("accounts/*/MAA/MAA.exe"))
+            if maas:
+                from infrastructure.utils import parse_maa_version
+                v = parse_maa_version(str(maas[0]))
+                if v:
+                    self.config["maa_version"] = v
+            if not self.config.get("maa_version", "") or self.config.get("maa_version", "") == "installed":
+                self.config["maa_version"] = ""
+            self.config["maa_instances"] = 0
+        from services.instance_pool import ensure_maa_instances_async
+        ensure_maa_instances_async(self.ctx)
 
     def _set_theme(self, m: str) -> None:
         style = {"Dark": DARK_STYLE, "Light": LIGHT_STYLE, "Notepaper": NOTEPAPER_STYLE}.get(m, DARK_STYLE)
