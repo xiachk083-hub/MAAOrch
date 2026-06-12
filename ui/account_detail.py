@@ -63,8 +63,11 @@ def open_account_detail(mw: Any, row: int) -> None:
     if not found and cur_idx:
         emu_combo.addItem(f"实例 #{cur_idx}", cur_idx)
         emu_combo.setCurrentIndex(emu_combo.count()-1)
-    emu_combo.currentIndexChanged.connect(lambda: _on_emu_changed(emu_combo, ac))
+    emu_combo.currentIndexChanged.connect(lambda: _on_emu_changed(emu_combo, ac, client_lbl, vm_hint))
     emu_row.addWidget(emu_combo)
+    client_lbl = QLabel("")
+    client_lbl.setStyleSheet("color:#888;font-size:8pt")
+    emu_row.addWidget(client_lbl)
     launch_cb = QCheckBox("自动启动")
     launch_cb.setChecked(ac.get("emu_launch", True))
     emu_row.addWidget(launch_cb)
@@ -73,6 +76,10 @@ def open_account_detail(mw: Any, row: int) -> None:
     wait_sp.setRange(0, 300); wait_sp.setValue(ac.get("emu_wait", 30)); wait_sp.setSuffix(" 秒")
     emu_row.addWidget(wait_sp)
     emu_row.addStretch()
+    vm_hint = QLabel("⚠ 修改模拟器需重新登录游戏账号")
+    vm_hint.setStyleSheet("color:#e8a000;font-size:7pt;padding:0 4px")
+    vm_hint.setVisible(bool(ac.get("emu_instance_index", "")))
+    emu_row.addWidget(vm_hint)
     gl1.addLayout(emu_row)
 
     # ADB status (read-only)
@@ -202,7 +209,7 @@ def open_account_detail(mw: Any, row: int) -> None:
     d.exec()
 
 
-def _on_emu_changed(combo: QComboBox, ac: dict) -> None:
+def _on_emu_changed(combo: QComboBox, ac: dict, client_lbl: QLabel, vm_hint: QLabel) -> None:
     idx = combo.currentData()
     if not idx: return
     ac["emu_instance_index"] = idx
@@ -216,3 +223,7 @@ def _on_emu_changed(combo: QComboBox, ac: dict) -> None:
             cand = Path(cli).parent / "adb.exe"
             if cand.exists(): adb_exe = str(cand)
     if adb_exe: ac["adb_path"] = adb_exe
+    client = ac.get("game_client", "?")
+    emu = combo.currentData() or ""
+    client_lbl.setText(f"→ {client}" if emu else "")
+    vm_hint.setVisible(bool(idx))

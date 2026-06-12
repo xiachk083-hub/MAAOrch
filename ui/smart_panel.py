@@ -161,6 +161,11 @@ def _rebuild_list(mw: Any) -> None:
 
         row = _make_row(mw, a, running, queued, fails)
         layout.insertWidget(layout.count() - 1, row)
+        vm_lbl = row.findChild(QLabel, "vmInfoLabel")
+        if vm_lbl:
+            vm = a.get("emu_instance_index", "") or "未绑定"
+            app = a.get("game_client", "?")
+            vm_lbl.setText(f"VM {vm} · {app}")
         mw._list_rows.append(row)
 
     _update_status(mw)
@@ -230,6 +235,12 @@ def _make_row(mw: Any, a: dict, running: bool, queued: bool, fails: int) -> QFra
     st_lbl.setAlignment(Qt.AlignCenter)
     _set_status_text(st_lbl, running, queued, fails, mw, a.get("id", ""))
     hl.addWidget(st_lbl)
+
+    # VM + APP info
+    vm_info = QLabel("")
+    vm_info.setObjectName("vmInfoLabel")
+    vm_info.setStyleSheet("color:#555;font-size:7pt")
+    hl.addWidget(vm_info)
 
     # Stage
     stage = a.get("smart_stage", "")
