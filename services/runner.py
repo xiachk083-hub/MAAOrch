@@ -425,6 +425,11 @@ class AccountRunner(QObject):
             import threading as _th
             _th.Thread(target=_rewrite_infra, daemon=True).start()
         self.account_started.emit(aid)
+        # Notify launch queue that this VM is ready (for serial launch)
+        emu_idx = ac.get("emu_instance_index", "")
+        if emu_idx and hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'launch_queue'):
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: self.ctx._mw.launch_queue._on_launch_ready(emu_idx))
 
     def _spawn(self, w: dict, ac: dict) -> None:
         aid = ac["id"]
