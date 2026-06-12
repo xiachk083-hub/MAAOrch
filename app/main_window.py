@@ -310,8 +310,9 @@ class MainWindow(QMainWindow):
         run_btn.setFixedHeight(26)
         from PySide6.QtWidgets import QMenu
         run_menu = QMenu(run_btn)
-        run_menu.addAction("含剿灭", lambda: _run_smart_all(self, True))
-        run_menu.addAction("不含剿灭", lambda: _run_smart_all(self, False))
+        run_menu.addAction("含剿灭", lambda: _run_smart_all(self, True, False))
+        run_menu.addAction("不含剿灭", lambda: _run_smart_all(self, False, False))
+        run_menu.addAction("只剿灭", lambda: _run_smart_all(self, False, True))
         run_btn.setMenu(run_menu)
         bb.addWidget(run_btn)
 
@@ -321,7 +322,15 @@ class MainWindow(QMainWindow):
                           ("批量停止","stop"),("批量删除","del")]:
             btn = QPushButton(name)
             btn.setFixedHeight(26)
-            btn.clicked.connect(lambda _, a=act: _do_batch(self, a))
+            if act == "enq":
+                from PySide6.QtWidgets import QMenu as _QMenu
+                enq_menu = _QMenu(btn)
+                enq_menu.addAction("含剿灭", lambda: _do_batch(self, "enq_anni"))
+                enq_menu.addAction("不含剿灭", lambda: _do_batch(self, "enq_no_anni"))
+                enq_menu.addAction("只剿灭", lambda: _do_batch(self, "enq_anni_only"))
+                btn.setMenu(enq_menu)
+            else:
+                btn.clicked.connect(lambda _, a=act: _do_batch(self, a))
             bb.addWidget(btn)
 
         stop_all_btn = QPushButton("⏹ 全部停止")
