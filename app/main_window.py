@@ -73,6 +73,12 @@ class MainWindow(QMainWindow):
                 self.config["modified"] = True
         if self.config.pop("modified", None):
             save_config(self.config)
+        # Migrate old accounts: smart_plan → dispatch_id
+        from services.dispatch_pool import create_dispatch
+        for a in self.accounts:
+            plan = a.get("smart_plan", "")
+            if plan and not a.get("dispatch_id"):
+                a["dispatch_id"] = create_dispatch(plan.split(","))
         self.pipeline_thread=None; self.schedule_thread=None; self.update_thread=None
         self._main_tab="accounts"
         self._running_procs={}; self._proc_status=set(); self._restart_cnt=defaultdict(int); self._cli_procs={}

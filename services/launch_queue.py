@@ -365,7 +365,8 @@ class LaunchQueue(QObject):
         data = []
         for e in self._pending:
             data.append({"account_id": e.account_id, "source": e.source,
-                         "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
+                         "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S"),
+                         "persist_plan": e.persist_plan})
         try:
             import json
             from infrastructure.utils import atomic_write
@@ -391,7 +392,11 @@ class LaunchQueue(QObject):
                 nb = dt.strptime(d["not_before"], "%Y-%m-%d %H:%M:%S")
             except Exception:
                 nb = dt.now()
-            entry = QueueEntry.make(d["account_id"], d.get("source", "saved"), d.get("priority", 0), nb)
+            entry = QueueEntry.make(d["account_id"], d.get("source", "saved"),
+                                    d.get("priority", 0), nb,
+                                    persist_plan=d.get("persist_plan", False))
             heapq.heappush(self._pending, entry)
         self.ctx.config["queue"] = []
         self.ctx.log(f"[队列] 从历史恢复 {len(data)} 个等待项")
+        if data:
+            self._tick()
