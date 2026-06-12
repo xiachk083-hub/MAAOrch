@@ -65,13 +65,29 @@ class LaunchQueue(QObject):
         self._tick_timer.stop()
 
     def stop_all(self) -> int:
-        """Stop all running accounts immediately. Returns count."""
+        """Stop all running accounts and shut down emulators immediately. Returns count."""
         count = 0
+        emus_to_stop = set()
         for aid in list(self._active_emus.values()):
             if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
                 self.ctx._mw.runner.stop(aid)
                 count += 1
+            for a in self.ctx.accounts:
+                if a.get("id") == aid:
+                    emu = a.get("emu_instance_index", "")
+                    if emu:
+                        emus_to_stop.add(emu)
+                    break
         self._active_emus.clear()
+        # Shut down emulators
+        if emus_to_stop:
+            from infrastructure.task_constants import find_mumu_cli
+            cli = find_mumu_cli()
+            if cli:
+                import subprocess as _sp
+                for emu_idx in emus_to_stop:
+                    _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                             creationflags=_sp.CREATE_NO_WINDOW)
         from PySide6.QtCore import QTimer
         QTimer.singleShot(200, self._tick)
         return count
