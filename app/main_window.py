@@ -311,6 +311,11 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda _, a=act: _do_batch(self, a))
             bb.addWidget(btn)
 
+        stop_all_btn = QPushButton("⏹ 全部停止")
+        stop_all_btn.setFixedHeight(26)
+        stop_all_btn.clicked.connect(lambda: _stop_all(self))
+        bb.addWidget(stop_all_btn)
+
         bb.addStretch()
         ml.addLayout(bb)
 
@@ -355,7 +360,7 @@ class MainWindow(QMainWindow):
         tm.addAction("📋 队列详情", lambda: _open_queue(self))
         tm.addSeparator()
         tm.addAction("📤 导出配置与日志", lambda: _export_data(self))
-        tm.addAction("退出", self.maint._quit_app)
+        tm.addAction("退出", lambda: self._quit_gracefully())
 
         # Help menu
         import webbrowser
@@ -725,7 +730,8 @@ class MainWindow(QMainWindow):
             ret = QMessageBox.question(self, "退出", "确认退出 MAAOrch？\n运行中的 MAA 实例将被关闭。",
                                        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if ret == QMessageBox.Yes:
-                self._do_save(); e.accept(); QApplication.quit()
+                self._quit_gracefully()
+                e.accept()
             else:
                 e.ignore()
 
@@ -742,6 +748,24 @@ class MainWindow(QMainWindow):
             self._progress_lbl.setText(text)
             if not text:
                 self._progress_lbl.setStyleSheet("color:#e8a000;font-size:8pt;padding:2px 4px")
+
+    def _quit_gracefully(self) -> None:
+        """Stop all running MAA instances before quitting."""
+        runner = getattr(self, "runner", None)
+        if runner:
+            aids = list(runner._active.keys())
+            if aids:
+                for aid in aids:
+                    runner.stop(aid)
+                import time
+                deadline = time.time() + 5
+                while runner._active and time.time() < deadline:
+                    time.sleep(0.2)
+        self._do_save()
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            self.tray_icon.hide()
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
 def _about_dialog(parent=None):
     """Show About MAAOrch dialog."""
     from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
@@ -820,6 +844,15 @@ def _export_data(parent=None):
         QMessageBox.information(parent, "导出完成", f"已导出到:\n{dst}")
     except Exception as e:
         QMessageBox.warning(parent, "导出失败", str(e))
+
+def _stop_all(mw):
+    """Stop all running accounts."""
+    if hasattr(mw, 'launch_queue') and mw.launch_queue:
+        count = mw.launch_queue.stop_all()
+        if count:
+            mw._log(f"[停止] 全部停止: {count} 个账号已停止")
+        else:
+            mw._log("[停止] 没有运行中的账号")
 
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
