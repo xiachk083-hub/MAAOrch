@@ -568,8 +568,10 @@ class AccountRunner(QObject):
                             self._log_positions[aid] = current_size
                             self._log.debug(f"[asst.log] head={repr(new_content[:200])}")
                             if "AllTasksCompleted" in new_content:
-                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成 (MAA 将自行退出)")
-                                try: p.terminate(); p.wait(5)
+                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+                                tasks, sanity, drops = self._parse_log(aid)
+                                self._cleanup(aid, 0, tasks, sanity, drops)
+                                try: p.terminate(); p.wait(3)
                                 except: pass
                                 try: p.kill()
                                 except: pass
