@@ -2,167 +2,139 @@
 
 ## 概述
 
-MAAOrch 是一个基�?PySide6 (Qt 6) 的桌面应用，通过 `main.pyw` 无控制台窗口启动。核心入口为 `MainWindow`（`main_window.py`），管理所�?UI 组件和业务逻辑�?
+MAAOrch 是一个基于 PySide6 (Qt 6) 的多账号 MAA 调度桌面应用。`main.pyw` 无控制台窗口启动，`MainWindow`（`app/main_window.py`）管理所有 UI 和业务逻辑。
 
 ```
-main.pyw �?MainWindow �?ServiceContext
-                         ├── AccountRunner (runner.py)      �?单号启动→监控→完成回调
-                         ├── LaunchQueue  (launch_queue.py)  �?统一启动队列
-                         ├── RunStats     (stats.py)         �?运行历史持久�?
-                         ├── EmuService   (emu_ops.py)       �?ADB / 模拟器操�?
-                         ├── ConfigService(config_injector.py)    �?MAA 配置注入
-                         ├── LogService   (log_ops.py)       �?日志解析 / 统计
-                         ├── MaintService (maint_ops.py)     �?守护 / 更新 / 托盘
-                         ├── PipelineThread(pipeline_thread.py) �?分组流水线调�?
-                          ├── ScheduleThread(schedule_thread.py) �?定时/循环调度触发
-                          └── ApiServer    (api_server.py)    �?HTTP API 服务
+main.pyw → MainWindow → ServiceContext
+     ├── AccountRunner (services/runner.py)         启动→监控→完成回调
+     ├── LaunchQueue   (services/launch_queue.py)   优先级队列 + 调度
+     ├── ConfigService (services/config_injector.py) gui.json 双写入
+     ├── MaintService  (services/instance_pool.py)  实例创建/删除/重建
+     ├── LogService    (services/log_parser.py)     asst.log 解析
+     ├── EmuService    (services/emu_service.py)    ADB / 模拟器操作
+     ├── UpdateService (services/update_service.py) 下载/解压 MAA
+     ├── HealthCheck   (services/health_check.py)   10 项健康检查
+     ├── SmartScheduler(services/smart_scheduler.py) 理智/定时/material 决策
+     ├── PipelineThread(services/pipeline_thread.py) 流水线调度(legacy)
+     ├── ScheduleThread(services/schedule_thread.py) 定时调度(legacy)
+     └── ApiServer     (network/api_server.py)      HTTP API (15+ endpoints)
 ```
+
+## 目录结构
+
+| 目录 | 说明 |
+|------|------|
+| `app/` | 应用入口、主窗口、主题、DI 容器 |
+| `services/` | 核心服务：启动队列、MAA 生命周期、配置注入、模拟器管理、日志、更新、健康检查 |
+| `ui/` | 所有界面组件：账号卡片、侧栏、对话框、配置面板 |
+| `models/` | 数据模型：Account、QueueEntry、ConfigManager、RunStats |
+| `infrastructure/` | 基础设施：Logger、TaskConstants、Utils、BackgroundTask、PlatformHelper |
+| `network/` | HTTP API 服务 |
 
 ## 核心模块
 
 | 文件 | 职责 |
 |------|------|
-| `main.pyw` | 入口，处�?UAC 提权、单实例锁定、代理检测、异常捕�?|
-| `main_window.py` | 主窗口类 `MainWindow`，包含所�?UI 组件和交互逻辑 |
-| `account.py` | `Account` 数据类，类型化的账号模型，兼容旧 dict 访问 |
-| `config.py` | 配置文件加载/保存，版本迁移（v4→v5），开机自�?|
-| `runner.py` | `AccountRunner` �?单号启动→监控→完成回调闭环 |
-| `launch_queue.py` | `LaunchQueue` �?统一启动队列（手�?定时/理智三种来源�?|
-| `stats.py` | `RunStats` �?运行历史持久化到 `accounts/{id}/stats.json` |
-| `config_injector.py` | `ConfigService` �?MAA 配置注入（gui.json / gui.new.json / TOML�?|
-| `emu_ops.py` | `EmuService` �?ADB 扫描/连接/截图，模拟器实例检�?启动/关闭 |
-| `log_ops.py` | `LogService` �?asst.log 解析（v5/v6 双格式），统计展示，日志轮转 |
-| `maint_ops.py` | `MaintService` �?进程守护、更新检查、系统托盘、通知 |
-| `pipeline_thread.py` | `PipelineThread` �?分组流水线调度线程（串行/并行/暂停/恢复�?|
-| `schedule_thread.py` | `ScheduleThread` �?每日/每周定时触发 |
-| `api_server.py` | `ApiServer` �?HTTP REST 服务�?27.0.0.1 监听 |
-| `updater.py` | 下载/更新线程（`UpdateCheckThread`, `DownloadThread`, `MaacliInstallThread`�?|
-| `task_constants.py` | 任务名常量、模拟器预设、mumu-cli 发现、`EmuMonitor` 后台线程 |
-| `themes.py` | 暗色/亮色 QSS 样式�?|
-| `dialogs.py` | 设置、定时、账号、任务参数对话框 |
-| `callbacks.py` | `ServiceContext` 数据类，解耦服务模块与主窗�?|
-| `background.py` | `BackgroundTask` 通用后台线程封装 |
-| `utils.py` | 工具函数（代理检测、管理员权限、ID 生成、版本解析等�?|
-| `ui/dashboard.py` | 账号仪表盘，支持增量刷新 |
-| `ui/accounts_panel.py` | 账号列表面板 |
-| `ui/queue_panel.py` | 队列运行状�?|
-| `ui/config_cards.py` | 配置卡片网格视图 |
-| `ui/schedule_panel.py` | 循环调度全局管理 |
-
-## 数据�?
-
-```
-config.json ──�?load_config() ──�?accounts[] / warehouse[] / groups[]
-                                       �?                   �?
-                                       �?                   �?
-                                AccountRunner          PipelineThread
-                                (单号启动闭环)         (按分组调度启�?
-                                       �?
-                                       �?
-                                 MAA 程序进程
-                                       �?
-                                       �?
-                                asst.log ──�?LogService.parse_log()
-                                               �?
-                                               �?
-                                          RunStats.save_run()
-                                               �?
-                                               �?
-                                          stats.json ──�?HTTP API / 仪表�?
-```
+| `app/main.pyw` | 入口，UAC 提权、单实例锁（Windows 命名 Mutex）、代理检测、异常捕获 |
+| `app/main_window.py` | MainWindow：UI 装配 + 定时器 setup |
+| `app/service_context.py` | ServiceContext dataclass，通过信号传递共享状态 |
+| `app/themes.py` | Dark/Light/Notepaper QSS 主题 |
+| `services/runner.py` | AccountRunner：launch→monitor→account_finished 回调闭环 |
+| `services/launch_queue.py` | LaunchQueue：优先级队列（手动/定时/理智三种来源），30s tick 调度 |
+| `services/config_injector.py` | ConfigService：MAA 配置注入，双写 gui.json (v5) + gui.new.json (v6 TaskQueue) |
+| `services/instance_pool.py` | MaintService：MAA 实例创建/删除/重建 |
+| `services/smart_scheduler.py` | decide()：根据时间/理智余量/material 需求计算最优 dispatch_id |
+| `services/dispatch_pool.py` | Dispatch 模板池（create/get/remove） |
+| `services/log_parser.py` | LogService：asst.log 解析（v5/v6 双格式）、统计、日志轮转 |
+| `services/update_service.py` | Update：GitHub API 查询、下载、解压 MAA 压缩包 |
+| `services/emu_service.py` | EmuService：ADB 扫描/连接/截图，模拟器列表/启动/关闭 |
+| `services/health_check.py` | HealthCheck：10 项检查（ADB、MAA 进程、配置完整性等） |
+| `services/pipeline_thread.py` | PipelineThread (legacy)：分组流水线调度 |
+| `services/schedule_thread.py` | ScheduleThread (legacy)：定时触发 |
+| `models/account.py` | Account dataclass |
+| `models/config_manager.py` | ConfigManager：config.json 加载/保存/版本迁移 |
+| `models/queue_entry.py` | QueueEntry frozen dataclass |
+| `models/stats.py` | RunStats：运行历史持久化到 accounts/{id}/stats.json |
+| `infrastructure/logger.py` | Logger 类：debug/events/crash 三类日志 |
+| `infrastructure/task_constants.py` | 任务常量、mumu-cli 发现、EmuMonitor QThread（30s 轮询） |
+| `infrastructure/utils.py` | atomic_write / is_safe_zip_path / setup_proxy |
+| `infrastructure/background_thread.py` | BackgroundTask QThread 通用封装 |
+| `infrastructure/platform_helper.py` | IsUserAdmin / ShellExecuteW runas 提权 |
+| `ui/smart_panel.py` | 账号卡片列表 + 批量操作 |
+| `ui/side_bar.py` | 状态过滤器 + 模式切换 |
+| `ui/create_account.py` | 新建账号对话框 |
+| `ui/emu_selector.py` | 模拟器实例选择器 |
+| `ui/task_config.py` | 账号任务配置（9 个标签页） |
+| `ui/smart_config.py` | 全局智能调度配置对话框 |
+| `ui/account_detail.py` | 账号设置对话框 |
+| `ui/main_poll.py` | do_poll / do_smart_tick / health_check 驱动 |
+| `ui/rebuild_dialog.py` | 重建实例进度对话框 |
+| `ui/batch_edit.py` | 批量编辑账号 |
+| `ui/log_window.py` | 日志显示窗口 |
+| `ui/settings_window.py` | 设置对话框 |
+| `ui/widgets/config_card.py` | ConfigCard 小部件 |
+| `ui/dialogs.py` | 旧版对话框（兼容） |
+| `network/api_server.py` | HTTP REST 服务（127.0.0.1:0），15+ endpoints |
 
 ## ServiceContext 设计
 
-`ServiceContext`（`callbacks.py`）是一�?dataclass，将主窗口的共享状态和回调以类型安全的方式暴露给各 Service 类，避免直接传�?`MainWindow` 引用�?
+`ServiceContext`（`app/service_context.py`）是一个 dataclass，通过 Qt Signal/Slot 将 MainWindow 的共享状态以类型安全方式暴露给各 Service，避免直接传递 MainWindow 引用。
 
-```python
-@dataclass
-class ServiceContext:
-    # 回调
-    log: Callable[[str], None]
-    save: Callable[[], None]
-    notify: Callable[[str, bool], None]
-    set_status: Callable[[str], None]
-    set_theme: Callable[[str], None]
-    show_dashboard: Callable[[int], None]
-    inject_config: Callable[[dict, dict], None]
-    launch_program: Callable[[dict], None]
-    start_pipeline: Callable[[], None]
-    restart_api_server: Callable[[], None]
-    on_account_done: Callable[[str, int, list], None]
+## 配置双写策略
 
-    # 共享数据
-    accounts: list[dict]
-    warehouse: list[dict]
-    config: dict
-    groups: list[dict]
-    emu_status: dict
-    proc_status: set
-    proc_start_times: dict
-    running_procs: dict
-    cli_procs: dict
+ConfigService 同时写入两种格式：
+- **gui.json (v5)** — 旧版兼容，保留完整配置结构
+- **gui.new.json (v6 TaskQueue)** — 新版任务队列格式
 
-    # 服务引用
-    cfg: ConfigService | None
-    logs: LogService | None
-    update_thread: Any
-    schedule_thread: Any
-    api_server: Any
-    emu_monitor: Any
+迁移逻辑在 `models/config_manager.py` 中处理 v4→v5 升级。
 
-    _mw: MainWindow  # 仅用于弹框等需�?parent 的场�?
-```
+## 智能调度
 
-## 单实例机�?
+`services/smart_scheduler.py::decide()` 根据以下条件计算最优 dispatch：
+- 当前时间 & 定时设定
+- 理智余量和恢复时间
+- material 需求优先级
 
-通过 `main.pyw` 创建命名�?Windows 互斥体（Mutex），若已存在则通过广播消息激活已有窗口后退出�?
-
-## 管理员权�?
-
-启动时通过 `ctypes.windll.shell32.IsUserAnAdmin()` 检测，若非管理员则调用 `ShellExecuteW` �?`runas` 重新启动（UAC 弹窗）�?
+返回的 dispatch 通过 `services/dispatch_pool.py` 模板池转换为具体配置。
 
 ## 线程模型
 
 | 线程 | 类型 | 说明 |
 |------|------|------|
-| 主线�?| GUI | Qt 事件循环，所�?UI 操作 |
-| `PipelineThread` | QThread | 流水线调度，支持暂停/停止 |
-| `ScheduleThread` | QThread | 定时/循环调度检查，到点触发 |
-| `ApiServer` | QThread | HTTP 服务器，独立监听 |
-| `EmuMonitor` | QThread | �?30s 轮询 MuMu 实例状�?|
-| `UpdateCheckThread` | QThread | GitHub API 查询 |
-| `DownloadThread` | QThread | 下载 MAA 压缩�?|
-| `BackgroundTask` | QThread | 通用一次性后台任�?|
-| `LaunchQueue` | QTimer | 30s tick 调度启动队列 |
+| 主线程 | GUI | Qt 事件循环，所有 UI 操作 |
+| EmuMonitor | QThread | ~30s 轮询 MuMu 实例状态 |
+| LaunchQueue 后台 | QThread | 启动调度（非阻塞） |
+| ApiServer | QThread | HTTP 服务器独立监听 |
+| PipelineThread | QThread | 流水线调度 (legacy) |
+| ScheduleThread | QThread | 定时触发 (legacy) |
+| BackgroundTask | QThread | 通用一次性后台任务 |
 
-所有线程间通信通过 Qt Signal/Slot 机制，数据更新回主线程执行�?
+所有线程间通信通过 Qt Signal/Slot，数据更新回主线程执行。
 
 ## 启动队列架构
 
-`LaunchQueue` 是系统的核心调度入口，所有启动请求都先进入队列：
+`LaunchQueue` 是核心调度入口，所有启动请求先入队：
 
 ```
-  触发来源:
-    �?手动点▶ (priority=0, not_before=now)
-    �?定时到了 (priority=1, not_before=now)
-    �?理智回满 (priority=2, not_before=recovery_time)
-           �?
-           �?
-  LaunchQueue (30s tick)
-    ├─ 已在运行�?�?跳过
-    ├─ 模拟器被占？ �?跳过
-    ├─ 还没到时间？ �?跳过
-    ├─ 理智不够�?�?跳过
-    └─ 全部满足 �?启动
-           �?
-           �?
-  AccountRunner.launch()
-           �?
-           �?
-  account_finished 信号
-    ├─ 释放模拟�?
-    ├─ 理智入队（自动计算恢复时间）
-    └─ tick() 检查下一�?
+触发来源：
+  - 手动点 ▶ (priority=0, not_before=now)
+  - 定时触发 (priority=1, not_before=now)
+  - 理智回满 (priority=2, not_before=recovery_time)
+
+LaunchQueue (30s tick)
+  跳过条件：已在运行 / 模拟器被占 / 未到时间 / 理智不够
+  全部满足 → AccountRunner.launch()
+
+account_finished 信号：
+  释放模拟器 → 理智入队（自动计算恢复时间）→ tick() 下一轮
 ```
 
-核心原则�?*绝不中断正在运行�?MAA，只等空闲时启动下一�?*�?
+核心原则：**绝不中断正在运行的 MAA，只等空闲时启动下一个**。
+
+## 单实例机制
+
+`app/main.pyw` 创建 Windows 命名 Mutex，若已存在则通过广播消息激活已有窗口后退出。
+
+## 管理员权限
+
+`infrastructure/platform_helper.py` 启动时检测 `IsUserAdmin()`，若非管理员则调用 `ShellExecuteW` 以 `runas` 重新启动（UAC 弹窗）。

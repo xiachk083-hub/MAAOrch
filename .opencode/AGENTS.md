@@ -24,8 +24,14 @@
 
 ## 项目上下文 (2025-06-12)
 - MAAOrch: Python + PySide6 Qt Widgets
+- 目录结构: `app/` `services/` `ui/` `models/` `infrastructure/` `network/`
 - MAA v6 使用 gui.new.json，要求 TaskQueue 条目带 $type 字段
 - PostActions="12" (MAA v6 编码: 4=ExitEmulator, 8=ExitSelf)
+- 调度模板池: `services/dispatch_pool.py` + account.dispatch_id 取代 smart_plan
+- 三种调度模式: `config.schedule_mode = daily / roguelike / reclamation`
+- `_persist_plan` 只在 exit_code == 0 时清理（崩溃/断连保留）
+- ADB server 自愈: 检测 protocol fault → kill-server + start-server
+- `find_mumu_cli()` 已缓存 (`@lru_cache`)
 - mumu-cli 子命令是 shutdown 不是 quit
 - subprocess 必须加 encoding="utf-8", errors="replace"
 - 所有改动须与现有 68 个测试兼容
