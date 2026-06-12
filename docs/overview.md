@@ -23,7 +23,7 @@
 │                                                                                  │
 │ ┌──────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐│
 │ │ 配置写入注入          │ │ MAA 实例池管理            │ │ 进程与队列管理            ││
-│ │ config_injector.py   │ │ instance_pool.py         │ │ launch_queue + runner   ││
+│ │ services/config_injector.py   │ │ instance_pool.py         │ │ launch_queue + runner   ││
 │ │                      │ │                          │ │                         ││
 │ │ 读账号配置            │ │ maa/source/ 用户目录      │ │ 排队 → 分配实例           ││
 │ │ 生成 gui.json         │ │ → 目录软链接              │ │ → 后台线程启动 MAA       ││
@@ -35,7 +35,7 @@
 │                                                                                  │
 │ ┌──────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐│
 │ │ 智能调度引擎          │ │ ADB 检测与连接            │ │ 环境检测与修复            ││
-│ │ smart_scheduler.py   │ │ task_constants.py        │ │ health_check.py         ││
+│ │ services/smart_scheduler.py   │ │ infrastructure/task_constants.py        │ │ services/health_check.py         ││
 │ │                      │ │                          │ │                         ││
 │ │ 理智阈值触发          │ │ detect_emu_instances()   │ │ 检查 10 项               ││
 │ │ 基建时间触发          │ │ 动态获取 ADB 端口         │ │ Python/PySide6/ADB/MAA  ││
@@ -58,7 +58,7 @@
 │                                                                                  │
 │ ┌──────────────────────┐ ┌─────────────────────────┐                             │
 │ │ 主题系统              │ │ HTTP API 服务器          │                             │
-│ │ themes.py            │ │ api_server.py            │                             │
+│ │ app/themes.py            │ │ network/api_server.py            │ │
 │ │                      │ │                          │                             │
 │ │ 暗色主题              │ │ 15+ 端点                 │                             │
 │ │ 亮色主题              │ │ hmac 鉴权                │                             │
@@ -387,8 +387,8 @@ ServiceContext / 信号事件
 | `models/account.py` | 账号数据模型（dataclass，完整字段集） | `Account`, `from_dict`, `to_dict` |
 | `models/config_manager.py` | config.json 读写（原子写）+ 备份 + 迁移 | `load_config`, `save_config`, `migrate` |
 | `models/queue_entry.py` | 冻结队列条目（防 sort_key 突变） | `QueueEntry` |
-| `themes.py` | 暗色/亮色/Notepaper 主题 | `DARK_STYLE`, `LIGHT_STYLE`, `NOTEPAPER_STYLE` |
-| `health_check.py` | 环境检测与修复（10 项检查） | `run_health_check`, `show_health_dialog` |
+| `app/themes.py` | 暗色/亮色/Notepaper 主题 | `DARK_STYLE`, `LIGHT_STYLE`, `NOTEPAPER_STYLE` |
+| `services/health_check.py` | 环境检测与修复（10 项检查） | `run_health_check`, `show_health_dialog` |
 
 ---
 
