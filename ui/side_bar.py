@@ -47,6 +47,18 @@ def build_side_bar(mw: Any) -> QFrame:
         mw._side_labels[key] = lbl
         mw._side_frames[key] = frame
 
+    # VM status section
+    vm_sep = QFrame()
+    vm_sep.setFrameShape(QFrame.HLine); vm_sep.setStyleSheet("color:#333;margin:4px 0")
+    vl.addWidget(vm_sep)
+    vm_title = QLabel("  模拟器")
+    vm_title.setStyleSheet("color:#888;font-size:8pt;padding:2px 4px")
+    vl.addWidget(vm_title)
+    vm_status_container = QVBoxLayout()
+    vm_status_container.setSpacing(1)
+    vl.addLayout(vm_status_container)
+    sb._vm_container = vm_status_container
+
     vl.addStretch()
 
     # Schedule mode selector
@@ -95,6 +107,36 @@ def build_side_bar(mw: Any) -> QFrame:
         mw._side_labels["waiting"].setText(f"  排队中  {waiting}")
         mw._side_labels["error"].setText(f"  错误  {errors}")
         mw._side_labels["paused"].setText(f"  暂停  {paused}")
+
+        # Refresh VM status
+        vm_container = getattr(sb, '_vm_container', None)
+        if vm_container:
+            while vm_container.count():
+                item = vm_container.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            from collections import defaultdict
+            vm_status = {}
+            runner = getattr(mw, "runner", None)
+            if runner:
+                for aid, ac in runner._active.items():
+                    vm = ac.get("emu_instance_index", "")
+                    name = ac.get("name", aid)[:6]
+                    client = ac.get("game_client", "?")
+                    if vm:
+                        vm_status[vm] = f"{client} {name}"
+            seen_vms = set()
+            for a in mw.accounts:
+                vm = a.get("emu_instance_index", "")
+                if vm and vm not in seen_vms:
+                    seen_vms.add(vm)
+                    status = vm_status.get(vm, "空闲")
+                    lbl = QLabel(f"  VM {vm}: {status}")
+                    if vm in vm_status:
+                        lbl.setStyleSheet("color:#498205;font-size:7pt;padding:1px 4px")
+                    else:
+                        lbl.setStyleSheet("color:#555;font-size:7pt;padding:1px 4px")
+                    vm_container.addWidget(lbl)
 
     timer = QTimer(sb)
     timer.timeout.connect(_refresh_counts)
