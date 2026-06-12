@@ -37,6 +37,7 @@ class LaunchQueue(QObject):
         self._tick_timer = QTimer(self)
         self._tick_timer.timeout.connect(self._tick)
         self._paused = True  # queue starts paused; user must explicitly start
+        self._booting_emus: set[str] = set()  # VMs currently being started (serial launch)
         self._import_heapq()
 
     @staticmethod
@@ -344,8 +345,14 @@ class LaunchQueue(QObject):
                     _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被 {occupant_name} 占用")
                     heapq.heappush(self._pending, entry)
                     continue
+                if emu_idx and emu_idx in self._booting_emus:
+                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 正在启动")
+                    heapq.heappush(self._pending, entry)
+                    continue
                 self._active_emus[emu_idx] = entry.account_id
+                self._booting_emus.add(emu_idx)
                 launch_now.append(entry)
+                break  # serial launch: only one per tick
 
         # Launch outside lock to avoid re-entrancy, staggered to prevent UI freeze
         from PySide6.QtCore import QTimer
@@ -353,6 +360,13 @@ class LaunchQueue(QObject):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
                 continue
             QTimer.singleShot(idx * 5000, lambda e=entry: self._do_launch(e))
+
+    def _on_launch_ready(self, emu_idx: str) -> None:
+        """Called when a VM has finished booting (ADB ready + MAA launched).
+        Removes from booting set and triggers next tick for serial launch."""
+        self._booting_emus.discard(emu_idx)
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, self._tick)
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
