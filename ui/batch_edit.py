@@ -18,7 +18,7 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
 
     d = QDialog(mw)
     d.setWindowTitle("批量编辑")
-    d.setMinimumSize(420, 360)
+    d.setMinimumSize(480, 380)
     vl = QVBoxLayout(d)
     vl.setSpacing(6)
 
@@ -44,10 +44,16 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
 
     def _build_fields(ac: dict, container: QVBoxLayout) -> dict:
         """Rebuild the field widgets for the given account. Returns dict of field widgets."""
-        # Clear container
-        while container.count():
-            item = container.takeAt(0)
-            if item.widget(): item.widget().deleteLater()
+        # Clear container: remove all items and delete widgets
+        def _clear_layout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                w = item.widget()
+                if w:
+                    w.deleteLater()
+                elif item.layout():
+                    _clear_layout(item.layout())
+        _clear_layout(container)
 
         widgets = {}
 
