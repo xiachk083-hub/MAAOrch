@@ -338,6 +338,9 @@ class MainWindow(QMainWindow):
         log_btn.setToolTip("日志")
         log_btn.clicked.connect(lambda: show_log_window(self))
         sb2.addPermanentWidget(log_btn)
+        self._progress_lbl = QLabel("")
+        self._progress_lbl.setStyleSheet("color:#e8a000;font-size:8pt;padding:2px 4px")
+        sb2.addPermanentWidget(self._progress_lbl)
 
         # Menu bar
         mb = self.menuBar()
@@ -351,6 +354,7 @@ class MainWindow(QMainWindow):
         tm.addAction("📊 运行统计", lambda: _open_stats(self))
         tm.addAction("📋 队列详情", lambda: _open_queue(self))
         tm.addSeparator()
+        tm.addAction("📤 导出配置与日志", lambda: _export_data(self))
         tm.addAction("退出", self.maint._quit_app)
 
         # Help menu
@@ -358,6 +362,7 @@ class MainWindow(QMainWindow):
         hm = mb.addMenu("帮助")
         hm.addAction("📖 使用文档", lambda: webbrowser.open("https://github.com/xiachk083-hub/MAAOrch/blob/main/docs/overview.md"))
         hm.addAction("💬 反馈问题", lambda: webbrowser.open("https://github.com/xiachk083-hub/MAAOrch/issues"))
+        hm.addAction("⌨ 快捷键", lambda: _shortcuts_dialog(self))
         hm.addSeparator()
         hm.addAction("ℹ️ 关于 MAAOrch", lambda: _about_dialog(self))
 
@@ -716,7 +721,13 @@ class MainWindow(QMainWindow):
         if self.config.get("minimize_to_tray",True) and hasattr(self,'tray_icon') and self.tray_icon:
             self.hide(); e.ignore()
         else:
-            self._do_save(); e.accept(); QApplication.quit()
+            from PySide6.QtWidgets import QMessageBox
+            ret = QMessageBox.question(self, "退出", "确认退出 MAAOrch？\n运行中的 MAA 实例将被关闭。",
+                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if ret == QMessageBox.Yes:
+                self._do_save(); e.accept(); QApplication.quit()
+            else:
+                e.ignore()
 
     def changeEvent(self, e) -> None:
         if e.type() == QEvent.WindowStateChange:
@@ -726,6 +737,11 @@ class MainWindow(QMainWindow):
         super().changeEvent(e)
     def _tlog(self) -> None: show_log_window(self)
     def _settings(self) -> None: open_settings(self)
+    def _set_progress(self, text: str) -> None:
+        if hasattr(self, '_progress_lbl'):
+            self._progress_lbl.setText(text)
+            if not text:
+                self._progress_lbl.setStyleSheet("color:#e8a000;font-size:8pt;padding:2px 4px")
 def _about_dialog(parent=None):
     """Show About MAAOrch dialog."""
     from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
@@ -776,6 +792,34 @@ def _open_queue(parent=None):
     mw = parent
     if hasattr(mw, 'launch_queue') and mw.launch_queue:
         open_queue_dialog(mw, mw.launch_queue, mw.accounts)
+
+def _shortcuts_dialog(parent=None):
+    from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel
+    d = QDialog(parent)
+    d.setWindowTitle("快捷键")
+    d.setFixedSize(300, 150)
+    vl = QVBoxLayout(d)
+    vl.addWidget(QLabel("Ctrl+Enter — 启动流水线"))
+    vl.addWidget(QLabel("Esc — 停止流水线"))
+    d.exec()
+
+def _export_data(parent=None):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+    import shutil, zipfile
+    from pathlib import Path
+    folder = QFileDialog.getExistingDirectory(parent, "选择导出目录")
+    if not folder:
+        return
+    dst = Path(folder) / f"maorch_export_{__import__('datetime').datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    dst.mkdir(parents=True)
+    try:
+        cfg = Path(__file__).parent.parent / "models" / "config.json"
+        if cfg.exists(): shutil.copy2(cfg, dst / "config.json")
+        log = Path(__file__).parent.parent / "debug.log"
+        if log.exists(): shutil.copy2(log, dst / "debug.log")
+        QMessageBox.information(parent, "导出完成", f"已导出到:\n{dst}")
+    except Exception as e:
+        QMessageBox.warning(parent, "导出失败", str(e))
 
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
