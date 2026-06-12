@@ -377,8 +377,16 @@ def _do_batch(mw: Any, action: str) -> None:
     lq = getattr(mw, "launch_queue", None)
     runner = getattr(mw, "runner", None)
     if action == "enq" and lq:
+        from services.dispatch_pool import create_dispatch
+        from ui.side_bar import _get_schedule_tasks
+        tasks = _get_schedule_tasks(mw)
+        plan = ",".join(tasks)
         for aid in selected:
-            lq.enqueue(aid, "manual")
+            a = next((x for x in mw.accounts if x.get("id") == aid), None)
+            if a:
+                a["dispatch_id"] = create_dispatch(tasks)
+                a["smart_plan"] = plan
+                lq.enqueue(aid, "manual", persist_plan=True)
         lq.tick()
     elif action == "stop" and runner:
         for aid in selected:

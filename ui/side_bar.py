@@ -155,12 +155,8 @@ def _toggle_smart(mw: Any, enabled: bool) -> None:
         QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
 
 
-def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
-    if hasattr(mw, "launch_queue") and mw.launch_queue:
-        with mw.launch_queue._lock:
-            mw.launch_queue._pending.clear()
-            mw.launch_queue._active_emus.clear()
-        mw.launch_queue._save_queue()
+def _get_schedule_tasks(mw: Any, include_anni: bool = True) -> list[str]:
+    """Generate task list based on current schedule mode."""
     mode = mw.config.get("schedule_mode", "daily")
     if mode == "daily":
         tasks = ["StartUp"]
@@ -173,6 +169,17 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
         tasks = ["StartUp", "Reclamation"]
     else:
         tasks = ["StartUp", "Award"]
+    return tasks
+
+
+def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
+    if hasattr(mw, "launch_queue") and mw.launch_queue:
+        with mw.launch_queue._lock:
+            mw.launch_queue._pending.clear()
+            mw.launch_queue._active_emus.clear()
+        mw.launch_queue._save_queue()
+    mode = mw.config.get("schedule_mode", "daily")
+    tasks = _get_schedule_tasks(mw, include_anni)
     plan = ",".join(tasks)
     label_map = {"daily":"日常", "roguelike":"肉鸽", "reclamation":"生息"}
     count = 0
