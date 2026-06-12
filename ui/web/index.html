@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAAOrch</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h2>MAAOrch</h2>
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="daily">日常</button>
+        <button class="mode-btn" data-mode="roguelike">肉鸽</button>
+        <button class="mode-btn" data-mode="reclamation">生息</button>
+      </div>
+    </div>
+    <nav id="nav">
+      <a class="nav-item active" data-page="accounts">📋 账号</a>
+      <a class="nav-item" data-page="queue">📦 队列</a>
+      <a class="nav-item" data-page="stats">📊 统计</a>
+      <a class="nav-item" data-page="settings">⚙ 设置</a>
+      <a class="nav-item" data-page="about">ℹ️ 关于</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="vm-status"></div>
+      <div id="queue-summary">运行: 0 | 队列: 0</div>
+    </div>
+  </aside>
+  <main id="main">
+    <header id="topbar">
+      <div id="page-title">账号</div>
+      <div id="topbar-actions"></div>
+    </header>
+    <div id="content"></div>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
