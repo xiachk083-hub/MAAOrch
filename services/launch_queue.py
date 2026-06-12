@@ -333,9 +333,10 @@ class LaunchQueue(QObject):
             # Resource overloaded? Push back all to_launch entries, don't start anything new
             if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'runner'):
                 if self.ctx._mw.runner._overloaded:
-                    _QUEUE_LOG.info(f"_tick: 过载保护 to_launch={len(to_launch)} pending={len(self._pending)}")
+                    _QUEUE_LOG.info(f"_tick: 过载保护 to_launch={len(to_launch)} pending_before={len(self._pending)}")
                     for entry in to_launch:
                         heapq.heappush(self._pending, entry)
+                    _QUEUE_LOG.info(f"_tick: 过载保护已推回 pending_after={len(self._pending)}")
                     return
 
             # Determine which entries to launch (still under lock)
