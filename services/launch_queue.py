@@ -382,9 +382,18 @@ class LaunchQueue(QObject):
             if a["id"] == entry.account_id:
                 a["_persist_plan"] = entry.persist_plan
                 break
+        ok = False
         if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
-            self.ctx._mw.runner.launch_by_id(entry.account_id)
-        self.launched.emit(entry.account_id)
+            ok = self.ctx._mw.runner.launch_by_id(entry.account_id)
+        if ok:
+            self.launched.emit(entry.account_id)
+        else:
+            # Launch failed → release resources and push back to queue
+            emu_idx = self._get_emu_key(entry.account_id)
+            self._active_emus.pop(emu_idx, None)
+            self._booting_emus.discard(emu_idx)
+            heapq.heappush(self._pending, entry)
+            self.ctx.log(f"[队列] {entry.account_id[:6]} 启动失败，放回队列等待重试")
 
     def _get_emu_key(self, account_id: str) -> str:
         """Return emu instance index, or a unique fallback for no-emu accounts."""
