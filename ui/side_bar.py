@@ -178,7 +178,6 @@ def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False) 
     if hasattr(mw, "launch_queue") and mw.launch_queue:
         with mw.launch_queue._lock:
             mw.launch_queue._pending.clear()
-            mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
     mode = mw.config.get("schedule_mode", "daily")
     tasks = _get_schedule_tasks(mw, include_anni, only_anni)
