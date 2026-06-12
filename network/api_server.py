@@ -41,6 +41,9 @@ class ApiServer(QThread):
                 if ref and not ref.startswith("http://127.0.0.1") and not ref.startswith("http://localhost"):
                     return s._json({"error":"forbidden"}, 403)
                 h=s.headers.get("x-agent-token","")
+                # Web UI (no token) allowed from localhost
+                if not h:
+                    return True
                 return hmac.compare_digest(h, token)
             def _json(s,data,code=200):
                 s.send_response(code); s.send_header("Content-Type","application/json"); s.end_headers()
@@ -49,8 +52,11 @@ class ApiServer(QThread):
                 s.send_response(200);s.send_header("Content-Type","application/json");s.end_headers()
             def do_GET(s):
                 if not s._check_rate_limit(): return
-                if not s._check_auth(): return s._json({"error":"unauthorized"},401)
                 p=s.path.split("?")[0]
+                # Static files: no auth required
+                if p=="/" or p.startswith("/ui/web/"):
+                    return s._serve_static(p)
+                if not s._check_auth(): return s._json({"error":"unauthorized"},401)
                 if p=="/api/status": return s._handle_status()
                 if p=="/api/node/info": return s._handle_node_info()
                 if p.startswith("/api/account/") and p.endswith("/status"): return s._handle_account_status(p)
