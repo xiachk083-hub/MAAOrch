@@ -382,6 +382,9 @@ class LaunchQueue(QObject):
         """Called when a VM has finished booting (ADB ready + MAA launched).
         Removes from booting set and triggers next tick for serial launch."""
         self._booting_emus.discard(emu_idx)
+        # Only trigger next tick if no other VM is still booting (prevents mass concurrent launch)
+        if self._booting_emus:
+            return
         from PySide6.QtCore import QTimer
         QTimer.singleShot(0, self._tick)
 
