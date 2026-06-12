@@ -138,3 +138,55 @@ account_finished 信号：
 ## 管理员权限
 
 `infrastructure/platform_helper.py` 启动时检测 `IsUserAdmin()`，若非管理员则调用 `ShellExecuteW` 以 `runas` 重新启动（UAC 弹窗）。
+
+---
+
+## 实体关系模型
+
+### 核心实体
+
+```
+账号 (Account)
+  ├─ game_client: Bilibili / Official  ← 不同 APK
+  ├─ emu_instance_index: "0"          ← 在哪个模拟器 VM 上
+  ├─ account_switch: "用户名"          ← APP 内的账号标识
+  └─ name: "我的B服号"                ← 用户给的昵称
+
+MAA 实例 (无状态工具)
+  ├─ maa/instances/N/MAA.exe
+  ├─ 被 MAAOrch 配置后启动
+  ├─ 通过 ADB 连接模拟器
+  └─ 执行 TaskQueue 后退出 (PostActions=12)
+
+MuMu 模拟器 (VM)
+  ├─ VM 0: ADB 127.0.0.1:16384
+  │   ├─ 安装了 方舟Bilibili.apk
+  │   │   └─ 用户手动登录了 "我的B服号"
+  │   └─ 安装了 方舟Official.apk
+  │       └─ 用户手动登录了 "我的官服号"
+  └─ VM 1: ADB 127.0.0.1:16416
+      └─ ...
+```
+
+### 关键约束
+
+| 规则 | 说明 |
+|------|------|
+| 账号 ≠ MAA 实例 | 账号绑的是**模拟器 VM + 服务器 APP** |
+| 一个 VM 可以有一个 B 服号 + 一个官服号 | 不同 APK 互不干扰 |
+| 用户手动登录 | MAAOrch 不存密码，不做自动登录 |
+| MAA 无状态 | 每次启动都重新注入配置，用完就退 |
+| `game_client` 决定启动哪个 APK | Bilibili / Official 是不同的 APP |
+
+### 调度链路
+
+```
+MAAOrch 调度器
+  → 读账号配置 (API/VM/服/号)
+  → 配 MAA (inject_smart)
+  → 启动 MAA (Popen)
+  → MAA 连模拟器 ADB
+  → 启动对应方舟 APP (ClientType)
+  → 执行任务队列
+  → PostActions 退出
+```
