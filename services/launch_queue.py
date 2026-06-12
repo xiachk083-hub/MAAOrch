@@ -273,6 +273,10 @@ class LaunchQueue(QObject):
         """Check queue and launch all eligible accounts (parallel across different emus)."""
         if self._paused:
             return
+        # Resource overloaded? Keep queue intact, don't launch
+        if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'runner'):
+            if self.ctx._mw.runner._overloaded:
+                return
         with self._lock:
             now = datetime.now()
             heapq = self._import_heapq()
