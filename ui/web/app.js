@@ -48,7 +48,7 @@ async function refreshSidebar() {
   try {
     const s = await apiGet('/status');
     const q = await apiGet('/queue');
-    document.getElementById('queue-summary').textContent = `运行: ${s.running || 0} | 队列: ${q.pending || 0}`;
+    document.getElementById('queue-summary').textContent = `运行: ${s.running || 0} | 队列: ${q.pending_count || 0}`;
     const accts = await apiGet('/accounts');
     if (accts.ok) {
       const vms = {};
@@ -127,16 +127,16 @@ async function renderQueue(container) {
     const s = await apiGet('/status');
     container.innerHTML = `<div style="margin-bottom:8px">
       <span>运行中: <strong>${s.running || 0}</strong></span>
-      <span style="margin-left:16px">排队: <strong>${q.pending || 0}</strong></span>
+      <span style="margin-left:16px">排队: <strong>${q.pending_count || 0}</strong></span>
       <button onclick="clearQueue()" style="margin-left:16px" class="danger small">清空队列</button>
     </div>
     <div id="queue-list"></div>`;
     const ql = document.getElementById('queue-list');
-    if (q.pending && q.entries) {
-      ql.innerHTML = q.entries.map(e => {
+    if (q.pending && q.pending.length) {
+      ql.innerHTML = q.pending.map(e => {
         const srcMap = {manual:'手动', schedule:'定时', sanity:'理智', force:'强制', retry:'重试'};
         return `<div class="queue-item">
-          <span class="name">${e.name || e.account_id.slice(0,8)}</span>
+          <span class="name">${e.account_name || e.account_id?.slice(0,8) || '?'}</span>
           <span class="source">${srcMap[e.source]||e.source}</span>
           <span class="eta">${e.not_before ? new Date(e.not_before).toLocaleTimeString() : '立即'}</span>
         </div>`;
