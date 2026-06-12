@@ -56,8 +56,7 @@ class Account:
         return getattr(self, key)
 
     def __setitem__(self, key: str, value) -> None:
-        if hasattr(self, key):
-            setattr(self, key, value)
+        object.__setattr__(self, key, value)
 
     def get(self, key: str, default=None):
         return getattr(self, key, default) if hasattr(self, key) else default
@@ -71,6 +70,14 @@ class Account:
         for k, v in d.items():
             if hasattr(self, k):
                 setattr(self, k, v)
+
+    def pop(self, key: str, default=None):
+        try:
+            val = object.__getattribute__(self, key)
+            object.__setattr__(self, key, type(val)() if type(val) in (str, int, float, bool, list, dict) else "")
+            return val
+        except AttributeError:
+            return default
 
     @classmethod
     def from_dict(cls, d: dict) -> "Account":
