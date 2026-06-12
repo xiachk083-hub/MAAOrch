@@ -90,8 +90,8 @@ class ApiServer(QThread):
                 if p=="/api/config": return s._handle_save_config(body)
                 if p=="/api/settings/smart": return s._handle_save_smart(body)
                 if p=="/api/action/stop_all": return s._handle_stop_all()
-			if p=="/api/action/smart_all": return s._handle_smart_all(body)
-				if p=="/api/instance/rebuild": return s._handle_rebuild()
+                if p=="/api/action/smart_all": return s._handle_smart_all(body)
+                if p=="/api/instance/rebuild": return s._handle_rebuild()
                 s._json({"error":"not found"},404)
             def _handle_status(s):
                 accts=[]
