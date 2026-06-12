@@ -155,8 +155,10 @@ def _toggle_smart(mw: Any, enabled: bool) -> None:
         QTimer.singleShot(500, lambda: (setattr(mw, "_last_smart_minute", ""), mw._smart_tick()))
 
 
-def _get_schedule_tasks(mw: Any, include_anni: bool = True) -> list[str]:
+def _get_schedule_tasks(mw: Any, include_anni: bool = True, only_anni: bool = False) -> list[str]:
     """Generate task list based on current schedule mode."""
+    if only_anni:
+        return ["StartUp", "Annihilation", "Award"]
     mode = mw.config.get("schedule_mode", "daily")
     if mode == "daily":
         tasks = ["StartUp"]
@@ -172,14 +174,14 @@ def _get_schedule_tasks(mw: Any, include_anni: bool = True) -> list[str]:
     return tasks
 
 
-def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
+def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False) -> None:
     if hasattr(mw, "launch_queue") and mw.launch_queue:
         with mw.launch_queue._lock:
             mw.launch_queue._pending.clear()
             mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
     mode = mw.config.get("schedule_mode", "daily")
-    tasks = _get_schedule_tasks(mw, include_anni)
+    tasks = _get_schedule_tasks(mw, include_anni, only_anni)
     plan = ",".join(tasks)
     label_map = {"daily":"日常", "roguelike":"肉鸽", "reclamation":"生息"}
     count = 0
@@ -194,7 +196,8 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
         mw.launch_queue.enqueue(aid, "force", priority=0)
         count += 1
     if count:
-        mw._log(f"▶ {label_map.get(mode, '')}调度: {count} 个账号已入队")
+        label = f" {'只剿灭' if only_anni else '含剿灭' if include_anni else '刷关'}"
+        mw._log(f"▶{label_map.get(mode, '')}调度{label}: {count} 个账号已入队")
         from PySide6.QtCore import QTimer
         QTimer.singleShot(200, mw.launch_queue.tick)
 

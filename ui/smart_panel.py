@@ -376,10 +376,12 @@ def _do_batch(mw: Any, action: str) -> None:
         return
     lq = getattr(mw, "launch_queue", None)
     runner = getattr(mw, "runner", None)
-    if action == "enq" and lq:
+    if action.startswith("enq") and lq:
         from services.dispatch_pool import create_dispatch
         from ui.side_bar import _get_schedule_tasks
-        tasks = _get_schedule_tasks(mw)
+        only_anni = action == "enq_anni_only"
+        no_anni = action == "enq_no_anni"
+        tasks = _get_schedule_tasks(mw, not no_anni, only_anni)
         plan = ",".join(tasks)
         for aid in selected:
             a = next((x for x in mw.accounts if x.get("id") == aid), None)
