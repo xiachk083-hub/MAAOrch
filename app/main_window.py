@@ -162,6 +162,8 @@ class MainWindow(QMainWindow):
                 ctypes.byref(dark_mode), ctypes.sizeof(dark_mode))
         except Exception:
             pass
+        from ui.onboarding import check_onboarding
+        QTimer.singleShot(100, lambda: check_onboarding(self))
 
     def _set_theme(self, m: str) -> None:
         style = {"Dark": DARK_STYLE, "Light": LIGHT_STYLE, "Notepaper": NOTEPAPER_STYLE}.get(m, DARK_STYLE)
@@ -346,6 +348,8 @@ class MainWindow(QMainWindow):
         tm.addAction("🔍 环境检测与修复", lambda: self._health_dialog())
         tm.addAction("设置", lambda: open_settings(self))
         tm.addAction("日志", lambda: show_log_window(self))
+        tm.addAction("📊 运行统计", lambda: _open_stats(self))
+        tm.addAction("📋 队列详情", lambda: _open_queue(self))
         tm.addSeparator()
         tm.addAction("退出", self.maint._quit_app)
 
@@ -762,6 +766,16 @@ def _about_dialog(parent=None):
     btn_row.addWidget(ok_btn)
     vl.addLayout(btn_row)
     d.exec()
+
+def _open_stats(parent=None):
+    from ui.stats_panel import show_stats_dialog
+    show_stats_dialog(parent)
+
+def _open_queue(parent=None):
+    from ui.queue_panel import open_queue_dialog
+    mw = parent
+    if hasattr(mw, 'launch_queue') and mw.launch_queue:
+        open_queue_dialog(mw, mw.launch_queue, mw.accounts)
 
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
