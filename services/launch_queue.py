@@ -273,6 +273,7 @@ class LaunchQueue(QObject):
         """Check queue and launch all eligible accounts (parallel across different emus)."""
         if self._paused:
             return
+        _QUEUE_LOG.info(f"_tick: start pending={len(self._pending)}")
         with self._lock:
             now = datetime.now()
             heapq = self._import_heapq()
@@ -327,9 +328,12 @@ class LaunchQueue(QObject):
             for entry in remaining:
                 heapq.heappush(self._pending, entry)
 
+            _QUEUE_LOG.info(f"_tick: pop done pending={len(self._pending)} to_launch={len(to_launch)} remaining={len(remaining)}")
+
             # Resource overloaded? Push back all to_launch entries, don't start anything new
             if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'runner'):
                 if self.ctx._mw.runner._overloaded:
+                    _QUEUE_LOG.info(f"_tick: 过载保护 to_launch={len(to_launch)} pending={len(self._pending)}")
                     for entry in to_launch:
                         heapq.heappush(self._pending, entry)
                     return
@@ -367,6 +371,7 @@ class LaunchQueue(QObject):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
                 continue
             QTimer.singleShot(idx * 5000, lambda e=entry: self._do_launch(e))
+        _QUEUE_LOG.info(f"_tick: launch_now={len(launch_now)} pending={len(self._pending)} active_emus={len(self._active_emus)}")
 
     def _on_launch_ready(self, emu_idx: str) -> None:
         """Called when a VM has finished booting (ADB ready + MAA launched).

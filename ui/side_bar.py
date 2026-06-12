@@ -197,6 +197,7 @@ def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False) 
     if count:
         label = f" {'只剿灭' if only_anni else '含剿灭' if include_anni else '刷关'}"
         mw._log(f"▶{label_map.get(mode, '')}调度{label}: {count} 个账号已入队")
+        mw._log(f"[队列] _run_smart_all: enqueued={count} total_accts={len(mw.accounts)}")
         from PySide6.QtCore import QTimer
         QTimer.singleShot(200, mw.launch_queue.tick)
 
