@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QRadioButton, QButtonGroup)
+from services.dispatch_pool import create_dispatch, remove_dispatch
 
 
 def build_side_bar(mw: Any) -> QFrame:
@@ -139,8 +140,9 @@ def _run_smart_all(mw: Any, include_anni: bool = True) -> None:
             continue
         if mw.launch_queue.is_queued(aid) or mw.launch_queue.is_running(aid):
             continue
-        a["smart_plan"] = plan
-        mw.launch_queue.enqueue(aid, "force", priority=0, persist_plan=(mode != "daily"))
+        task_list = tasks
+        a["dispatch_id"] = create_dispatch(task_list)
+        mw.launch_queue.enqueue(aid, "force", priority=0)
         count += 1
     if count:
         mw._log(f"▶ {label_map.get(mode, '')}调度: {count} 个账号已入队")

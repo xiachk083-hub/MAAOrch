@@ -49,6 +49,7 @@ class Account:
     smart_pending: bool = False
     smart_last_error: float = 0.0
     smart_plan: str = ""
+    dispatch_id: str = ""
 
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):
@@ -75,7 +76,7 @@ class Account:
     def from_dict(cls, d: dict) -> "Account":
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
-    _TRANSIENT = {"smart_pending", "smart_last_error", "smart_plan"}
+    _TRANSIENT = {"smart_pending", "smart_last_error", "smart_plan", "dispatch_id"}
 
     def to_dict(self) -> dict:
         result = {k: getattr(self, k) for k in self.__dataclass_fields__ if k not in self._TRANSIENT}

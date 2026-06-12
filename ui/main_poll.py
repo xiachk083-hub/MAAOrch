@@ -55,6 +55,9 @@ def do_smart_tick(mw: Any) -> None:
         last_error = a.get("smart_last_error", 0)
         if last_error and time.time() - last_error < 300:
             continue
+        # Skip accounts with active dispatch (owned by a running schedule)
+        if a.get("dispatch_id"):
+            continue
         if mode == "daily":
             tasks = decide(a, sg)
         elif mode == "roguelike":
