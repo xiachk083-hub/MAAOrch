@@ -53,8 +53,8 @@ class ApiServer(QThread):
             def do_GET(s):
                 if not s._check_rate_limit(): return
                 p=s.path.split("?")[0]
-                # Static files: no auth required
-                if p=="/" or p.startswith("/ui/web/"):
+                # Static files: no auth required, try serving from ui/web/
+                if not p.startswith("/api/"):
                     return s._serve_static(p)
                 if not s._check_auth(): return s._json({"error":"unauthorized"},401)
                 if p=="/api/status": return s._handle_status()
