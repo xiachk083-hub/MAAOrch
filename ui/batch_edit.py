@@ -121,9 +121,26 @@ def open_batch_edit(mw: Any, selected: list[str]) -> None:
     def _load(ac: dict, w: dict) -> None:
         """Load account values into field widgets for editing."""
         se = w.get("smart_stage")
-        if se: se.setText(ac.get("smart_stage", ""))
-        # Don't pre-fill anni/week/client — those are "apply" not "edit"
-        # Post actions: pre-fill
+        if se:
+            se.setText(ac.get("smart_stage", ""))
+        # Anni mode
+        am = w.get("anni_mode")
+        if am:
+            enabled = ac.get("smart_annihilation_enabled", True)
+            am.setCurrentText("启用" if enabled else "禁用")
+        # Week stage: use current mon as representative
+        we = w.get("week_all")
+        if we:
+            cur_week = ac.get("smart_mon", "")
+            we.setText(cur_week if cur_week else "")
+        # Client
+        cc = w.get("client")
+        if cc:
+            gc = ac.get("game_client", "Official")
+            if gc == "Official": cc.setCurrentIndex(1)
+            elif gc == "Bilibili": cc.setCurrentIndex(2)
+            else: cc.setCurrentIndex(0)
+        # Post actions
         post_str = ac.get("post_action", "")
         pcs = w.get("post_cbs", {})
         for k, cb in pcs.items():
