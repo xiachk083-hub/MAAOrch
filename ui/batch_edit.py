@@ -1,115 +1,200 @@
 from __future__ import annotations
 from typing import Any
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QGroupBox, QLineEdit,
-                               QCheckBox, QComboBox, QDialogButtonBox)
+                               QCheckBox, QComboBox, QSpinBox, QMessageBox)
 
 
 def open_batch_edit(mw: Any, selected: list[str]) -> None:
     if not selected:
         return
+    accounts = [a for a in mw.accounts if a.get("id", "") in selected]
+    if not accounts:
+        return
+    total = len(accounts)
+    cur = [0]
+
     d = QDialog(mw)
-    d.setWindowTitle(f"批量设置 — 已选 {len(selected)} 个账号")
-    d.setMinimumSize(380, 280)
+    d.setWindowTitle("批量编辑")
+    d.setMinimumSize(420, 360)
     vl = QVBoxLayout(d)
     vl.setSpacing(6)
 
-    vl.addWidget(QLabel("只填要修改的字段，留空=不修改",
-                        font=QFont("Microsoft YaHei UI", 9)))
-    vl.addSpacing(4)
+    # Nav header
+    nav_row = QHBoxLayout()
+    prev_btn = QPushButton("◀ 上一页"); prev_btn.setFixedWidth(80)
+    nav_info = QLabel(f"1 / {total}")
+    nav_info.setAlignment(Qt.AlignCenter)
+    nav_info.setStyleSheet("font-weight:bold")
+    next_btn = QPushButton("下一页 ▶"); next_btn.setFixedWidth(80)
+    nav_row.addWidget(prev_btn); nav_row.addWidget(nav_info, 1); nav_row.addWidget(next_btn)
+    vl.addLayout(nav_row)
 
-    # 默认关卡
-    stage_edit = QLineEdit()
-    stage_edit.setPlaceholderText("留空不修改")
-    stage_row = QHBoxLayout()
-    stage_row.addWidget(QLabel("默认关卡:"))
-    stage_row.addWidget(stage_edit, 1)
-    vl.addLayout(stage_row)
+    # Only-modified hint
+    only_modify_cb = QCheckBox("仅修改有值的字段（留空不覆盖原设置）")
+    only_modify_cb.setChecked(True)
+    vl.addWidget(only_modify_cb)
 
-    # 剿灭
-    anni_row = QHBoxLayout()
-    anni_row.addWidget(QLabel("剿灭:"))
-    anni_mode = QComboBox()
-    anni_mode.addItems(["不修改", "启用", "禁用"])
-    anni_row.addWidget(anni_mode)
-    anni_stage = QComboBox()
-    anni_stage.addItems(["自动选择", "当期剿灭", "切尔诺伯格", "龙门外环", "龙门市区"])
-    anni_row.addWidget(anni_stage)
-    anni_row.addStretch()
-    vl.addLayout(anni_row)
+    # ── Fields (re-created on page flip) ──
+    field_container = QVBoxLayout()
+    field_container.setSpacing(6)
+    vl.addLayout(field_container)
 
-    # 周批量
-    week_row = QHBoxLayout()
-    week_row.addWidget(QLabel("周一~周日:"))
-    week_edit = QLineEdit()
-    week_edit.setPlaceholderText("统一设为...")
-    week_row.addWidget(week_edit, 1)
-    week_btn = QPushButton("应用到全部")
-    week_row.addWidget(week_btn)
-    vl.addLayout(week_row)
+    def _build_fields(ac: dict, container: QVBoxLayout) -> dict:
+        """Rebuild the field widgets for the given account. Returns dict of field widgets."""
+        # Clear container
+        while container.count():
+            item = container.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
 
-    # 完成后
-    post_row = QHBoxLayout()
-    post_row.addWidget(QLabel("完成后:"))
-    post_cbs = {}
-    for k, v in [("ExitArknights", "退出游戏"), ("ExitSelf", "退出MAA"),
-                  ("ExitEmulator", "关模拟器")]:
-        cb = QCheckBox(v)
-        post_cbs[k] = cb
-        post_row.addWidget(cb)
-    post_row.addStretch()
-    vl.addLayout(post_row)
+        widgets = {}
 
-    # 客户端
-    client_row = QHBoxLayout()
-    client_row.addWidget(QLabel("客户端:"))
-    client_cb = QComboBox()
-    client_cb.addItems(["不修改", "官服", "B服"])
-    client_row.addWidget(client_cb)
-    client_row.addStretch()
-    vl.addLayout(client_row)
+        # Account name display
+        name_row = QHBoxLayout()
+        name_row.addWidget(QLabel(f"账号: {ac.get('name', '未命名')}"))
+        vm = ac.get("emu_instance_index", "") or "未绑定"
+        app = ac.get("game_client", "?")
+        name_row.addStretch()
+        name_row.addWidget(QLabel(f"VM {vm} · {app}", styleSheet="color:#888;font-size:8pt"))
+        container.addLayout(name_row)
+        container.addSpacing(4)
 
-    vl.addStretch()
+        # 默认关卡
+        se = QLineEdit(ac.get("smart_stage", ""))
+        se.setPlaceholderText("留空不修改")
+        sr = QHBoxLayout(); sr.addWidget(QLabel("默认关卡:")); sr.addWidget(se, 1)
+        container.addLayout(sr); widgets["smart_stage"] = se
 
-    def _apply():
-        stage = stage_edit.text().strip()
-        anni_mode_val = anni_mode.currentText()
-        anni_stage_val = anni_stage.currentText()
-        week_val = week_edit.text().strip()
-        selected_post = [k for k, cb in post_cbs.items() if cb.isChecked()]
-        client_val = client_cb.currentText()
+        # 剿灭
+        ar = QHBoxLayout()
+        ar.addWidget(QLabel("剿灭:"))
+        am = QComboBox()
+        am.addItems(["不修改", "启用", "禁用"])
+        ar.addWidget(am)
+        ans = QComboBox()
+        ans.addItems(["自动选择", "当期剿灭", "切尔诺伯格", "龙门外环", "龙门市区"])
+        ar.addWidget(ans)
+        ar.addStretch()
+        container.addLayout(ar); widgets["anni_mode"] = am; widgets["anni_stage"] = ans
 
-        for a in mw.accounts:
-            if a.get("id", "") not in selected:
-                continue
-            if stage:
-                a["smart_stage"] = stage
-                a["fight_stage"] = stage
-            if anni_mode_val == "启用":
-                a["smart_annihilation_enabled"] = True
-                a["smart_annihilation"] = {"自动选择": "", "当期剿灭": "Annihilation",
-                                            "切尔诺伯格": "Chernobog@Annihilation",
-                                            "龙门外环": "LungmenOutskirts@Annihilation",
-                                            "龙门市区": "LungmenDowntown@Annihilation"}.get(anni_stage_val, "")
-            elif anni_mode_val == "禁用":
-                a["smart_annihilation_enabled"] = False
-            if week_val:
-                for dk in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]:
-                    a[f"smart_{dk}"] = week_val
-            if selected_post:
-                a["post_action"] = ",".join(selected_post)
-            if client_val == "官服":
-                a["game_client"] = "Official"
-            elif client_val == "B服":
-                a["game_client"] = "Bilibili"
+        # 周计划
+        week_row = QHBoxLayout()
+        week_row.addWidget(QLabel("周一~周日统一:"))
+        we = QLineEdit("")
+        we.setPlaceholderText("留空不修改")
+        week_row.addWidget(we, 1)
+        container.addLayout(week_row); widgets["week_all"] = we
+
+        # 游戏客户端
+        cr = QHBoxLayout()
+        cr.addWidget(QLabel("客户端:"))
+        cc = QComboBox()
+        cc.addItems(["不修改", "官服", "B服"])
+        cur_client = ac.get("game_client", "Official")
+        if cur_client == "Official": cc.setCurrentIndex(1)
+        elif cur_client == "Bilibili": cc.setCurrentIndex(2)
+        cr.addWidget(cc)
+        cr.addStretch()
+        container.addLayout(cr); widgets["client"] = cc
+
+        # 完成动作
+        pr = QHBoxLayout()
+        pr.addWidget(QLabel("完成后:"))
+        pcs = {}
+        for k, v in [("ExitEmulator", "关模拟器"), ("ExitSelf", "退出MAA")]:
+            cb = QCheckBox(v)
+            pcs[k] = cb; pr.addWidget(cb)
+        pr.addStretch()
+        container.addLayout(pr); widgets["post_cbs"] = pcs
+
+        container.addStretch()
+        return widgets
+
+    def _load(ac: dict, w: dict) -> None:
+        """Load account values into field widgets for editing."""
+        se = w.get("smart_stage")
+        if se: se.setText(ac.get("smart_stage", ""))
+        # Don't pre-fill anni/week/client — those are "apply" not "edit"
+        # Post actions: pre-fill
+        post_str = ac.get("post_action", "")
+        pcs = w.get("post_cbs", {})
+        for k, cb in pcs.items():
+            cb.setChecked(k in post_str)
+
+    def _save_current() -> None:
+        """Save current page's modifications to the account."""
+        idx = cur[0]
+        if idx < 0 or idx >= total:
+            return
+        ac = accounts[idx]
+        w = field_widgets
+        se = w.get("smart_stage")
+        if se and se.text().strip():
+            ac["smart_stage"] = se.text().strip()
+        if se and se.text().strip():
+            ac["fight_stage"] = se.text().strip()
+        am = w.get("anni_mode")
+        ans = w.get("anni_stage")
+        if am and am.currentText() == "启用":
+            ac["smart_annihilation_enabled"] = True
+            stage_map = {"自动选择": "", "当期剿灭": "Annihilation",
+                         "切尔诺伯格": "Chernobog@Annihilation",
+                         "龙门外环": "LungmenOutskirts@Annihilation",
+                         "龙门市区": "LungmenDowntown@Annihilation"}
+            ac["smart_annihilation"] = stage_map.get(ans.currentText() if ans else "", "")
+        elif am and am.currentText() == "禁用":
+            ac["smart_annihilation_enabled"] = False
+        we = w.get("week_all")
+        if we and we.text().strip():
+            for dk in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]:
+                ac[f"smart_{dk}"] = we.text().strip()
+        cc = w.get("client")
+        if cc:
+            if cc.currentText() == "官服": ac["game_client"] = "Official"
+            elif cc.currentText() == "B服": ac["game_client"] = "Bilibili"
+        pcs = w.get("post_cbs", {})
+        selected_post = [k for k, cb in pcs.items() if cb.isChecked()]
+        if selected_post:
+            ac["post_action"] = ",".join(selected_post)
+
+    def _go(idx: int) -> None:
+        """Navigate to page idx."""
+        if idx < 0 or idx >= total:
+            return
+        _save_current()
+        cur[0] = idx
+        ac = accounts[idx]
+        w = _build_fields(ac, field_container)
+        field_widgets.clear()
+        field_widgets.update(w)
+        _load(ac, w)
+        nav_info.setText(f"{idx + 1} / {total}")
+        prev_btn.setEnabled(idx > 0)
+        next_btn.setEnabled(idx < total - 1)
+        d.setWindowTitle(f"批量编辑 — {ac.get('name', '未命名')}")
+
+    field_widgets = {}
+    prev_btn.clicked.connect(lambda: _go(cur[0] - 1))
+    next_btn.clicked.connect(lambda: _go(cur[0] + 1))
+
+    # Buttons
+    btn_row = QHBoxLayout()
+    cancel_btn = QPushButton("取消")
+    cancel_btn.clicked.connect(d.reject)
+    btn_row.addWidget(cancel_btn)
+    btn_row.addStretch()
+    save_btn = QPushButton("✓ 保存并关闭")
+    save_btn.setObjectName("startBtn")
+    def _save_all():
+        _save_current()
         mw._save()
         d.accept()
+    save_btn.clicked.connect(_save_all)
+    btn_row.addWidget(save_btn)
+    vl.addLayout(btn_row)
 
-    bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-    bb.accepted.connect(_apply)
-    bb.rejected.connect(d.reject)
-    vl.addWidget(bb)
-
+    # Start on first account
+    _go(0)
     d.exec()
