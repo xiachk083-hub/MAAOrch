@@ -46,8 +46,9 @@ class ApiServer(QThread):
                     return True
                 return hmac.compare_digest(h, token)
             def _json(s,data,code=200):
-                s.send_response(code); s.send_header("Content-Type","application/json"); s.end_headers()
-                s.wfile.write(json.dumps(data,ensure_ascii=False).encode())
+                body=json.dumps(data,ensure_ascii=False).encode()
+                s.send_response(code); s.send_header("Content-Type","application/json"); s.send_header("Content-Length",str(len(body))); s.end_headers()
+                s.wfile.write(body)
             def do_OPTIONS(s):
                 s.send_response(200);s.send_header("Content-Type","application/json");s.end_headers()
             def do_GET(s):
