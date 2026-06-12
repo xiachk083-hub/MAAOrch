@@ -349,6 +349,14 @@ class MainWindow(QMainWindow):
         tm.addSeparator()
         tm.addAction("退出", self.maint._quit_app)
 
+        # Help menu
+        import webbrowser
+        hm = mb.addMenu("帮助")
+        hm.addAction("📖 使用文档", lambda: webbrowser.open("https://github.com/xiachk083-hub/MAAOrch/blob/main/docs/overview.md"))
+        hm.addAction("💬 反馈问题", lambda: webbrowser.open("https://github.com/xiachk083-hub/MAAOrch/issues"))
+        hm.addSeparator()
+        hm.addAction("ℹ️ 关于 MAAOrch", lambda: _about_dialog(self))
+
         from PySide6.QtGui import QShortcut, QKeySequence
         QShortcut(QKeySequence("Ctrl+Return"), self, self._start_pipeline)
         QShortcut(QKeySequence("Esc"), self, self._stop_pipeline)
@@ -695,6 +703,9 @@ class MainWindow(QMainWindow):
     def _update_todo_badge(self, count: int = -1) -> None:
         pass  # badge removed with tab bar
 
+    def _about(self) -> None:
+        _about_dialog(self)
+
     def closeEvent(self, e) -> None:
         if not self.isMinimized():
             g=self.geometry(); self.config["window_geometry"]=f"{g.width()}x{g.height()}+{g.x()}+{g.y()}"
@@ -711,6 +722,47 @@ class MainWindow(QMainWindow):
         super().changeEvent(e)
     def _tlog(self) -> None: show_log_window(self)
     def _settings(self) -> None: open_settings(self)
+def _about_dialog(parent=None):
+    """Show About MAAOrch dialog."""
+    from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+    from PySide6.QtCore import Qt
+    import webbrowser
+    d = QDialog(parent)
+    d.setWindowTitle("关于 MAAOrch")
+    d.setFixedSize(380, 280)
+    vl = QVBoxLayout(d)
+    vl.setSpacing(8)
+    title = QLabel("MAAOrch")
+    title.setStyleSheet("font-size:18pt;font-weight:bold;color:#498205")
+    title.setAlignment(Qt.AlignCenter)
+    vl.addWidget(title)
+    desc = QLabel("多账号 MAA 编排调度器\n基于 MaaAssistantArknights 的智能调度工具")
+    desc.setAlignment(Qt.AlignCenter)
+    desc.setStyleSheet("color:#888;font-size:9pt")
+    vl.addWidget(desc)
+    sep = QLabel(); sep.setFixedHeight(1); sep.setStyleSheet("background:#333")
+    vl.addWidget(sep)
+    info = QLabel("版本: <a href='https://github.com/xiachk083-hub/MAAOrch'>v7.x</a>")
+    info.setOpenExternalLinks(True)
+    info.setAlignment(Qt.AlignCenter)
+    vl.addWidget(info)
+    py_v = __import__("sys").version
+    infos = QLabel(f"Python {py_v[:5]} | PySide6 | Qt 6\n"
+                   f"MAA v6 兼容 | 开源软件 (MIT)")
+    infos.setAlignment(Qt.AlignCenter)
+    infos.setStyleSheet("color:#666;font-size:8pt")
+    vl.addWidget(infos)
+    vl.addStretch()
+    btn_row = QHBoxLayout()
+    gh_btn = QPushButton("🌐 GitHub")
+    gh_btn.clicked.connect(lambda: webbrowser.open("https://github.com/xiachk083-hub/MAAOrch"))
+    btn_row.addWidget(gh_btn)
+    ok_btn = QPushButton("确定")
+    ok_btn.clicked.connect(d.accept)
+    btn_row.addWidget(ok_btn)
+    vl.addLayout(btn_row)
+    d.exec()
+
 if __name__=="__main__":
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin(); sys.exit(0)
