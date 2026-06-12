@@ -364,7 +364,11 @@ class LaunchQueue(QObject):
                 self._active_emus[emu_idx] = entry.account_id
                 self._booting_emus.add(emu_idx)
                 launch_now.append(entry)
-                break  # serial launch: only one per tick
+                # Push back remaining to_launch entries (serial launch: only one per tick)
+                idx = to_launch.index(entry)
+                for remaining_entry in to_launch[idx + 1:]:
+                    heapq.heappush(self._pending, remaining_entry)
+                break
 
         # Launch outside lock to avoid re-entrancy, staggered to prevent UI freeze
         from PySide6.QtCore import QTimer
