@@ -29,6 +29,9 @@ def main():
     _LOG = Logger("app")
     _LOG.info("══ MAAOrch Web 启动 ══")
 
+    # Go monitors dir
+    _go_dir = Path(__file__).parent / "services"
+
     # Load config (minimal bootstrap)
     from models.config_manager import load_config, save_config
     config = load_config()
@@ -84,20 +87,29 @@ def main():
     url = f"http://127.0.0.1:{port}/"
     webbrowser.open(url)
 
-    # Start Go ADB monitor if available
-    adb_monitor_proc = None
-    adb_monitor_exe = Path(__file__).parent / "services" / "adb_monitor" / "adb_monitor.exe"
-    if adb_monitor_exe.exists():
-        try:
-            import subprocess as _sp
-            adb_monitor_proc = _sp.Popen(
-                [str(adb_monitor_exe)],
-                creationflags=_sp.CREATE_NO_WINDOW,
-                stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
-            )
-            _LOG.info("ADB monitor 已启动 (端口 19998)")
-        except Exception as e:
-            _LOG.error(f"ADB monitor 启动失败: {e}")
+    # Start Go services (adb_monitor, log_monitor, health_monitor)
+    go_procs = []
+    go_services = [
+        ("adb_monitor", "adb_monitor.exe", "19998"),
+        ("log_monitor", "log_monitor.exe", "19997"),
+        ("health_monitor", "health_monitor.exe", "19996"),
+    ]
+    for name, exe, port in go_services:
+        exe_path = _go_dir / name / exe
+        if exe_path.exists():
+            try:
+                import subprocess as _sp
+                p = _sp.Popen(
+                    [str(exe_path)],
+                    creationflags=_sp.CREATE_NO_WINDOW,
+                    stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+                )
+                go_procs.append(p)
+                _LOG.info(f"{name} 已启动 (端口 {port})")
+            except Exception as e:
+                _LOG.error(f"{name} 启动失败: {e}")
+        else:
+            _LOG.info(f"{name} 未找到 ({exe_path})，跳过")
 
     has_webview = False
     try:
@@ -110,9 +122,12 @@ def main():
         try:
             if hasattr(api, 'stop_server'):
                 api.stop_server()
-            if adb_monitor_proc:
-                adb_monitor_proc.terminate()
-                adb_monitor_proc.wait(3)
+            for p in go_procs:
+                try:
+                    p.terminate()
+                    p.wait(3)
+                except:
+                    pass
             for aid in list(runner._active.keys()):
                 runner.stop(aid)
         except Exception as e:
