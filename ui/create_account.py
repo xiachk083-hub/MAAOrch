@@ -3,7 +3,8 @@ from typing import Any
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QLineEdit, QGroupBox, QCheckBox, QDialogButtonBox, QWidget)
+    QPushButton, QLineEdit, QGroupBox, QCheckBox, QRadioButton, QButtonGroup,
+    QDialogButtonBox, QWidget)
 from infrastructure.task_constants import TASK_NAMES, find_adb, find_mumu_cli
 from models.account import Account
 from ui.emu_selector import EmulatorSelector
@@ -58,10 +59,24 @@ class CreateAccountDialog(QDialog):
         emu_row.addWidget(sel_btn)
         vl.addLayout(emu_row)
 
+        # ── Server APP ──
+        srow = QHBoxLayout()
+        srow.addWidget(QLabel("服务器 APP:"))
+        self._game_client_group = QButtonGroup(self)
+        rb_bili = QRadioButton("Bilibili (B服)")
+        rb_offi = QRadioButton("Official (官服)")
+        rb_offi.setChecked(True)
+        self._game_client_group.addButton(rb_bili, 1)
+        self._game_client_group.addButton(rb_offi, 2)
+        srow.addWidget(rb_bili)
+        srow.addWidget(rb_offi)
+        srow.addStretch()
+        vl.addLayout(srow)
+
         # ── Name ──
         nrow = QHBoxLayout()
         self._name = QLineEdit()
-        self._name.setPlaceholderText("留空自动生成")
+        self._name.setPlaceholderText("例如: 我的B服号")
         nrow.addWidget(QLabel("名称:"))
         nrow.addWidget(self._name, 1)
         vl.addLayout(nrow)
@@ -156,6 +171,10 @@ class CreateAccountDialog(QDialog):
         else:
             idx = int(inst.get("index", 0))
             a.adb_address = f"127.0.0.1:{16384 + idx * 32}"
+
+        # Server APP (radio buttons override any preset value)
+        checked = self._game_client_group.checkedButton()
+        a.game_client = "Bilibili" if checked and self._game_client_group.id(checked) == 1 else "Official"
 
         # Find adb
         adb_exe = find_adb()

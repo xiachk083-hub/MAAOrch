@@ -269,8 +269,14 @@ class LaunchQueue(QObject):
                 # ③ Emulator occupied? Keep in queue
                 emu_idx = self._get_emu_key(entry.account_id)
                 if emu_idx and emu_idx in self._active_emus:
-                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被占用")
-                    self.skipped.emit(entry.account_id, f"模拟器占用 ({emu_idx})")
+                    occupant = self._active_emus[emu_idx]
+                    occupant_name = occupant[:8]
+                    for a in self.ctx.accounts:
+                        if a.get("id") == occupant:
+                            occupant_name = a.get("name", occupant[:8])
+                            break
+                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被 {occupant_name} 占用")
+                    self.skipped.emit(entry.account_id, f"模拟器 {emu_idx} 被 {occupant_name} 占用")
                     remaining.append(entry)
                     continue
 
@@ -301,6 +307,13 @@ class LaunchQueue(QObject):
                     continue
                 emu_idx = self._get_emu_key(entry.account_id)
                 if emu_idx and emu_idx in self._active_emus:
+                    occupant = self._active_emus[emu_idx]
+                    occupant_name = occupant[:8]
+                    for a in self.ctx.accounts:
+                        if a.get("id") == occupant:
+                            occupant_name = a.get("name", occupant[:8])
+                            break
+                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被 {occupant_name} 占用")
                     heapq.heappush(self._pending, entry)
                     continue
                 self._active_emus[emu_idx] = entry.account_id

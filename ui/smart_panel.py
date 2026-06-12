@@ -134,7 +134,16 @@ def _rebuild_list(mw: Any) -> None:
     fk = getattr(mw, "_smart_filter", "")
     mw._list_rows = []
 
-    for a in mw.accounts:
+    sorted_accounts = sorted(mw.accounts, key=lambda a: (a.get("emu_instance_index", "") or "Z", a.get("game_client", "")))
+    prev_vm = None
+    for a in sorted_accounts:
+        vm = a.get("emu_instance_index", "") or "未绑定"
+        if vm != prev_vm:
+            header = QLabel(f"  📱 模拟器 VM {vm}")
+            header.setStyleSheet("color:#888;font-size:8pt;padding:4px 8px;background:#2b2b30;border-radius:4px;margin:2px 0")
+            layout.insertWidget(layout.count() - 1, header)
+            prev_vm = vm
+
         name = a.get("name", "")
         if st and st not in name.lower():
             continue
