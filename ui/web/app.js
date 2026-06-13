@@ -77,7 +77,10 @@ setTheme(savedTheme);
 // ── Page renderers ──
 function renderPage() {
   const c = document.getElementById('content');
-  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs, account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, health: renderHealth };
+  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, 
+              settings: renderSettings, about: renderAbout, logs: renderLogs,
+              account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, 
+              health: renderHealth, onboarding: renderOnboarding };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -250,6 +253,24 @@ async function renderSettings(container) {
       });
     });
   } catch(e) { container.innerHTML = `<div class="error">加载失败</div>`; }
+}
+
+function renderOnboarding(container) {
+  fetch('pages/onboarding.html').then(r => r.text()).then(html => {
+    container.innerHTML = html;
+  });
+}
+
+function openMaaFolder() {
+  toast('请将 MAA 文件夹放到 services/maa/source/ 目录');
+}
+
+async function finishOnboarding() {
+  const done = document.getElementById('onboarding-done')?.checked || false;
+  if (done) {
+    await apiPost('/config', { onboarding_done: true });
+  }
+  navigate('accounts');
 }
 
 function renderAbout(container) {
@@ -794,6 +815,17 @@ function startSSE() {
   };
 }
 
+async function checkOnboarding() {
+  try {
+    const r = await apiGet('/config');
+    if (r.ok && !r.config?.onboarding_done) {
+      if (!r.config?.maa_version) {
+        navigate('onboarding');
+      }
+    }
+  } catch(e) {}
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   // Navigation
@@ -820,6 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   })();
   startSSE();
+  checkOnboarding();
   setInterval(() => { if (state.page !== 'accounts') renderPage(); }, 5000);
   navigate('accounts');
 });
