@@ -1,14 +1,29 @@
 // ── API ──
 const API = '/api';
 async function api(path, opts = {}) {
-  const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts
-  });
-  return res.json();
+  try {
+    const res = await fetch(API + path, {
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      ...opts
+    });
+    return res.json();
+  } catch(e) {
+    return { ok: false, error: e.message || '网络错误' };
+  }
 }
 async function apiGet(path) { return api(path); }
 async function apiPost(path, body) { return api(path, { method: 'POST', body: JSON.stringify(body) }); }
+
+// ── Render helpers ──
+function showLoading(container, msg = '加载中...') {
+  container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">${msg}</div>`;
+}
+function showError(container, msg = '加载失败') {
+  container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--danger);font-size:12px">${msg}</div>`;
+}
+function showEmpty(container, msg = '暂无数据') {
+  container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">${msg}</div>`;
+}
 
 // ── State ──
 let state = { accounts: [], queue: [], config: {}, stats: {}, page: 'accounts', polling: false };
@@ -77,16 +92,18 @@ setTheme(savedTheme);
 // ── Page renderers ──
 function renderPage() {
   const c = document.getElementById('content');
+  showLoading(c);
   const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, 
               settings: renderSettings, about: renderAbout, logs: renderLogs,
               account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, 
-              health: renderHealth, onboarding: renderOnboarding, warehouse: renderWarehouse, groups: renderGroups, pipeline: renderPipeline };
+              health: renderHealth, onboarding: renderOnboarding, warehouse: renderWarehouse,
+              groups: renderGroups, pipeline: renderPipeline };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
   try {
     const r = await apiGet('/accounts');
-    if (!r.ok) { container.innerHTML = `<div class="error">加载失败: ${r.error}</div>`; return; }
+    if (!r.ok) { showError(container, r.error); return; }
     state.accounts = r.accounts;
 
     let searchText = (document.getElementById('search-input')?.value || '').toLowerCase();
@@ -157,7 +174,7 @@ async function renderAccounts(container) {
     });
     html += '</div>';
     container.innerHTML = html;
-  } catch(e) { container.innerHTML = `<div class="error">加载失败: ${e.message}</div>`; }
+  } catch(e) { showError(container, e.message); }
 }
 
 async function renderQueue(container) {
@@ -184,7 +201,7 @@ async function renderQueue(container) {
     } else {
       ql.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center">队列为空</div>';
     }
-  } catch(e) { container.innerHTML = `<div class="error">加载失败: ${e.message}</div>`; }
+  } catch(e) { showError(container, e.message); }
 }
 
 async function renderStats(container) {
@@ -202,7 +219,7 @@ async function renderStats(container) {
     <div style="margin-top:12px">${r.accounts ? r.accounts.filter(ac => ac.total_runs > 0).map(ac =>
       `<div style="font-size:11px;color:var(--text2);padding:2px 0">${ac.account_name}: ${ac.total_runs} 次</div>`
     ).join('') : '<div style="color:var(--text3)">暂无运行记录</div>'}</div>`;
-  } catch(e) { container.innerHTML = `<div class="error">加载失败</div>`; }
+  } catch(e) { showError(container); }
 }
 
 async function renderSettings(container) {
@@ -252,7 +269,7 @@ async function renderSettings(container) {
         if (tc) tc.classList.add('active');
       });
     });
-  } catch(e) { container.innerHTML = `<div class="error">加载失败</div>`; }
+  } catch(e) { showError(container); }
 }
 
 function renderOnboarding(container) {
@@ -369,7 +386,7 @@ async function renderBatchEdit(container) {
   const ids = [...selectedIds];
   if (ids.length === 0) { container.innerHTML = '<div>请先选择账号</div>'; return; }
   const r = await apiGet('/accounts');
-  if (!r.ok) { container.innerHTML = '<div>加载失败</div>'; return; }
+  if (!r.ok) { showError(container); return; }
   const accounts = r.accounts.filter(a => ids.includes(a.id));
   if (accounts.length === 0) return;
   const total = accounts.length;
@@ -440,7 +457,7 @@ async function renderAccount(container) {
   const id = state._detailId;
   if (!id) { container.innerHTML = '<div>未选择账号</div>'; return; }
   const r = await apiGet('/accounts');
-  if (!r.ok) { container.innerHTML = '<div>加载失败</div>'; return; }
+  if (!r.ok) { showError(container); return; }
   const a = r.accounts.find(x => x.id === id);
   if (!a) { container.innerHTML = '<div>账号不存在</div>'; return; }
   const idx = r.accounts.indexOf(a);
@@ -502,7 +519,7 @@ async function renderTaskConfig(container) {
   const id = state._detailId;
   if (!id) { container.innerHTML = '<div>未选择账号</div>'; return; }
   const r = await apiGet('/accounts');
-  if (!r.ok) { container.innerHTML = '<div>加载失败</div>'; return; }
+  if (!r.ok) { showError(container); return; }
   const a = r.accounts.find(x => x.id === id);
   if (!a) { container.innerHTML = '<div>账号不存在</div>'; return; }
   const idx = r.accounts.indexOf(a);
@@ -761,7 +778,7 @@ async function renderWarehouse(container) {
         </div>
       </div>
     `).join('');
-  } catch(e) { container.innerHTML = '<div class="error">加载失败</div>'; }
+  } catch(e) { showError(container); }
 }
 
 function showAddWarehouse() {
@@ -825,7 +842,7 @@ async function renderGroups(container) {
         </div>
       `).join('')
     }</div>`;
-  } catch(e) { container.innerHTML = '<div class="error">加载失败</div>'; }
+  } catch(e) { showError(container); }
 }
 
 function showAddGroup() {
@@ -883,7 +900,7 @@ async function renderPipeline(container) {
         启动前请确保已在「分组」页面配置好任务。
       </div>
     </div>`;
-  } catch(e) { container.innerHTML = '<div class="error">加载失败</div>'; }
+  } catch(e) { showError(container); }
 }
 
 async function pipelineAction(action) {
