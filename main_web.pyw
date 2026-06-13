@@ -150,7 +150,16 @@ def main():
     has_webview = False
     try:
         import webview
-        has_webview = True
+        # Check WebView2 runtime availability
+        try:
+            import winreg
+            k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}")
+            winreg.QueryValueEx(k, 'pv')
+            winreg.CloseKey(k)
+            has_webview = True
+        except Exception:
+            _LOG.info("WebView2 Runtime 未安装，pywebview 降级到系统托盘模式")
+            has_webview = False
     except ImportError:
         pass
 
