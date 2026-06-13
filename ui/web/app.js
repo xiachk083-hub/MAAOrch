@@ -728,8 +728,10 @@ function searchAccounts(value) {
 
 // ── Queue Pause ──
 async function toggleQueuePause() {
-  const r = await apiPost('/pipeline/pause', {});
-  if (!r.error) toast('队列已' + (r.paused ? '暂停' : '恢复'));
+  const q = await apiGet('/queue');
+  const isPaused = q.paused;
+  const r = await apiPost(isPaused ? '/queue/resume' : '/queue/pause', {});
+  if (r.ok) toast(isPaused ? '队列已恢复' : '队列已暂停');
   renderPage();
 }
 
