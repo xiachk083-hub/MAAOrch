@@ -396,6 +396,7 @@ class AccountRunner(QObject):
                 self._spawn_instance(exe, ac, inst_dir)
                 self._active[aid] = ac
         except Exception as e:
+            self._log.error(f"[启动] {ac.get('name', aid)} 启动失败: {e}")
             self.log_msg.emit(f"启动失败: {e}")
             self.account_error.emit(aid, str(e))
             self._cleanup(aid, -1, [])
@@ -458,12 +459,14 @@ class AccountRunner(QObject):
             MSG_ALL_TASKS_COMPLETED, MSG_TASK_CHAIN_START, MSG_TASK_CHAIN_COMPLETED, \
             MSG_SUB_TASK_ERROR, MSG_CONNECTION_INFO, MSG_DESTROYED
         if not is_loaded():
+            self._log.debug(f"[MaaCore] {ac.get('name', aid)} 未加载，跳过")
             return False
         aid = ac["id"]
         adb_path = ac.get("adb_path", "") or "adb"
         addr = ac.get("adb_address", "")
         preset = ac.get("connection_preset", "MuMuEmulator12")
         if not addr:
+            self._log.debug(f"[MaaCore] {ac.get('name', aid)} 无ADB地址，跳过")
             return False
 
         callbacks = []
@@ -487,11 +490,13 @@ class AccountRunner(QObject):
 
         inst = create_instance(_cb)
         if not inst:
+            self._log.debug(f"[MaaCore] {ac.get('name', aid)} create_instance 失败")
             return False
 
         try:
             ok = inst.connect(adb_path, addr, preset)
             if not ok:
+                self._log.debug(f"[MaaCore] {ac.get('name', aid)} connect 失败 ({addr})")
                 inst.destroy()
                 return False
 
@@ -499,6 +504,8 @@ class AccountRunner(QObject):
             from services.smart_scheduler import _parse_task_list_from_ac
             task_list_str = ac.get("smart_plan", "")
             if not task_list_str:
+                self._log.debug(f"[MaaCore] {ac.get('name', aid)} 无任务列表")
+                inst.destroy()
                 return False
             task_types = [t.strip().lower() for t in task_list_str.split(",")]
             # Build task_params from task_settings
@@ -512,7 +519,10 @@ class AccountRunner(QObject):
                         params["stage"] = stage
                 inst.append_task(tt.capitalize(), params)
 
-            inst.start()
+            if not inst.start():
+                self._log.debug(f"[MaaCore] {ac.get('name', aid)} start 失败")
+                inst.destroy()
+                return False
             self._procs[aid] = inst  # store instance for cleanup
             self._start_times[aid] = time.time()
             self.ctx.proc_status.add(aid)
