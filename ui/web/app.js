@@ -351,8 +351,9 @@ let _logCache = '';
 async function updateLogContent() {
   try {
     const resp = await fetch(API + '/logs?lines=200');
-    const raw = await resp.text();
-    if (raw === _logCache) return;  // unchanged, skip
+    const data = await resp.json();
+    const raw = JSON.stringify(data.lines || []);
+    if (raw === _logCache) return;
     _logCache = raw;
     const el = document.getElementById('log-content');
     if (!el) return;
@@ -360,7 +361,7 @@ async function updateLogContent() {
     const levelOrder = {TRACE:0, DEBUG:1, INFO:2, WARN:3, ERROR:4, CRASH:5};
     const minLevel = levelOrder[level] || 0;
     const levelColors = {INFO:'var(--text)', WARN:'var(--warn)', ERROR:'var(--danger)', CRASH:'var(--danger)', DEBUG:'var(--text3)', TRACE:'var(--text3)'};
-    const lines = raw.split('\n');
+    const lines = data.lines || [];
     let html = '';
     let count = 0;
     for (const line of lines) {
@@ -379,7 +380,7 @@ async function updateLogContent() {
       }
     }
     el.innerHTML = count ? html : '<div style="color:var(--text3);padding:20px;text-align:center">无匹配日志</div>';
-  } catch(e) {}
+  } catch(e) { /* auto-refresh errors are silent */ }
 }
 
 function startLogAuto() {
