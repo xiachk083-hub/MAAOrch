@@ -68,7 +68,8 @@ def main():
 
     # Initialize ConfigService for MAA config injection
     from services.config_injector import ConfigService
-    ctx.cfg = ConfigService()
+    ctx.cfg = ConfigService(ctx)
+
     # Web mode: use subprocess MAA.exe, not MaaCore direct (more reliable for now)
     for a in ctx.accounts:
         a["_use_direct"] = False
