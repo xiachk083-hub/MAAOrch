@@ -42,10 +42,11 @@
 - 需要用户操作的（如重启、贴日志），给出具体的一步操作指令
 - 修复后说明根因，让用户知道问题出在哪
 
-## 项目上下文 (2026-06-13)
+## 项目上下文 (2026-06-13, 晚间)
 - MAAOrch: Python + PySide6 + Web UI (pywebview/浏览器双模)
 - 目录结构: `app/` `services/` `ui/` `models/` `infrastructure/` `network/`
 - 三种运行模式: `main.pyw` (Qt), `main_web.pyw` (Web推荐)
+- Web UI 页面: 账号/队列/统计/日志/设置/关于/账号详情/任务配置/批量编辑/健康检查/引导/仓库/分组
 - MAA v6 使用 gui.new.json，要求 TaskQueue 条目带 $type 字段
 - PostActions="12" (MAA v6 编码: 4=ExitEmulator, 8=ExitSelf)
 - 调度模板池: `services/dispatch_pool.py` + account.dispatch_id
@@ -53,12 +54,11 @@
 - `_persist_plan` 只在 exit_code == 0 时清理（崩溃/断连保留）
 - ADB server 自愈: 检测 protocol fault → kill-server + start-server
 - `find_mumu_cli()` 已缓存 (`@lru_cache`)
-- MaaCore ctypes 直连 (`infrastructure/maa_core.py`) — 跳过 MAA.exe 子进程
+- MaaCore ctypes 直连 (`infrastructure/maa_core.py`) — 默认禁用，用子进程 MAA.exe
 - Web UI SSE 推送 (`/api/sse`) — 替代 3s 轮询
-- Go 性能服务: `services/adb_monitor/`, `log_monitor/`, `health_monitor/`
-- **Qt 信号在 pywebview 模式不送达** → 改为直呼 `on_account_finished` 兜底
-- **QTimer 需 Qt 事件循环** → 改用 `threading.Timer` 或后台 daemon 线程兜底
-- **`type('MW', (), {})` 创建的 mock 属性被转为方法描述符** → lambda 须接受 `self` 参数
+- queue 使用单线程(去QTimer)避免双tick竞争
+- 桌面入口: `MAAOrch.bat` (自动创建)
+- Go 服务: `services/adb_monitor/`, `log_monitor/`, `health_monitor/` (可选)
 - mumu-cli 子命令是 shutdown 不是 quit
 - subprocess 必须加 encoding="utf-8", errors="replace"
 - 所有改动须与现有 68 个测试兼容
