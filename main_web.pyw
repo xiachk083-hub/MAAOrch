@@ -198,6 +198,8 @@ def main():
         _wv.start(private_mode=False, tray=True)
     else:
         _LOG.info(f"Web UI: {url} (浏览器 + 系统托盘)")
+        import webbrowser
+        webbrowser.open(url)
         from PySide6.QtWidgets import QSystemTrayIcon, QMenu
         from PySide6.QtGui import QIcon
         tray = QSystemTrayIcon(QIcon(), app)
