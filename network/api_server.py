@@ -135,19 +135,27 @@ class ApiServer(QThread):
                         "client": a.get("game_client",""),
                         "failures": a.get("consecutive_failures", 0),
                     })
-                q = {"count": mw.launch_queue.pending_count if hasattr(mw, 'launch_queue') else 0}
+                q = {"count": mw.launch_queue.pending_count if hasattr(mw, 'launch_queue') and mw.launch_queue else 0}
                 return {"ok": True, "accounts": accts, "queue": q}
             def _handle_status(s):
                 accts=[]
+                proc_status = getattr(mw, "_proc_status", set())
+                proc_times = getattr(mw, "_proc_start_times", {})
                 for i,a in enumerate(mw.accounts):
                     progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
                     pid=progs[0]["id"] if progs else ""
-                    running=pid in getattr(mw,"_proc_status",set())
+                    running=pid in proc_status
                     elapsed=0
-                    if running and pid in mw._proc_start_times: elapsed=int(time.time()-mw._proc_start_times[pid])
+                    if running and pid in proc_times: elapsed=int(time.time()-proc_times[pid])
                     accts.append({"name":a.get("name",""),"index":i,"running":running,"elapsed":elapsed,"adb":a.get("adb_address",""),"emu_index":a.get("emu_instance_index","")})
-                pipeline_running=mw.pipeline_thread.isRunning() if hasattr(mw,'pipeline_thread') and mw.pipeline_thread else False
-                s._json({"accounts":accts,"pipeline_running":pipeline_running})
+                pt = getattr(mw, "pipeline_thread", None)
+                pipeline_running = pt and pt.isRunning() if hasattr(pt, 'isRunning') else False
+                running_count = getattr(mw, 'runner', None)
+                if running_count:
+                    running_count = len(running_count._active)
+                else:
+                    running_count = sum(1 for a in accts if a["running"])
+                s._json({"accounts":accts,"pipeline_running":pipeline_running,"running":running_count})
             def _handle_node_info(s):
                 import psutil as _ps
                 mem = _ps.virtual_memory()
