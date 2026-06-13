@@ -300,22 +300,27 @@ async function rebuildInstances() {
   if (r.ok) toast('重建完成'); else toast(r.error || '重建失败', 'error');
 }
 
-// ── Polling ──
-function startPolling() {
-  if (state.polling) return;
-  state.polling = true;
-  async function poll() {
-    if (!state.polling) return;
-    await refreshSidebar();
-    if (document.visibilityState === 'visible' && state.page === 'accounts') {
-      try {
-        const r = await apiGet('/accounts');
-        if (r.ok) state.accounts = r.accounts;
-      } catch(e) {}
-    }
-    setTimeout(poll, 3000);
-  }
-  setTimeout(poll, 1000);
+// ── SSE (Server-Sent Events) — replace polling ──
+function startSSE() {
+  const evtSource = new EventSource(API + '/sse');
+  evtSource.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.ok && data.accounts) {
+        state.accounts = data.accounts;
+        const running = data.accounts.filter(a => a.running).length;
+        document.getElementById('queue-summary').textContent =
+          `运行: ${running} | 队列: ${data.queue?.count || 0}`;
+        // Only re-render if current page is accounts
+        if (state.page === 'accounts' && document.getElementById('content')) {
+          renderPage();
+        }
+      }
+    } catch(ex) { /* ignore parse errors */ }
+  };
+  evtSource.onerror = () => {
+    // SSE will auto-reconnect
+  };
 }
 
 // ── Init ──
@@ -343,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } catch(e) {}
   })();
+  startSSE();
+  setInterval(() => { if (state.page !== 'accounts') renderPage(); }, 5000);
   navigate('accounts');
-  startPolling();
 });
