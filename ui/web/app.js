@@ -12,6 +12,8 @@ async function apiPost(path, body) { return api(path, { method: 'POST', body: JS
 
 // ── State ──
 let state = { accounts: [], queue: [], config: {}, stats: {}, page: 'accounts', polling: false };
+let filterKey = '';
+let selectedIds = new Set();
 
 // ── Toast ──
 function toast(msg, type = 'info') {
@@ -75,7 +77,7 @@ setTheme(savedTheme);
 // ── Page renderers ──
 function renderPage() {
   const c = document.getElementById('content');
-  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout };
+  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -83,38 +85,71 @@ async function renderAccounts(container) {
     const r = await apiGet('/accounts');
     if (!r.ok) { container.innerHTML = `<div class="error">加载失败: ${r.error}</div>`; return; }
     state.accounts = r.accounts;
+
+    let searchText = (document.getElementById('search-input')?.value || '').toLowerCase();
+    let filtered = r.accounts.filter(a => {
+      const nameMatch = !searchText || a.name.toLowerCase().includes(searchText);
+      return nameMatch;
+    });
+    if (filterKey === 'running') filtered = filtered.filter(a => a.running);
+    else if (filterKey === 'waiting') filtered = filtered.filter(a => a.queued);
+    else if (filterKey === 'error') filtered = filtered.filter(a => !a.running && !a.queued && a.failures > 0 && a.failures < 6);
+    else if (filterKey === 'paused') filtered = filtered.filter(a => a.failures >= 6);
+
     const groups = {};
-    r.accounts.forEach(a => {
+    filtered.forEach(a => {
       const vm = a.emu_instance_index || 'unbound';
       if (!groups[vm]) groups[vm] = [];
       groups[vm].push(a);
     });
     const vmKeys = Object.keys(groups).sort((a,b) => a === 'unbound' ? 1 : b === 'unbound' ? -1 : parseInt(a) - parseInt(b));
-    let html = `<div class="top-actions" style="margin-bottom:8px">
-      <button class="primary" onclick="smartAll(true)">▶ 含剿灭</button>
-      <button onclick="smartAll(false)">▶ 不含剿灭</button>
-      <button onclick="smartAll(false,true)">▶ 只剿灭</button>
-      <button onclick="document.getElementById('file-input').click()" style="margin-left:8px">＋ 创建账号</button>
-      <input type="file" id="file-input" style="display:none" accept=".exe" onchange="createAccount(this)">
-      <button class="danger" onclick="stopAll()" style="margin-left:8px">⏹ 全部停止</button>
-    </div>
-    <div class="card-list">`;
+    const batchCount = selectedIds.size;
+    let html = `<input type="text" id="search-input" placeholder="搜索账号..." 
+  oninput="searchAccounts(this.value)" 
+  style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:12px;margin-bottom:6px">
+<div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap">
+  <button class="${!filterKey ? 'primary' : ''}" onclick="setFilter('')">全部</button>
+  <button class="${filterKey==='running'?'primary':''}" onclick="setFilter('running')">▶ 运行中</button>
+  <button class="${filterKey==='waiting'?'primary':''}" onclick="setFilter('waiting')">⏳ 排队中</button>
+  <button class="${filterKey==='error'?'primary':''}" onclick="setFilter('error')">✕ 错误</button>
+  <button class="${filterKey==='paused'?'primary':''}" onclick="setFilter('paused')">⏸ 暂停</button>
+</div>
+<div class="top-actions" style="margin-bottom:8px">
+  <button class="primary" onclick="smartAll(true)">▶ 含剿灭</button>
+  <button onclick="smartAll(false)">▶ 不含剿灭</button>
+  <button onclick="smartAll(false,true)">▶ 只剿灭</button>
+  <button onclick="document.getElementById('file-input').click()" style="margin-left:8px">＋ 创建账号</button>
+  <input type="file" id="file-input" style="display:none" accept=".exe" onchange="createAccount(this)">
+  <button class="danger" onclick="stopAll()" style="margin-left:8px">⏹ 全部停止</button>
+</div>
+<div id="batch-bar" style="display:${batchCount?'flex':'none'};align-items:center;gap:8px;padding:4px 0;margin-bottom:4px">
+  <span class="count" style="color:var(--accent);font-size:12px">已选 ${batchCount}</span>
+  <button class="small" onclick="batchEnqueue()">批量入队</button>
+  <button class="small danger" onclick="batchStop()">批量停止</button>
+  <button class="small danger" onclick="batchDelete()">批量删除</button>
+  <button class="small" onclick="selectedIds.clear();renderPage();">取消选择</button>
+</div>
+<div class="card-list">`;
     vmKeys.forEach(vm => {
       html += `<div style="color:var(--text3);font-size:10px;padding:4px 0;margin-top:4px">📱 模拟器 VM ${vm === 'unbound' ? '未绑定' : vm}</div>`;
       groups[vm].forEach(a => {
         const statusClass = a.running ? 'status-running' : a.queued ? 'status-queued' : a.failures >= 6 ? 'status-paused' : a.failures > 0 ? 'status-error' : '';
         const statusText = a.running ? '▶ 运行' : a.queued ? '⏳ 排队' : a.failures >= 6 ? '⏸ 暂停' : a.failures > 0 ? `✕ 错误x${a.failures}` : '';
-        html += `<div class="card" onclick="showAccountDetail('${a.id}')">
-          <div class="info">
-            <div class="name">${a.name}</div>
-            <div class="meta">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.adb_address ? ' · ' + a.adb_address : ''}</div>
-          </div>
-          <div class="status ${statusClass}">${statusText}</div>
-          <div class="card-actions">
-            <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')">启动</button>
-            <button class="small danger" onclick="event.stopPropagation();deleteAccount('${a.id}')">删除</button>
-          </div>
-        </div>`;
+        const checked = selectedIds.has(a.id) ? 'checked' : '';
+        html += `<div class="card">
+  <input type="checkbox" class="cb" ${checked} onchange="event.stopPropagation();toggleSelect('${a.id}')">
+  <div style="flex:1" onclick="showAccountDetail('${a.id}')">
+    <div class="info">
+      <div class="name">${a.name}</div>
+      <div class="meta">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.adb_address ? ' · ' + a.adb_address : ''}</div>
+    </div>
+    <div class="status ${statusClass}">${statusText}</div>
+  </div>
+  <div class="card-actions">
+    <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')">启动</button>
+    <button class="small danger" onclick="event.stopPropagation();deleteAccount('${a.id}')">删除</button>
+  </div>
+</div>`;
       });
     });
     html += '</div>';
@@ -129,7 +164,8 @@ async function renderQueue(container) {
     container.innerHTML = `<div style="margin-bottom:8px">
       <span>运行中: <strong>${s.running || 0}</strong></span>
       <span style="margin-left:16px">排队: <strong>${q.pending_count || 0}</strong></span>
-      <button onclick="clearQueue()" style="margin-left:16px" class="danger small">清空队列</button>
+      <button onclick="toggleQueuePause()" style="margin-left:16px">${q.paused ? '▶ 恢复队列' : '⏸ 暂停队列'}</button>
+      <button onclick="clearQueue()" style="margin-left:8px" class="danger small">清空队列</button>
     </div>
     <div id="queue-list"></div>`;
     const ql = document.getElementById('queue-list');
@@ -222,6 +258,52 @@ function renderAbout(container) {
   MAA v6 兼容 | 开源软件 (MIT)</div>`;
 }
 
+let logAutoRef = true;
+let logTimer = null;
+
+async function renderLogs(container) {
+  const resp = await fetch(API + '/logs?lines=200');
+  const html = await resp.text();
+  // Wrap in page layout
+  container.innerHTML = `<div class="log-page">
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <span style="color:var(--text2);font-size:12px">日志</span>
+      <button class="small primary" onclick="toggleLogAuto()" id="log-auto-btn">${logAutoRef ? '⏸ 暂停' : '▶ 自动'}</button>
+      <button class="small" onclick="clearLogView()">🗑 清空</button>
+    </div>
+    <pre id="log-content" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-size:11px;line-height:1.4;height:calc(100vh - 120px);overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all"></pre>
+  </div>`;
+  document.getElementById('log-content').textContent = html;
+  startLogAuto();
+}
+
+function startLogAuto() {
+  if (logTimer) clearInterval(logTimer);
+  if (!logAutoRef) return;
+  logTimer = setInterval(async () => {
+    if (state.page !== 'logs') { clearInterval(logTimer); logTimer = null; return; }
+    try {
+      const resp = await fetch(API + '/logs?lines=200');
+      const html = await resp.text();
+      const el = document.getElementById('log-content');
+      if (el) el.textContent = html;
+    } catch(e) {}
+  }, 2000);
+}
+
+function toggleLogAuto() {
+  logAutoRef = !logAutoRef;
+  const btn = document.getElementById('log-auto-btn');
+  if (btn) btn.textContent = logAutoRef ? '⏸ 暂停' : '▶ 自动';
+  if (logAutoRef) startLogAuto();
+  else if (logTimer) { clearInterval(logTimer); logTimer = null; }
+}
+
+function clearLogView() {
+  const el = document.getElementById('log-content');
+  if (el) el.textContent = '';
+}
+
 // ── Actions ──
 async function smartAll(includeAnni, onlyAnni) {
   const r = await apiPost('/action/smart_all', { include_anni: includeAnni ?? true, only_anni: onlyAnni ?? false });
@@ -298,6 +380,58 @@ async function saveSmart() {
 async function rebuildInstances() {
   const r = await apiPost('/instance/rebuild', {});
   if (r.ok) toast('重建完成'); else toast(r.error || '重建失败', 'error');
+}
+
+// ── Filter & Search ──
+function setFilter(key) {
+  filterKey = key;
+  if (state.page === 'accounts') renderPage();
+}
+function searchAccounts(value) {
+  if (state.page === 'accounts') renderPage();
+}
+
+// ── Queue Pause ──
+async function toggleQueuePause() {
+  const r = await apiPost('/pipeline/pause', {});
+  if (!r.error) toast('队列已' + (r.paused ? '暂停' : '恢复'));
+  renderPage();
+}
+
+// ── Batch Operations ──
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  updateBatchBar();
+}
+function updateBatchBar() {
+  const bar = document.getElementById('batch-bar');
+  if (!bar) return;
+  const count = selectedIds.size;
+  bar.style.display = count ? 'flex' : 'none';
+  const countEl = bar.querySelector('.count');
+  if (countEl) countEl.textContent = `已选 ${count}`;
+}
+async function batchEnqueue() {
+  for (const id of selectedIds) { await launchAccount(id); }
+  selectedIds.clear(); renderPage();
+}
+async function batchStop() {
+  for (const id of selectedIds) {
+    const idx = state.accounts.findIndex(a => a.id === id);
+    if (idx >= 0) await apiPost(`/account/${idx}/launch`, { action: 'stop' });
+  }
+  selectedIds.clear(); renderPage();
+}
+async function batchDelete() {
+  if (!confirm(`确认删除 ${selectedIds.size} 个账号？`)) return;
+  for (const id of selectedIds) {
+    const idx = state.accounts.findIndex(a => a.id === id);
+    if (idx >= 0) {
+      await apiPost(`/account/${idx}/delete`, {});
+    }
+  }
+  selectedIds.clear(); renderPage();
 }
 
 // ── SSE (Server-Sent Events) — replace polling ──
