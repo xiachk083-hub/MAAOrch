@@ -44,7 +44,7 @@ class LaunchQueue(QObject):
     def _import_heapq():
         return heapq
 
-    def start(self, interval_sec: int = 30) -> None:
+    def start(self, interval_sec: int = 5) -> None:
         self._tick_timer.start(interval_sec * 1000)
 
     def pause(self) -> None:
