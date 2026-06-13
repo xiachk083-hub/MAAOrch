@@ -29,6 +29,17 @@ def main():
     _LOG = Logger("app")
     _LOG.info("══ MAAOrch Web 启动 ══")
 
+    # Preload MaaCore.dll for direct integration (skip MAA.exe subprocess)
+    from infrastructure.maa_core import preload, get_version
+    source_path = Path(__file__).parent / "services" / "maa" / "source"
+    if source_path.exists() and (source_path / "MaaCore.dll").exists():
+        if preload(source_path):
+            _LOG.info(f"MaaCore 已加载 (版本: {get_version()})")
+        else:
+            _LOG.warning("MaaCore 加载失败，回退到子进程模式")
+    else:
+        _LOG.info("MaaCore.dll 未找到，使用子进程模式")
+
     # Go monitors dir
     _go_dir = Path(__file__).parent / "services"
 

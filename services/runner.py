@@ -380,8 +380,12 @@ class AccountRunner(QObject):
             else:
                 self.ctx.cfg.inject_smart(["StartUp", "Award"], ac, str(config_dir))
             self.log_msg.emit(f"注入配置: {config_dir}/")
-            self._spawn_instance(exe, ac, inst_dir)
-            self._active[aid] = ac  # Mark running
+            # Use direct MaaCore ctypes if available (faster, no MAA.exe subprocess)
+            if ac.get("_use_direct", True) and self._try_spawn_direct(ac, inst_dir):
+                self._active[aid] = ac
+            else:
+                self._spawn_instance(exe, ac, inst_dir)
+                self._active[aid] = ac
         except Exception as e:
             self.log_msg.emit(f"启动失败: {e}")
             self.account_error.emit(aid, str(e))
@@ -430,6 +434,94 @@ class AccountRunner(QObject):
         if emu_idx and hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'launch_queue'):
             from PySide6.QtCore import QTimer
             QTimer.singleShot(0, lambda: self.ctx._mw.launch_queue._on_launch_ready(emu_idx))
+
+    def _try_spawn_direct(self, ac: dict, inst_dir: str) -> bool:
+        """Try to launch via MaaCore ctypes (skip MAA.exe subprocess). Returns True if successful."""
+        from infrastructure.maa_core import is_loaded, create_instance, \
+            MSG_ALL_TASKS_COMPLETED, MSG_TASK_CHAIN_START, MSG_TASK_CHAIN_COMPLETED, \
+            MSG_SUB_TASK_ERROR, MSG_CONNECTION_INFO, MSG_DESTROYED
+        if not is_loaded():
+            return False
+        aid = ac["id"]
+        adb_path = ac.get("adb_path", "") or "adb"
+        addr = ac.get("adb_address", "")
+        preset = ac.get("connection_preset", "MuMuEmulator12")
+        if not addr:
+            return False
+
+        callbacks = []
+        def _cb(msg: int, details_json: bytes, _arg):
+            nonlocal callbacks
+            details = details_json.decode("utf-8", errors="replace") if details_json else ""
+            callbacks.append((msg, details))
+            if msg == MSG_ALL_TASKS_COMPLETED:
+                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成 (MaaCore)")
+            elif msg in (MSG_TASK_CHAIN_START, MSG_TASK_CHAIN_COMPLETED):
+                try:
+                    data = json.loads(details)
+                    tc = data.get("taskchain", "")
+                    st_map = {"StartUp":"唤醒","Fight":"刷关","Recruit":"公招","Infrast":"基建","Mall":"信用","Award":"奖励","Roguelike":"肉鸽","Reclamation":"生息"}
+                    if tc in st_map:
+                        self.status_msg.emit(f"MAA: {st_map[tc]}...")
+                except: pass
+            elif msg == MSG_CONNECTION_INFO:
+                if "connected" in details.lower() or "success" in details.lower():
+                    self.log_msg.emit(f"ADB 已连接 ({addr})")
+
+        inst = create_instance(_cb)
+        if not inst:
+            return False
+
+        try:
+            ok = inst.connect(adb_path, addr, preset)
+            if not ok:
+                inst.destroy()
+                return False
+
+            # Append tasks from config
+            from services.smart_scheduler import _parse_task_list_from_ac
+            task_list_str = ac.get("smart_plan", "")
+            if not task_list_str:
+                return False
+            task_types = [t.strip().lower() for t in task_list_str.split(",")]
+            # Build task_params from task_settings
+            ts = ac.get("task_settings", {})
+            for tt in task_types:
+                params = ts.get(tt.capitalize(), {}).copy() if isinstance(ts.get(tt.capitalize()), dict) else {}
+                # Map MAAOrch params to MAA task params
+                if tt == "fight":
+                    stage = ac.get("fight_stage", "") or ac.get("smart_stage", "")
+                    if stage:
+                        params["stage"] = stage
+                inst.append_task(tt.capitalize(), params)
+
+            inst.start()
+            self._procs[aid] = inst  # store instance for cleanup
+            self._start_times[aid] = time.time()
+            self.ctx.proc_status.add(aid)
+            self.log_msg.emit(f"✓ 启动 MaaCore PID=N/A (直接模式)")
+            self.account_started.emit(aid)
+            # Start monitoring thread
+            import threading as _th
+            _th.Thread(target=self._monitor_direct, args=(aid, inst, ac), daemon=True).start()
+            return True
+        except Exception:
+            inst.destroy()
+            return False
+
+    def _monitor_direct(self, aid: str, inst, ac: dict) -> None:
+        """Background thread: wait for MaaCore to complete, then cleanup."""
+        try:
+            while inst.running():
+                import time as _t
+                _t.sleep(0.5)
+            # Process completed
+            tasks, sanity, drops = self._parse_log(aid)
+            self._log.debug(f"[MaaCore] {ac.get('name', aid)} 完成")
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: self._cleanup(aid, 0, tasks, sanity, drops))
+        except Exception:
+            QTimer.singleShot(0, lambda: self._cleanup(aid, -1, [], None, None))
 
     def _spawn(self, w: dict, ac: dict) -> None:
         aid = ac["id"]
