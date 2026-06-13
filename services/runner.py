@@ -920,6 +920,9 @@ class AccountRunner(QObject):
                 ac["consecutive_failures"] = failures
             self.log_msg.emit(f"[账号] {name} 状态: error (exit={exit_code}) 连续失败={failures}")
             self.ctx.notify(f"进程异常退出 (code={exit_code})", True)
+            # Desktop notification for repeated failures
+            if failures >= 3:
+                _send_notification(name, f"连续失败 {failures} 次，请检查模拟器或 MAA 配置")
 
             # Collect diagnostic
             self._collect_diagnostic(aid, ac, exit_code)
@@ -1075,3 +1078,14 @@ class AccountRunner(QObject):
         sd.setdefault(today, {"launches": 0, "total_sec": 0})
         sd[today]["launches"] += 1
         self.ctx.save()
+
+
+def _send_notification(title: str, message: str) -> None:
+    """Send a Windows notification using PowerShell balloon tip."""
+    try:
+        import subprocess as _sp
+        import ctypes
+        # Fallback: Use ctypes to show a simple message box
+        ctypes.windll.user32.MessageBoxW(0, message, title, 0)
+    except Exception:
+        pass

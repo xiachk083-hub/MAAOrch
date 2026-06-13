@@ -131,6 +131,25 @@ def main():
         else:
             _LOG.info(f"{name} 未找到 ({exe_path})，跳过")
 
+    # Dependency check (lightweight)
+    _deferred_warnings = []
+    try:
+        import PySide6
+    except ImportError:
+        _deferred_warnings.append("PySide6 未安装，系统托盘不可用")
+    from pathlib import Path as _P
+    maa_source = _P(__file__).parent / "services" / "maa" / "source"
+    if not (maa_source / "MAA.exe").exists():
+        _deferred_warnings.append("MAA 未安装，请将 MAA 放到 services/maa/source/ 目录")
+
+    # Desktop shortcut (first run)
+    desktop_bat = _P(os.environ.get("USERPROFILE", ".")) / "Desktop" / "MAAOrch.bat"
+    if not desktop_bat.exists():
+        try:
+            desktop_bat.write_text(f'@start /min "" "{sys.executable}" "{__file__}"')
+        except Exception:
+            pass
+
     has_webview = False
     try:
         import webview
@@ -157,8 +176,10 @@ def main():
     if has_webview:
         _LOG.info(f"Web UI: {url} (pywebview 原生窗口)")
         import webview as _wv
-        _wv.create_window("MAAOrch", url, width=1100, height=700, resizable=True)
-        _wv.start(private_mode=False)
+
+        # Create native window with system tray
+        _wv.create_window("MAAOrch", url, width=1100, height=700, resizable=True, on_top=False)
+        _wv.start(private_mode=False, tray=True)
     else:
         _LOG.info(f"Web UI: {url} (浏览器 + 系统托盘)")
         from PySide6.QtWidgets import QSystemTrayIcon, QMenu
