@@ -414,6 +414,14 @@ class AccountRunner(QObject):
         try: pid_file.write_text(str(p.pid))
         except Exception: self.log_msg.emit(f"警告: 无法写入 PID 文件 {pid_file}")
         self.log_msg.emit(f"✓ 启动 MAA PID={p.pid}")
+        # Background thread: wait for process exit (eliminates 2s polling)
+        import threading as _th
+        def _wait_exit():
+            try: p.wait()
+            except: pass
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: self._on_process_exit(aid, p))
+        _th.Thread(target=_wait_exit, daemon=True).start()
         # Re-apply Infrast Mode after MAA initializes (MAA overwrites gui.new.json on start)
         infra_mode = ac.get("task_settings", {}).get("Infrast", {}).get("mode", "")
         if infra_mode:
@@ -530,6 +538,14 @@ class AccountRunner(QObject):
             QTimer.singleShot(0, lambda: self._cleanup(aid, 0, tasks, sanity, drops))
         except Exception:
             QTimer.singleShot(0, lambda: self._cleanup(aid, -1, [], None, None))
+
+    def _on_process_exit(self, aid: str, p: subprocess.Popen) -> None:
+        """Called when subprocess exits (from wait thread). Skips if already cleaned up."""
+        if aid not in self._active:
+            return
+        rc = p.poll()
+        tasks, sanity, drops = self._parse_log(aid)
+        self._cleanup(aid, rc, tasks, sanity, drops)
 
     def _spawn(self, w: dict, ac: dict) -> None:
         aid = ac["id"]
@@ -650,36 +666,39 @@ class AccountRunner(QObject):
         p = self._procs.get(aid)
         if p is None or isinstance(p, str):
             return
-        # MaaCore direct instances are monitored in background thread, skip here
+        # MaaCore direct instances monitored in background thread
         if not hasattr(p, 'poll'):
             return
-        if p.poll() is None:
-            self._update_status(aid)
-            # Task completion detection: check log for AllTasksCompleted
-            ac = self._active.get(aid)
-            if ac and hasattr(p, '_inst_path'):
-                lp = Path(p._inst_path) / "debug" / "asst.log"
-                if lp.exists():
-                    try:
-                        current_size = lp.stat().st_size
-                        last_pos = self._log_positions.get(aid, 0)
-                        self._log.debug(f"[asst.log] {aid}: pos {last_pos} → {current_size}, changed={current_size > last_pos}")
-                        if current_size > last_pos:
-                            with lp.open("r", encoding="utf-8", errors="replace") as _f:
-                                _f.seek(last_pos)
-                                new_content = _f.read(current_size - last_pos)
-                            self._log_positions[aid] = current_size
-                            self._log.debug(f"[asst.log] head={repr(new_content[:200])}")
-                            if "AllTasksCompleted" in new_content:
-                                self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
-                                tasks, sanity, drops = self._parse_log(aid)
-                                self._cleanup(aid, 0, tasks, sanity, drops)
-                                try: p.terminate(); p.wait(3)
-                                except: pass
-                                try: p.kill()
-                                except: pass
-                                return
-                    except Exception: pass
+        # Process exit handled by _wait_exit background thread → _on_process_exit
+        if p.poll() is not None:
+            # Only log; actual cleanup is in _on_process_exit (avoids double cleanup)
+            return
+        self._update_status(aid)
+        # Task completion detection: check log for AllTasksCompleted
+        ac = self._active.get(aid)
+        if ac and hasattr(p, '_inst_path'):
+            lp = Path(p._inst_path) / "debug" / "asst.log"
+            if lp.exists():
+                try:
+                    current_size = lp.stat().st_size
+                    last_pos = self._log_positions.get(aid, 0)
+                    self._log.debug(f"[asst.log] {aid}: pos {last_pos} → {current_size}, changed={current_size > last_pos}")
+                    if current_size > last_pos:
+                        with lp.open("r", encoding="utf-8", errors="replace") as _f:
+                            _f.seek(last_pos)
+                            new_content = _f.read(current_size - last_pos)
+                        self._log_positions[aid] = current_size
+                        self._log.debug(f"[asst.log] head={repr(new_content[:200])}")
+                        if "AllTasksCompleted" in new_content:
+                            self.log_msg.emit(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+                            tasks, sanity, drops = self._parse_log(aid)
+                            self._cleanup(aid, 0, tasks, sanity, drops)
+                            try: p.terminate(); p.wait(3)
+                            except: pass
+                            try: p.kill()
+                            except: pass
+                            return
+                except Exception: pass
             # Stuck detection: same task over timeout → kill
             ac = self._active.get(aid)
             if ac:
