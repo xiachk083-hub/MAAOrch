@@ -80,7 +80,7 @@ function renderPage() {
   const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, 
               settings: renderSettings, about: renderAbout, logs: renderLogs,
               account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, 
-              health: renderHealth, onboarding: renderOnboarding, warehouse: renderWarehouse, groups: renderGroups };
+              health: renderHealth, onboarding: renderOnboarding, warehouse: renderWarehouse, groups: renderGroups, pipeline: renderPipeline };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -862,6 +862,35 @@ async function deleteGroup(idx) {
   if (!confirm('确认删除？')) return;
   const r = await apiPost('/config/sync', { remove_group_index: idx });
   if (r.ok) { toast('已删除'); renderPage(); } else toast(r.error || '删除失败', 'error');
+}
+
+// ── Pipeline ──
+async function renderPipeline(container) {
+  try {
+    const s = await apiGet('/status');
+    const running = s.pipeline_running || false;
+    container.innerHTML = `<div id="pipeline-page">
+      <div style="margin-bottom:16px">
+        <div style="font-size:18px;font-weight:bold;margin-bottom:4px">流水线</div>
+        <div style="font-size:12px;color:var(--text2)">状态: <span style="color:${running ? 'var(--accent)' : 'var(--text3)'}">${running ? '▶ 运行中' : '⏹ 已停止'}</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="${running ? '' : 'primary'}" onclick="pipelineAction('start')" ${running ? 'disabled' : ''}>▶ 启动</button>
+        <button class="${running ? 'danger' : ''}" onclick="pipelineAction('stop')" ${!running ? 'disabled' : ''}>⏹ 停止</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.6">
+        流水线会按分组顺序依次执行各组内的程序。<br>
+        启动前请确保已在「分组」页面配置好任务。
+      </div>
+    </div>`;
+  } catch(e) { container.innerHTML = '<div class="error">加载失败</div>'; }
+}
+
+async function pipelineAction(action) {
+  const r = await apiPost('/pipeline/' + action, {});
+  if (r.error) toast(r.error, 'error');
+  else toast(action === 'start' ? '流水线已启动' : '流水线已停止');
+  renderPage();
 }
 
 // ── Filter & Search ──
