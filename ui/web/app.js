@@ -77,7 +77,7 @@ setTheme(savedTheme);
 // ── Page renderers ──
 function renderPage() {
   const c = document.getElementById('content');
-  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs };
+  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs, account: renderAccount, taskcfg: renderTaskConfig };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -331,16 +331,77 @@ async function showAccountDetail(id) {
   const a = state.accounts.find(x => x.id === id);
   if (!a) return;
   const idx = state.accounts.indexOf(a);
-  const html = `<h3>${a.name}</h3>
+  state._detailId = id;
+  navigate('account');
+}
+
+async function renderAccount(container) {
+  const id = state._detailId;
+  if (!id) { container.innerHTML = '<div>未选择账号</div>'; return; }
+  const r = await apiGet('/accounts');
+  if (!r.ok) { container.innerHTML = '<div>加载失败</div>'; return; }
+  const a = r.accounts.find(x => x.id === id);
+  if (!a) { container.innerHTML = '<div>账号不存在</div>'; return; }
+  const idx = r.accounts.indexOf(a);
+  
+  container.innerHTML = `<div>
+    <button onclick="navigate('accounts')" style="margin-bottom:8px">← 返回</button>
     <div class="form-row"><label>名称</label><input id="ed-name" value="${a.name}"></div>
-    <div class="form-row"><label>客户端</label><select id="ed-client"><option value="Official" ${a.game_client==='Official'?'selected':''}>官服</option><option value="Bilibili" ${a.game_client==='Bilibili'?'selected':''}>B服</option></select></div>
-    <div class="form-row"><label>模拟器 VM</label><input id="ed-vm" value="${a.emu_instance_index||''}" placeholder="VM 索引"></div>
-    <div class="form-row"><label>ADB 地址</label><input id="ed-adb" value="${a.adb_address||''}" placeholder="127.0.0.1:16384"></div>
+    <div class="form-row"><label>客户端</label><select id="ed-client">
+      <option value="Official" ${a.game_client==='Official'?'selected':''}>官服</option>
+      <option value="Bilibili" ${a.game_client==='Bilibili'?'selected':''}>B服</option>
+    </select></div>
+    <div class="form-row"><label>模拟器 VM</label>
+      <select id="ed-vm" style="flex:0.3">
+        <option value="">未绑定</option>
+        ${Array.from({length:20}, (_,i) => `<option value="${i}" ${a.emu_instance_index==String(i)?'selected':''}>VM ${i}</option>`).join('')}
+      </select>
+      <span style="color:var(--text3);font-size:10px;margin-left:4px">${a.game_client||''}</span>
+    </div>
+    <div class="form-row"><label>ADB 地址</label><input id="ed-adb" value="${a.adb_address||''}"></div>
+    <div class="form-row"><label>ADB 路径</label><input id="ed-adb-path" value="${a.adb_path||''}" placeholder="自动检测"></div>
+    <div class="form-row"><label>关卡</label><input id="ed-stage" value="${a.smart_stage||''}" placeholder="例如 1-7"></div>
+    <div class="form-row"><label>剿灭</label>
+      <select id="ed-anni"><option value="">自动选择</option><option value="Annihilation">当期剿灭</option></select>
+    </div>
+    <div style="border-top:1px solid var(--border);margin:8px 0;padding-top:8px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px">操作</div>
+      <button class="primary" onclick="navigate('taskcfg')" style="margin-right:4px">📋 任务配置</button>
+      <button onclick="launchAccount('${a.id}')" style="margin-right:4px">▶ 启动</button>
+      <button class="danger" onclick="deleteAccount('${a.id}')">🗑 删除</button>
+    </div>
     <div class="btn-row">
-      <button onclick="saveAccount('${a.id}',${idx})">保存</button>
-      <button class="danger" onclick="closeDialog(this.closest('.dialog-overlay'))">取消</button>
-    </div>`;
-  showDialog(html);
+      <button class="primary" onclick="saveAccountDetail('${a.id}',${idx})">保存</button>
+    </div>
+  </div>`;
+}
+
+async function saveAccountDetail(id, idx) {
+  const name = document.getElementById('ed-name')?.value?.trim();
+  const client = document.getElementById('ed-client')?.value;
+  const vm = document.getElementById('ed-vm')?.value;
+  const adb = document.getElementById('ed-adb')?.value?.trim();
+  const adbPath = document.getElementById('ed-adb-path')?.value?.trim();
+  const stage = document.getElementById('ed-stage')?.value?.trim();
+  const anni = document.getElementById('ed-anni')?.value;
+  const body = {};
+  if (name) body.name = name;
+  if (client) body.game_client = client;
+  body.emu_instance_index = vm || '';
+  if (adb) body.adb_address = adb;
+  if (adbPath) body.adb_path = adbPath;
+  if (stage) { body.smart_stage = stage; body.fight_stage = stage; }
+  if (anni) body.smart_annihilation = anni;
+  const r = await apiPost(`/account/${idx}/edit`, body);
+  if (r.ok) toast('已保存');
+  else toast(r.error || '保存失败', 'error');
+}
+
+function renderTaskConfig(container) {
+  container.innerHTML = `<div>
+    <button onclick="navigate('account')" style="margin-bottom:8px">← 返回</button>
+    <div style="color:var(--text2);padding:20px;text-align:center">任务配置页面（待实现）</div>
+  </div>`;
 }
 async function saveAccount(id, idx) {
   const overlay = document.querySelector('.dialog-overlay');
