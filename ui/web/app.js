@@ -77,7 +77,7 @@ setTheme(savedTheme);
 // ── Page renderers ──
 function renderPage() {
   const c = document.getElementById('content');
-  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs, account: renderAccount, taskcfg: renderTaskConfig };
+  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs, account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -227,9 +227,11 @@ async function renderSettings(container) {
       <div class="btn-row"><button class="primary" onclick="saveGeneral()">保存</button></div>
     </div>
     <div class="tab-content" id="tab-smart">
-      <div class="form-row"><label>智能调度</label><label style="color:var(--text2);font-size:12px"><input type="checkbox" id="cb-smart" ${smart.enabled?'checked':''}> 启用</label></div>
+      <div class="form-row"><label>智能调度</label>
+        <label style="color:var(--text2);font-size:12px"><input type="checkbox" id="cb-smart" ${smart.enabled?'checked':''}> 启用</label></div>
       <div class="form-row"><label>体力阈值</label><input type="number" id="input-threshold" value="${smart.threshold||80}" min="0" max="200"> %</div>
-      <div class="form-row"><label>过期药用</label><label style="color:var(--text2);font-size:12px"><input type="checkbox" id="cb-exp-med" ${smart.expiring_medicine?'checked':''}> 优先吃快过期药</label></div>
+      <div class="form-row"><label>过期药</label><label><input type="checkbox" id="cb-exp-med" ${smart.expiring_medicine?'checked':''}> 优先吃快过期药</label></div>
+      <div class="form-row"><label>剿灭</label><label><input type="checkbox" id="cb-anni" ${smart.annihilation_enabled!==false?'checked':''}> 启用自动剿灭</label></div>
       <div class="btn-row"><button class="primary" onclick="saveSmart()">保存</button></div>
     </div>
     <div class="tab-content" id="tab-maa">
@@ -333,6 +335,77 @@ async function showAccountDetail(id) {
   const idx = state.accounts.indexOf(a);
   state._detailId = id;
   navigate('account');
+}
+
+async function renderBatchEdit(container) {
+  const ids = [...selectedIds];
+  if (ids.length === 0) { container.innerHTML = '<div>请先选择账号</div>'; return; }
+  const r = await apiGet('/accounts');
+  if (!r.ok) { container.innerHTML = '<div>加载失败</div>'; return; }
+  const accounts = r.accounts.filter(a => ids.includes(a.id));
+  if (accounts.length === 0) return;
+  const total = accounts.length;
+  let curIdx = 0;
+  
+  function renderForm(idx) {
+    const a = accounts[idx];
+    container.innerHTML = `<div>
+      <div class="pager">
+        <button onclick="prevPage()">◀ 上一页</button>
+        <span>${idx+1} / ${total}</span>
+        <button onclick="nextPage()">下一页 ▶</button>
+      </div>
+      <div style="color:var(--text2);font-size:11px;margin-bottom:8px">
+        账号: ${a.name} | VM ${a.emu_instance_index||'?'} | ${a.game_client||'?'}
+      </div>
+      <div class="form-row"><label>默认关卡</label><input id="be-stage" value="${a.smart_stage||''}" placeholder="留空不修改"></div>
+      <div class="form-row"><label>客户端</label><select id="be-client">
+        <option value="">不修改</option>
+        <option value="Official" ${a.game_client==='Official'?'selected':''}>官服</option>
+        <option value="Bilibili" ${a.game_client==='Bilibili'?'selected':''}>B服</option>
+      </select></div>
+      <div class="form-row"><label>完成后</label>
+        <label><input type="checkbox" id="be-exit-emu">关模拟器</label>
+        <label><input type="checkbox" id="be-exit-self">退MAA</label>
+      </div>
+      <div class="btn-row">
+        <button class="primary" onclick="saveBatchItem(${idx})">保存</button>
+      </div>
+    </div>`;
+    curIdx = idx;
+    const pa = a.post_action || '';
+    const be1 = document.getElementById('be-exit-emu');
+    const be2 = document.getElementById('be-exit-self');
+    if (be1) be1.checked = pa.includes('ExitEmulator');
+    if (be2) be2.checked = pa.includes('ExitSelf');
+  }
+  
+  window.prevPage = () => { if (curIdx > 0) saveBatchItem(curIdx - 1); renderForm(curIdx - 1); };
+  window.nextPage = () => { if (curIdx < total - 1) saveBatchItem(curIdx + 1); renderForm(curIdx + 1); };
+  window.saveBatchItem = async (nextIdx) => {
+    const a = accounts[curIdx];
+    const idx = r.accounts.indexOf(a);
+    const body = {};
+    const stage = document.getElementById('be-stage')?.value?.trim();
+    const client = document.getElementById('be-client')?.value;
+    const exE = document.getElementById('be-exit-emu')?.checked;
+    const exS = document.getElementById('be-exit-self')?.checked;
+    if (stage) { body.smart_stage = stage; body.fight_stage = stage; }
+    if (client) body.game_client = client;
+    if (exE || exS) {
+      const acts = [];
+      if (exE) acts.push('ExitEmulator');
+      if (exS) acts.push('ExitSelf');
+      body.post_action = acts.join(',');
+    }
+    const res = await apiPost(`/account/${idx}/edit`, body);
+    if (res.ok) toast(`已保存 ${a.name}`);
+    if (nextIdx !== undefined && nextIdx !== curIdx) {
+      renderForm(nextIdx);
+    }
+  };
+  
+  renderForm(0);
 }
 
 async function renderAccount(container) {
@@ -593,7 +666,8 @@ async function saveSmart() {
   const r = await apiPost('/settings/smart', {
     enabled: document.getElementById('cb-smart').checked,
     threshold: parseInt(document.getElementById('input-threshold').value) || 80,
-    expiring_medicine: document.getElementById('cb-exp-med').checked
+    expiring_medicine: document.getElementById('cb-exp-med').checked,
+    annihilation_enabled: document.getElementById('cb-anni').checked,
   });
   if (r.ok) toast('已保存'); else toast(r.error || '保存失败', 'error');
 }
@@ -633,8 +707,8 @@ function updateBatchBar() {
   if (countEl) countEl.textContent = `已选 ${count}`;
 }
 async function batchEnqueue() {
-  for (const id of selectedIds) { await launchAccount(id); }
-  selectedIds.clear(); renderPage();
+  if (selectedIds.size === 0) return;
+  navigate('batch');
 }
 async function batchStop() {
   for (const id of selectedIds) {
