@@ -150,15 +150,25 @@ def main():
     has_webview = False
     try:
         import webview
-        # Check WebView2 runtime availability
-        try:
-            import winreg
-            k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}")
-            winreg.QueryValueEx(k, 'pv')
-            winreg.CloseKey(k)
+        # Check WebView2 runtime availability via multiple registry paths
+        import winreg
+        found = False
+        for path, value in [
+            (r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", 'pv'),
+            (r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", 'pv'),
+        ]:
+            try:
+                k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path)
+                winreg.QueryValueEx(k, value)
+                winreg.CloseKey(k)
+                found = True
+                break
+            except:
+                pass
+        if found:
             has_webview = True
-        except Exception:
-            _LOG.info("WebView2 Runtime 未安装，pywebview 降级到系统托盘模式")
+        else:
+            _LOG.info("WebView2 Runtime 未安装，降级到系统托盘模式")
             has_webview = False
     except ImportError:
         pass
