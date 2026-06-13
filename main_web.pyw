@@ -103,7 +103,9 @@ def main():
 
     from PySide6.QtWidgets import QSystemTrayIcon, QMenu
     from PySide6.QtGui import QIcon
-    tray = QSystemTrayIcon(QIcon(), app)
+    icon_path = str(Path(__file__).parent / "icon.ico")
+    icon = QIcon(icon_path) if Path(icon_path).exists() else QIcon()
+    tray = QSystemTrayIcon(icon, app)
     tray.setToolTip("MAAOrch")
     menu = QMenu()
     menu.addAction("打开浏览器", lambda: webbrowser.open(url))
