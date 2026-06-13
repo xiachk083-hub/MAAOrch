@@ -328,12 +328,10 @@ let logAutoRef = true;
 let logTimer = null;
 
 async function renderLogs(container) {
-  const resp = await fetch(API + '/logs?lines=200');
-  const raw = await resp.text();
   container.innerHTML = `<div class="log-page">
     <div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       <span style="color:var(--text2);font-size:12px;font-weight:bold">日志</span>
-      <select id="log-level-filter" onchange="renderLogs(document.getElementById('content'))" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+      <select id="log-level-filter" onchange="updateLogContent()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
         <option value="ALL">全部</option>
         <option value="INFO" selected>INFO+</option>
         <option value="WARN">WARN+</option>
@@ -344,50 +342,52 @@ async function renderLogs(container) {
     </div>
     <div id="log-content" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-size:11px;line-height:1.5;height:calc(100vh - 120px);overflow-y:auto;font-family:Consolas,'Courier New',monospace;white-space:pre-wrap;word-break:break-all"></div>
   </div>`;
-  const el = document.getElementById('log-content');
-  const level = document.getElementById('log-level-filter')?.value || 'ALL';
-  
-  // Parse log lines, filter by level, colorize
-  const lines = raw.split('\n');
-  const levelOrder = {TRACE:0, DEBUG:1, INFO:2, WARN:3, ERROR:4, CRASH:5};
-  const minLevel = levelOrder[level] || 0;
-  const levelColors = {INFO:'var(--text)', WARN:'var(--warn)', ERROR:'var(--danger)', CRASH:'var(--danger)', DEBUG:'var(--text3)', TRACE:'var(--text3)'};
-  
-  let html = '';
-  let count = 0;
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    // Parse: [timestamp] [LEVEL] [source] message
-    const m = line.match(/\[(.*?)\]\s+\[(\w+)\]\s+\[(.*?)\]\s+(.*)/);
-    if (m) {
-      const ts = m[1], lvl = m[2], src = m[3], msg = m[4];
-      const lvlIdx = levelOrder[lvl] ?? 99;
-      if (lvlIdx < minLevel) continue;
-      const color = levelColors[lvl] || 'var(--text)';
-      html += `<div style="color:${color}"><span style="color:var(--text3)">${ts}</span> [<b>${lvl}</b>] ${msg}</div>`;
-      count++;
-    } else {
-      if (minLevel <= 0) {
+  await updateLogContent();
+  startLogAuto();
+}
+
+let _logCache = '';
+
+async function updateLogContent() {
+  try {
+    const resp = await fetch(API + '/logs?lines=200');
+    const raw = await resp.text();
+    if (raw === _logCache) return;  // unchanged, skip
+    _logCache = raw;
+    const el = document.getElementById('log-content');
+    if (!el) return;
+    const level = document.getElementById('log-level-filter')?.value || 'ALL';
+    const levelOrder = {TRACE:0, DEBUG:1, INFO:2, WARN:3, ERROR:4, CRASH:5};
+    const minLevel = levelOrder[level] || 0;
+    const levelColors = {INFO:'var(--text)', WARN:'var(--warn)', ERROR:'var(--danger)', CRASH:'var(--danger)', DEBUG:'var(--text3)', TRACE:'var(--text3)'};
+    const lines = raw.split('\n');
+    let html = '';
+    let count = 0;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const m = line.match(/\[(.*?)\]\s+\[(\w+)\]\s+\[(.*?)\]\s+(.*)/);
+      if (m) {
+        const ts = m[1], lvl = m[2], msg = m[4];
+        const lvlIdx = levelOrder[lvl] ?? 99;
+        if (lvlIdx < minLevel) continue;
+        const color = levelColors[lvl] || 'var(--text)';
+        html += `<div style="color:${color}"><span style="color:var(--text3)">${ts}</span> [<b>${lvl}</b>] ${msg}</div>`;
+        count++;
+      } else if (minLevel <= 0) {
         html += `<div style="color:var(--text3)">${line}</div>`;
         count++;
       }
     }
-  }
-  el.innerHTML = count ? html : '<div style="color:var(--text3);padding:20px;text-align:center">无匹配日志</div>';
-  startLogAuto();
+    el.innerHTML = count ? html : '<div style="color:var(--text3);padding:20px;text-align:center">无匹配日志</div>';
+  } catch(e) {}
 }
 
 function startLogAuto() {
   if (logTimer) clearInterval(logTimer);
   if (!logAutoRef) return;
-  logTimer = setInterval(async () => {
+  logTimer = setInterval(() => {
     if (state.page !== 'logs') { clearInterval(logTimer); logTimer = null; return; }
-    try {
-      const resp = await fetch(API + '/logs?lines=200');
-      const html = await resp.text();
-      const el = document.getElementById('log-content');
-      if (el) el.textContent = html;
-    } catch(e) {}
+    updateLogContent();
   }, 2000);
 }
 
