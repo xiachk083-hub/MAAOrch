@@ -175,9 +175,16 @@ def _get_schedule_tasks(mw: Any, include_anni: bool = True, only_anni: bool = Fa
 
 
 def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False) -> None:
+    # Stop accounts that were started by previous _run_smart_all (have dispatch_id)
+    if hasattr(mw, "runner") and mw.runner:
+        for aid in list(mw.runner._active.keys()):
+            ac = next((a for a in mw.accounts if a.get("id") == aid), None)
+            if ac and ac.get("dispatch_id"):
+                mw.runner.stop(aid)
     if hasattr(mw, "launch_queue") and mw.launch_queue:
         with mw.launch_queue._lock:
             mw.launch_queue._pending.clear()
+            mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
     mode = mw.config.get("schedule_mode", "daily")
     tasks = _get_schedule_tasks(mw, include_anni, only_anni)
