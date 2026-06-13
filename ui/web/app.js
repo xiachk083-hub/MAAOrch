@@ -366,7 +366,7 @@ async function updateLogContent() {
     let count = 0;
     for (const line of lines) {
       if (!line.trim()) continue;
-      const m = line.match(/\[(.*?)\]\s+\[(\w+)\]\s+\[(.*?)\]\s+(.*)/);
+      const m = line.match(/\[(.*?)\]\s+\[(\w+)\s*\]\s+\[(.*?)\]\s+(.*)/);
       if (m) {
         const ts = m[1], lvl = m[2], msg = m[4];
         const lvlIdx = levelOrder[lvl] ?? 99;
