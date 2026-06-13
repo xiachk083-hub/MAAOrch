@@ -77,7 +77,7 @@ setTheme(savedTheme);
 // ── Page renderers ──
 function renderPage() {
   const c = document.getElementById('content');
-  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs, account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit };
+  const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, settings: renderSettings, about: renderAbout, logs: renderLogs, account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, health: renderHealth };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -237,7 +237,7 @@ async function renderSettings(container) {
     <div class="tab-content" id="tab-maa">
       <div class="form-row"><label>MAA 版本</label><span style="color:var(--text2);font-size:12px">${cfg.maa_version||'未安装'}</span></div>
       <div class="form-row"><label>实例数</label><span style="color:var(--text2);font-size:12px">${cfg.maa_instances||0}</span></div>
-      <div class="btn-row"><button onclick="rebuildInstances()">🔄 重建实例</button></div>
+      <div class="btn-row"><button onclick="rebuildInstances()">🔄 重建实例</button><button onclick="exportConfig()" style="margin-left:8px">📤 导出配置</button></div>
     </div>`;
     // Tab switching
     container.querySelectorAll('.tab').forEach(tab => {
@@ -257,7 +257,14 @@ function renderAbout(container) {
   <div class="about-info">多账号 MAA 编排调度器<br><br>
   Python + PySide6 + Web UI<br>
   <a href="https://github.com/xiachk083-hub/MAAOrch" target="_blank" style="color:var(--accent)">GitHub</a><br><br>
-  MAA v6 兼容 | 开源软件 (MIT)</div>`;
+  MAA v6 兼容 | 开源软件 (MIT)</div>
+<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+  <div style="font-size:12px;color:var(--text2);margin-bottom:4px">快捷键</div>
+  <div style="font-size:11px;color:var(--text3);line-height:1.8">
+    Ctrl+Enter — 启动流水线<br>
+    Esc — 停止流水线
+  </div>
+</div>`;
 }
 
 let logAutoRef = true;
@@ -674,6 +681,40 @@ async function saveSmart() {
 async function rebuildInstances() {
   const r = await apiPost('/instance/rebuild', {});
   if (r.ok) toast('重建完成'); else toast(r.error || '重建失败', 'error');
+}
+async function renderHealth(container) {
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">正在检测...</div>';
+  try {
+    const r = await apiGet('/health');
+    if (r.ok) {
+      let html = '<div class="stat-grid">';
+      r.checks?.forEach(c => {
+        html += `<div class="stat-card">
+          <div class="stat-value" style="color:${c.passed ? 'var(--accent)' : 'var(--danger)'}">${c.passed ? '✓' : '✕'}</div>
+          <div class="stat-label">${c.name}</div>
+          <div style="font-size:10px;color:var(--text3)">${c.message || ''}</div>
+        </div>`;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">检测不可用</div>';
+    }
+  } catch(e) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger)">检测失败</div>';
+  }
+}
+async function exportConfig() {
+  const r = await apiPost('/config/sync', { export: true });
+  if (r.ok) {
+    const blob = new Blob([JSON.stringify(r.config, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'maorch_config_export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('配置已导出');
+  } else toast('导出失败', 'error');
 }
 
 // ── Filter & Search ──
