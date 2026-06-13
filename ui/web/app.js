@@ -96,8 +96,7 @@ function renderPage() {
   const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, 
               settings: renderSettings, about: renderAbout, logs: renderLogs,
               account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, 
-              health: renderHealth, onboarding: renderOnboarding, warehouse: renderWarehouse,
-              groups: renderGroups, pipeline: renderPipeline };
+              health: renderHealth, onboarding: renderOnboarding };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
