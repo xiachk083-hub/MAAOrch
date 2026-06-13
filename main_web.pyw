@@ -77,7 +77,7 @@ def main():
         'runner': runner, 'launch_queue': launch_queue, 'config': config,
         'accounts': ctx.accounts, 'ctx': ctx, 'warehouse': [],
         '_proc_status': set(), '_proc_start_times': {},
-        '_log': lambda msg: _LOG.info(msg),
+        '_log': lambda self, msg: _LOG.info(msg),
     })()
 
     # Migrate old accounts
