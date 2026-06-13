@@ -487,6 +487,13 @@ class AccountRunner(QObject):
             elif msg == MSG_CONNECTION_INFO:
                 if "connected" in details.lower() or "success" in details.lower():
                     self.log_msg.emit(f"ADB 已连接 ({addr})")
+                elif "connectfailed" in details.lower() or "fail" in details.lower():
+                    try:
+                        import json as _j
+                        d = _j.loads(details)
+                        why = d.get("why", "")
+                        if why: self._log.warn(f"[MaaCore] {ac.get('name', aid)} 连接失败: {why}")
+                    except: pass
 
         inst = create_instance(_cb)
         if not inst:
