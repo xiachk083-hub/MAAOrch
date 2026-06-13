@@ -1,10 +1,9 @@
-"""Web UI entry point — pywebview native window + browser access."""
+"""Web UI entry point — browser + system tray (no pywebview)."""
 import sys, os, threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from infrastructure.platform_helper import is_admin, run_as_admin
-from infrastructure.utils import setup_proxy
 from infrastructure.logger import Logger
 
 def main():
@@ -12,7 +11,6 @@ def main():
         run_as_admin()
         sys.exit(0)
 
-    # Single instance check
     import ctypes as _ct
     hwnd = _ct.windll.user32.FindWindowW(None, "MAAOrchWeb")
     if hwnd:
@@ -20,7 +18,6 @@ def main():
         _ct.windll.user32.SetForegroundWindow(hwnd)
         sys.exit(0)
 
-    # Minimal Qt for ApiServer QThread + system tray
     from PySide6.QtWidgets import QApplication
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
@@ -29,7 +26,6 @@ def main():
     _LOG = Logger("app")
     _LOG.info("══ MAAOrch Web 启动 ══")
 
-    # Preload MaaCore.dll for direct integration (skip MAA.exe subprocess)
     from infrastructure.maa_core import preload, get_version
     source_path = Path(__file__).parent / "services" / "maa" / "source"
     if source_path.exists() and (source_path / "MaaCore.dll").exists():
@@ -40,14 +36,16 @@ def main():
     else:
         _LOG.info("MaaCore.dll 未找到，使用子进程模式")
 
-    # Go monitors dir
-    _go_dir = Path(__file__).parent / "services"
+    desktop_bat = Path(os.environ.get("USERPROFILE", ".")) / "Desktop" / "MAAOrch.bat"
+    if not desktop_bat.exists():
+        try:
+            desktop_bat.write_text(f'@start /min "" "{sys.executable}" "{__file__}"')
+        except Exception:
+            pass
 
-    # Load config (minimal bootstrap)
     from models.config_manager import load_config, save_config
     config = load_config()
 
-    # Create ServiceContext (minimal)
     from app.service_context import ServiceContext
     ctx = ServiceContext(
         log=lambda msg: _LOG.info(msg),
@@ -66,19 +64,17 @@ def main():
     )
     config["accounts"] = ctx.accounts
 
-    # Initialize ConfigService for MAA config injection
     from services.config_injector import ConfigService
     ctx.cfg = ConfigService(ctx)
 
-    # Initialize runner + launch_queue
     from services.runner import AccountRunner
     from services.launch_queue import LaunchQueue
     runner = AccountRunner(ctx)
     launch_queue = LaunchQueue(ctx)
     runner.log_msg.connect(lambda m: _LOG.info(f"[MAA] {m}"))
     runner.account_finished.connect(launch_queue.on_account_finished)
-    launch_queue._restore()  # restore pending queue from disk
-    launch_queue.start()  # start the 5s tick timer (also clears stale _active_emus)
+    launch_queue._restore()
+    launch_queue.start()
     ctx._mw = type('MW', (), {
         'runner': runner, 'launch_queue': launch_queue, 'config': config,
         'accounts': ctx.accounts, 'ctx': ctx, 'warehouse': [],
@@ -86,14 +82,12 @@ def main():
         '_log': lambda self, msg: _LOG.info(msg),
     })()
 
-    # Migrate old accounts
     from services.dispatch_pool import create_dispatch
     for a in ctx.accounts:
         plan = a.get("smart_plan", "")
         if plan and not a.get("dispatch_id"):
             a["dispatch_id"] = create_dispatch(plan.split(","))
 
-    # Start API server
     port = config.get("api_port", 19999)
     token = config.get("api_token", "")
     from network.api_server import ApiServer
@@ -104,101 +98,29 @@ def main():
     url = f"http://127.0.0.1:{port}/"
     _LOG.info(f"Web UI: {url}")
 
-    # Start Go services (adb_monitor, log_monitor, health_monitor)
-    go_procs = []
-    go_services = [
-        ("adb_monitor", "adb_monitor.exe", "19998"),
-        ("log_monitor", "log_monitor.exe", "19997"),
-        ("health_monitor", "health_monitor.exe", "19996"),
-    ]
-    for name, exe, port in go_services:
-        exe_path = _go_dir / name / exe
-        if exe_path.exists():
-            try:
-                import subprocess as _sp
-                p = _sp.Popen(
-                    [str(exe_path)],
-                    creationflags=_sp.CREATE_NO_WINDOW,
-                    stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
-                )
-                go_procs.append(p)
-                _LOG.info(f"{name} 已启动 (端口 {port})")
-            except Exception as e:
-                _LOG.error(f"{name} 启动失败: {e}")
-        else:
-            _LOG.info(f"{name} 未找到 ({exe_path})，跳过")
+    import webbrowser
+    webbrowser.open(url)
 
-    # Dependency check (lightweight)
-    _deferred_warnings = []
-    try:
-        import PySide6
-    except ImportError:
-        _deferred_warnings.append("PySide6 未安装，系统托盘不可用")
-    from pathlib import Path as _P
-    maa_source = _P(__file__).parent / "services" / "maa" / "source"
-    if not (maa_source / "MAA.exe").exists():
-        _deferred_warnings.append("MAA 未安装，请将 MAA 放到 services/maa/source/ 目录")
-
-    # Desktop shortcut (first run)
-    desktop_bat = _P(os.environ.get("USERPROFILE", ".")) / "Desktop" / "MAAOrch.bat"
-    if not desktop_bat.exists():
-        try:
-            desktop_bat.write_text(f'@start /min "" "{sys.executable}" "{__file__}"')
-        except Exception:
-            pass
-
-    has_webview = False
-    try:
-        import webview
-        has_webview = True
-    except ImportError:
-        pass
-
-    def cleanup():
+    from PySide6.QtWidgets import QSystemTrayIcon, QMenu
+    from PySide6.QtGui import QIcon
+    tray = QSystemTrayIcon(QIcon(), app)
+    tray.setToolTip("MAAOrch")
+    menu = QMenu()
+    menu.addAction("打开浏览器", lambda: webbrowser.open(url))
+    def _quit():
         try:
             if hasattr(api, 'stop_server'):
                 api.stop_server()
-            for p in go_procs:
-                try:
-                    p.terminate()
-                    p.wait(3)
-                except:
-                    pass
             for aid in list(runner._active.keys()):
                 runner.stop(aid)
         except Exception as e:
             _LOG.error(f"清理异常: {e}")
         _LOG.info("══ MAAOrch 退出 ══")
-
-    if has_webview:
-        _LOG.info(f"Web UI: {url} (pywebview 原生窗口)")
-        import webview as _wv
-        try:
-            _wv.create_window("MAAOrch", url, width=1100, height=700, resizable=True, on_top=False)
-            _wv.start(private_mode=False, tray=True)
-            cleanup()
-            return
-        except Exception as e:
-            _LOG.error(f"pywebview 启动失败: {e}，降级到浏览器模式")
-            # Fall through to browser + tray fallback
-
-    _LOG.info(f"Web UI: {url} (浏览器 + 系统托盘)")
-        import webbrowser
-        webbrowser.open(url)
-        from PySide6.QtWidgets import QSystemTrayIcon, QMenu
-        from PySide6.QtGui import QIcon
-        tray = QSystemTrayIcon(QIcon(), app)
-        tray.setToolTip("MAAOrch")
-        menu = QMenu()
-        menu.addAction("打开浏览器", lambda: webbrowser.open(url))
-        menu.addAction("退出", lambda: (cleanup(), app.quit()))
-        tray.setContextMenu(menu)
-        tray.show()
-        import sys as _sys
-        _sys.exit(app.exec())
-        return
-
-    cleanup()
+        app.quit()
+    menu.addAction("退出", _quit)
+    tray.setContextMenu(menu)
+    tray.show()
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()
