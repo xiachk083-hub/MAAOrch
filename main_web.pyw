@@ -104,10 +104,8 @@ def main():
     api.daemon = True
     api.start()
 
-    # Open browser + pywebview
-    import webbrowser
     url = f"http://127.0.0.1:{port}/"
-    webbrowser.open(url)
+    _LOG.info(f"Web UI: {url}")
 
     # Start Go services (adb_monitor, log_monitor, health_monitor)
     go_procs = []
@@ -157,7 +155,7 @@ def main():
         _LOG.info("══ MAAOrch 退出 ══")
 
     if has_webview:
-        _LOG.info(f"Web UI: {url} (pywebview + 浏览器)")
+        _LOG.info(f"Web UI: {url} (pywebview 原生窗口)")
         import webview as _wv
         _wv.create_window("MAAOrch", url, width=1100, height=700, resizable=True)
         _wv.start(private_mode=False)
