@@ -46,6 +46,14 @@ class LaunchQueue(QObject):
 
     def start(self, interval_sec: int = 5) -> None:
         self._tick_timer.start(interval_sec * 1000)
+        # Background thread for non-Qt mode (pywebview doesn't run Qt event loop)
+        import threading as _th
+        def _bg_tick():
+            while True:
+                import time as _t
+                _t.sleep(interval_sec)
+                self._tick()
+        _th.Thread(target=_bg_tick, daemon=True).start()
 
     def pause(self) -> None:
         """Pause queue processing. Pending items are preserved."""
@@ -54,9 +62,7 @@ class LaunchQueue(QObject):
     def resume(self) -> None:
         """Resume queue processing and tick immediately."""
         self._paused = False
-        # Tick after a brief delay so UI has time to settle
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(300, self._tick)
+        self._tick()
 
     @property
     def is_paused(self) -> bool:
