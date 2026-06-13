@@ -23,16 +23,27 @@
 - 提交信息用中文，格式: "类型: 简短说明"
 - type: fix / feat / refactor / docs / perf / chore
 
-## 项目上下文 (2025-06-12)
-- MAAOrch: Python + PySide6 Qt Widgets
+## 持续学习与迭代
+- 每次对话结束时，评估是否有新的优化空间并更新 AGENTS.md
+- 定期从类似开源项目（MAA、同类调度工具）学习架构模式，应用到项目中
+- 每次架构变更后，重新评估性能、可维护性、用户体验
+- 保留「待优化清单」在项目文档中，按优先级迭代
+- 遇到不熟悉的模式或技术，先在子代理中做 research 再决定是否引入
+
+## 项目上下文 (2026-06-13)
+- MAAOrch: Python + PySide6 + Web UI (pywebview/浏览器双模)
 - 目录结构: `app/` `services/` `ui/` `models/` `infrastructure/` `network/`
+- 三种运行模式: `main.pyw` (Qt), `main_web.pyw` (Web推荐)
 - MAA v6 使用 gui.new.json，要求 TaskQueue 条目带 $type 字段
 - PostActions="12" (MAA v6 编码: 4=ExitEmulator, 8=ExitSelf)
-- 调度模板池: `services/dispatch_pool.py` + account.dispatch_id 取代 smart_plan
+- 调度模板池: `services/dispatch_pool.py` + account.dispatch_id
 - 三种调度模式: `config.schedule_mode = daily / roguelike / reclamation`
 - `_persist_plan` 只在 exit_code == 0 时清理（崩溃/断连保留）
 - ADB server 自愈: 检测 protocol fault → kill-server + start-server
 - `find_mumu_cli()` 已缓存 (`@lru_cache`)
+- MaaCore ctypes 直连 (`infrastructure/maa_core.py`) — 跳过 MAA.exe 子进程
+- Web UI SSE 推送 (`/api/sse`) — 替代 3s 轮询
+- Go 性能服务: `services/adb_monitor/`, `log_monitor/`, `health_monitor/`
 - mumu-cli 子命令是 shutdown 不是 quit
 - subprocess 必须加 encoding="utf-8", errors="replace"
 - 所有改动须与现有 68 个测试兼容
