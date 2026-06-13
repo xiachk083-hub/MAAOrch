@@ -80,7 +80,7 @@ function renderPage() {
   const fns = { accounts: renderAccounts, queue: renderQueue, stats: renderStats, 
               settings: renderSettings, about: renderAbout, logs: renderLogs,
               account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit, 
-              health: renderHealth, onboarding: renderOnboarding };
+              health: renderHealth, onboarding: renderOnboarding, warehouse: renderWarehouse, groups: renderGroups };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -736,6 +736,132 @@ async function exportConfig() {
     URL.revokeObjectURL(url);
     toast('配置已导出');
   } else toast('导出失败', 'error');
+}
+
+// ── Warehouse ──
+async function renderWarehouse(container) {
+  try {
+    const r = await apiGet('/status');
+    container.innerHTML = `<div style="margin-bottom:8px"><button class="primary small" onclick="showAddWarehouse()">＋ 添加程序</button></div>
+    <div id="warehouse-list"></div>`;
+    const wl = document.getElementById('warehouse-list');
+    if (!r.warehouse || r.warehouse.length === 0) {
+      wl.innerHTML = '<div style="color:var(--text3);padding:20px">仓库为空，点击上方按钮添加程序</div>';
+      return;
+    }
+    wl.innerHTML = r.warehouse.map((w, i) => `
+      <div class="card" style="margin-bottom:2px">
+        <div class="info">
+          <div class="name">${w.name || w.path?.split('\\').pop() || '?'}</div>
+          <div class="meta">${w.path || ''} ${w.type ? '· ' + w.type : ''}</div>
+        </div>
+        <div class="card-actions">
+          <button class="small" onclick="launchWarehouse(${i})">启动</button>
+          <button class="small danger" onclick="deleteWarehouse(${i})">删除</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { container.innerHTML = '<div class="error">加载失败</div>'; }
+}
+
+function showAddWarehouse() {
+  const html = `<div class="dialog"><h3>添加程序</h3>
+    <div class="form-row"><label>路径</label><input id="wh-path" placeholder="程序 exe 路径" style="flex:1"></div>
+    <div class="form-row"><label>名称</label><input id="wh-name" placeholder="留空自动取文件名"></div>
+    <div class="form-row"><label>类型</label><select id="wh-type">
+      <option value="general">通用</option>
+      <option value="maa">MAA</option>
+      <option value="cli">CLI</option>
+    </select></div>
+    <div class="btn-row">
+      <button onclick="saveWarehouse()">保存</button>
+      <button class="danger" onclick="this.closest('.dialog-overlay').remove()">取消</button>
+    </div>
+  </div>`;
+  const ov = document.createElement('div'); ov.className = 'dialog-overlay';
+  ov.innerHTML = html; document.body.appendChild(ov);
+}
+
+async function saveWarehouse() {
+  const path = document.getElementById('wh-path')?.value?.trim();
+  if (!path) { toast('请输入路径', 'error'); return; }
+  const name = document.getElementById('wh-name')?.value?.trim() || path.split('\\').pop().replace(/\.exe$/,'');
+  const type = document.getElementById('wh-type')?.value || 'general';
+  const r = await apiPost('/config/sync', { add_warehouse: { path, name, type } });
+  if (r.ok) { toast('已添加'); document.querySelector('.dialog-overlay')?.remove(); renderPage(); }
+  else toast(r.error || '添加失败', 'error');
+}
+
+async function launchWarehouse(idx) {
+  const r = await apiPost('/pipeline/start', { warehouse_index: idx });
+  if (r.ok) toast('已启动'); else toast(r.error || '启动失败', 'error');
+}
+
+async function deleteWarehouse(idx) {
+  if (!confirm('确认删除？')) return;
+  const r = await apiPost('/config/sync', { remove_warehouse_index: idx });
+  if (r.ok) { toast('已删除'); renderPage(); } else toast(r.error || '删除失败', 'error');
+}
+
+// ── Groups ──
+async function renderGroups(container) {
+  try {
+    const r = await apiGet('/status');
+    const groups = r.groups || [];
+    container.innerHTML = `<div style="margin-bottom:8px">
+      <button class="primary small" onclick="showAddGroup()">＋ 新建分组</button>
+    </div>
+    <div id="groups-list">${groups.length === 0 ? '<div style="color:var(--text3);padding:20px">暂无分组</div>' :
+      groups.map((g, i) => `
+        <div class="card" style="margin-bottom:4px">
+          <div class="info">
+            <div class="name">${g.name || '未命名'}</div>
+            <div class="meta">模式: ${g.mode || 'parallel'} | 程序: ${(g.programs||[]).length} 个</div>
+          </div>
+          <div class="card-actions">
+            <button class="small" onclick="launchGroup(${i})">▶ 启动</button>
+            <button class="small danger" onclick="deleteGroup(${i})">删除</button>
+          </div>
+        </div>
+      `).join('')
+    }</div>`;
+  } catch(e) { container.innerHTML = '<div class="error">加载失败</div>'; }
+}
+
+function showAddGroup() {
+  const html = `<div class="dialog"><h3>新建分组</h3>
+    <div class="form-row"><label>名称</label><input id="grp-name" placeholder="分组名称"></div>
+    <div class="form-row"><label>模式</label><select id="grp-mode">
+      <option value="parallel">并行</option>
+      <option value="sequential">串行</option>
+    </select></div>
+    <div class="btn-row">
+      <button onclick="saveGroup()">保存</button>
+      <button class="danger" onclick="this.closest('.dialog-overlay').remove()">取消</button>
+    </div>
+  </div>`;
+  const ov = document.createElement('div'); ov.className = 'dialog-overlay';
+  ov.innerHTML = html; document.body.appendChild(ov);
+}
+
+async function saveGroup() {
+  const name = document.getElementById('grp-name')?.value?.trim();
+  if (!name) { toast('请输入名称', 'error'); return; }
+  const mode = document.getElementById('grp-mode')?.value || 'parallel';
+  const r = await apiPost('/config/sync', { add_group: { name, mode, programs: [] } });
+  if (r.ok) { toast('已创建'); document.querySelector('.dialog-overlay')?.remove(); renderPage(); }
+  else toast(r.error || '创建失败', 'error');
+}
+
+async function launchGroup(idx) {
+  const r = await apiPost('/pipeline/start', { group_index: idx });
+  if (r.ok) toast('已启动'); else toast(r.error || '启动失败', 'error');
+}
+
+async function deleteGroup(idx) {
+  if (!confirm('确认删除？')) return;
+  const r = await apiPost('/config/sync', { remove_group_index: idx });
+  if (r.ok) { toast('已删除'); renderPage(); } else toast(r.error || '删除失败', 'error');
 }
 
 // ── Filter & Search ──
