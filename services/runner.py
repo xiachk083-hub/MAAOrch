@@ -447,11 +447,6 @@ class AccountRunner(QObject):
             import threading as _th
             _th.Thread(target=_rewrite_infra, daemon=True).start()
         self.account_started.emit(aid)
-        # Notify launch queue that this VM is ready (for serial launch)
-        emu_idx = ac.get("emu_instance_index", "")
-        if emu_idx and hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'launch_queue'):
-            from PySide6.QtCore import QTimer
-            QTimer.singleShot(0, lambda: self.ctx._mw.launch_queue._on_launch_ready(emu_idx))
 
     def _try_spawn_direct(self, ac: dict, inst_dir: str) -> bool:
         """Try to launch via MaaCore ctypes (skip MAA.exe subprocess). Returns True if successful."""
@@ -891,11 +886,6 @@ class AccountRunner(QObject):
         duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)
         self.ctx.proc_status.discard(aid)
-        # Clean up booting_emus so queue doesn't get stuck
-        if ac and hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'launch_queue'):
-            emu = ac.get("emu_instance_index", "")
-            if emu:
-                self.ctx._mw.launch_queue._booting_emus.discard(emu)
 
         name = ac.get("name", aid) if ac else aid
         # MAA handles its own exit via PostActions="6" (ExitEmulator + ExitSelf)
