@@ -181,26 +181,46 @@ async function renderQueue(container) {
   try {
     const q = await apiGet('/queue');
     const s = await apiGet('/status');
+    const accts = state.accounts.length ? state.accounts : (await apiGet('/accounts')).ok ? (await apiGet('/accounts')).accounts : [];
+
+    // Build active (running) list
+    let activeHtml = '';
+    const activeIds = q.active || [];
+    if (activeIds.length > 0) {
+      activeHtml = `<div style="color:var(--accent);font-size:11px;font-weight:bold;padding:4px 0;margin-top:4px">── 进行中 ──</div>`;
+      activeIds.forEach(aid => {
+        const a = accts.find(x => x.id === aid);
+        const name = a?.name || aid.slice(0,8);
+        const vm = a?.emu_instance_index || '?';
+        activeHtml += `<div class="queue-item" style="border-color:var(--accent)">
+          <span class="name">▶ ${name}</span>
+          <span class="source">VM ${vm}</span>
+          <span class="eta" style="color:var(--accent)">运行中</span>
+        </div>`;
+      });
+    }
+
+    // Pending list
+    let pendingHtml = '';
+    if (q.pending && q.pending.length) {
+      pendingHtml = `<div style="color:var(--warn);font-size:11px;font-weight:bold;padding:4px 0;margin-top:4px">── 排队中 ──</div>`;
+      pendingHtml += q.pending.map(e => {
+        const srcMap = {manual:'手动', schedule:'定时', sanity:'理智', force:'强制', retry:'重试'};
+        return `<div class="queue-item">
+          <span class="name">⏳ ${e.account_name || e.account_id?.slice(0,8) || '?'}</span>
+          <span class="source">${srcMap[e.source]||e.source}</span>
+          <span class="eta">${e.not_before ? new Date(e.not_before).toLocaleTimeString() : '等待中'}</span>
+        </div>`;
+      }).join('');
+    }
+
     container.innerHTML = `<div style="margin-bottom:8px">
-      <span>运行中: <strong>${s.running || 0}</strong></span>
+      <span>运行中: <strong>${activeIds.length}</strong></span>
       <span style="margin-left:16px">排队: <strong>${q.pending_count || 0}</strong></span>
       <button onclick="toggleQueuePause()" style="margin-left:16px">${q.paused ? '▶ 恢复队列' : '⏸ 暂停队列'}</button>
       <button onclick="clearQueue()" style="margin-left:8px" class="danger small">清空队列</button>
     </div>
-    <div id="queue-list"></div>`;
-    const ql = document.getElementById('queue-list');
-    if (q.pending && q.pending.length) {
-      ql.innerHTML = q.pending.map(e => {
-        const srcMap = {manual:'手动', schedule:'定时', sanity:'理智', force:'强制', retry:'重试'};
-        return `<div class="queue-item">
-          <span class="name">${e.account_name || e.account_id?.slice(0,8) || '?'}</span>
-          <span class="source">${srcMap[e.source]||e.source}</span>
-          <span class="eta">${e.not_before ? new Date(e.not_before).toLocaleTimeString() : '立即'}</span>
-        </div>`;
-      }).join('');
-    } else {
-      ql.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center">队列为空</div>';
-    }
+    <div id="queue-list">${activeHtml}${pendingHtml || '<div style="color:var(--text3);padding:20px;text-align:center;margin-top:8px">队列为空</div>'}</div>`;
   } catch(e) { showError(container, e.message); }
 }
 
