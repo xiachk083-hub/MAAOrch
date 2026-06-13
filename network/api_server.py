@@ -94,6 +94,8 @@ class ApiServer(QThread):
                 if p.startswith("/api/account/") and p.endswith("/delete"): return s._handle_delete_account(p)
                 if p.startswith("/api/account/") and p.endswith("/config"): return s._handle_save_account_config(p, body)
                 if p=="/api/queue/clear": return s._handle_queue_clear()
+                if p=="/api/queue/pause": return s._handle_queue_pause()
+                if p=="/api/queue/resume": return s._handle_queue_resume()
                 if p=="/api/config": return s._handle_save_config(body)
                 if p=="/api/settings/smart": return s._handle_save_smart(body)
                 if p=="/api/action/stop_all": return s._handle_stop_all()
@@ -264,7 +266,7 @@ class ApiServer(QThread):
                     a=next((x for x in mw.accounts if x["id"]==e.account_id),None)
                     pending.append({"account_id":e.account_id,"account_name":a.get("name","") if a else "","source":src_map.get(e.source,e.source),"priority":e.sort_key[0],"not_before":e.not_before.strftime("%Y-%m-%d %H:%M:%S")})
                 active=list(lq._active_emus.values())
-                s._json({"pending":pending,"active":active,"pending_count":len(pending),"active_count":len(active)})
+                s._json({"pending":pending,"active":active,"pending_count":len(pending),"active_count":len(active),"paused":lq._paused})
             def _handle_queue_enqueue(s,body):
                 lq=getattr(mw,"launch_queue",None)
                 if not lq: return s._json({"error":"queue not available"},500)
@@ -384,6 +386,20 @@ class ApiServer(QThread):
                     lq._save_queue()
                     s._json({"ok":True})
                 except Exception as e: s._json({"error":str(e)},500)
+            def _handle_queue_pause(s):
+                try:
+                    lq=getattr(mw,"launch_queue",None)
+                    if not lq: return s._json({"error":"queue not available"},500)
+                    lq.pause()
+                    s._json({"ok":True,"paused":True})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_queue_resume(s):
+                try:
+                    lq=getattr(mw,"launch_queue",None)
+                    if not lq: return s._json({"error":"queue not available"},500)
+                    lq.resume()
+                    s._json({"ok":True,"paused":False})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_save_config(s,body):
                 try:
                     for field in ("maa_version","parallel_max","appearance_mode","schedule_mode"):
@@ -413,6 +429,10 @@ class ApiServer(QThread):
                     from ui.side_bar import _run_smart_all
                     include_anni=body.get("include_anni",True)
                     only_anni=body.get("only_anni",False)
+                    # Resume queue before scheduling
+                    lq=getattr(mw,"launch_queue",None)
+                    if lq and lq._paused:
+                        lq.resume()
                     _run_smart_all(mw,include_anni,only_anni)
                     s._json({"ok":True})
                 except Exception as e: s._json({"error":str(e)},500)
