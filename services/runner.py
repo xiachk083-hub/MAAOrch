@@ -214,12 +214,20 @@ class AccountRunner(QObject):
         self._stopping.add(account_id)
         p = self._procs.pop(account_id, None)
         if p:
-            try:
-                p.terminate()
-                p.wait(2)
-            except Exception:
+            # Handle both subprocess.Popen and _AsstInstance
+            if hasattr(p, 'terminate'):
                 try:
-                    p.kill()
+                    p.terminate()
+                    p.wait(2)
+                except Exception:
+                    try:
+                        p.kill()
+                    except Exception:
+                        pass
+            elif hasattr(p, 'destroy'):
+                try:
+                    p.stop()
+                    p.destroy()
                 except Exception:
                     pass
             self._cleanup(account_id, -9, [])
@@ -609,7 +617,7 @@ class AccountRunner(QObject):
         maa_mem = 0
         for aid in list(self._procs.keys()):
             p = self._procs.get(aid)
-            if not p or isinstance(p, str):
+            if not p or isinstance(p, str) or not hasattr(p, 'pid'):
                 continue
             try:
                 pp = psutil.Process(p.pid)
@@ -641,6 +649,9 @@ class AccountRunner(QObject):
     def _check_one(self, aid: str) -> None:
         p = self._procs.get(aid)
         if p is None or isinstance(p, str):
+            return
+        # MaaCore direct instances are monitored in background thread, skip here
+        if not hasattr(p, 'poll'):
             return
         if p.poll() is None:
             self._update_status(aid)
