@@ -70,10 +70,6 @@ def main():
     from services.config_injector import ConfigService
     ctx.cfg = ConfigService(ctx)
 
-    # Web mode: use subprocess MAA.exe, not MaaCore direct (more reliable for now)
-    for a in ctx.accounts:
-        a["_use_direct"] = False
-
     # Initialize runner + launch_queue
     from services.runner import AccountRunner
     from services.launch_queue import LaunchQueue
