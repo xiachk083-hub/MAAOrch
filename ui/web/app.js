@@ -397,11 +397,170 @@ async function saveAccountDetail(id, idx) {
   else toast(r.error || '保存失败', 'error');
 }
 
-function renderTaskConfig(container) {
+async function renderTaskConfig(container) {
+  const id = state._detailId;
+  if (!id) { container.innerHTML = '<div>未选择账号</div>'; return; }
+  const r = await apiGet('/accounts');
+  if (!r.ok) { container.innerHTML = '<div>加载失败</div>'; return; }
+  const a = r.accounts.find(x => x.id === id);
+  if (!a) { container.innerHTML = '<div>账号不存在</div>'; return; }
+  const idx = r.accounts.indexOf(a);
+  const ts = a.task_settings || {};
+  
   container.innerHTML = `<div>
-    <button onclick="navigate('account')" style="margin-bottom:8px">← 返回</button>
-    <div style="color:var(--text2);padding:20px;text-align:center">任务配置页面（待实现）</div>
+    <button onclick="navigate('account')" style="margin-bottom:8px">← 返回 ${a.name}</button>
+    <h3 style="margin-bottom:8px">任务配置 — ${a.name}</h3>
+    <div class="tabs" id="cfg-tabs">
+      <div class="tab active" data-tab="startup">启动</div>
+      <div class="tab" data-tab="fight">刷关</div>
+      <div class="tab" data-tab="recruit">招募</div>
+      <div class="tab" data-tab="infrast">基建</div>
+      <div class="tab" data-tab="mall">商店</div>
+      <div class="tab" data-tab="award">领取</div>
+    </div>
+    <div id="cfg-tab-content"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="primary" onclick="saveTaskConfig(${idx})">保存配置</button>
+    </div>
   </div>`;
+  
+  renderCfgTab('startup', ts);
+  
+  // Tab switching
+  container.querySelectorAll('#cfg-tabs .tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      container.querySelectorAll('#cfg-tabs .tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderCfgTab(tab.dataset.tab, ts);
+    });
+  });
+}
+
+function renderCfgTab(tab, ts) {
+  const ct = document.getElementById('cfg-tab-content');
+  const ft = ts.Fight || {};
+  const rt = ts.Recruit || {};
+  const it = ts.Infrast || {};
+  const mt = ts.Mall || {};
+  const at = ts.Award || {};
+  
+  switch(tab) {
+    case 'startup':
+      ct.innerHTML = `<div class="form-row"><label>账号切换</label><input id="cfg-acct-switch" value="${ts.account_switch||''}" placeholder="留空用当前账号"></div>`;
+      break;
+    case 'fight':
+      ct.innerHTML = `<div class="form-row"><label>吃药</label><input type="checkbox" id="cfg-med" ${ft.use_medicine?'checked':''}></div>
+        <div class="form-row"><label>过期药</label><input type="checkbox" id="cfg-exp-med" ${ft.use_expiring_medicine?'checked':''}></div>
+        <div class="form-row"><label>过期天数</label><input type="number" id="cfg-med-days" value="${ft.medicine_expire_days||2}" min="1" max="7"></div>
+        <div class="form-row"><label>重置模式</label><select id="cfg-reset"><option value="Current" ${(ft.stage_reset_mode||'Current')==='Current'?'selected':''}>当前</option><option value="Last" ${ft.stage_reset_mode==='Last'?'selected':''}>上周</option><option value="Yesterday" ${ft.stage_reset_mode==='Yesterday'?'selected':''}>昨日</option><option value="Clear" ${ft.stage_reset_mode==='Clear'?'selected':''}>已通关</option></select></div>
+        <div class="form-row"><label>次数</label><input type="number" id="cfg-times" value="${ft.times||99}" min="1" max="999"></div>
+        <div class="form-row"><label>限次</label><input type="checkbox" id="cfg-limit" ${ft.enable_times_limit?'checked':''}></div>
+        <div class="form-row"><label>搓玉</label><input type="checkbox" id="cfg-grandet" ${ft.is_dr_grandet?'checked':''}></div>
+        <div class="form-row"><label>可选关</label><input type="checkbox" id="cfg-opt" ${ft.use_optional_stage?'checked':''}></div>
+        <div class="form-row"><label>仓库目标</label><input type="checkbox" id="cfg-inv" ${ft.is_inventory_target?'checked':''}></div>
+        <div class="form-row"><label>周计划</label><input type="checkbox" id="cfg-weekly" ${ft.use_weekly_schedule?'checked':''}></div>`;
+      break;
+    case 'recruit':
+      ct.innerHTML = `<div class="form-row"><label>刷新</label><input type="checkbox" id="cfg-refresh" ${rt.refresh!==false?'checked':''}></div>
+        <div class="form-row"><label>强制刷新</label><input type="checkbox" id="cfg-force" ${rt.force_refresh!==false?'checked':''}></div>
+        <div class="form-row"><label>次数</label><input type="number" id="cfg-rec-times" value="${rt.times||4}" min="1" max="20"></div>
+        <div class="form-row"><label>3星时间</label><input type="number" id="cfg-l3t" value="${rt.level3_time||540}" min="60"> 分</div>
+        <div class="form-row"><label>保留词条</label><input id="cfg-preserve" value="${rt.preserve_tags||'支援机械'}" placeholder="用;分隔"></div>
+        <div class="form-row"><label>保留启用</label><input type="checkbox" id="cfg-preserve-en" ${rt.preserve_tag_enabled?'checked':''}></div>`;
+      break;
+    case 'infrast':
+      ct.innerHTML = `<div class="form-row"><label>模式</label><select id="cfg-inf-mode"><option value="Normal" ${(it.mode||'Normal')==='Normal'?'selected':''}>常规</option><option value="Rotation" ${it.mode==='Rotation'?'selected':''}>轮换</option></select></div>
+        <div class="form-row"><label>无人机</label><select id="cfg-drones"><option value="Money" ${(it.drones||'Money')==='Money'?'selected':''}>贸易</option><option value="Combat" ${it.drones==='Combat'?'selected':''}>制造</option></select></div>
+        <div class="form-row"><label>宿舍阈值</label><input type="number" id="cfg-dorm" value="${it.dorm_threshold||30}" min="0" max="100"> %</div>
+        <div class="form-row"><label>宿舍信任</label><input type="checkbox" id="cfg-dorm-trust" ${it.dorm_trust_enabled!==false?'checked':''}></div>
+        <div class="form-row"><label>自动搓玉</label><input type="checkbox" id="cfg-shard" ${it.originium_shard_auto!==false?'checked':''}></div>
+        <div class="form-row"><label>线索</label><input type="checkbox" id="cfg-clue" ${it.reception_clue!==false?'checked':''}></div>
+        <div class="form-row"><label>送线索</label><input type="checkbox" id="cfg-send" ${it.send_clue!==false?'checked':''}></div>
+        <div class="form-row"><label>继续训练</label><input type="checkbox" id="cfg-train" ${it.continue_training?'checked':''}></div>`;
+      break;
+    case 'mall':
+      ct.innerHTML = `<div class="form-row"><label>购物</label><input type="checkbox" id="cfg-shop" ${mt.shopping!==false?'checked':''}></div>
+        <div class="form-row"><label>信用战</label><input type="checkbox" id="cfg-cf" ${mt.credit_fight?'checked':''}></div>
+        <div class="form-row"><label>访问好友</label><input type="checkbox" id="cfg-vf" ${mt.visit_friends!==false?'checked':''}></div>
+        <div class="form-row"><label>黑名单</label><input id="cfg-bl" value="${mt.blacklist||'碳;家具;加急许可'}" placeholder="用;分隔"></div>
+        <div class="form-row"><label>优先购买</label><input id="cfg-fl" value="${mt.first_list||'招聘许可'}"></div>
+        <div class="form-row"><label>仅折扣</label><input type="checkbox" id="cfg-od" ${mt.only_buy_discount?'checked':''}></div>
+        <div class="form-row"><label>保留信用</label><input type="checkbox" id="cfg-rm" ${mt.reserve_max_credit?'checked':''}></div>`;
+      break;
+    case 'award':
+      ct.innerHTML = `<div class="form-row"><label>奖励</label><input type="checkbox" id="cfg-aw" ${at.award!==false?'checked':''}></div>
+        <div class="form-row"><label>邮件</label><input type="checkbox" id="cfg-mail" ${at.mail!==false?'checked':''}></div>
+        <div class="form-row"><label>免费抽</label><input type="checkbox" id="cfg-gacha" ${at.free_gacha?'checked':''}></div>
+        <div class="form-row"><label>合成玉</label><input type="checkbox" id="cfg-oru" ${at.orundum!==false?'checked':''}></div>
+        <div class="form-row"><label>采矿</label><input type="checkbox" id="cfg-mine" ${at.mining?'checked':''}></div>
+        <div class="form-row"><label>特别许可</label><input type="checkbox" id="cfg-sp" ${at.special_access?'checked':''}></div>`;
+      break;
+    default:
+      ct.innerHTML = '';
+  }
+}
+
+function collectTaskConfig() {
+  return {
+    account_switch: getVal('cfg-acct-switch'),
+    Fight: {
+      use_medicine: isChecked('cfg-med'),
+      use_expiring_medicine: isChecked('cfg-exp-med'),
+      medicine_expire_days: parseInt(getVal('cfg-med-days')) || 2,
+      stage_reset_mode: getVal('cfg-reset') || 'Current',
+      times: parseInt(getVal('cfg-times')) || 99,
+      enable_times_limit: isChecked('cfg-limit'),
+      is_dr_grandet: isChecked('cfg-grandet'),
+      use_optional_stage: isChecked('cfg-opt'),
+      is_inventory_target: isChecked('cfg-inv'),
+      use_weekly_schedule: isChecked('cfg-weekly'),
+    },
+    Recruit: {
+      refresh: isChecked('cfg-refresh'),
+      force_refresh: isChecked('cfg-force'),
+      times: parseInt(getVal('cfg-rec-times')) || 4,
+      level3_time: parseInt(getVal('cfg-l3t')) || 540,
+      preserve_tags: getVal('cfg-preserve') || '支援机械',
+      preserve_tag_enabled: isChecked('cfg-preserve-en'),
+    },
+    Infrast: {
+      mode: getVal('cfg-inf-mode') || 'Normal',
+      drones: getVal('cfg-drones') || 'Money',
+      dorm_threshold: parseInt(getVal('cfg-dorm')) || 30,
+      dorm_trust_enabled: isChecked('cfg-dorm-trust'),
+      originium_shard_auto: isChecked('cfg-shard'),
+      reception_clue: isChecked('cfg-clue'),
+      send_clue: isChecked('cfg-send'),
+      continue_training: isChecked('cfg-train'),
+    },
+    Mall: {
+      shopping: isChecked('cfg-shop'),
+      credit_fight: isChecked('cfg-cf'),
+      visit_friends: isChecked('cfg-vf'),
+      blacklist: getVal('cfg-bl') || '碳;家具;加急许可',
+      first_list: getVal('cfg-fl') || '招聘许可',
+      only_buy_discount: isChecked('cfg-od'),
+      reserve_max_credit: isChecked('cfg-rm'),
+    },
+    Award: {
+      award: isChecked('cfg-aw'),
+      mail: isChecked('cfg-mail'),
+      free_gacha: isChecked('cfg-gacha'),
+      orundum: isChecked('cfg-oru'),
+      mining: isChecked('cfg-mine'),
+      special_access: isChecked('cfg-sp'),
+    },
+  };
+}
+
+function getVal(id) { const e = document.getElementById(id); return e ? e.value : ''; }
+function isChecked(id) { const e = document.getElementById(id); return e ? e.checked : false; }
+
+async function saveTaskConfig(idx) {
+  const cfg = collectTaskConfig();
+  const r = await apiPost(`/account/${idx}/config`, { task_settings: cfg });
+  if (r.ok) toast('配置已保存');
+  else toast(r.error || '保存失败', 'error');
 }
 async function saveAccount(id, idx) {
   const overlay = document.querySelector('.dialog-overlay');
