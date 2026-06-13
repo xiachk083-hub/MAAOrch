@@ -958,6 +958,12 @@ class AccountRunner(QObject):
             msg_parts.append(f"理智 {cur}/{mx}  ({h}h{m:02d}m回满)")
 
         self.account_finished.emit((aid, exit_code, tasks))
+        # Direct fallback: call on_account_finished directly (Qt signal may not deliver in web mode)
+        if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'launch_queue'):
+            try:
+                self.ctx._mw.launch_queue.on_account_finished((aid, exit_code, tasks))
+            except Exception:
+                pass
         if msg_parts:
             self.ctx.notify(" | ".join(msg_parts), False)
 
