@@ -81,7 +81,8 @@ def main():
     launch_queue = LaunchQueue(ctx)
     runner.log_msg.connect(lambda m: _LOG.info(f"[MAA] {m}"))
     runner.account_finished.connect(launch_queue.on_account_finished)
-    launch_queue.start()  # start the 5s tick timer
+    launch_queue._restore()  # restore pending queue from disk
+    launch_queue.start()  # start the 5s tick timer (also clears stale _active_emus)
     ctx._mw = type('MW', (), {
         'runner': runner, 'launch_queue': launch_queue, 'config': config,
         'accounts': ctx.accounts, 'ctx': ctx, 'warehouse': [],
