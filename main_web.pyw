@@ -150,26 +150,7 @@ def main():
     has_webview = False
     try:
         import webview
-        # Check WebView2 runtime availability via multiple registry paths
-        import winreg
-        found = False
-        for path, value in [
-            (r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", 'pv'),
-            (r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", 'pv'),
-        ]:
-            try:
-                k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path)
-                winreg.QueryValueEx(k, value)
-                winreg.CloseKey(k)
-                found = True
-                break
-            except:
-                pass
-        if found:
-            has_webview = True
-        else:
-            _LOG.info("WebView2 Runtime 未安装，降级到系统托盘模式")
-            has_webview = False
+        has_webview = True
     except ImportError:
         pass
 
@@ -192,12 +173,16 @@ def main():
     if has_webview:
         _LOG.info(f"Web UI: {url} (pywebview 原生窗口)")
         import webview as _wv
+        try:
+            _wv.create_window("MAAOrch", url, width=1100, height=700, resizable=True, on_top=False)
+            _wv.start(private_mode=False, tray=True)
+            cleanup()
+            return
+        except Exception as e:
+            _LOG.error(f"pywebview 启动失败: {e}，降级到浏览器模式")
+            # Fall through to browser + tray fallback
 
-        # Create native window with system tray
-        _wv.create_window("MAAOrch", url, width=1100, height=700, resizable=True, on_top=False)
-        _wv.start(private_mode=False, tray=True)
-    else:
-        _LOG.info(f"Web UI: {url} (浏览器 + 系统托盘)")
+    _LOG.info(f"Web UI: {url} (浏览器 + 系统托盘)")
         import webbrowser
         webbrowser.open(url)
         from PySide6.QtWidgets import QSystemTrayIcon, QMenu
