@@ -30,6 +30,12 @@
 - 保留「待优化清单」在项目文档中，按优先级迭代
 - 遇到不熟悉的模式或技术，先在子代理中做 research 再决定是否引入
 
+## 自我迭代
+- 每次对话结束前，主动审查 AGENTS.md 是否需要更新
+- 每次修完 bug 或完成架构变更后，把根因、改动、关键决策记录到项目上下文
+- 如果对话中发现某个规则不合理或过时，当场提出修改建议
+- 每 3 次对话后，系统性检查 AGENTS.md 是否完整
+
 ## 问题排查
 - 用户报告问题时，先自己查 `debug.log` 和 `crash.log` 定位根因，不直接问用户
 - 能复现的优先自己看日志、自己测 API，不给用户增加负担
@@ -50,6 +56,9 @@
 - MaaCore ctypes 直连 (`infrastructure/maa_core.py`) — 跳过 MAA.exe 子进程
 - Web UI SSE 推送 (`/api/sse`) — 替代 3s 轮询
 - Go 性能服务: `services/adb_monitor/`, `log_monitor/`, `health_monitor/`
+- **Qt 信号在 pywebview 模式不送达** → 改为直呼 `on_account_finished` 兜底
+- **QTimer 需 Qt 事件循环** → 改用 `threading.Timer` 或后台 daemon 线程兜底
+- **`type('MW', (), {})` 创建的 mock 属性被转为方法描述符** → lambda 须接受 `self` 参数
 - mumu-cli 子命令是 shutdown 不是 quit
 - subprocess 必须加 encoding="utf-8", errors="replace"
 - 所有改动须与现有 68 个测试兼容
