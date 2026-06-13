@@ -99,7 +99,42 @@ class ApiServer(QThread):
                 if p=="/api/action/stop_all": return s._handle_stop_all()
                 if p=="/api/action/smart_all": return s._handle_smart_all(body)
                 if p=="/api/instance/rebuild": return s._handle_rebuild()
+                if p=="/api/sse": return s._handle_sse()
                 s._json({"error":"not found"},404)
+            def _handle_sse(s):
+                """Server-Sent Events: push state changes to Web UI."""
+                s.send_response(200)
+                s.send_header("Content-Type", "text/event-stream")
+                s.send_header("Cache-Control", "no-cache")
+                s.send_header("Connection", "keep-alive")
+                s.send_header("Access-Control-Allow-Origin", "*")
+                s.end_headers()
+                try:
+                    while not s.server._stopped:
+                        data = json.dumps(_gather_sse_state(mw))
+                        s.wfile.write(f"data: {data}\n\n".encode())
+                        s.wfile.flush()
+                        import time as _t
+                        _t.sleep(1)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+            def _gather_sse_state(mw) -> dict:
+                """Collect current state for SSE push."""
+                from services.dispatch_pool import get_template
+                accts = []
+                for a in mw.accounts:
+                    aid = a.get("id", "")
+                    running = mw.launch_queue.is_running(aid) if hasattr(mw, 'launch_queue') else False
+                    queued = mw.launch_queue.is_queued(aid) if hasattr(mw, 'launch_queue') else False
+                    accts.append({
+                        "id": aid, "name": a.get("name",""),
+                        "running": running, "queued": queued,
+                        "emu": a.get("emu_instance_index",""),
+                        "client": a.get("game_client",""),
+                        "failures": a.get("consecutive_failures", 0),
+                    })
+                q = {"count": mw.launch_queue.pending_count if hasattr(mw, 'launch_queue') else 0}
+                return {"ok": True, "accounts": accts, "queue": q}
             def _handle_status(s):
                 accts=[]
                 for i,a in enumerate(mw.accounts):
