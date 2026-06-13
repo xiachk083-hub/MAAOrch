@@ -75,7 +75,8 @@ def main():
     runner.account_finished.connect(launch_queue.on_account_finished)
     ctx._mw = type('MW', (), {
         'runner': runner, 'launch_queue': launch_queue, 'config': config,
-        'accounts': ctx.accounts, 'ctx': ctx
+        'accounts': ctx.accounts, 'ctx': ctx,
+        '_log': lambda self, msg: _LOG.info(msg),
     })()
 
     # Migrate old accounts
