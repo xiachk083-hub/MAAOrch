@@ -46,6 +46,7 @@ class AccountRunner(QObject):
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
         self._log_positions: dict[str, int] = {}      # account_id → asst.log read position
+        self._log_handles = {}                       # account_id → persistent file handle
         self._adb_fail_count: dict[str, int] = {}     # account_id → consecutive ADB ping failures
         self._adb_restart_count: dict[str, int] = {}  # account_id → consecutive ADB-restart cycles
         from infrastructure.logger import Logger
@@ -789,12 +790,16 @@ class AccountRunner(QObject):
         name = ac.get("name", aid)
         if lp and lp.exists():
             try:
-                with lp.open("rb") as f:
-                    f.seek(0, 2)
-                    size = f.tell()
-                    read_size = min(400, size)
-                    f.seek(size - read_size)
-                    tail = f.read(read_size).decode("utf-8", errors="replace")
+                # Use persistent file handle to avoid stat/open/seek/read on every poll
+                fh = self._log_handles.get(aid)
+                if fh is None or fh.closed:
+                    fh = lp.open("rb")
+                    self._log_handles[aid] = fh
+                fh.seek(0, 2)
+                size = fh.tell()
+                read_size = min(400, size)
+                fh.seek(size - read_size)
+                tail = fh.read(read_size).decode("utf-8", errors="replace")
                 # Rolling buffer: keep last 200 lines
                 lines = tail.split("\n")
                 buf = self._log_buffers.setdefault(aid, [])
@@ -860,6 +865,11 @@ class AccountRunner(QObject):
         ac = self._active.pop(aid, None)
         old_progs = self._progs.pop(aid, None)
         self._procs.pop(aid, None)
+        # Close persistent log handle
+        fh = self._log_handles.pop(aid, None)
+        if fh and not fh.closed:
+            try: fh.close()
+            except: pass
         started = self._start_times.pop(aid, None)
         duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)
