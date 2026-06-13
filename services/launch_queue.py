@@ -48,8 +48,7 @@ class LaunchQueue(QObject):
         # Clear stale state from previous process
         self._active_emus.clear()
         self._booting_emus.clear()
-        self._tick_timer.start(interval_sec * 1000)
-        # Background thread for non-Qt mode (pywebview doesn't run Qt event loop)
+        # Background thread for queue processing (works with and without Qt event loop)
         import threading as _th
         def _bg_tick():
             while True:
