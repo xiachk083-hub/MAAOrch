@@ -149,46 +149,49 @@ async function renderAccounts(container) {
     });
     const vmKeys = Object.keys(groups).sort((a,b) => a === 'unbound' ? 1 : b === 'unbound' ? -1 : parseInt(a) - parseInt(b));
     const batchCount = selectedIds.size;
-    let html = `<input type="text" id="search-input" placeholder="搜索账号..." 
-  oninput="searchAccounts(this.value)" 
-  style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:12px;margin-bottom:6px">
-<div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap">
-  <button class="${!filterKey ? 'primary' : ''}" onclick="setFilter('')">全部</button>
-  <button class="${filterKey==='running'?'primary':''}" onclick="setFilter('running')">▶ 运行中</button>
-  <button class="${filterKey==='waiting'?'primary':''}" onclick="setFilter('waiting')">⏳ 排队中</button>
-  <button class="${filterKey==='error'?'primary':''}" onclick="setFilter('error')">✕ 错误</button>
-  <button class="${filterKey==='paused'?'primary':''}" onclick="setFilter('paused')">⏸ 暂停</button>
-</div>
-<div class="top-actions" style="margin-bottom:8px">
-  <button onclick="showCreateAccountForm()">＋ 创建账号</button>
-</div>
-<div id="batch-bar" style="display:${batchCount?'flex':'none'};align-items:center;gap:8px;padding:4px 0;margin-bottom:4px">
-  <span class="count" style="color:var(--accent);font-size:12px">已选 ${batchCount}</span>
-  <button class="small primary" onclick="batchSmart()">▶ 调度选中</button>
-  <button class="small" onclick="batchEnqueue()">批量入队</button>
-  <button class="small danger" onclick="batchStop()">批量停止</button>
-  <button class="small danger" onclick="batchDelete()">批量删除</button>
-  <button class="small" onclick="selectedIds.clear();renderPage();">取消选择</button>
-</div>
-<div class="card-list">`;
-    vmKeys.forEach(vm => {
-      html += `<div style="color:var(--text3);font-size:10px;padding:4px 0;margin-top:4px">📱 模拟器 VM ${vm === 'unbound' ? '未绑定' : vm}</div>`;
-      groups[vm].forEach(a => {
-        const statusClass = a.running ? 'status-running' : a.queued ? 'status-queued' : a.failures >= 6 ? 'status-paused' : a.failures > 0 ? 'status-error' : '';
-        const statusText = a.running ? '▶ 运行' : a.queued ? '⏳ 排队' : a.failures >= 6 ? '⏸ 暂停' : a.failures > 0 ? `✕ 错误x${a.failures}` : '';
-        const checked = selectedIds.has(a.id) ? 'checked' : '';
-        html += `<div class="card">
-  <input type="checkbox" class="cb" ${checked} onchange="event.stopPropagation();toggleSelect('${a.id}')">
-  <div style="flex:1" onclick="showAccountDetail('${a.id}')">
-    <div class="info">
-      <div class="name">${a.name}</div>
-      <div class="meta">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.adb_address ? ' · ' + a.adb_address : ''}</div>
+    let html = `<div style="display:flex;gap:4px;margin-bottom:6px">
+      <input type="text" id="search-input" placeholder="搜索账号..." 
+        oninput="searchAccounts(this.value)" 
+        style="flex:1;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
+      <button onclick="showCreateAccountForm()" style="white-space:nowrap;font-size:11px">＋ 创建</button>
     </div>
-    <div class="status ${statusClass}">${statusText}</div>
+    <div style="display:flex;gap:3px;margin-bottom:6px;flex-wrap:wrap">
+      <button class="small ${!filterKey ? 'primary' : ''}" onclick="setFilter('')">全部 (${r.accounts.length})</button>
+      <button class="small ${filterKey==='running'?'primary':''}" onclick="setFilter('running')">▶ 运行中</button>
+      <button class="small ${filterKey==='waiting'?'primary':''}" onclick="setFilter('waiting')">⏳ 排队</button>
+      <button class="small ${filterKey==='error'?'primary':''}" onclick="setFilter('error')">✕ 错误</button>
+      <button class="small ${filterKey==='paused'?'primary':''}" onclick="setFilter('paused')">⏸ 暂停</button>
+    </div>
+    <div id="batch-bar" style="display:${batchCount?'flex':'none'};align-items:center;gap:6px;padding:5px 8px;margin-bottom:6px;background:var(--accent);color:#fff;border-radius:var(--radius);font-size:11px">
+      <span>已选 ${batchCount}</span>
+      <span style="flex:1"></span>
+      <button class="small" onclick="batchSmart()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">▶ 调度</button>
+      <button class="small" onclick="batchEnqueue()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">入队</button>
+      <button class="small" onclick="batchStop()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">停止</button>
+      <button class="small" onclick="batchDelete()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">删除</button>
+      <button class="small" onclick="selectedIds.clear();renderPage()" style="background:transparent;color:#fff;border-color:rgba(255,255,255,0.3)">✕</button>
+    </div>
+    <div class="card-list">`;
+    vmKeys.forEach(vm => {
+      html += `<div style="color:var(--text3);font-size:9px;padding:6px 4px 2px;font-weight:bold">📱 VM ${vm === 'unbound' ? '未绑定' : vm}</div>`;
+      groups[vm].forEach(a => {
+        const isRunning = a.running, isQueued = a.queued;
+        const failCount = a.failures || 0;
+        const statusBadge = isRunning ? '<span style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">运行中</span>' :
+                            isQueued ? '<span style="background:var(--warn);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">排队</span>' :
+                            failCount >= 6 ? '<span style="background:var(--text3);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">暂停</span>' :
+                            failCount > 0 ? `<span style="background:var(--danger);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">错误×${failCount}</span>` : '';
+        const checked = selectedIds.has(a.id) ? 'checked' : '';
+        html += `<div class="card" style="padding:5px 8px">
+  <input type="checkbox" class="cb" ${checked} onchange="event.stopPropagation();toggleSelect('${a.id}')">
+  <div style="flex:1;min-width:0;cursor:pointer" onclick="showAccountDetail('${a.id}')">
+    <div style="font-size:11px;font-weight:bold">${a.name}</div>
+    <div style="font-size:9px;color:var(--text3)">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.adb_address ? ' · ' + a.adb_address.slice(0,20) : ''}</div>
   </div>
-  <div class="card-actions">
-    <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')">启动</button>
-    <button class="small danger" onclick="event.stopPropagation();deleteAccount('${a.id}')">删除</button>
+  <div style="display:flex;align-items:center;gap:4px;margin-left:6px">
+    ${statusBadge}
+    <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')" style="font-size:9px;padding:1px 5px">▶</button>
+    <button class="small danger" onclick="event.stopPropagation();showConfirm('确认删除 ${a.name}？').then(r=>r&&deleteAccount('${a.id}'))" style="font-size:9px;padding:1px 5px">🗑</button>
   </div>
 </div>`;
       });
