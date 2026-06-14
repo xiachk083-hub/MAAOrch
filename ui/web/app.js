@@ -2015,6 +2015,12 @@ async function checkOnboarding() {
   try {
     const r = await apiGet('/config');
     if (r.ok && !r.config?.onboarding_done) {
+      // If accounts already exist, skip onboarding (old user)
+      const accts = await apiGet('/accounts');
+      if (accts.ok && accts.accounts && accts.accounts.length > 0) {
+        await apiPost('/config', { onboarding_done: true });
+        return;
+      }
       if (!r.config?.maa_version) {
         navigate('onboarding');
       }
