@@ -1567,32 +1567,81 @@ async function createAccount(input) {
 }
 function showCreateAccountForm() {
   const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
-    <div class="dialog" style="max-width:400px">
-      <div style="font-size:14px;font-weight:bold;margin-bottom:12px;color:var(--text2)">创建账号</div>
-      <div class="form-row"><label>名称</label><input type="text" id="form-name" value="" placeholder="账号名称"></div>
-      <div class="form-row"><label>客户端</label><select id="form-client"><option value="Official">官服</option><option value="Bilibili">B服</option></select></div>
-      <div class="form-row"><label>ADB 地址</label><input type="text" id="form-adb" value="" placeholder="127.0.0.1:16384"></div>
-      <div class="form-row"><label>模拟器索引</label><input type="number" id="form-emu" value="0" min="0" max="9" style="width:80px"></div>
-      <div class="form-row"><label><input type="checkbox" id="form-emu-launch" checked> 自动启动模拟器</label></div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="primary" onclick="submitCreateAccount()">创建</button>
-        <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
-      </div>
+    <div class="dialog" style="max-width:420px">
+      <div style="font-size:14px;font-weight:bold;margin-bottom:10px;color:var(--text2)">创建账号</div>
+      <div id="create-form-loading" style="text-align:center;padding:20px;color:var(--text3);font-size:11px">正在检测模拟器...</div>
     </div>
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+  loadCreateForm();
+}
+async function loadCreateForm() {
+  try {
+    const emuR = await apiGet('/emulators');
+    const emus = emuR.ok ? (emuR.emulators || []) : [];
+    const loading = document.getElementById('create-form-loading');
+    if (!loading) return;
+    loading.outerHTML = `
+      <div class="form-row"><label>名称</label><input type="text" id="form-name" value="" placeholder="账号名称"></div>
+      <div class="form-row"><label>客户端</label><select id="form-client"><option value="Official">官服</option><option value="Bilibili">B服</option></select></div>
+      <div class="form-row"><label>模拟器</label>
+        <select id="form-emu" onchange="emuSelectChange()" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
+          <option value="">-- 手动输入 --</option>
+          ${emus.map(e => `<option value='${JSON.stringify({idx:e.index,port:e.adb_port,emu:e.emu,name:e.name})}'>${e.emu} ${e.name} (VM ${e.index})${e.running ? ' 🟢' : ''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row" id="form-manual-row" style="display:none">
+        <label style="font-size:9px">手动</label>
+        <input type="text" id="form-adb" placeholder="ADB 地址" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:10px">
+      </div>
+      <div id="form-auto-info" style="font-size:9px;color:var(--text3);padding:2px 0 6px 78px"></div>
+      <div class="form-row"><label><input type="checkbox" id="form-emu-launch" checked> 自动启动模拟器</label></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="primary" onclick="submitCreateAccount()">创建</button>
+        <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
+      </div>`;
+  } catch(e) {
+    const loading = document.getElementById('create-form-loading');
+    if (loading) loading.textContent = '检测失败，请手动填写';
+  }
+}
+function emuSelectChange() {
+  const sel = document.getElementById('form-emu');
+  const manualRow = document.getElementById('form-manual-row');
+  const info = document.getElementById('form-auto-info');
+  if (!sel || !info) return;
+  try {
+    const data = JSON.parse(sel.value);
+    manualRow.style.display = 'none';
+    const port = data.port || (16384 + parseInt(data.idx || 0) * 32);
+    info.innerHTML = `ADB: 127.0.0.1:${port} · VM ${data.idx} · ${data.emu} ${data.name}`;
+    window._emuData = data;
+  } catch(e) {
+    manualRow.style.display = '';
+    info.innerHTML = '';
+    window._emuData = null;
+  }
 }
 async function submitCreateAccount() {
   const name = document.getElementById('form-name')?.value?.trim();
   if (!name) { toast('请输入名称', 'error'); return; }
-  const r = await apiPost('/account', {
+  const body = {
     name,
     game_client: document.getElementById('form-client')?.value || 'Official',
-    adb_address: document.getElementById('form-adb')?.value || '',
-    emu_instance_index: document.getElementById('form-emu')?.value || '0',
     emu_launch: document.getElementById('form-emu-launch')?.checked || false,
-  });
+  };
+  const emuData = window._emuData;
+  if (emuData) {
+    body.emu_instance_index = emuData.idx;
+    body.adb_address = `127.0.0.1:${emuData.port || (16384 + parseInt(emuData.idx||0) * 32)}`;
+    body.connection_preset = emuData.emu === 'MuMu' ? 'MuMuEmulator12' : (emuData.emu || 'MuMuEmulator12');
+  } else {
+    body.adb_address = document.getElementById('form-adb')?.value?.trim() || '';
+    body.emu_instance_index = '';
+  }
+  const r = await apiPost('/account', body);
   document.querySelector('.dialog-overlay')?.remove();
+  window._emuData = null;
   if (r.ok) { toast(`已创建 ${name}`); renderPage(); } else toast(r.error || '创建失败', 'error');
 }
 async function saveGeneral() {
