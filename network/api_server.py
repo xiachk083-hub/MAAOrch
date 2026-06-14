@@ -224,65 +224,76 @@ class ApiServer(QThread):
                          "memory_available_mb": mem.available // 1048576})
             def _handle_node_dashboard(s):
                 import psutil as _ps, subprocess as _sp, json as _js
-                # System
                 try:
-                    mem = _ps.virtual_memory()
-                    cpu_pct = _ps.cpu_percent(interval=0)
-                    cpu_count = _ps.cpu_count()
-                except Exception:
-                    mem = type('m',(),{'total':1,'available':1,'percent':0})()
-                    cpu_pct = 0
-                    cpu_count = 1
-                processes = []
-                runner = getattr(mw, 'runner', None)
-                if runner and hasattr(runner, '_proc_info'):
-                    for aid, info in runner._proc_info.items():
-                        ac = next((a for a in mw.accounts if a["id"] == aid), None)
-                        if not ac: continue
-                        maa = info.get("maa", {})
-                        emu = info.get("emu", {})
-                        processes.append({
-                            "aid": aid, "name": ac.get("name", aid),
-                            "running": aid in getattr(mw, "_proc_status", set()),
-                            "last_task": ac.get("_last_task", ""),
-                            "maa_mem_mb": maa.get("mem_mb", 0),
-                            "maa_cpu_pct": maa.get("cpu_pct", 0),
-                            "maa_pid": maa.get("pid"),
-                            "emu_mem_mb": emu.get("mem_mb", 0),
-                            "emu_cpu_pct": emu.get("cpu_pct", 0),
-                            "emu_pid": emu.get("pid"),
-                            "emu_name": emu.get("name", ""),
-                        })
-                # GPU
-                gpu = {"name": "", "usage": 0, "mem_used_mb": 0, "mem_total_mb": 0}
-                try:
-                    o = _sp.check_output(["nvidia-smi","--query-gpu=name,utilization.gpu,memory.used,memory.total","--format=csv,noheader,nounits"], timeout=5, encoding="utf-8", errors="replace", creationflags=_sp.CREATE_NO_WINDOW)
-                    parts = o.strip().split(", ")
-                    if len(parts) >= 4:
-                        gpu = {"name": parts[0], "usage": float(parts[1]),
-                               "mem_used_mb": int(float(parts[2])), "mem_total_mb": int(float(parts[3]))}
-                except: pass
-                # Capacity
-                total_proc_mem = sum(p["maa_mem_mb"] + p["emu_mem_mb"] for p in processes)
-                running = sum(1 for p in processes if p["running"])
-                parallel_max = mw.config.get("parallel_max", 3)
-                by_parallel = max(0, parallel_max - running)
-                est_per = max(1, (total_proc_mem / max(running, 1))) if running > 0 else 1500
-                by_mem = max(0, int((mem.available / 1048576) / est_per))
-                gpu_free = max(0, gpu["mem_total_mb"] - gpu["mem_used_mb"])
-                by_gpu = max(0, int(gpu_free / est_per)) if gpu["mem_total_mb"] > 0 else 99
-                capacity = min(by_parallel, by_mem, by_gpu)
-                limit_by = "并行上限" if capacity == by_parallel else ("内存" if capacity == by_mem else "显存")
-                samples = getattr(mw, "_res_samples", [])
-                gantt = getattr(mw, "_gantt_events", [])
-                s._json({"ok":True,"system":{"cpu_pct":cpu_pct,"cpu_count":cpu_count,"memory_total_mb":mem.total//1048576,
-                         "memory_available_mb":mem.available//1048576,"memory_pct":mem.percent},
-                         "gpu":gpu,"processes":processes,"capacity":{"parallel_max":parallel_max,
-                         "running":running,"by_parallel":by_parallel,"by_memory":by_mem,"by_gpu":by_gpu,
-                         "max":capacity,"limit_by":limit_by,"est_per_instance_mb":int(est_per),
-                         "deficit":mw.config.get("deficit",0),"stuck_timeout":mw.config.get("stuck_timeout",10)},
-                         "samples":samples[-360:] if samples else [],
-                         "gantt":gantt[-100:] if gantt else []})
+                    # System
+                    try:
+                        mem = _ps.virtual_memory()
+                        cpu_pct = _ps.cpu_percent(interval=0)
+                        cpu_count = _ps.cpu_count()
+                    except Exception:
+                        mem = type('m',(),{'total':1,'available':1,'percent':0})()
+                        cpu_pct = 0
+                        cpu_count = 1
+                    processes = []
+                    runner = getattr(mw, 'runner', None)
+                    if runner and hasattr(runner, '_proc_info'):
+                        accounts_list = getattr(mw, 'accounts', []) or []
+                        proc_status = getattr(mw, "_proc_status", set())
+                        for aid, info in list(runner._proc_info.items()):
+                            try:
+                                ac = next((a for a in accounts_list if a.get("id") == aid), None)
+                                if not ac: continue
+                                maa = info.get("maa", {}) or {}
+                                emu = info.get("emu", {}) or {}
+                                processes.append({
+                                    "aid": aid, "name": ac.get("name", aid),
+                                    "running": aid in proc_status,
+                                    "last_task": ac.get("_last_task", ""),
+                                    "maa_mem_mb": maa.get("mem_mb", 0),
+                                    "maa_cpu_pct": maa.get("cpu_pct", 0),
+                                    "maa_pid": maa.get("pid"),
+                                    "emu_mem_mb": emu.get("mem_mb", 0),
+                                    "emu_cpu_pct": emu.get("cpu_pct", 0),
+                                    "emu_pid": emu.get("pid"),
+                                    "emu_name": emu.get("name", ""),
+                                })
+                            except Exception:
+                                continue
+                    # GPU
+                    gpu = {"name": "", "usage": 0, "mem_used_mb": 0, "mem_total_mb": 0}
+                    try:
+                        o = _sp.check_output(["nvidia-smi","--query-gpu=name,utilization.gpu,memory.used,memory.total","--format=csv,noheader,nounits"], timeout=5, encoding="utf-8", errors="replace", creationflags=_sp.CREATE_NO_WINDOW)
+                        parts = o.strip().split(", ")
+                        if len(parts) >= 4:
+                            gpu = {"name": parts[0], "usage": float(parts[1]),
+                                   "mem_used_mb": int(float(parts[2])), "mem_total_mb": int(float(parts[3]))}
+                    except: pass
+                    # Capacity
+                    total_proc_mem = sum((p.get("maa_mem_mb",0) or 0) + (p.get("emu_mem_mb",0) or 0) for p in processes) if processes else 0
+                    running = sum(1 for p in processes if p["running"])
+                    parallel_max = mw.config.get("parallel_max", 3)
+                    by_parallel = max(0, parallel_max - running)
+                    est_per = max(1, (total_proc_mem / max(running, 1))) if running > 0 else 1500
+                    by_mem = max(0, int((mem.available / 1048576) / est_per))
+                    gpu_free = max(0, gpu["mem_total_mb"] - gpu["mem_used_mb"])
+                    by_gpu = max(0, int(gpu_free / est_per)) if gpu["mem_total_mb"] > 0 else 99
+                    capacity = min(by_parallel, by_mem, by_gpu)
+                    limit_by = "并行上限" if capacity == by_parallel else ("内存" if capacity == by_mem else "显存")
+                    samples = getattr(mw, "_res_samples", [])
+                    gantt = getattr(mw, "_gantt_events", [])
+                    s._json({"ok":True,"system":{"cpu_pct":cpu_pct,"cpu_count":cpu_count,"memory_total_mb":mem.total//1048576,
+                             "memory_available_mb":mem.available//1048576,"memory_pct":mem.percent},
+                             "gpu":gpu,"processes":processes,"capacity":{"parallel_max":parallel_max,
+                             "running":running,"by_parallel":by_parallel,"by_memory":by_mem,"by_gpu":by_gpu,
+                             "max":capacity,"limit_by":limit_by,"est_per_instance_mb":int(est_per),
+                             "deficit":mw.config.get("deficit",0),"stuck_timeout":mw.config.get("stuck_timeout",10)},
+                             "samples":samples[-360:] if samples else [],
+                             "gantt":gantt[-100:] if gantt else []})
+                except Exception as e:
+                    _log_op("dashboard_error", str(e)[:80])
+                    s._json({"ok":True,"system":{"cpu_pct":0,"cpu_count":1,"memory_total_mb":0,"memory_available_mb":0,"memory_pct":0},
+                             "gpu":{"name":"","usage":0,"mem_used_mb":0,"mem_total_mb":0},"processes":[],"capacity":{"parallel_max":1,"running":0,"by_parallel":1,"by_memory":0,"by_gpu":0,"max":0,"limit_by":"N/A","est_per_instance_mb":1500,"deficit":0,"stuck_timeout":10},
+                             "samples":[],"gantt":[]})
             def _handle_node_register(s, body):
                 daigan_url = body.get("daigan_url", "")
                 if daigan_url and daigan_url.startswith("https://"):
