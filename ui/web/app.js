@@ -669,30 +669,32 @@ async function loadDashboard() {
     }
     html += `</div></div>`;
 
-    // ── 图表区 ──
+    // ── 资源趋势 ──
     const samples = d.samples || [];
-    const gantt = d.gantt || [];
-    window._lastGanttData = gantt;
-    if (samples.length > 5 || gantt.length >= 1) {
-      html += `<div style="display:grid;grid-template-columns:${samples.length>5 && gantt.length>=1 ? '1fr 1fr' : '1fr'};gap:8px;margin-bottom:8px">`;
-      if (samples.length > 5) {
-        html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
-        html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">资源趋势</div>`;
-        html += _trendChart(samples);
-        html += `<div style="font-size:8px;color:var(--text3);margin-top:2px"><span style="color:#e74c3c">─ CPU</span> <span style="color:#3498db;margin-left:6px">─ 内存</span> <span style="color:#2ecc71;margin-left:6px">─ GPU</span></div>`;
-        html += `</div>`;
-      }
-      const startCount = gantt.filter(e=>e.event==='start').length;
+    if (samples.length > 5) {
+      html += `<div style="margin-bottom:8px">`;
       html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
-      html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">调度时间线${startCount ? ' ('+startCount+'次)' : ''}</div>`;
-      html += `<div id="gantt-toggle" style="margin-bottom:4px">`;
-      html += `<label style="font-size:9px;color:var(--text3);cursor:pointer"><input type="radio" name="gantt-view" value="agg" checked onchange="switchGanttView()"> 整体热度</label>`;
-      html += `<label style="font-size:9px;color:var(--text3);cursor:pointer;margin-left:8px"><input type="radio" name="gantt-view" value="detail" onchange="switchGanttView()"> 账号明细</label>`;
-      html += `</div>`;
-      html += `<div id="gantt-chart">${_ganttAgg(gantt)}</div>`;
+      html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">资源趋势</div>`;
+      html += _trendChart(samples);
+      html += `<div style="font-size:8px;color:var(--text3);margin-top:2px"><span style="color:#e74c3c">─ CPU</span> <span style="color:#3498db;margin-left:6px">─ 内存</span> <span style="color:#2ecc71;margin-left:6px">─ GPU</span></div>`;
       html += `</div>`;
       html += `</div>`;
     }
+
+    // ── 调度时间线 ──
+    const gantt = d.gantt || [];
+    window._lastGanttData = gantt;
+    html += `<div style="margin-bottom:8px">`;
+    html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
+    const startCount = gantt.filter(e=>e.event==='start').length;
+    html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">调度时间线${startCount ? ' ('+startCount+'次)' : ''}</div>`;
+    html += `<div id="gantt-toggle" style="margin-bottom:4px">`;
+    html += `<label style="font-size:9px;color:var(--text3);cursor:pointer"><input type="radio" name="gantt-view" value="agg" checked onchange="switchGanttView()"> 整体热度</label>`;
+    html += `<label style="font-size:9px;color:var(--text3);cursor:pointer;margin-left:8px"><input type="radio" name="gantt-view" value="detail" onchange="switchGanttView()"> 账号明细</label>`;
+    html += `</div>`;
+    html += `<div id="gantt-chart">${_ganttAgg(gantt)}</div>`;
+    html += `</div>`;
+    html += `</div>`;
 
     // ── 进程资源表 ──
     html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
