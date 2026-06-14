@@ -185,8 +185,8 @@ async function renderAccounts(container) {
         html += `<div class="card" style="padding:5px 8px">
   <input type="checkbox" class="cb" ${checked} onchange="event.stopPropagation();toggleSelect('${a.id}')">
   <div style="flex:1;min-width:0;cursor:pointer" onclick="showAccountDetail('${a.id}')">
-    <div style="font-size:11px;font-weight:bold">${a.name}</div>
-    <div style="font-size:9px;color:var(--text3)">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.adb_address ? ' · ' + a.adb_address.slice(0,20) : ''}</div>
+    <div style="font-size:11px;font-weight:bold">${a.name}${a.uid ? ' <span style="font-size:9px;color:var(--text3);font-weight:normal">UID:'+a.uid+'</span>' : ''}</div>
+    <div style="font-size:9px;color:var(--text3)">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.account_switch ? ' · 切换:'+a.account_switch : ''}</div>
   </div>
   <div style="display:flex;align-items:center;gap:4px;margin-left:6px">
     ${statusBadge}
@@ -1275,26 +1275,20 @@ async function renderAccount(container) {
   container.innerHTML = `<div>
     <button onclick="navigate('accounts')" style="margin-bottom:8px">← 返回</button>
     <div class="form-row"><label>名称</label><input id="ed-name" value="${a.name}"></div>
-    <div class="form-row"><label>客户端</label><select id="ed-client">
+    <div class="form-row"><label>服务器</label><select id="ed-client">
       <option value="Official" ${a.game_client==='Official'?'selected':''}>官服</option>
       <option value="Bilibili" ${a.game_client==='Bilibili'?'selected':''}>B服</option>
     </select></div>
-    <div class="form-row"><label>模拟器 VM</label>
-      <select id="ed-vm" style="flex:0.3">
+    <div class="form-row"><label>模拟器</label>
+      <select id="ed-vm" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
         <option value="">未绑定</option>
-        ${Array.from({length:20}, (_,i) => `<option value="${i}" ${a.emu_instance_index==String(i)?'selected':''}>VM ${i}</option>`).join('')}
+        ${Array.from({length:50}, (_,i) => `<option value="${i}" ${a.emu_instance_index==String(i)?'selected':''}>VM ${i}</option>`).join('')}
       </select>
-      <span style="color:var(--text3);font-size:10px;margin-left:4px">${a.game_client||''}</span>
     </div>
-    <div class="form-row"><label>ADB 地址</label><input id="ed-adb" value="${a.adb_address||''}"></div>
-    <div class="form-row"><label>ADB 路径</label><input id="ed-adb-path" value="${a.adb_path||''}" placeholder="自动检测"></div>
-    <div class="form-row"><label>关卡</label><input id="ed-stage" value="${a.smart_stage||''}" placeholder="例如 1-7"></div>
-    <div class="form-row"><label>剿灭</label>
-      <select id="ed-anni"><option value="">自动选择</option><option value="Annihilation">当期剿灭</option></select>
-    </div>
+    <div class="form-row"><label>切换账号</label><input id="ed-switch" value="${a.account_switch||''}" placeholder="游戏内切换账号标识"></div>
+    <div class="form-row"><label>游戏 UID</label><input id="ed-uid" value="${a.uid||''}" placeholder="游戏内 UID"></div>
     <div style="border-top:1px solid var(--border);margin:8px 0;padding-top:8px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:4px">操作</div>
-      <button class="primary" onclick="navigate('taskcfg')" style="margin-right:4px">📋 任务配置</button>
       <button onclick="launchAccount('${a.id}')" style="margin-right:4px">▶ 启动</button>
       <button onclick="previewEmulator('${a.id}',${idx})" style="margin-right:4px">📷 画面预览</button>
       <button class="danger" onclick="showConfirm('确认删除 ${a.name}？').then(r=>r&&deleteAccount('${a.id}'))">🗑 删除</button>
@@ -1313,18 +1307,11 @@ async function saveAccountDetail(id, idx) {
   const name = document.getElementById('ed-name')?.value?.trim();
   const client = document.getElementById('ed-client')?.value;
   const vm = document.getElementById('ed-vm')?.value;
-  const adb = document.getElementById('ed-adb')?.value?.trim();
-  const adbPath = document.getElementById('ed-adb-path')?.value?.trim();
-  const stage = document.getElementById('ed-stage')?.value?.trim();
-  const anni = document.getElementById('ed-anni')?.value;
-  const body = {};
-  if (name) body.name = name;
-  if (client) body.game_client = client;
-  body.emu_instance_index = vm || '';
-  if (adb) body.adb_address = adb;
-  if (adbPath) body.adb_path = adbPath;
-  if (stage) { body.smart_stage = stage; body.fight_stage = stage; }
-  if (anni) body.smart_annihilation = anni;
+  const sw = document.getElementById('ed-switch')?.value?.trim();
+  const uid = document.getElementById('ed-uid')?.value?.trim();
+  const body = { name, game_client: client, emu_instance_index: vm || '' };
+  if (sw) body.account_switch = sw;
+  if (uid) body.uid = uid;
   const r = await apiPost(`/account/${idx}/edit`, body);
   if (r.ok) toast('已保存');
   else toast(r.error || '保存失败', 'error');
@@ -1567,14 +1554,15 @@ async function loadCreateForm() {
     window._emuList = emus;
     loading.outerHTML = `
       <div class="form-row"><label>名称</label><input type="text" id="form-name" value="" placeholder="账号名称"></div>
-      <div class="form-row"><label>客户端</label><select id="form-client"><option value="Official">官服</option><option value="Bilibili">B服</option></select></div>
+      <div class="form-row"><label>服务器</label><select id="form-client"><option value="Official">官服</option><option value="Bilibili">B服</option></select></div>
       <div class="form-row" style="flex-direction:column;align-items:stretch">
         <label style="margin-bottom:2px">模拟器 (${emus.length} 个)</label>
-        <input type="text" id="form-emu-search" placeholder="搜索 VM 编号或名称..." oninput="filterEmuList()" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
-        <div id="form-emu-list" style="max-height:200px;overflow-y:auto;margin-top:4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3)"></div>
+        <input type="text" id="form-emu-search" placeholder="搜索 VM 编号..." oninput="filterEmuList()" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
+        <div id="form-emu-list" style="max-height:160px;overflow-y:auto;margin-top:4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3)"></div>
       </div>
       <div id="form-auto-info" style="font-size:9px;color:var(--text3);padding:2px 0 6px;display:none"></div>
-      <div class="form-row"><label><input type="checkbox" id="form-emu-launch" checked> 自动启动模拟器</label></div>
+      <div class="form-row"><label>切换账号</label><input type="text" id="form-switch" value="" placeholder="游戏内切换账号标识(可选)"></div>
+      <div class="form-row"><label>游戏 UID</label><input type="text" id="form-uid" value="" placeholder="游戏内 UID(可选)"></div>
       <div class="btn-row" style="margin-top:10px">
         <button class="primary" onclick="submitCreateAccount()">创建</button>
         <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
@@ -1620,16 +1608,11 @@ async function submitCreateAccount() {
   const body = {
     name,
     game_client: document.getElementById('form-client')?.value || 'Official',
-    emu_launch: document.getElementById('form-emu-launch')?.checked || false,
+    account_switch: document.getElementById('form-switch')?.value?.trim() || '',
+    uid: document.getElementById('form-uid')?.value?.trim() || '',
   };
   const emuData = window._emuData;
-  if (emuData) {
-    body.emu_instance_index = emuData.idx;
-    body.adb_address = `127.0.0.1:${emuData.port || (16384 + parseInt(emuData.idx||0) * 32)}`;
-    body.connection_preset = emuData.emu === 'MuMu' ? 'MuMuEmulator12' : (emuData.emu || 'MuMuEmulator12');
-  } else {
-    body.emu_instance_index = '';
-  }
+  body.emu_instance_index = emuData ? emuData.idx : '';
   const r = await apiPost('/account', body);
   document.querySelector('.dialog-overlay')?.remove();
   window._emuData = null;
