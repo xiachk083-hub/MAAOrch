@@ -756,7 +756,6 @@ function _trendChart(samples) {
   return svg;
 }
 function _chronicleTimeline(events) {
-  // Pair start/stop events into runs, collect tasks per run
   const starts = {}, runs = [], tasks = {};
   for (const e of events) {
     if (e.event === 'task') {
@@ -774,49 +773,62 @@ function _chronicleTimeline(events) {
       delete starts[aid];
     }
   }
-  // Running (no stop yet)
   for (const [aid, ts] of Object.entries(starts)) {
     const name = events.find(e => e.aid === aid)?.name || aid;
     runs.push({aid, name, start: ts, stop: 0, dur: 0, taskList: (tasks[aid]||[]).filter(t => t.ts >= ts).map(t => t.task)});
   }
-  runs.sort((a, b) => b.start - a.start); // newest first
+  runs.sort((a, b) => b.start - a.start);
   if (!runs.length) return '<div style="font-size:10px;color:var(--text3);text-align:center;padding:20px">📭 暂无调度记录</div>';
   const taskColors = {'唤醒':'#3498db','刷关':'#e74c3c','公招':'#f39c12','基建':'#2ecc71','信用':'#9b59b6','奖励':'#1abc9c','肉鸽':'#e67e22','生息':'#34495e'};
-  let html = '<div style="position:relative;padding-left:20px">';
-  // Vertical timeline line
-  html += '<div style="position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--border)"></div>';
-  runs.slice(0, 20).forEach((r, i) => {
+  let lastHour = -1, lastDate = '';
+  let html = '<div style="display:flex;flex-direction:column;gap:4px">';
+  runs.slice(0, 20).forEach((r) => {
     const date = new Date(r.start * 1000);
-    const dateStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
-    const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+    const dateKey = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+    const hour = date.getHours();
+    const timeStr = `${hour.toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
     const durStr = r.dur > 0 ? `${Math.floor(r.dur/60)}m${Math.floor(r.dur%60)}s` : '运行中';
     const isRunning = r.dur === 0;
-    // Dot marker
-    html += `<div style="position:absolute;left:3px;top:${14 + i * 36}px;width:12px;height:12px;border-radius:50%;background:${isRunning ? 'var(--accent)' : 'var(--text3)'};border:2px solid var(--bg2);z-index:1"></div>`;
-    // Run entry card
-    html += `<div style="margin-bottom:6px;padding:6px 8px;background:var(--bg3);border-radius:var(--radius);border-left:3px solid ${isRunning ? 'var(--accent)' : 'transparent'}">`;
+
+    // Hour marker
+    if (hour !== lastHour || dateKey !== lastDate) {
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:2px 0">`;
+      html += `<span style="font-size:10px;font-weight:bold;color:var(--text3);white-space:nowrap">${hour.toString().padStart(2,'0')}:00</span>`;
+      html += `<span style="flex:1;height:1px;background:var(--border)"></span>`;
+      if (dateKey !== lastDate) {
+        html += `<span style="font-size:8px;color:var(--text3)">${dateKey}</span>`;
+      }
+      html += `</div>`;
+      lastHour = hour;
+      lastDate = dateKey;
+    }
+
+    // Dot + card in one flex row
+    html += `<div style="display:flex;gap:8px;align-items:stretch">`;
+    html += `<div style="display:flex;flex-direction:column;align-items:center;width:14px;flex-shrink:0">`;
+    html += `<div style="width:14px;height:14px;border-radius:50%;background:${isRunning ? 'var(--accent)' : 'var(--text3)'};border:2px solid var(--bg2);margin-top:4px"></div>`;
+    html += `<div style="flex:1;width:2px;background:var(--border)"></div>`;
+    html += `</div>`;
+    html += `<div style="flex:1;margin-bottom:2px;padding:6px 8px;background:var(--bg3);border-radius:var(--radius);border-left:3px solid ${isRunning ? 'var(--accent)' : 'transparent'}">`;
     html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">`;
     html += `<span style="font-size:10px;font-weight:bold;color:var(--text2)">${r.name}</span>`;
-    html += `<span style="font-size:9px;color:var(--text3)">${dateStr} ${timeStr} · ${durStr}</span>`;
+    html += `<span style="font-size:9px;color:var(--text3)">${timeStr} · ${durStr}</span>`;
     html += `</div>`;
-    // Task chain
-    const tasks = r.taskList || [];
-    if (tasks.length) {
+    const tlist = r.taskList || [];
+    if (tlist.length) {
       html += `<div style="display:flex;gap:3px;flex-wrap:wrap">`;
       const seen = [];
-      tasks.forEach((t, ti) => {
+      tlist.forEach((t) => {
         const col = taskColors[t] || '#555';
         if (seen.includes(t)) return;
         seen.push(t);
-        const count = tasks.filter(x => x === t).length;
-        html += `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${col}22;color:${col};border:1px solid ${col}44">${t}${count > 1 ? '×'+count : ''}</span>`;
+        const cnt = tlist.filter(x => x === t).length;
+        html += `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${col}22;color:${col};border:1px solid ${col}44">${t}${cnt > 1 ? '×'+cnt : ''}</span>`;
       });
       html += `</div>`;
     }
-    if (isRunning) {
-      html += `<div style="font-size:9px;color:var(--accent);margin-top:2px">▶ 运行中</div>`;
-    }
-    html += `</div>`;
+    if (isRunning) html += `<div style="font-size:9px;color:var(--accent);margin-top:2px">▶ 运行中</div>`;
+    html += `</div></div>`;
   });
   html += '</div>';
   return html;
