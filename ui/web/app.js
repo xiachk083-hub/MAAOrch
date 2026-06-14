@@ -568,6 +568,7 @@ async function renderDashboard(container) {
     </div>
     <div id="dash-content"></div>
   </div>`;
+  _dashCache = '';
   await loadDashboard();
   if (logTimer) clearInterval(logTimer);
   logTimer = setInterval(() => {
