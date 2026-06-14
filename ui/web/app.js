@@ -122,7 +122,7 @@ function renderPage() {
                 settings: renderSettings, about: renderAbout, logs: renderLogs,
                 account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit,
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
-                gallery: renderGallery };
+                gallery: renderGallery, chronicle: renderChronicle };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -1050,6 +1050,41 @@ function showFullImage(aid, run, file) {
     <img src="${API}/screenshots/file/${aid}/${run}/${file}" style="max-width:90vw;max-height:90vh;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ── Chronicle (编年史) ──
+async function renderChronicle(container) {
+  container.innerHTML = `<div>
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="color:var(--text2);font-size:12px;font-weight:bold">📜 编年史</span>
+      <span style="font-size:10px;color:var(--text3)">运行时间线</span>
+      <button class="small" onclick="loadChronicle()">刷新</button>
+    </div>
+    <div id="chronicle-content"></div>
+  </div>`;
+  await loadChronicle();
+  if (logTimer) clearInterval(logTimer);
+  logTimer = setInterval(() => {
+    if (state.page !== 'chronicle') { clearInterval(logTimer); logTimer = null; return; }
+    loadChronicle();
+  }, 10000);
+}
+async function loadChronicle() {
+  try {
+    const r = await apiGet('/node/dashboard');
+    const el = document.getElementById('chronicle-content');
+    if (!el) return;
+    const gantt = r.gantt || [];
+    let html = '';
+    // Summary
+    const totalRuns = gantt.filter(e => e.event === 'start').length;
+    html += `<div style="display:flex;gap:12px;font-size:10px;color:var(--text3);margin-bottom:8px">`;
+    html += `<span>累计调度 <b style="color:var(--accent)">${totalRuns}</b> 次</span>`;
+    html += `<span>累计事件 <b style="color:var(--text2)">${gantt.length}</b> 条</span>`;
+    html += `</div>`;
+    html += _chronicleTimeline(gantt);
+    el.innerHTML = html;
+  } catch(e) { /* silent */ }
 }
 
 async function renderLogs(container) {
