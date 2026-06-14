@@ -262,7 +262,7 @@ class ApiServer(QThread):
                     # GPU
                     gpu = {"name": "", "usage": 0, "mem_used_mb": 0, "mem_total_mb": 0}
                     try:
-                        o = _sp.check_output(["nvidia-smi","--query-gpu=name,utilization.gpu,memory.used,memory.total","--format=csv,noheader,nounits"], timeout=5, encoding="utf-8", errors="replace", creationflags=_sp.CREATE_NO_WINDOW)
+                        o = _sp.check_output(["nvidia-smi","--query-gpu=name,utilization.gpu,memory.used,memory.total","--format=csv,noheader,nounits"], timeout=2, encoding="utf-8", errors="replace", creationflags=_sp.CREATE_NO_WINDOW)
                         parts = o.strip().split(", ")
                         if len(parts) >= 4:
                             gpu = {"name": parts[0], "usage": float(parts[1]),
