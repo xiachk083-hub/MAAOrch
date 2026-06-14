@@ -681,19 +681,11 @@ async function loadDashboard() {
       html += `</div>`;
     }
 
-    // ── 调度时间线 ──
+    // ── 调度编年史 ──
     const gantt = d.gantt || [];
-    window._lastGanttData = gantt;
-    html += `<div style="margin-bottom:8px">`;
-    html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
-    const startCount = gantt.filter(e=>e.event==='start').length;
-    html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">调度时间线${startCount ? ' ('+startCount+'次)' : ''}</div>`;
-    html += `<div id="gantt-toggle" style="margin-bottom:4px">`;
-    html += `<label style="font-size:9px;color:var(--text3);cursor:pointer"><input type="radio" name="gantt-view" value="agg" checked onchange="switchGanttView()"> 整体热度</label>`;
-    html += `<label style="font-size:9px;color:var(--text3);cursor:pointer;margin-left:8px"><input type="radio" name="gantt-view" value="detail" onchange="switchGanttView()"> 账号明细</label>`;
-    html += `</div>`;
-    html += `<div id="gantt-chart">${_ganttAgg(gantt)}</div>`;
-    html += `</div>`;
+    html += `<div class="card" style="padding:10px;margin-bottom:8px;flex-direction:column;align-items:stretch">`;
+    html += `<div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:6px">📜 调度编年史</div>`;
+    html += _chronicleTimeline(gantt);
     html += `</div>`;
 
     // ── 进程资源表 ──
@@ -763,129 +755,71 @@ function _trendChart(samples) {
   svg += `</svg>`;
   return svg;
 }
-function _ganttChart(events) {
-  const W = 800, H = 200, pad = {t:10,r:10,b:25,l:80};
-  const iw = W - pad.l - pad.r;
-  // Collect task events per aid
-  const tasks = {};
+function _chronicleTimeline(events) {
+  // Pair start/stop events into runs, collect tasks per run
+  const starts = {}, runs = [], tasks = {};
   for (const e of events) {
     if (e.event === 'task') {
       if (!tasks[e.aid]) tasks[e.aid] = [];
       tasks[e.aid].push({ts: e.ts, task: e.task});
     }
   }
-  // Pair start/stop → runs
-  const starts = {};
-  const runs = [];
   for (const e of events) {
     if (e.event === 'start') starts[e.aid] = e.ts;
     else if (e.event === 'stop' && starts[e.aid]) {
-      const run = {aid: e.aid, name: e.name, start: starts[e.aid], stop: e.ts, dur: e.ts - starts[e.aid]};
-      run.tasks = (tasks[e.aid]||[]).filter(t => t.ts >= run.start && t.ts <= run.stop);
+      const aid = e.aid;
+      const run = {aid, name: e.name, start: starts[e.aid], stop: e.ts, dur: e.ts - starts[e.aid]};
+      run.taskList = (tasks[aid]||[]).filter(t => t.ts >= run.start && t.ts <= run.stop).map(t => t.task);
       runs.push(run);
-      delete starts[e.aid];
+      delete starts[aid];
     }
   }
-  // Running entries (no stop yet)
+  // Running (no stop yet)
   for (const [aid, ts] of Object.entries(starts)) {
     const name = events.find(e => e.aid === aid)?.name || aid;
-    runs.push({aid, name, start: ts, stop: 0, dur: 0, tasks: (tasks[aid]||[]).filter(t => t.ts >= ts)});
+    runs.push({aid, name, start: ts, stop: 0, dur: 0, taskList: (tasks[aid]||[]).filter(t => t.ts >= ts).map(t => t.task)});
   }
-  if (!runs.length) return '<div style="font-size:10px;color:var(--text3);text-align:center;padding:8px">暂无运行记录</div>';
-  runs.sort((a, b) => a.start - b.start);
-  const minT = Math.min(...runs.map(r => r.start));
-  const maxT = Math.max(...runs.map(r => r.stop || Date.now()/1000));
-  const span = Math.max(maxT - minT, 60);
-  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
+  runs.sort((a, b) => b.start - a.start); // newest first
+  if (!runs.length) return '<div style="font-size:10px;color:var(--text3);text-align:center;padding:20px">📭 暂无调度记录</div>';
   const taskColors = {'唤醒':'#3498db','刷关':'#e74c3c','公招':'#f39c12','基建':'#2ecc71','信用':'#9b59b6','奖励':'#1abc9c','肉鸽':'#e67e22','生息':'#34495e'};
-  let svg = `<svg width="${W}" height="${H + runs.length * 28}" style="width:100%;height:auto;background:transparent" viewBox="0 0 ${W} ${H + runs.length * 28}">`;
-  runs.forEach((r, i) => {
-    const y = pad.t + i * 28;
-    svg += `<text x="${pad.l-6}" y="${y+14}" fill="var(--text2)" font-size="9" text-anchor="end">${r.name}</text>`;
-    svg += `<rect x="${pad.l}" y="${y+4}" width="${iw}" height="18" fill="var(--bg3)" rx="3"/>`;
-    if (r.tasks && r.tasks.length > 1) {
-      let prevTs = r.start;
-      r.tasks.forEach((t, ti) => {
-        const x1 = pad.l + (prevTs - minT) / span * iw;
-        const x2 = pad.l + (t.ts - minT) / span * iw;
-        if (x2 > x1) {
-          const col = taskColors[t.task] || colors[ti % colors.length];
-          svg += `<rect x="${x1}" y="${y+5}" width="${Math.max(x2-x1, 3)}" height="16" fill="${col}" rx="2" opacity="0.8"/>`;
-          if (x2 - x1 > 30) svg += `<text x="${(x1+x2)/2}" y="${y+16}" fill="#fff" font-size="7" text-anchor="middle">${t.task}</text>`;
-        }
-        prevTs = t.ts;
+  let html = '<div style="position:relative;padding-left:20px">';
+  // Vertical timeline line
+  html += '<div style="position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--border)"></div>';
+  runs.slice(0, 20).forEach((r, i) => {
+    const date = new Date(r.start * 1000);
+    const dateStr = `${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+    const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+    const durStr = r.dur > 0 ? `${Math.floor(r.dur/60)}m${Math.floor(r.dur%60)}s` : '运行中';
+    const isRunning = r.dur === 0;
+    // Dot marker
+    html += `<div style="position:absolute;left:3px;top:${14 + i * 36}px;width:12px;height:12px;border-radius:50%;background:${isRunning ? 'var(--accent)' : 'var(--text3)'};border:2px solid var(--bg2);z-index:1"></div>`;
+    // Run entry card
+    html += `<div style="margin-bottom:6px;padding:6px 8px;background:var(--bg3);border-radius:var(--radius);border-left:3px solid ${isRunning ? 'var(--accent)' : 'transparent'}">`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">`;
+    html += `<span style="font-size:10px;font-weight:bold;color:var(--text2)">${r.name}</span>`;
+    html += `<span style="font-size:9px;color:var(--text3)">${dateStr} ${timeStr} · ${durStr}</span>`;
+    html += `</div>`;
+    // Task chain
+    const tasks = r.taskList || [];
+    if (tasks.length) {
+      html += `<div style="display:flex;gap:3px;flex-wrap:wrap">`;
+      const seen = [];
+      tasks.forEach((t, ti) => {
+        const col = taskColors[t] || '#555';
+        if (seen.includes(t)) return;
+        seen.push(t);
+        const count = tasks.filter(x => x === t).length;
+        html += `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${col}22;color:${col};border:1px solid ${col}44">${t}${count > 1 ? '×'+count : ''}</span>`;
       });
-      const end = r.stop || Date.now()/1000;
-      const xLast = pad.l + (prevTs - minT) / span * iw;
-      const xEnd = pad.l + (end - minT) / span * iw;
-      if (xEnd > xLast) {
-        const col = taskColors[r.tasks[r.tasks.length-1]?.task] || colors[i % colors.length];
-        svg += `<rect x="${xLast}" y="${y+5}" width="${Math.max(xEnd-xLast, 2)}" height="16" fill="${col}" rx="2" opacity="0.6"/>`;
-      }
-    } else {
-      const x1 = pad.l + (r.start - minT) / span * iw;
-      const x2 = r.dur > 0 ? pad.l + (r.stop - minT) / span * iw : pad.l + iw;
-      svg += `<rect x="${x1}" y="${y+5}" width="${Math.max(x2-x1, 2)}" height="16" fill="${colors[i % colors.length]}" rx="3" opacity="${r.dur>0?0.8:0.4}"/>`;
+      html += `</div>`;
     }
-    if (r.tasks && r.tasks.length > 1) {
-      const taskNames = [...new Set(r.tasks.map(t => t.task))].join(' → ');
-      svg += `<text x="${pad.l+iw+4}" y="${y+16}" fill="var(--text3)" font-size="7">${taskNames}</text>`;
-    } else if (r.dur > 0) {
-      svg += `<text x="${pad.l+iw+4}" y="${y+15}" fill="var(--text3)" font-size="8">${Math.floor(r.dur/60)}m${Math.floor(r.dur%60)}s</text>`;
-    } else {
-      svg += `<text x="${pad.l+iw+4}" y="${y+15}" fill="var(--warn)" font-size="8">运行中</text>`;
+    if (isRunning) {
+      html += `<div style="font-size:9px;color:var(--accent);margin-top:2px">▶ 运行中</div>`;
     }
+    html += `</div>`;
   });
-  svg += `</svg>`;
-  return svg;
-}
-function _ganttAgg(events) {
-  // Build concurrent count timeline from start/stop events
-  const timeline = [];
-  for (const e of events) {
-    if (e.event === 'start') timeline.push({ts: e.ts, delta: 1});
-    else if (e.event === 'stop') timeline.push({ts: e.ts, delta: -1});
-  }
-  if (!timeline.length) return '<div style="font-size:10px;color:var(--text3);text-align:center;padding:12px">暂无调度记录</div>';
-  timeline.sort((a, b) => a.ts - b.ts);
-  const W = 800, H = 120, pad = {t:8,r:8,b:20,l:30};
-  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
-  // Build run count curve
-  let count = 0;
-  const points = [{x: timeline[0].ts, y: 0}];
-  for (const t of timeline) {
-    count += t.delta;
-    points.push({x: t.ts, y: Math.max(0, count)});
-  }
-  const minT = points[0].x, maxT = Math.max(points[points.length-1].x, minT + 60);
-  const span = maxT - minT;
-  const maxY = Math.max(1, ...points.map(p => p.y));
-  let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:130px;background:transparent" viewBox="0 0 ${W} ${H}">`;
-  // Grid
-  for (let y = 0; y <= maxY; y++) {
-    const yy = pad.t + ih * (1 - y / maxY);
-    if (y > 0) svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="var(--border)" stroke-width="0.5"/>`;
-    svg += `<text x="${pad.l-4}" y="${yy+3}" fill="var(--text3)" font-size="8" text-anchor="end">${y}</text>`;
-  }
-  // Area fill
-  let path = '';
-  for (let i = 0; i < points.length; i++) {
-    const x = pad.l + (points[i].x - minT) / span * iw;
-    const y = pad.t + ih * (1 - points[i].y / maxY);
-    path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
-  }
-  const lastX = pad.l + iw;
-  path += ` L${lastX.toFixed(1)},${pad.t+ih} L${pad.l},${pad.t+ih} Z`;
-  svg += `<path d="${path}" fill="var(--accent)" fill-opacity="0.15" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>`;
-  svg += `</svg>`;
-  return svg;
-}
-function switchGanttView() {
-  const el = document.getElementById('gantt-chart');
-  if (!el) return;
-  const view = document.querySelector('input[name="gantt-view"]:checked')?.value;
-  const gantt = window._lastGanttData || [];
-  el.innerHTML = view === 'agg' ? _ganttAgg(gantt) : _ganttChart(gantt);
+  html += '</div>';
+  return html;
 }
 function dashSliderChange(val) {
   const lbl = document.getElementById('dash-slider-val');
