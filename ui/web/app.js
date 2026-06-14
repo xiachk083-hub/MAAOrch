@@ -1218,6 +1218,10 @@ async function renderBatchEdit(container) {
         <option value="">不修改</option>
         <option value="Official" ${a.game_client==='Official'?'selected':''}>官服</option>
         <option value="Bilibili" ${a.game_client==='Bilibili'?'selected':''}>B服</option>
+        <option value="YoStarEN">美服</option>
+        <option value="YoStarJP">日服</option>
+        <option value="YoStarKR">韩服</option>
+        <option value="txwy">繁中服</option>
       </select></div>
       <div class="form-row"><label>完成后</label>
         <label><input type="checkbox" id="be-exit-emu">关模拟器</label>
@@ -1275,9 +1279,13 @@ async function renderAccount(container) {
   container.innerHTML = `<div>
     <button onclick="navigate('accounts')" style="margin-bottom:8px">← 返回</button>
     <div class="form-row"><label>名称</label><input id="ed-name" value="${a.name}"></div>
-    <div class="form-row"><label>服务器</label><select id="ed-client">
+    <div class="form-row"><label>服务器</label><select id="ed-client" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
       <option value="Official" ${a.game_client==='Official'?'selected':''}>官服</option>
       <option value="Bilibili" ${a.game_client==='Bilibili'?'selected':''}>B服</option>
+      <option value="YoStarEN" ${a.game_client==='YoStarEN'?'selected':''}>美服</option>
+      <option value="YoStarJP" ${a.game_client==='YoStarJP'?'selected':''}>日服</option>
+      <option value="YoStarKR" ${a.game_client==='YoStarKR'?'selected':''}>韩服</option>
+      <option value="txwy" ${a.game_client==='txwy'?'selected':''}>繁中服</option>
     </select></div>
     <div class="form-row"><label>模拟器</label>
       <select id="ed-vm" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
@@ -1554,7 +1562,7 @@ async function loadCreateForm() {
     window._emuList = emus;
     loading.outerHTML = `
       <div class="form-row"><label>名称</label><input type="text" id="form-name" value="" placeholder="账号名称"></div>
-      <div class="form-row"><label>服务器</label><select id="form-client"><option value="Official">官服</option><option value="Bilibili">B服</option></select></div>
+      <div class="form-row"><label>服务器</label><select id="form-client" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px"><option value="Official">官服</option><option value="Bilibili">B服</option><option value="YoStarEN">美服</option><option value="YoStarJP">日服</option><option value="YoStarKR">韩服</option><option value="txwy">繁中服</option></select></div>
       <div class="form-row" style="flex-direction:column;align-items:stretch">
         <label style="margin-bottom:2px">模拟器 (${emus.length} 个)</label>
         <input type="text" id="form-emu-search" placeholder="搜索 VM 编号..." oninput="filterEmuList()" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
