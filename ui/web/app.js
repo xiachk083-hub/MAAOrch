@@ -787,7 +787,7 @@ function _chronicleTimeline(events) {
   html += '<div style="position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--border)"></div>';
   runs.slice(0, 20).forEach((r, i) => {
     const date = new Date(r.start * 1000);
-    const dateStr = `${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+    const dateStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
     const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
     const durStr = r.dur > 0 ? `${Math.floor(r.dur/60)}m${Math.floor(r.dur%60)}s` : '运行中';
     const isRunning = r.dur === 0;
