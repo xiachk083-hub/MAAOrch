@@ -593,7 +593,7 @@ class ApiServer(QThread):
                         aid=a.get("id","")
                         running=mw.launch_queue.is_running(aid) if hasattr(mw,'launch_queue') else False
                         queued=mw.launch_queue.is_queued(aid) if hasattr(mw,'launch_queue') else False
-                        data.append({"id":aid,"name":a.get("name",""),"game_client":a.get("game_client",""),"emu_instance_index":a.get("emu_instance_index",""),"adb_address":a.get("adb_address",""),"running":running,"queued":queued,"failures":a.get("consecutive_failures",0),"dispatch_id":a.get("dispatch_id",""),"suspended":a.get("suspended",False)})
+                        data.append({"id":aid,"name":a.get("name",""),"game_client":a.get("game_client",""),"emu_instance_index":a.get("emu_instance_index",""),"account_switch":a.get("account_switch",""),"uid":a.get("uid",""),"running":running,"queued":queued,"failures":a.get("consecutive_failures",0),"suspended":a.get("suspended",False)})
                     s._json({"ok":True,"accounts":data})
                 except Exception as e: s._json({"ok":False,"error":str(e)})
             def _handle_account_config(s,p):
@@ -623,7 +623,7 @@ class ApiServer(QThread):
                 try:
                     import uuid as _uuid
                     new_id=_uuid.uuid4().hex[:12]
-                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"adb_address":body.get("adb_address",""),"adb_path":body.get("adb_path",""),"connection_preset":body.get("connection_preset",""),"emu_instance_index":body.get("emu_instance_index",""),"touch_mode":body.get("touch_mode",""),"emu_launch":body.get("emu_launch",True),"task_settings":body.get("task_settings",{}),"dispatch_id":body.get("dispatch_id",""),"consecutive_failures":0}
+                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"emu_instance_index":body.get("emu_instance_index",""),"account_switch":body.get("account_switch",""),"uid":body.get("uid",""),"consecutive_failures":0}
                     mw.accounts.append(acct)
                     mw.config["accounts"]=mw.accounts
                     from models.config_manager import save_config
@@ -635,7 +635,7 @@ class ApiServer(QThread):
                     idx=int(p.split("/")[3])
                     if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
                     a=mw.accounts[idx]
-                    for field in ("name","game_client","adb_address","emu_instance_index","dispatch_id","suspended","round_robin_deficit","stuck_timeout_min"):
+                    for field in ("name","game_client","emu_instance_index","account_switch","uid","suspended"):
                         if field in body: a[field]=body[field]
                     mw.config["accounts"]=mw.accounts
                     from models.config_manager import save_config
