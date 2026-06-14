@@ -773,20 +773,21 @@ class ApiServer(QThread):
                     tag = ""
                     for url in urls:
                         try:
-                            req = urllib.request.Request(url, headers={"User-Agent":"MAAOrch","Accept":"application/json"})
+                            headers = {"User-Agent":"MAAOrch"}
+                            if "api.github.com" in url:
+                                headers["Accept"] = "application/json"
+                            req = urllib.request.Request(url, headers=headers)
                             resp = urllib.request.urlopen(req, timeout=10)
                             if "api.github.com" in url:
                                 data = json.loads(resp.read())
                                 tag = data.get("tag_name", "").lstrip("v")
                             else:
-                                # HTML page: extract version from redirect URL or meta
-                                html = resp.read().decode("utf-8", errors="replace")
-                                # Try <meta> or redirect URL pattern
-                                m = re.search(r'/releases/tag/v?([\d.]+(?:-[\w.]+)?)', html)
+                                # Version is in the redirect URL: /releases/tag/v6.12.2
+                                m = re.search(r'/tag/v?([\d.]+)', resp.url)
                                 if m: tag = m.group(1)
-                                # Fallback: try og:title or page title
                                 if not tag:
-                                    m = re.search(r'<title>[^<]*v?([\d.]+)', html)
+                                    html = resp.read().decode("utf-8", errors="replace")
+                                    m = re.search(r'/releases/tag/v?([\d.]+(?:-[\w.]+)?)', html)
                                     if m: tag = m.group(1)
                             if tag: break
                         except Exception:
