@@ -623,7 +623,7 @@ class ApiServer(QThread):
                 try:
                     import uuid as _uuid
                     new_id=_uuid.uuid4().hex[:12]
-                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"adb_address":body.get("adb_address",""),"emu_instance_index":body.get("emu_instance_index",""),"task_settings":body.get("task_settings",{}),"dispatch_id":body.get("dispatch_id",""),"consecutive_failures":0}
+                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"adb_address":body.get("adb_address",""),"adb_path":body.get("adb_path",""),"connection_preset":body.get("connection_preset",""),"emu_instance_index":body.get("emu_instance_index",""),"touch_mode":body.get("touch_mode",""),"emu_launch":body.get("emu_launch",True),"task_settings":body.get("task_settings",{}),"dispatch_id":body.get("dispatch_id",""),"consecutive_failures":0}
                     mw.accounts.append(acct)
                     mw.config["accounts"]=mw.accounts
                     from models.config_manager import save_config
