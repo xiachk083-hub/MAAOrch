@@ -521,6 +521,9 @@ class AccountRunner(QObject):
                     self.ctx._mw._gantt_events.append({"ts": time.time(), "aid": aid, "name": ac.get("name", aid), "event": "start"})
                     if len(self.ctx._mw._gantt_events) > 500:
                         self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+                    try:
+                        self.ctx._mw._save_gantt()
+                    except: pass
             except: pass
             # Start monitoring thread
             import threading as _th
@@ -949,6 +952,8 @@ class AccountRunner(QObject):
                                                 self.ctx._mw._gantt_events.append({"ts":time.time(),"aid":aid,"name":name,"event":"task","task":task_name})
                                                 if len(self.ctx._mw._gantt_events) > 500:
                                                     self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+                                                try: self.ctx._mw._save_gantt()
+                                                except: pass
                                         except: pass
                                     self._task_start_times[aid] = time.time()
                                     self.status_msg.emit(f"MAA: {task_name}...")
@@ -967,6 +972,8 @@ class AccountRunner(QObject):
                                             self.ctx._mw._gantt_events.append({"ts":time.time(),"aid":aid,"name":name,"event":"task","task":v})
                                             if len(self.ctx._mw._gantt_events) > 500:
                                                 self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+                                            try: self.ctx._mw._save_gantt()
+                                            except: pass
                                     except: pass
                                 self.status_msg.emit(f"MAA: {v}...")
                                 return
@@ -1142,6 +1149,8 @@ class AccountRunner(QObject):
                 self.ctx._mw._gantt_events.append({"ts": time.time(), "aid": aid, "name": name, "event": "stop"})
                 if len(self.ctx._mw._gantt_events) > 500:
                     self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+                try: self.ctx._mw._save_gantt()
+                except: pass
         except: pass
 
         # Rotate MAA log

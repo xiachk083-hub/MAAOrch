@@ -75,14 +75,28 @@ def main():
     runner.account_finished.connect(launch_queue.on_account_finished)
     launch_queue._restore()
     launch_queue.start()
+    from pathlib import Path as _P
+    _gantt_file = _P(__file__).parent / "screenshots" / "gantt_history.json"
+    _gantt_events = []
+    if _gantt_file.exists():
+        try:
+            import json as _j
+            _gantt_events = _j.loads(_gantt_file.read_text(encoding="utf-8"))
+        except: pass
+    def _save_gantt():
+        try:
+            import json as _j
+            _gantt_file.write_text(_j.dumps(_gantt_events[-500:], ensure_ascii=False), encoding="utf-8")
+        except: pass
     ctx._mw = type('MW', (), {
         'runner': runner, 'launch_queue': launch_queue, 'config': config,
         'accounts': ctx.accounts, 'ctx': ctx, 'warehouse': [],
         '_proc_status': set(), '_proc_start_times': {},
         '_notifications': [],
-        '_oplog': [],  # operation history [{ts, action, detail}]
+        '_oplog': [],
         '_res_samples': [],
-        '_gantt_events': [],
+        '_gantt_events': _gantt_events,
+        '_save_gantt': _save_gantt,
         '_log': lambda self, msg: _LOG.info(msg),
     })()
 
