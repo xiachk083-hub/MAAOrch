@@ -9,5 +9,6 @@
       "location": ".opencode/skills/maaorch-dev.md"
     }
   ],
+  "plugin": ["zenox"],
   "mcpServers": {}
 }

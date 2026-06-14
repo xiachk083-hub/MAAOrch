@@ -41,7 +41,7 @@ class AccountRunner(QObject):
         self._start_times: dict[str, float] = {}    # account_id → time.time()
         self._task_start_times: dict[str, float] = {}  # account_id → last task start
         self._stopping: set = set()                 # accounts being stopped
-        self._proc_info: dict[str, dict] = {}       # account_id → {mem_mb, cpu_pct, pid}
+        self._proc_info: dict[str, dict] = {}       # account_id → {maa:{mem_mb,cpu_pct,pid}, emu:{mem_mb,cpu_pct,pid,name}}
         self._restart_times: dict[str, list[float]] = {}  # account_id → [timestamps]
         self._overloaded = False                    # true when resource limit hit
         self._log_buffers: dict[str, list[str]] = {}  # account_id → rolling 200 lines
@@ -49,6 +49,7 @@ class AccountRunner(QObject):
         self._log_handles = {}                       # account_id → persistent file handle
         self._adb_fail_count: dict[str, int] = {}     # account_id → consecutive ADB ping failures
         self._adb_restart_count: dict[str, int] = {}  # account_id → consecutive ADB-restart cycles
+        self._emu_fail_count: dict[str, int] = {}     # account_id → consecutive emulator process failures
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -125,21 +126,6 @@ class AccountRunner(QObject):
                 port = 5555 + idx * 2
             ac["adb_address"] = f"127.0.0.1:{port}"
         ac["touch_mode"] = ac.get("touch_mode", "MiniTouch")
-
-        # Auto-fill ADB path if empty (try mumu-cli sibling first, then find_adb)
-        if not ac.get("adb_path"):
-            from infrastructure.task_constants import find_mumu_cli
-            cli = find_mumu_cli()
-            if cli:
-                from pathlib import Path as _P
-                cand = _P(cli).parent / "adb.exe"
-                if cand.exists():
-                    ac["adb_path"] = str(cand)
-            if not ac.get("adb_path"):
-                from infrastructure.task_constants import find_adb
-                adb_exe = find_adb()
-                if adb_exe:
-                    ac["adb_path"] = adb_exe
 
         # Get free MAA instance
         try:
@@ -530,6 +516,12 @@ class AccountRunner(QObject):
             self.ctx.proc_status.add(aid)
             self.log_msg.emit(f"✓ 启动 MaaCore PID=N/A (直接模式)")
             self.account_started.emit(aid)
+            try:
+                if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, '_gantt_events'):
+                    self.ctx._mw._gantt_events.append({"ts": time.time(), "aid": aid, "name": ac.get("name", aid), "event": "start"})
+                    if len(self.ctx._mw._gantt_events) > 500:
+                        self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+            except: pass
             # Start monitoring thread
             import threading as _th
             _th.Thread(target=self._monitor_direct, args=(aid, inst, ac), daemon=True).start()
@@ -631,6 +623,42 @@ class AccountRunner(QObject):
         except ImportError:
             return ""
 
+    def _find_emu_pid(self, addr: str) -> int | None:
+        """Find the PID of the emulator/adb process listening on the given ADB address (e.g. 127.0.0.1:16384)."""
+        if not addr:
+            return None
+        try:
+            host, port_str = addr.rsplit(":", 1)
+            port = int(port_str)
+            import psutil as _ps
+            for conn in _ps.net_connections():
+                if conn.status == "LISTEN" and conn.laddr.port == port:
+                    return conn.pid
+        except Exception:
+            pass
+        return None
+
+    def _kill_emu(self, aid: str) -> None:
+        """Shut down the emulator associated with an account via mumu-cli."""
+        ac = self._active.get(aid, {})
+        if not ac:
+            ac = next((a for a in self.ctx.accounts if a["id"] == aid), None)
+        emu_idx = ac.get("emu_instance_index", "") if ac else ""
+        if not emu_idx:
+            return
+        from infrastructure.task_constants import find_mumu_cli
+        cli = find_mumu_cli()
+        if not cli:
+            return
+        import subprocess as _sp
+        name = ac.get("name", aid) if ac else aid
+        self._log.info(f"[进程组] {name} 关闭模拟器 #{emu_idx}")
+        try:
+            _sp.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                    timeout=10, capture_output=True, creationflags=_sp.CREATE_NO_WINDOW)
+        except Exception:
+            pass
+
     def _check_resources(self) -> None:
         """Monitor system memory and emulator/MAA processes to detect overload."""
         try:
@@ -640,25 +668,48 @@ class AccountRunner(QObject):
         sv = psutil.virtual_memory()
         free_gb = sv.available / 1024 / 1024 / 1024
         total_mem_used = sv.used / 1024 / 1024
+        headroom_cpu = psutil.cpu_percent(interval=0)
 
         # Track MAA process memory (for per-process limit)
         now = time.time()
         maa_mem = 0
         for aid in list(self._procs.keys()):
             p = self._procs.get(aid)
-            if not p or isinstance(p, str) or not hasattr(p, 'pid'):
-                continue
-            try:
-                pp = psutil.Process(p.pid)
-                mem_mb = pp.memory_info().rss / 1024 / 1024
-                self._proc_info[aid] = {"mem_mb": mem_mb, "pid": p.pid, "time": now}
-                maa_mem += mem_mb
-                if mem_mb > self.MAX_PROC_MEM_MB:
-                    name = self._active.get(aid, {}).get("name", aid)
-                    self.log_msg.emit(f"[资源] {name} 内存超限 ({mem_mb:.0f}MB > {self.MAX_PROC_MEM_MB}MB)")
-                    self.stop(aid)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                self._proc_info.pop(aid, None)
+            # Init proc_info for this account
+            info = self._proc_info.setdefault(aid, {"maa": {}, "emu": {}})
+            # Track MAA process
+            if p and not isinstance(p, str) and hasattr(p, 'pid'):
+                try:
+                    pp = psutil.Process(p.pid)
+                    mem_mb = pp.memory_info().rss / 1024 / 1024
+                    cpu_pct = pp.cpu_percent(interval=0.05)
+                    info["maa"] = {"mem_mb": mem_mb, "cpu_pct": cpu_pct, "pid": p.pid, "time": now}
+                    maa_mem += mem_mb
+                    if mem_mb > self.MAX_PROC_MEM_MB:
+                        name = self._active.get(aid, {}).get("name", aid)
+                        self.log_msg.emit(f"[资源] {name} 内存超限 ({mem_mb:.0f}MB > {self.MAX_PROC_MEM_MB}MB)")
+                        self.stop(aid)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    info["maa"] = {}
+            else:
+                info["maa"] = {}
+            # Track emulator process via ADB port
+            ac = self._active.get(aid)
+            if ac:
+                addr = ac.get("adb_address", "")
+                epid = self._find_emu_pid(addr)
+                if epid:
+                    try:
+                        ep = psutil.Process(epid)
+                        emu_mem = ep.memory_info().rss / 1024 / 1024
+                        emu_cpu = ep.cpu_percent(interval=0.05)
+                        info["emu"] = {"mem_mb": emu_mem, "cpu_pct": emu_cpu, "pid": epid, "time": now, "name": ep.name()}
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        info["emu"] = {}
+                else:
+                    info["emu"] = {}
+            else:
+                info["emu"] = {}
 
         # Detect overload: system free memory < 4GB → pause
         was = self._overloaded
@@ -668,6 +719,27 @@ class AccountRunner(QObject):
                 self.log_msg.emit(f"[资源] 系统可用内存 {free_gb:.1f}GB 不足，暂停新启动")
             else:
                 self.log_msg.emit(f"[资源] 内存已恢复 ({free_gb:.1f}GB 可用)，继续启动")
+
+        # Push resource sample for trend chart
+        try:
+            mw = getattr(self.ctx, '_mw', None)
+            if mw and hasattr(mw, '_res_samples'):
+                gpu_usage = gpu_mem_pct = 0
+                try:
+                    import subprocess as _s
+                    o = _s.check_output(["nvidia-smi","--query-gpu=utilization.gpu,memory.used,memory.total","--format=csv,noheader,nounits"], timeout=3, creationflags=CF, encoding="utf-8", errors="replace")
+                    parts = o.strip().split(", ")
+                    if len(parts) >= 3:
+                        gpu_usage = float(parts[0])
+                        gu, gt = int(float(parts[1])), int(float(parts[2]))
+                        gpu_mem_pct = round(gu / max(gt, 1) * 100, 1)
+                except: pass
+                mw._res_samples.append({"ts": time.time(), "cpu": round(headroom_cpu, 1),
+                                         "mem": round(sv.percent, 1), "gpu": gpu_usage, "gpu_mem": gpu_mem_pct})
+                if len(mw._res_samples) > 720:
+                    mw._res_samples = mw._res_samples[-720:]
+        except Exception:
+            pass
 
     def check_processes(self) -> None:
         """Check all running processes for completion. Called by centralized poll timer."""
@@ -687,7 +759,47 @@ class AccountRunner(QObject):
             # Only log; actual cleanup is in _on_process_exit (avoids double cleanup)
             return
         self._update_status(aid)
-        # Task completion detection: check log for AllTasksCompleted
+        # ── Process pair health check ──
+        info = self._proc_info.get(aid, {})
+        emu = info.get("emu", {})
+        emu_pid = emu.get("pid")
+        ac = self._active.get(aid)
+        if ac and emu_pid and aid not in self._stopping:
+            name = ac.get("name", aid)
+            try:
+                import psutil as _pu
+                ep = _pu.Process(emu_pid)
+                _ep_status = ep.status()
+                if _ep_status == _pu.STATUS_ZOMBIE:
+                    raise _pu.NoSuchProcess(emu_pid)
+            except Exception:
+                # Emulator process died — track and handle
+                fail = self._emu_fail_count.get(aid, 0) + 1
+                self._emu_fail_count[aid] = fail
+                self._log.warning(f"[进程组] {name} 模拟器进程已消失 (PID={emu_pid}) 第{fail}次")
+                p = self._procs.get(aid)
+                if fail >= 3 or (p and hasattr(p, 'poll') and p.poll() is not None):
+                    # Give up — kill MAA if still alive, cleanup with ADB-disconnect code
+                    self._emu_fail_count.pop(aid, None)
+                    if p and not isinstance(p, str):
+                        try: p.terminate(); p.wait(3)
+                        except: pass
+                        try: p.kill()
+                        except: pass
+                    tasks, sanity, drops = self._parse_log(aid)
+                    self._cleanup(aid, -8, tasks, sanity, drops)
+                    return
+                # Try restart emulator
+                emu_idx = ac.get("emu_instance_index", "")
+                cli = find_mumu_cli()
+                if cli and emu_idx:
+                    self.log_msg.emit(f"[进程组] {name} 重启模拟器 #{emu_idx}")
+                    subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                            timeout=10, capture_output=True, creationflags=CF)
+                    subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"],
+                            timeout=10, capture_output=True, creationflags=CF)
+                return  # Skip this tick; let restart settle
+        # ── Task completion detection ──
         ac = self._active.get(aid)
         if ac and hasattr(p, '_inst_path'):
             lp = Path(p._inst_path) / "debug" / "asst.log"
@@ -832,6 +944,12 @@ class AccountRunner(QObject):
                                     if task_name != prev:
                                         ac["_last_task"] = task_name
                                         self.log_msg.emit(f"[MAA] {name} 当前任务: {task_name}")
+                                        try:
+                                            if hasattr(self.ctx,'_mw') and hasattr(self.ctx._mw,'_gantt_events'):
+                                                self.ctx._mw._gantt_events.append({"ts":time.time(),"aid":aid,"name":name,"event":"task","task":task_name})
+                                                if len(self.ctx._mw._gantt_events) > 500:
+                                                    self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+                                        except: pass
                                     self._task_start_times[aid] = time.time()
                                     self.status_msg.emit(f"MAA: {task_name}...")
                                     return
@@ -844,6 +962,12 @@ class AccountRunner(QObject):
                                 if v != prev:
                                     ac["_last_task"] = v
                                     self.log_msg.emit(f"[MAA] {name} 当前任务: {v}")
+                                    try:
+                                        if hasattr(self.ctx,'_mw') and hasattr(self.ctx._mw,'_gantt_events'):
+                                            self.ctx._mw._gantt_events.append({"ts":time.time(),"aid":aid,"name":name,"event":"task","task":v})
+                                            if len(self.ctx._mw._gantt_events) > 500:
+                                                self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+                                    except: pass
                                 self.status_msg.emit(f"MAA: {v}...")
                                 return
                     elif "[ERR]" in line:
@@ -905,9 +1029,37 @@ class AccountRunner(QObject):
                     ac["smart_plan"] = ""
                 ac.pop("_persist_plan", None)
 
+        # Mark remaining running tasks as done (PostActions may skip AllTasksCompleted)
+        if exit_code in (0, -9) and tasks:
+            for t in tasks:
+                if t.get("status") == "运行中":
+                    t["status"] = "完成"
+
+        # Task failure detection: MAA reports task failures in log
+        if exit_code == 0 and tasks:
+            failed = [t for t in tasks if t.get("status") == "失败"]
+            completed = [t for t in tasks if t.get("status") == "完成"]
+            if failed and not completed:
+                names = [t["name"] for t in failed]
+                exit_code = -11  # mark as task-failure error
+                self._log.warning(f"[任务失败] {name} 失败: {names}")
+                self.log_msg.emit(f"[❌] {name} 任务失败: {','.join(names)}，自动重试")
         is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):
             is_real_error = False
+
+        # Push notification to SSE queue
+        try:
+            ntype = "error" if is_real_error else "success"
+            nmsg = f"{name} 运行完成" if not is_real_error else f"{name} 运行失败"
+            if exit_code == -11:
+                nmsg = f"{name} 任务失败，自动重试"
+            if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, '_notifications'):
+                self.ctx._mw._notifications.append({"id": int(time.time()), "type": ntype, "message": nmsg})
+                if len(self.ctx._mw._notifications) > 20:
+                    self.ctx._mw._notifications = self.ctx._mw._notifications[-20:]
+        except Exception:
+            pass
 
         # Track consecutive failures
         failures = ac.get("consecutive_failures", 0) if ac else 0
@@ -968,12 +1120,6 @@ class AccountRunner(QObject):
             msg_parts.append(f"理智 {cur}/{mx}  ({h}h{m:02d}m回满)")
 
         self.account_finished.emit((aid, exit_code, tasks))
-        # Direct fallback: call on_account_finished directly (Qt signal may not deliver in web mode)
-        if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, 'launch_queue'):
-            try:
-                self.ctx._mw.launch_queue.on_account_finished((aid, exit_code, tasks))
-            except Exception:
-                pass
         if msg_parts:
             self.ctx.notify(" | ".join(msg_parts), False)
 
@@ -989,6 +1135,14 @@ class AccountRunner(QObject):
                 mark_annihilation_done(aid, tasks)
             except Exception:
                 pass
+
+        # Push gantt event
+        try:
+            if hasattr(self.ctx, '_mw') and hasattr(self.ctx._mw, '_gantt_events'):
+                self.ctx._mw._gantt_events.append({"ts": time.time(), "aid": aid, "name": name, "event": "stop"})
+                if len(self.ctx._mw._gantt_events) > 500:
+                    self.ctx._mw._gantt_events = self.ctx._mw._gantt_events[-500:]
+        except: pass
 
         # Rotate MAA log
         if old_progs:
@@ -1019,6 +1173,47 @@ class AccountRunner(QObject):
                     self.log_msg.emit(f"[daigan] 推送成功 → {daigan_url}")
                 except Exception as e:
                     self.log_msg.emit(f"[daigan] 推送失败: {e}")
+
+            # Webhook: POST completion/failure to configured URL
+            webhook_url = self.ctx.config.get("webhook_url", "").strip()
+            if webhook_url and webhook_url.startswith("http"):
+                try:
+                    import urllib.request as _ur
+                    import json as _js
+                    status = "error" if is_real_error else ("success" if any(t.get("status") == "完成" for t in (tasks or [])) else "unknown")
+                    payload = _js.dumps({
+                        "event": "account_finished", "account": name, "aid": aid,
+                        "exit_code": exit_code, "status": status,
+                        "tasks": {t["name"]: t["status"] for t in (tasks or [])},
+                        "ts": time.time(),
+                    }).encode("utf-8")
+                    _ur.urlopen(_ur.Request(webhook_url, data=payload, headers={"Content-Type":"application/json"}), timeout=5)
+                except Exception:
+                    pass
+
+        # Save MAA screenshots to per-account gallery
+        if old_progs and started:
+            try:
+                interface_dir = Path(old_progs[0].get("path", "")).parent / "debug" / "interface"
+                if interface_dir.exists() and list(interface_dir.glob("*.png")):
+                    from datetime import datetime as _dt
+                    _proj = Path(__file__).parent.parent
+                    run_tag = f"run_{_dt.fromtimestamp(started).strftime('%Y%m%d_%H%M%S')}"
+                    shot_dir = _proj / "screenshots" / aid / run_tag
+                    shot_dir.mkdir(parents=True, exist_ok=True)
+                    for f in interface_dir.glob("*.png"):
+                        import shutil as _su
+                        _su.copy2(str(f), str(shot_dir / f.name))
+                    for f in interface_dir.glob("*"):
+                        try: f.unlink()
+                        except: pass
+                    all_runs = sorted((_proj / "screenshots" / aid).glob("run_*"),
+                                      key=lambda p: p.stat().st_mtime, reverse=True)
+                    for old_run in all_runs[20:]:
+                        import shutil as _su
+                        _su.rmtree(str(old_run))
+            except Exception:
+                pass
 
     def _collect_diagnostic(self, aid: str, ac: dict | None, exit_code: int) -> None:
         """Save diagnostic info (log tail + screenshot) on error."""

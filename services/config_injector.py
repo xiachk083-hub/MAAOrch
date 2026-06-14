@@ -218,6 +218,30 @@ class ConfigService:
         """Called from PipelineThread (no MainWindow ref needed)."""
         self.inject(w, ac)
 
+    def _set_connection(self, c: dict, ac: dict, use_v6: bool) -> None:
+        """Write ADB/connection settings to MAA config dict (shared by v5 and v6)."""
+        if ac.get("adb_address"):
+            c["Connect.Address"] = ac["adb_address"]
+        if ac.get("adb_path"):
+            c["Connect.AdbPath"] = ac["adb_path"]
+        pr = ac.get("connection_preset", "")
+        to = ac.get("touch_mode", "")
+        if pr:
+            c["Connect.ConnectConfig"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
+        if to:
+            c["Connect.TouchMode"] = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}.get(to, "minitouch")
+        c["Connect.AdbReplaced"] = "True"
+        c["Connect.AutoDetect"] = "False"
+        c["Connect.AlwaysAutoDetect"] = "False"
+        if ac.get("game_client"):
+            c["Start.ClientType"] = ac["game_client"]
+        c["Start.RunDirectly"] = "True"
+        c["Start.StartGame"] = "True"
+        if use_v6:
+            c["Connect.RetryOnDisconnected"] = "True"
+            c["Connect.AllowADBRestart"] = "True"
+            c["Connect.AllowADBHardRestart"] = "True"
+
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
         cd = Path(config_dir)
@@ -254,47 +278,11 @@ class ConfigService:
                 c.pop(stale, None)
 
             if not use_v6:
-                if ac.get("adb_address"):
-                    c["Connect.Address"] = ac["adb_address"]
-                if ac.get("adb_path"):
-                    c["Connect.AdbPath"] = ac["adb_path"]
-                pr = ac.get("connection_preset", "")
-                to = ac.get("touch_mode", "")
-                if pr:
-                    c["Connect.ConnectConfig"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
-                if to:
-                    c["Connect.TouchMode"] = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}.get(to, "minitouch")
-                c["Connect.AdbReplaced"] = "True"
-                c["Connect.AutoDetect"] = "False"
-                c["Connect.AlwaysAutoDetect"] = "False"
-                if ac.get("game_client"):
-                    c["Start.ClientType"] = ac["game_client"]
-                c["Start.RunDirectly"] = "True"
-                c["Start.StartGame"] = "True"
+                self._set_connection(c, ac, use_v6=False)
                 c["MainFunction.PostActions"] = "12"
             else:
+                self._set_connection(c, ac, use_v6=True)
                 c.pop("MainFunction.PostActions", None)
-                # Write connection settings for v6 (same as v5, after dot-key cleanup)
-                if ac.get("adb_address"):
-                    c["Connect.Address"] = ac["adb_address"]
-                if ac.get("adb_path"):
-                    c["Connect.AdbPath"] = ac["adb_path"]
-                pr = ac.get("connection_preset", "")
-                to = ac.get("touch_mode", "")
-                if pr:
-                    c["Connect.ConnectConfig"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
-                if to:
-                    c["Connect.TouchMode"] = {"MiniTouch": "minitouch", "MaaTouch": "maatouch", "ADB": "adb"}.get(to, "minitouch")
-                c["Connect.AdbReplaced"] = "True"
-                c["Connect.AutoDetect"] = "False"
-                c["Connect.AlwaysAutoDetect"] = "False"
-                if ac.get("game_client"):
-                    c["Start.ClientType"] = ac["game_client"]
-                c["Start.RunDirectly"] = "True"
-                c["Start.StartGame"] = "True"
-                c["Connect.RetryOnDisconnected"] = "True"
-                c["Connect.AllowADBRestart"] = "True"
-                c["Connect.AllowADBHardRestart"] = "True"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:

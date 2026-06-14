@@ -176,7 +176,9 @@ class LaunchQueue(QObject):
         account_id, exit_code, tasks = data
         emu_idx = self._get_emu_key(account_id)
         with self._lock:
-            self._active_emus.pop(emu_idx, None)
+            old = self._active_emus.pop(emu_idx, None)
+            if old != account_id:
+                return  # already processed (guard against double-trigger)
 
         ac = next((a for a in self.ctx.accounts if a["id"] == account_id), None)
         if not ac:
@@ -282,6 +284,11 @@ class LaunchQueue(QObject):
         """Check queue and launch all eligible accounts (parallel across different emus)."""
         if self._paused:
             return
+        # Tick the runner resource monitor (popsulates _proc_info with maa+emu memory)
+        try:
+            r = getattr(self.ctx, '_mw', None)
+            if r: r.runner.check_processes()
+        except: pass
         _QUEUE_LOG.info(f"_tick: start pending={len(self._pending)}")
         with self._lock:
             now = datetime.now()
@@ -321,7 +328,7 @@ class LaunchQueue(QObject):
 
                 # ④ Sanity check (sanity-driven only)
                 if entry.source == "sanity":
-                    ac = next((a for a in self.ctx.accounts if a.id == entry.account_id), None)
+                    ac = next((a for a in self.ctx.accounts if a.get("id") == entry.account_id), None)
                     if ac:
                         st = RunStats(entry.account_id)
                         s = st.get_last_sanity()
