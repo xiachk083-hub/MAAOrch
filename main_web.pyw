@@ -79,6 +79,10 @@ def main():
         'runner': runner, 'launch_queue': launch_queue, 'config': config,
         'accounts': ctx.accounts, 'ctx': ctx, 'warehouse': [],
         '_proc_status': set(), '_proc_start_times': {},
+        '_notifications': [],
+        '_oplog': [],  # operation history [{ts, action, detail}]
+        '_res_samples': [],
+        '_gantt_events': [],
         '_log': lambda self, msg: _LOG.info(msg),
     })()
 

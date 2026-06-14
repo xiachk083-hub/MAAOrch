@@ -174,7 +174,7 @@ def _get_schedule_tasks(mw: Any, include_anni: bool = True, only_anni: bool = Fa
     return tasks
 
 
-def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False) -> None:
+def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False, account_ids: list[str] | None = None) -> None:
     # Stop accounts that were started by previous _run_smart_all (have dispatch_id)
     if hasattr(mw, "runner") and mw.runner:
         for aid in list(mw.runner._active.keys()):
@@ -187,13 +187,18 @@ def _run_smart_all(mw: Any, include_anni: bool = True, only_anni: bool = False) 
             mw.launch_queue._active_emus.clear()
         mw.launch_queue._save_queue()
     mode = mw.config.get("schedule_mode", "daily")
-    tasks = _get_schedule_tasks(mw, include_anni, only_anni)
+    smart_enabled = mw.config.get("smart_global", {}).get("enabled", False)
+    tasks = _get_schedule_tasks(mw, include_anni, only_anni) if smart_enabled else ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
     plan = ",".join(tasks)
     label_map = {"daily":"日常", "roguelike":"肉鸽", "reclamation":"生息"}
     count = 0
     for a in mw.accounts:
         aid = a.get("id", "")
+        if account_ids is not None and aid not in account_ids:
+            continue
         if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+            continue
+        if a.get("suspended", False):
             continue
         if mw.launch_queue.is_queued(aid) or mw.launch_queue.is_running(aid):
             continue

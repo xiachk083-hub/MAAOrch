@@ -181,6 +181,7 @@ class LogService:
         tasks = []
         seen_chains: set[str] = set()
         chain_status: dict[str, dict] = {}  # taskchain → task dict
+        chain_stages: dict[str, str] = {}   # taskchain → stage name (for annihilation detection)
         task_map = {"StartUp": "开始唤醒", "Fight": "刷关作战", "Recruit": "公开招募", "Infrast": "基建换班", "Mall": "信用商店", "Award": "领取奖励", "Roguelike": "肉鸽探索", "Reclamation": "生息演算", "CloseDown": "关闭游戏"}
         # MAA internal chains (not user tasks)
         skip_chains = {"Depot", "OperBox"}
@@ -190,6 +191,20 @@ class LogService:
         for line in lines:
             m = re.match(r"\[([^\]]+)\]", line)
             ts = m.group(1) if m else ""
+
+            # ── Stage name extraction (e.g., Fight with annihilation stage) ──
+            if "append_task" in line:
+                for tc_name in task_map:
+                    if f"append_task {tc_name}" in line:
+                        jm = re.search(r"\{.*\}", line)
+                        if jm:
+                            try:
+                                data = json.loads(jm.group(0))
+                                stage = data.get("stage", "")
+                                if stage:
+                                    chain_stages[tc_name] = stage
+                            except:
+                                pass
 
             # ── v6: SubTaskExtraInfo (sanity, drops, status) ──
             if "SubTaskExtraInfo" in line:
@@ -248,6 +263,11 @@ class LogService:
 
                 # Task start — update existing if same chain restarted
                 if "SubTaskStart" in line and tc in task_map:
+                    # Check if this is an annihilation stage
+                    base_name = task_map[tc]
+                    if tc in chain_stages and "@Annihilation" in chain_stages[tc]:
+                        stage = chain_stages[tc].replace("@Annihilation", "")
+                        base_name = f"剿灭({stage})"
                     if tc in seen_chains:
                         if tc in chain_status:
                             chain_status[tc]["start"] = ts
@@ -255,7 +275,7 @@ class LogService:
                             chain_status[tc]["error"] = ""
                     else:
                         seen_chains.add(tc)
-                        cur_task = {"name": task_map[tc], "start": ts, "status": "运行中", "drops": "", "error": ""}
+                        cur_task = {"name": base_name, "start": ts, "status": "运行中", "drops": "", "error": ""}
                         tasks.append(cur_task)
                         chain_status[tc] = cur_task
 
