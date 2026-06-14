@@ -754,8 +754,10 @@ class ApiServer(QThread):
                 try:
                     import urllib.request, json
                     cur = mw.config.get("maa_version", "未知")
+                    # Try multiple sources for GitHub API (official + mirrors for China)
                     urls = [
                         "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/releases/latest",
+                        "https://hub.fastgit.xyz/repos/MaaAssistantArknights/MaaRelease/releases/latest",
                     ]
                     tag = ""
                     last_err = ""
@@ -765,14 +767,14 @@ class ApiServer(QThread):
                             resp = urllib.request.urlopen(req, timeout=10)
                             data = json.loads(resp.read())
                             tag = data.get("tag_name", "").lstrip("v")
-                            break
+                            if tag: break
                         except Exception as e:
-                            last_err = str(e)
+                            last_err = str(e)[:60]
                     if tag:
                         s._json({"ok":True,"has_update":tag != cur,"current":cur,"latest":tag})
                     else:
-                        s._json({"ok":False,"error":"网络异常，请手动检查: https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases"})
-                except Exception as e: s._json({"ok":False,"error":"检查失败: "+str(e)})
+                        s._json({"ok":False,"error":"网络异常("+last_err+")", "manual_url":"https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases"})
+                except Exception as e: s._json({"ok":False,"error":"检查失败: "+str(e)[:60]})
             def _handle_maa_download_update(s):
                 try:
                     import urllib.request, json, os, zipfile, io, shutil, threading, time
