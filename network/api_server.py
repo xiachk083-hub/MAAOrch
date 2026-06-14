@@ -225,8 +225,14 @@ class ApiServer(QThread):
             def _handle_node_dashboard(s):
                 import psutil as _ps, subprocess as _sp, json as _js
                 # System
-                mem = _ps.virtual_memory()
-                cpu_pct = _ps.cpu_percent(interval=0)
+                try:
+                    mem = _ps.virtual_memory()
+                    cpu_pct = _ps.cpu_percent(interval=0)
+                    cpu_count = _ps.cpu_count()
+                except Exception:
+                    mem = type('m',(),{'total':1,'available':1,'percent':0})()
+                    cpu_pct = 0
+                    cpu_count = 1
                 processes = []
                 runner = getattr(mw, 'runner', None)
                 if runner and hasattr(runner, '_proc_info'):
@@ -267,14 +273,16 @@ class ApiServer(QThread):
                 by_gpu = max(0, int(gpu_free / est_per)) if gpu["mem_total_mb"] > 0 else 99
                 capacity = min(by_parallel, by_mem, by_gpu)
                 limit_by = "并行上限" if capacity == by_parallel else ("内存" if capacity == by_mem else "显存")
-                s._json({"ok":True,"system":{"cpu_pct":cpu_pct,"cpu_count":_ps.cpu_count(),"memory_total_mb":mem.total//1048576,
+                samples = getattr(mw, "_res_samples", [])
+                gantt = getattr(mw, "_gantt_events", [])
+                s._json({"ok":True,"system":{"cpu_pct":cpu_pct,"cpu_count":cpu_count,"memory_total_mb":mem.total//1048576,
                          "memory_available_mb":mem.available//1048576,"memory_pct":mem.percent},
                          "gpu":gpu,"processes":processes,"capacity":{"parallel_max":parallel_max,
                          "running":running,"by_parallel":by_parallel,"by_memory":by_mem,"by_gpu":by_gpu,
                          "max":capacity,"limit_by":limit_by,"est_per_instance_mb":int(est_per),
                          "deficit":mw.config.get("deficit",0),"stuck_timeout":mw.config.get("stuck_timeout",10)},
-                         "samples":getattr(mw,"_res_samples",[])[-360:],
-                         "gantt":getattr(mw,"_gantt_events",[])[-100:]})
+                         "samples":samples[-360:] if samples else [],
+                         "gantt":gantt[-100:] if gantt else []})
             def _handle_node_register(s, body):
                 daigan_url = body.get("daigan_url", "")
                 if daigan_url and daigan_url.startswith("https://"):
