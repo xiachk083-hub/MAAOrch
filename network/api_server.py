@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json,time,re,os,hmac
+import json,time,re,os,hmac,subprocess
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Any
@@ -325,7 +325,7 @@ class ApiServer(QThread):
                 a=mw.accounts[idx]; addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
                 if not addr: return s._json({"error":"no adb address"},400)
                 try:
-                    r=subprocess.run([adb,"-s",addr,"exec-out","screencap","-p"],capture_output=True,timeout=15,creationflags=CF)
+                    r=subprocess.run([adb,"-s",addr,"exec-out","screencap","-p"],capture_output=True,timeout=15,creationflags=subprocess.CREATE_NO_WINDOW)
                     if r.returncode!=0 or len(r.stdout)<100: return s._json({"error":"screencap failed"},500)
                     s.send_response(200); s.send_header("Content-Type","image/png"); s.send_header("Content-Length",str(len(r.stdout))); s.send_header("Cache-Control","no-cache"); s.end_headers()
                     s.wfile.write(r.stdout)
@@ -752,28 +752,38 @@ class ApiServer(QThread):
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_maa_check_update(s):
                 try:
-                    import urllib.request, json
+                    import urllib.request, json, re
                     cur = mw.config.get("maa_version", "未知")
-                    # Try multiple sources for GitHub API (official + mirrors for China)
+                    # Try GitHub releases page (works when api.github.com is blocked)
                     urls = [
+                        "https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
                         "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/releases/latest",
-                        "https://hub.fastgit.xyz/repos/MaaAssistantArknights/MaaRelease/releases/latest",
                     ]
                     tag = ""
-                    last_err = ""
                     for url in urls:
                         try:
                             req = urllib.request.Request(url, headers={"User-Agent":"MAAOrch","Accept":"application/json"})
                             resp = urllib.request.urlopen(req, timeout=10)
-                            data = json.loads(resp.read())
-                            tag = data.get("tag_name", "").lstrip("v")
+                            if "api.github.com" in url:
+                                data = json.loads(resp.read())
+                                tag = data.get("tag_name", "").lstrip("v")
+                            else:
+                                # HTML page: extract version from redirect URL or meta
+                                html = resp.read().decode("utf-8", errors="replace")
+                                # Try <meta> or redirect URL pattern
+                                m = re.search(r'/releases/tag/v?([\d.]+(?:-[\w.]+)?)', html)
+                                if m: tag = m.group(1)
+                                # Fallback: try og:title or page title
+                                if not tag:
+                                    m = re.search(r'<title>[^<]*v?([\d.]+)', html)
+                                    if m: tag = m.group(1)
                             if tag: break
-                        except Exception as e:
-                            last_err = str(e)[:60]
+                        except Exception:
+                            continue
                     if tag:
                         s._json({"ok":True,"has_update":tag != cur,"current":cur,"latest":tag})
                     else:
-                        s._json({"ok":False,"error":"网络异常("+last_err+")", "manual_url":"https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases"})
+                        s._json({"ok":False,"error":"无法获取版本信息", "manual_url":"https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases"})
                 except Exception as e: s._json({"ok":False,"error":"检查失败: "+str(e)[:60]})
             def _handle_maa_download_update(s):
                 try:

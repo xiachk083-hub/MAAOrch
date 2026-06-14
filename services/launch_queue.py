@@ -114,7 +114,7 @@ class LaunchQueue(QObject):
             heapq = self._import_heapq()
             heapq.heappush(self._pending, entry)
             self._save_queue()
-        ac = next((a for a in self.ctx.accounts if a.id == account_id), None)
+        ac = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
         name = ac.get("name", account_id) if ac else account_id
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
         nb_str = f" → {entry.not_before.strftime('%H:%M')}" if entry.not_before > datetime.now() else ""
@@ -124,7 +124,7 @@ class LaunchQueue(QObject):
                       accounts: list[str] | None = None) -> None:
         """Enqueue multiple accounts at once."""
         if accounts is None:
-            accounts = [a.id for a in self.ctx.accounts]
+            accounts = [a.get("id") for a in self.ctx.accounts if a.get("id")]
         for aid in accounts:
             self.enqueue(aid, source, priority)
 
@@ -155,7 +155,7 @@ class LaunchQueue(QObject):
         parts = []
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
         for e in sorted(self._pending, key=lambda x: x.sort_key):
-            ac = next((a for a in self.ctx.accounts if a.id == e.account_id), None)
+            ac = next((a for a in self.ctx.accounts if a.get("id") == e.account_id), None)
             name = ac.get("name", e.account_id[:6]) if ac else e.account_id[:6]
             parts.append(f"{name}({src_map.get(e.source, e.source)})")
         return "排队: " + ", ".join(parts[:3])

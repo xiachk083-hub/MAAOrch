@@ -245,24 +245,6 @@ async function renderQueue(container) {
   } catch(e) { showError(container, e.message); }
 }
 
-async function renderStats(container) {
-  try {
-    const r = await apiGet('/stats');
-    const a = await apiGet('/accounts');
-    const total = a.ok ? a.accounts.length : 0;
-    const running = a.ok ? a.accounts.filter(x => x.running).length : 0;
-    const todayRuns = r.accounts ? r.accounts.reduce((s,ac) => s + (ac.total_runs||0), 0) : 0;
-    container.innerHTML = `<div class="stat-grid">
-      <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">总账号</div></div>
-      <div class="stat-card"><div class="stat-value">${running}</div><div class="stat-label">运行中</div></div>
-      <div class="stat-card"><div class="stat-value">${todayRuns}</div><div class="stat-label">运行次数</div></div>
-    </div>
-    <div style="margin-top:12px">${r.accounts ? r.accounts.filter(ac => ac.total_runs > 0).map(ac =>
-      `<div style="font-size:11px;color:var(--text2);padding:2px 0">${ac.account_name}: ${ac.total_runs} 次</div>`
-    ).join('') : '<div style="color:var(--text3)">暂无运行记录</div>'}</div>`;
-  } catch(e) { showError(container); }
-}
-
 async function renderSettings(container) {
   try {
     const r = await apiGet('/config');
@@ -746,22 +728,6 @@ async function loadDashboard() {
 }
 function _dashStat(val, label, color) {
   return `<div class="card" style="padding:4px 10px;gap:4px;min-width:0"><div style="font-size:15px;font-weight:bold;color:${color};line-height:1.2">${val}</div><div style="font-size:8px;color:var(--text3);line-height:1">${label}</div></div>`;
-}
-function _gaugeRing(val, max, label, pct) {
-  const r = 28, circ = 2 * Math.PI * r;
-  const offset = circ * (1 - Math.min(pct, 1));
-  const color = pct > 0.8 ? 'var(--danger)' : pct > 0.5 ? 'var(--warn)' : 'var(--accent)';
-  const displayVal = max != null ? `${val}/${max}` : val;
-  return `<div class="card" style="padding:10px;display:flex;align-items:center;gap:10px">
-    <svg width="70" height="70" viewBox="0 0 70 70">
-      <circle cx="35" cy="35" r="${r}" fill="none" stroke="var(--bg3)" stroke-width="5"/>
-      <circle cx="35" cy="35" r="${r}" fill="none" stroke="${color}" stroke-width="5"
-        stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
-        transform="rotate(-90, 35, 35)" stroke-linecap="round"/>
-      <text x="35" y="35" text-anchor="middle" dominant-baseline="central" fill="${color}" font-size="14" font-weight="bold">${displayVal}</text>
-    </svg>
-    <span style="font-size:11px;font-weight:bold;color:var(--text2)">${label}</span>
-  </div>`;
 }
 function _trendChart(samples) {
   const W = 800, H = 150, pad = {t:8,r:8,b:20,l:30};
@@ -1627,6 +1593,8 @@ async function submitCreateAccount() {
   if (r.ok) { toast(`已创建 ${name}`); renderPage(); } else toast(r.error || '创建失败', 'error');
 }
 async function saveGeneral() {
+  const theme = document.getElementById('sel-theme').value;
+  setTheme(theme);
   const r = await apiPost('/config', {
     parallel_max: parseInt(document.getElementById('input-parallel').value) || 1,
     schedule_mode: document.getElementById('sel-mode').value,
