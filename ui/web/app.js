@@ -1581,45 +1581,54 @@ async function loadCreateForm() {
     const emus = emuR.ok ? (emuR.emulators || []) : [];
     const loading = document.getElementById('create-form-loading');
     if (!loading) return;
+    window._emuList = emus;
     loading.outerHTML = `
       <div class="form-row"><label>名称</label><input type="text" id="form-name" value="" placeholder="账号名称"></div>
       <div class="form-row"><label>客户端</label><select id="form-client"><option value="Official">官服</option><option value="Bilibili">B服</option></select></div>
-      <div class="form-row"><label>模拟器</label>
-        <select id="form-emu" onchange="emuSelectChange()" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
-          <option value="">-- 手动输入 --</option>
-          ${emus.map(e => `<option value='${JSON.stringify({idx:e.index,port:e.adb_port,emu:e.emu,name:e.name})}'>${e.emu} ${e.name} (VM ${e.index})${e.running ? ' 🟢' : ''}</option>`).join('')}
-        </select>
+      <div class="form-row" style="flex-direction:column;align-items:stretch">
+        <label style="margin-bottom:2px">模拟器 (${emus.length} 个)</label>
+        <input type="text" id="form-emu-search" placeholder="搜索 VM 编号或名称..." oninput="filterEmuList()" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
+        <div id="form-emu-list" style="max-height:200px;overflow-y:auto;margin-top:4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3)"></div>
       </div>
-      <div class="form-row" id="form-manual-row" style="display:none">
-        <label style="font-size:9px">手动</label>
-        <input type="text" id="form-adb" placeholder="ADB 地址" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:10px">
-      </div>
-      <div id="form-auto-info" style="font-size:9px;color:var(--text3);padding:2px 0 6px 78px"></div>
+      <div id="form-auto-info" style="font-size:9px;color:var(--text3);padding:2px 0 6px;display:none"></div>
       <div class="form-row"><label><input type="checkbox" id="form-emu-launch" checked> 自动启动模拟器</label></div>
       <div class="btn-row" style="margin-top:10px">
         <button class="primary" onclick="submitCreateAccount()">创建</button>
         <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
       </div>`;
+    renderEmuList(emus);
   } catch(e) {
     const loading = document.getElementById('create-form-loading');
     if (loading) loading.textContent = '检测失败，请手动填写';
   }
 }
-function emuSelectChange() {
-  const sel = document.getElementById('form-emu');
-  const manualRow = document.getElementById('form-manual-row');
+function renderEmuList(emus) {
+  const el = document.getElementById('form-emu-list');
+  if (!el) return;
+  if (!emus.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:10px;text-align:center">无匹配模拟器</div>'; return; }
+  el.innerHTML = emus.map(e => {
+    const sel = window._emuData && window._emuData.idx === e.index ? 'selected' : '';
+    const label = `${e.emu} ${e.name} · VM ${e.index}` + (e.adb_port ? ` · :${e.adb_port}` : '') + (e.running ? ' 🟢' : '');
+    return `<div class="emu-item ${sel}" data-idx="${e.index}" data-port="${e.adb_port||''}" data-emu="${e.emu||''}" data-name="${e.name||''}"
+      onclick="selectEmu(this)" style="padding:4px 8px;font-size:10px;cursor:pointer;border-bottom:1px solid var(--border);background:${sel ? 'var(--accent)' : 'transparent'};color:${sel ? '#fff' : 'var(--text)'}">${label}</div>`;
+  }).join('');
+}
+function filterEmuList() {
+  const q = (document.getElementById('form-emu-search')?.value || '').toLowerCase();
+  const emus = (window._emuList || []).filter(e =>
+    (e.name||'').toLowerCase().includes(q) || String(e.index).includes(q) || (e.emu||'').toLowerCase().includes(q)
+  );
+  renderEmuList(emus);
+}
+function selectEmu(el) {
+  document.querySelectorAll('.emu-item').forEach(d => { d.style.background = ''; d.style.color = 'var(--text)'; });
+  el.style.background = 'var(--accent)'; el.style.color = '#fff';
+  window._emuData = {idx: el.dataset.idx, port: el.dataset.port, emu: el.dataset.emu, name: el.dataset.name};
   const info = document.getElementById('form-auto-info');
-  if (!sel || !info) return;
-  try {
-    const data = JSON.parse(sel.value);
-    manualRow.style.display = 'none';
-    const port = data.port || (16384 + parseInt(data.idx || 0) * 32);
-    info.innerHTML = `ADB: 127.0.0.1:${port} · VM ${data.idx} · ${data.emu} ${data.name}`;
-    window._emuData = data;
-  } catch(e) {
-    manualRow.style.display = '';
-    info.innerHTML = '';
-    window._emuData = null;
+  if (info) {
+    const port = el.dataset.port || (16384 + parseInt(el.dataset.idx||0) * 32);
+    info.innerHTML = `已选: VM ${el.dataset.idx} · ADB 127.0.0.1:${port} · ${el.dataset.emu} ${el.dataset.name}`;
+    info.style.display = '';
   }
 }
 async function submitCreateAccount() {
@@ -1636,7 +1645,6 @@ async function submitCreateAccount() {
     body.adb_address = `127.0.0.1:${emuData.port || (16384 + parseInt(emuData.idx||0) * 32)}`;
     body.connection_preset = emuData.emu === 'MuMu' ? 'MuMuEmulator12' : (emuData.emu || 'MuMuEmulator12');
   } else {
-    body.adb_address = document.getElementById('form-adb')?.value?.trim() || '';
     body.emu_instance_index = '';
   }
   const r = await apiPost('/account', body);
