@@ -1666,7 +1666,7 @@ async function checkMaaUpdate() {
         ? `发现新版本 <b>${r.latest}</b> (当前 ${r.current}) <a href="#" onclick="downloadMaaUpdate();return false">立即更新</a>`
         : `已是最新版本 (${r.current})`;
     } else {
-      if (result) result.textContent = r.error || '检查失败';
+      if (result) result.innerHTML = `❌ ${r.error || '检查失败'} <span style="font-size:9px;color:var(--text3)">(可尝试手动访问 GitHub 查看最新版本)</span>`;
     }
   } catch(e) {
     if (result) result.textContent = '网络错误';

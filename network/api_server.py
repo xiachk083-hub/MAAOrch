@@ -752,7 +752,7 @@ class ApiServer(QThread):
                     data = json.loads(resp.read())
                     tag = data.get("tag_name", "").lstrip("v")
                     s._json({"ok":True,"has_update":tag != cur,"current":cur,"latest":tag})
-                except Exception as e: s._json({"ok":True,"has_update":False,"current":mw.config.get("maa_version","未知"),"latest":"","error":str(e)})
+                except Exception as e: s._json({"ok":False,"error":"连接 GitHub 失败: "+str(e)})
             def _handle_maa_download_update(s):
                 try:
                     import urllib.request, json, os, zipfile, io, shutil, threading, time
