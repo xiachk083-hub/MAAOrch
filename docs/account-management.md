@@ -1,16 +1,16 @@
-# 多账号与模拟器管�?
+﻿# 澶氳处鍙蜂笌妯℃嫙鍣ㄧ鐞?
 
-## 账号数据结构
+## 璐﹀彿鏁版嵁缁撴瀯
 
-### Account �?(`account.py`)
+### Account 绫?(`account.py`)
 
-`Account` 是一�?dataclass，提供类型化的账号模型，同时兼容旧的 dict 访问方式（支�?`__getitem__`、`__setitem__`、`get()`、`setdefault()`、`update()`）�?
+`Account` 鏄竴涓?dataclass锛屾彁渚涚被鍨嬪寲鐨勮处鍙锋ā鍨嬶紝鍚屾椂鍏煎鏃х殑 dict 璁块棶鏂瑰紡锛堟敮鎸?`__getitem__`銆乣__setitem__`銆乣get()`銆乣setdefault()`銆乣update()`锛夈€?
 
 ```python
 @dataclass
 class Account:
     id: str = ""
-    name: str = "未命�?
+    name: str = "鏈懡鍚?
     game_client: str = "Official"
     adb_path: str = ""
     adb_address: str = ""
@@ -42,14 +42,14 @@ class Account:
     min_sanity: int = 0
 ```
 
-### config.json 中的存储
+### config.json 涓殑瀛樺偍
 
-每个账号�?`config.json` 中存储为 `accounts[]` 数组的一个元素：
+姣忎釜璐﹀彿鍦?`config.json` 涓瓨鍌ㄤ负 `accounts[]` 鏁扮粍鐨勪竴涓厓绱狅細
 
 ```json
 {
   "id": "a1b2c3d4",
-  "name": "官服大号",
+  "name": "瀹樻湇澶у彿",
   "game_client": "Official",
   "adb_path": "C:\\platform-tools\\adb.exe",
   "adb_address": "127.0.0.1:16384",
@@ -61,7 +61,7 @@ class Account:
   "emu_wait": 30,
   "emu_add_cmd": "",
   "emu_instance_index": "0",
-  "emu_instance_name": "MuMu 模拟�?,
+  "emu_instance_name": "MuMu 妯℃嫙鍣?,
   "post_action": "",
   "start_minimized": false,
   "start_directly": false,
@@ -75,129 +75,129 @@ class Account:
 }
 ```
 
-### 字段说明
+### 瀛楁璇存槑
 
-| 字段 | 类型 | 说明 |
+| 瀛楁 | 绫诲瀷 | 璇存槑 |
 |------|------|------|
-| `id` | string | 唯一标识�?位随机ID |
-| `name` | string | 账号显示�?|
-| `game_client` | string | 区服标识 |
-| `adb_path` | string | ADB 可执行文件路径，�?系统默认 |
-| `adb_address` | string | ADB 连接地址，如 `127.0.0.1:16384` |
-| `connection_preset` | string | 连接预设 |
-| `touch_mode` | string | 触控模式 |
-| `account_switch` | string | 账号切换标识（手机号/邮箱），�?不切�?|
-| `emu_*` | various | 模拟器相关配�?|
-| `task_pipeline` | string | 逗号分隔的任务链 |
-| `task_settings` | object | 各任务的详细参数 |
-| `sanity_driven` | bool | 理智回满自动再启�?|
-| `min_sanity` | int | 理智最低阈�?|
+| `id` | string | 鍞竴鏍囪瘑锛?浣嶉殢鏈篒D |
+| `name` | string | 璐﹀彿鏄剧ず鍚?|
+| `game_client` | string | 鍖烘湇鏍囪瘑 |
+| `adb_path` | string | ADB 鍙墽琛屾枃浠惰矾寰勶紝绌?绯荤粺榛樿 |
+| `adb_address` | string | ADB 杩炴帴鍦板潃锛屽 `127.0.0.1:16384` |
+| `connection_preset` | string | 杩炴帴棰勮 |
+| `touch_mode` | string | 瑙︽帶妯″紡 |
+| `account_switch` | string | 璐﹀彿鍒囨崲鏍囪瘑锛堟墜鏈哄彿/閭锛夛紝绌?涓嶅垏鎹?|
+| `emu_*` | various | 妯℃嫙鍣ㄧ浉鍏抽厤缃?|
+| `task_pipeline` | string | 閫楀彿鍒嗛殧鐨勪换鍔￠摼 |
+| `task_settings` | object | 鍚勪换鍔＄殑璇︾粏鍙傛暟 |
+| `sanity_driven` | bool | 鐞嗘櫤鍥炴弧鑷姩鍐嶅惎鍔?|
+| `min_sanity` | int | 鐞嗘櫤鏈€浣庨槇鍊?|
 
-## 区服支持
+## 鍖烘湇鏀寔
 
-`game_client` 字段支持以下值，对应明日方舟各客户端�?
+`game_client` 瀛楁鏀寔浠ヤ笅鍊硷紝瀵瑰簲鏄庢棩鏂硅垷鍚勫鎴风锛?
 
-| �?| 客户�?|
+| 鍊?| 瀹㈡埛绔?|
 |----|--------|
-| `Official` | 官服 |
-| `Bilibili` | B �?|
-| `YoStarEN` | 国际�?|
-| `YoStarJP` | 日服 |
-| `YoStarKR` | 韩服 |
-| `Txwy` | 繁中�?|
+| `Official` | 瀹樻湇 |
+| `Bilibili` | B 鏈?|
+| `YoStarEN` | 鍥介檯鏈?|
+| `YoStarJP` | 鏃ユ湇 |
+| `YoStarKR` | 闊╂湇 |
+| `Txwy` | 绻佷腑鏈?|
 
-## 连接配置
+## 杩炴帴閰嶇疆
 
-### 连接预设
+### 杩炴帴棰勮
 
-`connection_preset` 决定 MAA 的连接模式，可选项�?
+`connection_preset` 鍐冲畾 MAA 鐨勮繛鎺ユā寮忥紝鍙€夐」锛?
 
-| 预设 | 说明 |
+| 棰勮 | 璇存槑 |
 |------|------|
-| `General` | 通用模式 |
-| `MuMuPro` | MuMu 模拟�?12 |
-| `BlueStack` | 蓝叠模拟�?|
-| `Nox` | 夜神模拟�?|
-| `Xiaoyao` | 逍遥模拟�?|
-| `Ledi` | 雷电模拟�?|
+| `General` | 閫氱敤妯″紡 |
+| `MuMuPro` | MuMu 妯℃嫙鍣?12 |
+| `BlueStack` | 钃濆彔妯℃嫙鍣?|
+| `Nox` | 澶滅妯℃嫙鍣?|
+| `Xiaoyao` | 閫嶉仴妯℃嫙鍣?|
+| `Ledi` | 闆风數妯℃嫙鍣?|
 
-### 触控模式
+### 瑙︽帶妯″紡
 
-`touch_mode` 控制 MAA 的触控方式：
+`touch_mode` 鎺у埗 MAA 鐨勮Е鎺ф柟寮忥細
 
-| �?| 对应 MAA 配置 |
+| 鍊?| 瀵瑰簲 MAA 閰嶇疆 |
 |----|---------------|
-| `ADB` | `adb`（默认） |
+| `ADB` | `adb`锛堥粯璁わ級 |
 | `MiniTouch` | `minitouch` |
 | `MaaTouch` | `maatouch` |
 
-## ADB 工具
+## ADB 宸ュ叿
 
-### 扫描设备
+### 鎵弿璁惧
 
-`EmuService.scan()` 执行流程�?
+`EmuService.scan()` 鎵ц娴佺▼锛?
 
-1. 调用 `adb devices` 获取已连接设备列�?
-2. 解析输出，过�?`device` / `unauthorized` / `offline` 状�?
-3. 若无在线设备，遍历所有模拟器预设端口，执�?`adb connect` 探测后重新扫�?
+1. 璋冪敤 `adb devices` 鑾峰彇宸茶繛鎺ヨ澶囧垪琛?
+2. 瑙ｆ瀽杈撳嚭锛岃繃婊?`device` / `unauthorized` / `offline` 鐘舵€?
+3. 鑻ユ棤鍦ㄧ嚎璁惧锛岄亶鍘嗘墍鏈夋ā鎷熷櫒棰勮绔彛锛屾墽琛?`adb connect` 鎺㈡祴鍚庨噸鏂版壂鎻?
 
-### 测试连接
+### 娴嬭瘯杩炴帴
 
-`EmuService.test_adb()` 对指定地址执行 `adb connect`，根据输出判断连接状态�?
+`EmuService.test_adb()` 瀵规寚瀹氬湴鍧€鎵ц `adb connect`锛屾牴鎹緭鍑哄垽鏂繛鎺ョ姸鎬併€?
 
-### 截图
+### 鎴浘
 
-`EmuService.screenshot()` 通过 `adb exec-out screencap -p` 获取设备屏幕截图，保存到 `screenshots/` 目录，文件名格式 `MAA_YYYYMMDD_HHMMSS.png`�?
+`EmuService.screenshot()` 閫氳繃 `adb exec-out screencap -p` 鑾峰彇璁惧灞忓箷鎴浘锛屼繚瀛樺埌 `screenshots/` 鐩綍锛屾枃浠跺悕鏍煎紡 `MAA_YYYYMMDD_HHMMSS.png`銆?
 
-## 模拟器多实例
+## 妯℃嫙鍣ㄥ瀹炰緥
 
-### 支持的模拟器
+### 鏀寔鐨勬ā鎷熷櫒
 
-通过 `task_constants.py` 中的 `EMU_PRESETS` 定义�?
+閫氳繃 `task_constants.py` 涓殑 `EMU_PRESETS` 瀹氫箟锛?
 
-| 模拟�?| 关键端口 |
+| 妯℃嫙鍣?| 鍏抽敭绔彛 |
 |--------|----------|
-| MuMu 12 | 16384 + index × 32 |
-| MuMu 6 | 7555 + index × 32 |
-| 雷电 | 5555, 5556, 5557... |
-| 夜神 | 62001, 62025... |
-| 逍遥 | 21503, 21513... |
-| 蓝叠 | 5555 |
+| MuMu 12 | 16384 + index 脳 32 |
+| MuMu 6 | 7555 + index 脳 32 |
+| 闆风數 | 5555, 5556, 5557... |
+| 澶滅 | 62001, 62025... |
+| 閫嶉仴 | 21503, 21513... |
+| 钃濆彔 | 5555 |
 
-### mumu-cli 集成
+### mumu-cli 闆嗘垚
 
-MuMu 模拟器通过 `mumu-cli` 命令行工具管理，搜索路径优先级：
+MuMu 妯℃嫙鍣ㄩ€氳繃 `mumu-cli` 鍛戒护琛屽伐鍏风鐞嗭紝鎼滅储璺緞浼樺厛绾э細
 
-1. 环境变量 `MUMU_CLI_HOME`
+1. 鐜鍙橀噺 `MUMU_CLI_HOME`
 2. `C:\Program Files\MuMu Player 12\shell\`
 3. `C:\Program Files\Nemu\vmonitor\bin\`
 4. `C:\Program Files\Muvm6\emulator\nemu\EmulatorShell\`
 
-### 实例检�?
+### 瀹炰緥妫€娴?
 
-`detect_emu_instances()` 函数（`task_constants.py`）执行：
+`detect_emu_instances()` 鍑芥暟锛坄task_constants.py`锛夋墽琛岋細
 
-1. 调用 `mumu-cli info --vmindex all` 获取实例列表
-2. 解析每个实例�?`name`、`adb_port`、`running` 状�?
-3. �?mumu-cli 不可用，回退到读�?`MUMU_INSTANCE_DIRS` 中各实例目录�?`config.json`
+1. 璋冪敤 `mumu-cli info --vmindex all` 鑾峰彇瀹炰緥鍒楄〃
+2. 瑙ｆ瀽姣忎釜瀹炰緥鐨?`name`銆乣adb_port`銆乣running` 鐘舵€?
+3. 鑻?mumu-cli 涓嶅彲鐢紝鍥為€€鍒拌鍙?`MUMU_INSTANCE_DIRS` 涓悇瀹炰緥鐩綍鐨?`config.json`
 
-### 实例状态监�?
+### 瀹炰緥鐘舵€佺洃鎺?
 
-`EmuMonitor`（`task_constants.py`）是一个持续运行的后台线程，每 30 秒通过 `mumu-cli info --vmindex all` 轮询所�?MuMu 实例的运行状态，更新 `emu_status` 字典�?UI 显示�?
+`EmuMonitor`锛坄task_constants.py`锛夋槸涓€涓寔缁繍琛岀殑鍚庡彴绾跨▼锛屾瘡 30 绉掗€氳繃 `mumu-cli info --vmindex all` 杞鎵€鏈?MuMu 瀹炰緥鐨勮繍琛岀姸鎬侊紝鏇存柊 `emu_status` 瀛楀吀渚?UI 鏄剧ず銆?
 
-### 扫端口流�?
+### 鎵鍙ｆ祦绋?
 
-`EmuService.scan_port()` 三步操作�?
+`EmuService.scan_port()` 涓夋鎿嶄綔锛?
 
-1. **启动**：`mumu-cli control --vmindex {index} launch`
-2. **等待**：休�?5 秒等待开�?
-3. **获取端口**：先读实例目�?`config.json` �?`adb_port` 字段 �?失败则调 `detect_emu_instances()` �?最终回退公式 `16384 + index × 32`
-4. **连接**：`adb connect 127.0.0.1:{port}`
+1. **鍚姩**锛歚mumu-cli control --vmindex {index} launch`
+2. **绛夊緟**锛氫紤鐪?5 绉掔瓑寰呭紑鏈?
+3. **鑾峰彇绔彛**锛氬厛璇诲疄渚嬬洰褰?`config.json` 鐨?`adb_port` 瀛楁 鈫?澶辫触鍒欒皟 `detect_emu_instances()` 鈫?鏈€缁堝洖閫€鍏紡 `16384 + index 脳 32`
+4. **杩炴帴**锛歚adb connect 127.0.0.1:{port}`
 
-### 关闭模拟�?
+### 鍏抽棴妯℃嫙鍣?
 
-`EmuService.stop_emu()` 调用 `mumu-cli control --vmindex {index} shutdown`�?
+`EmuService.stop_emu()` 璋冪敤 `mumu-cli control --vmindex {index} shutdown`銆?
 
-## 配置导入/导出
+## 閰嶇疆瀵煎叆/瀵煎嚭
 
-支持通过菜单导出当前全局配置或单个账号配置为 JSON 文件，以及从文件导入合并配置。导出时会自动去除敏感路径信息�?
+鏀寔閫氳繃鑿滃崟瀵煎嚭褰撳墠鍏ㄥ眬閰嶇疆鎴栧崟涓处鍙烽厤缃负 JSON 鏂囦欢锛屼互鍙婁粠鏂囦欢瀵煎叆鍚堝苟閰嶇疆銆傚鍑烘椂浼氳嚜鍔ㄥ幓闄ゆ晱鎰熻矾寰勪俊鎭€?

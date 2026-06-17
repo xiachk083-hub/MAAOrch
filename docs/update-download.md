@@ -1,132 +1,132 @@
-# MAA/maa-cli 下载更新与代�?
+﻿# MAA/maa-cli 涓嬭浇鏇存柊涓庝唬锟?
 
-## 更新检�?
+## 鏇存柊妫€锟?
 
-`UpdateCheckThread`（`services/update_service.py`）通过 GitHub Release API 查询最新版本：
+`UpdateCheckThread`锛坄services/update_service.py`锛夐€氳繃 GitHub Release API 鏌ヨ鏈€鏂扮増鏈細
 
 ```
 GET https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/releases/latest
 Headers: User-Agent: MAA-Launcher
 ```
 
-返回数据解析�?
+杩斿洖鏁版嵁瑙ｆ瀽锟?
 
-- `tag_name` �?版本号（�?`v6.11.1`�?
-- `assets[]` �?按平台过�?`win-x64` / `win-arm64` �?`.zip` �?
-- 排除 debug symbol �?component �?
+- `tag_name` 锟?鐗堟湰鍙凤紙锟?`v6.11.1`锟?
+- `assets[]` 锟?鎸夊钩鍙拌繃锟?`win-x64` / `win-arm64` 锟?`.zip` 锟?
+- 鎺掗櫎 debug symbol 锟?component 锟?
 
-## 版本切换
+## 鐗堟湰鍒囨崲
 
-`LogService.switch_maa_version()` 支持�?Stable / Beta / Alpha 之间切换 MAA 版本�?
+`LogService.switch_maa_version()` 鏀寔锟?Stable / Beta / Alpha 涔嬮棿鍒囨崲 MAA 鐗堟湰锟?
 
-1. 确认对话�?
-2. 调用 `UpdateCheckThread` 查询
-3. 弹出 `UpdateDialog` 下载目标版本
-4. 下载完成后覆�?`{MAA目录}/` 下的文件
-5. 更新仓库条目�?`maa_version` �?`update_channel`
-6. 重新注入 gui.json 配置
+1. 纭瀵硅瘽锟?
+2. 璋冪敤 `UpdateCheckThread` 鏌ヨ
+3. 寮瑰嚭 `UpdateDialog` 涓嬭浇鐩爣鐗堟湰
+4. 涓嬭浇瀹屾垚鍚庤锟?`{MAA鐩綍}/` 涓嬬殑鏂囦欢
+5. 鏇存柊浠撳簱鏉＄洰锟?`maa_version` 锟?`update_channel`
+6. 閲嶆柊娉ㄥ叆 gui.json 閰嶇疆
 
-## 下载线程
+## 涓嬭浇绾跨▼
 
-`DownloadThread` 处理 MAA 压缩包的下载和解压：
+`DownloadThread` 澶勭悊 MAA 鍘嬬缉鍖呯殑涓嬭浇鍜岃В鍘嬶細
 
 ```
-下载进度 �?progress(downloaded, total)
-解压 �?临时目录 �?覆盖目标目录 �?清理临时文件
+涓嬭浇杩涘害 锟?progress(downloaded, total)
+瑙ｅ帇 锟?涓存椂鐩綍 锟?瑕嗙洊鐩爣鐩綍 锟?娓呯悊涓存椂鏂囦欢
 ```
 
-### 文件覆盖策略
+### 鏂囦欢瑕嗙洊绛栫暐
 
-- **目录**：先删除目标目录 �?`shutil.copytree`
-- **文件**：`shutil.copy2`，若受权限问题影响则先复制到 `.new` 后缀再替�?
-- **取消**：设�?`cancel_flag`，下载循环中检测并退�?
+- **鐩綍**锛氬厛鍒犻櫎鐩爣鐩綍 锟?`shutil.copytree`
+- **鏂囦欢**锛歚shutil.copy2`锛岃嫢鍙楁潈闄愰棶棰樺奖鍝嶅垯鍏堝鍒跺埌 `.new` 鍚庣紑鍐嶆浛锟?
+- **鍙栨秷**锛氳锟?`cancel_flag`锛屼笅杞藉惊鐜腑妫€娴嬪苟閫€锟?
 
 ## UpdateDialog
 
-下载进度对话框：
+涓嬭浇杩涘害瀵硅瘽妗嗭細
 
-- 显示版本号、文件大小（MB�?
-- 进度条实时显示下�?解压状�?
-- 完成后自动关�?
+- 鏄剧ず鐗堟湰鍙枫€佹枃浠跺ぇ灏忥紙MB锟?
+- 杩涘害鏉″疄鏃舵樉绀轰笅锟?瑙ｅ帇鐘讹拷?
+- 瀹屾垚鍚庤嚜鍔ㄥ叧锟?
 
-## 批量检查更�?
+## 鎵归噺妫€鏌ユ洿锟?
 
-`MaintService.check_updates()`�?
+`MaintService.check_updates()`锟?
 
-1. 收集所�?`maa_type != "general"` 的仓库条�?
-2. 查询最新版�?
-3. 列出所有版本低于最新的程序
-4. 批量或者逐个确认下载
+1. 鏀堕泦鎵€锟?`maa_type != "general"` 鐨勪粨搴撴潯锟?
+2. 鏌ヨ鏈€鏂扮増锟?
+3. 鍒楀嚭鎵€鏈夌増鏈綆浜庢渶鏂扮殑绋嬪簭
+4. 鎵归噺鎴栬€呴€愪釜纭涓嬭浇
 
-## 自动下载 MAA
+## 鑷姩涓嬭浇 MAA
 
-`MaintService.dl_maa()` 为选中账号下载 MAA�?
+`MaintService.dl_maa()` 涓洪€変腑璐﹀彿涓嬭浇 MAA锟?
 
-1. 调用 `UpdateCheckThread` 查询最新版
-2. 弹出 `UpdateDialog` 下载�?`accounts/{账号ID}/MAA/`
-3. 搜索解压后的 `MAA.exe`
-4. 自动创建仓库条目（`guard_enabled=True`�?
-5. 注入配置，更新账号仪表盘
+1. 璋冪敤 `UpdateCheckThread` 鏌ヨ鏈€鏂扮増
+2. 寮瑰嚭 `UpdateDialog` 涓嬭浇锟?`accounts/{璐﹀彿ID}/MAA/`
+3. 鎼滅储瑙ｅ帇鍚庣殑 `MAA.exe`
+4. 鑷姩鍒涘缓浠撳簱鏉＄洰锛坄guard_enabled=True`锟?
+5. 娉ㄥ叆閰嶇疆锛屾洿鏂拌处鍙蜂华琛ㄧ洏
 
-## 手动绑定
+## 鎵嬪姩缁戝畾
 
-`MaintService.pk_maa()` 通过文件选择对话框手动绑定已有的 MAA 程序�?
+`MaintService.pk_maa()` 閫氳繃鏂囦欢閫夋嫨瀵硅瘽妗嗘墜鍔ㄧ粦瀹氬凡鏈夌殑 MAA 绋嬪簭锟?
 
-- 自动解析版本号（从父目录名提�?`vX.X.X`�?
-- 创建仓库条目（`guard_enabled=False`�?
-- 注入配置
+- 鑷姩瑙ｆ瀽鐗堟湰鍙凤紙浠庣埗鐩綍鍚嶆彁锟?`vX.X.X`锟?
+- 鍒涘缓浠撳簱鏉＄洰锛坄guard_enabled=False`锟?
+- 娉ㄥ叆閰嶇疆
 
-## maa-cli 安装
+## maa-cli 瀹夎
 
-`MaacliInstallThread` �?GitHub 下载并安�?maa-cli�?
+`MaacliInstallThread` 锟?GitHub 涓嬭浇骞跺畨锟?maa-cli锟?
 
 ```
 GET https://api.github.com/repos/MaaAssistantArknights/maa-cli/releases/latest
-�?过滤 windows x86_64 .zip �?下载 �?解压�?maa-cli/ 目录
+锟?杩囨护 windows x86_64 .zip 锟?涓嬭浇 锟?瑙ｅ帇锟?maa-cli/ 鐩綍
 ```
 
-`MaacliInstallDialog` 显示安装进度，完成后自动关闭�?
+`MaacliInstallDialog` 鏄剧ず瀹夎杩涘害锛屽畬鎴愬悗鑷姩鍏抽棴锟?
 
-## 代理自动检�?
+## 浠ｇ悊鑷姩妫€锟?
 
-`utils.setup_proxy()` �?`main.pyw` 启动时调用，�?`urllib.request` 配置代理�?
+`utils.setup_proxy()` 锟?`main.pyw` 鍚姩鏃惰皟鐢紝锟?`urllib.request` 閰嶇疆浠ｇ悊锟?
 
-### 检测顺�?
+### 妫€娴嬮『锟?
 
-1. **环境变量**：检�?`HTTP_PROXY` / `HTTPS_PROXY` / `http_proxy` / `https_proxy`，任一存在则直接使�?
-2. **端口探测**：依次尝�?TCP 连接以下本地端口�?
-   - 7890, 7891（Clash�?
-   - 1080, 10809（v2ray�?
-   - 8080（通用 HTTP 代理�?
-3. **超时**：每个端�?0.3 �?
-4. **命中**：设�?`http://127.0.0.1:{port}` 代理
+1. **鐜鍙橀噺**锛氭锟?`HTTP_PROXY` / `HTTPS_PROXY` / `http_proxy` / `https_proxy`锛屼换涓€瀛樺湪鍒欑洿鎺ヤ娇锟?
+2. **绔彛鎺㈡祴**锛氫緷娆″皾锟?TCP 杩炴帴浠ヤ笅鏈湴绔彛锟?
+   - 7890, 7891锛圕lash锟?
+   - 1080, 10809锛坴2ray锟?
+   - 8080锛堥€氱敤 HTTP 浠ｇ悊锟?
+3. **瓒呮椂**锛氭瘡涓锟?0.3 锟?
+4. **鍛戒腑**锛氳锟?`http://127.0.0.1:{port}` 浠ｇ悊
 
-### 作用范围
+### 浣滅敤鑼冨洿
 
-配置后，所有通过 `urllib.request` 发出的请求（GitHub API、下载）均走代理�?
+閰嶇疆鍚庯紝鎵€鏈夐€氳繃 `urllib.request` 鍙戝嚭鐨勮姹傦紙GitHub API銆佷笅杞斤級鍧囪蛋浠ｇ悊锟?
 
-## MAAOrch 自更�?
+## MAAOrch 鑷洿锟?
 
 ### OrchUpdateCheckThread
 
-`services/update_service.py` 中的 `OrchUpdateCheckThread` 查询 MAAOrch �?GitHub Release�?
+`services/update_service.py` 涓殑 `OrchUpdateCheckThread` 鏌ヨ MAAOrch 锟?GitHub Release锟?
 
 ```
 GET https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest
 ```
 
-返回 `tag_name`（如 `v1.2.0`）和下载链接�?
+杩斿洖 `tag_name`锛堝 `v1.2.0`锛夊拰涓嬭浇閾炬帴锟?
 
-### 流程
+### 娴佺▼
 
-1. **菜单触发**：工�?�?检�?MAAOrch 更新
-2. **版本比较**：`_version_tuple()` �?`MainWindow.VERSION` 比较
-3. **下载**：从 GitHub 下载 ZIP
-4. **解压**：解压到项目目录下的 `_update/` 临时文件�?
-5. **生成替换脚本**：生�?`replace.bat`
-6. **退�?+ 替换**：关�?MAAOrch �?批处理杀�?python �?复制文件 �?重启
+1. **鑿滃崟瑙﹀彂**锛氬伐锟?锟?妫€锟?MAAOrch 鏇存柊
+2. **鐗堟湰姣旇緝**锛歚_version_tuple()` 锟?`MainWindow.VERSION` 姣旇緝
+3. **涓嬭浇**锛氫粠 GitHub 涓嬭浇 ZIP
+4. **瑙ｅ帇**锛氳В鍘嬪埌椤圭洰鐩綍涓嬬殑 `_update/` 涓存椂鏂囦欢锟?
+5. **鐢熸垚鏇挎崲鑴氭湰**锛氱敓锟?`replace.bat`
+6. **閫€锟?+ 鏇挎崲**锛氬叧锟?MAAOrch 锟?鎵瑰鐞嗘潃锟?python 锟?澶嶅埗鏂囦欢 锟?閲嶅惎
 
-### replace.bat 逻辑
+### replace.bat 閫昏緫
 
 ```bat
 taskkill /f /im python.exe
@@ -137,7 +137,7 @@ start "" python "%~dp0main.pyw"
 del "%~dp0replace.bat"
 ```
 
-### 注意事项
+### 娉ㄦ剰浜嬮」
 
-- 不会覆盖 `accounts/`、`config.json`、`backups/`（xcopy �?`/exclude` 或手动排除）
-- 需要在其他设备上先 `pip install PySide6`
+- 涓嶄細瑕嗙洊 `accounts/`銆乣config.json`銆乣backups/`锛坸copy 锟?`/exclude` 鎴栨墜鍔ㄦ帓闄わ級
+- 闇€瑕佸湪鍏朵粬璁惧涓婂厛 `pip install PySide6`

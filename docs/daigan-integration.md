@@ -1,25 +1,25 @@
-# MAAOrch HTTP API 参�?
+﻿# MAAOrch HTTP API 鍙傝€?
 
-MAAOrch 启动后自动在 `127.0.0.1` 开�?REST 服务，供外部调度系统调用�?
+MAAOrch 鍚姩鍚庤嚜鍔ㄥ湪 `127.0.0.1` 寮€鍚?REST 鏈嶅姟锛屼緵澶栭儴璋冨害绯荤粺璋冪敤銆?
 
-## 连接
+## 杩炴帴
 
-- **地址**: `http://127.0.0.1:19999`（端口可在设置中修改�?
-- **鉴权**: Header `x-agent-token: <token>`（token 为空则不验证�?
+- **鍦板潃**: `http://127.0.0.1:19999`锛堢鍙ｅ彲鍦ㄨ缃腑淇敼锛?
+- **閴存潈**: Header `x-agent-token: <token>`锛坱oken 涓虹┖鍒欎笉楠岃瘉锛?
 - **Content-Type**: `application/json`
 
-## 端点
+## 绔偣
 
-### 状态查�?
+### 鐘舵€佹煡璇?
 
 **`GET /api/status`**
 
-返回所有账号运行状态和流水线状态�?
+杩斿洖鎵€鏈夎处鍙疯繍琛岀姸鎬佸拰娴佹按绾跨姸鎬併€?
 
 ```json
 {
   "accounts": [
-    {"name": "官服大号", "index": 0, "running": true, "elapsed": 360, "adb": "127.0.0.1:16384", "emu_index": "0"}
+    {"name": "瀹樻湇澶у彿", "index": 0, "running": true, "elapsed": 360, "adb": "127.0.0.1:16384", "emu_index": "0"}
   ],
   "pipeline_running": false
 }
@@ -27,73 +27,73 @@ MAAOrch 启动后自动在 `127.0.0.1` 开�?REST 服务，供外部调度系统
 
 **`GET /api/account/{index}/status`**
 
-单个账号状态。`index` 对应 MAAOrch 账号列表中的序号�?
+鍗曚釜璐﹀彿鐘舵€併€俙index` 瀵瑰簲 MAAOrch 璐﹀彿鍒楄〃涓殑搴忓彿銆?
 
 ```json
-{"name": "官服大号", "running": true, "elapsed": 120}
+{"name": "瀹樻湇澶у彿", "running": true, "elapsed": 120}
 ```
 
-### 流水线控�?
+### 娴佹按绾挎帶鍒?
 
-**`POST /api/pipeline/start`** �?启动流水�?
+**`POST /api/pipeline/start`** 鈥?鍚姩娴佹按绾?
 
 ```js
 fetch("http://127.0.0.1:19999/api/pipeline/start", { method: "POST" })
-// �?{"ok": true}
+// 鈫?{"ok": true}
 ```
 
-**`POST /api/pipeline/stop`** �?停止流水�?
+**`POST /api/pipeline/stop`** 鈥?鍋滄娴佹按绾?
 
-**`POST /api/pipeline/pause`** �?暂停/恢复
+**`POST /api/pipeline/pause`** 鈥?鏆傚仠/鎭㈠
 
 ```js
 fetch("http://127.0.0.1:19999/api/pipeline/pause", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ action: "pause" }) // �?"resume"
+  body: JSON.stringify({ action: "pause" }) // 鎴?"resume"
 })
-// �?{"ok": true, "state": "paused"}
+// 鈫?{"ok": true, "state": "paused"}
 ```
 
-### 账号控制
+### 璐﹀彿鎺у埗
 
-**`POST /api/account/{index}/launch`** �?启动单个账号
+**`POST /api/account/{index}/launch`** 鈥?鍚姩鍗曚釜璐﹀彿
 
-### 日志
+### 鏃ュ織
 
-**`GET /api/logs?lines=100`** �?最�?N �?debug.log
+**`GET /api/logs?lines=100`** 鈥?鏈€杩?N 琛?debug.log
 
 ```json
-{"lines": ["[08:00:01] 启动", "[08:00:05] MAA v6.11.1 运行�?, "..."]}
+{"lines": ["[08:00:01] 鍚姩", "[08:00:05] MAA v6.11.1 杩愯涓?, "..."]}
 ```
 
-### 配置同步
+### 閰嶇疆鍚屾
 
-**`POST /api/config/sync`** �?下发 MAA gui.json 配置到指定账�?
+**`POST /api/config/sync`** 鈥?涓嬪彂 MAA gui.json 閰嶇疆鍒版寚瀹氳处鍙?
 
 ```js
 fetch("http://127.0.0.1:19999/api/config/sync", {
   method: "POST",
   headers: { "Content-Type": "application/json", "x-agent-token": "your-token" },
   body: JSON.stringify({
-    account_name: "官服大号",
-    gui_json: { /* MAA gui.json 配置对象 */ }
+    account_name: "瀹樻湇澶у彿",
+    gui_json: { /* MAA gui.json 閰嶇疆瀵硅薄 */ }
   })
 })
-// �?{"ok": true}
+// 鈫?{"ok": true}
 ```
 
 ---
 
-## 运行统计数据 (daigan 对接)
+## 杩愯缁熻鏁版嵁 (daigan 瀵规帴)
 
-### 概述
+### 姒傝堪
 
-MAAOrch 每次任务完成后，将运行结果写�?`accounts/{account_id}/stats.json`。此文件可在本地读取，也可通过 API 获取。数据按次累积，支持月报、年报统计�?
+MAAOrch 姣忔浠诲姟瀹屾垚鍚庯紝灏嗚繍琛岀粨鏋滃啓鍏?`accounts/{account_id}/stats.json`銆傛鏂囦欢鍙湪鏈湴璇诲彇锛屼篃鍙€氳繃 API 鑾峰彇銆傛暟鎹寜娆＄疮绉紝鏀寔鏈堟姤銆佸勾鎶ョ粺璁°€?
 
-### 数据格式 (stats.json)
+### 鏁版嵁鏍煎紡 (stats.json)
 
-位置：`accounts/{account_id}/stats.json`
+浣嶇疆锛歚accounts/{account_id}/stats.json`
 
 ```json
 {
@@ -101,18 +101,18 @@ MAAOrch 每次任务完成后，将运行结果写�?`accounts/{account_id}/stat
     {
       "ts": "2026-06-06 09:45:29",
       "tasks": {
-        "开始唤�?: "完成",
-        "刷关作战": "完成",
-        "公开招募": "完成",
-        "基建换班": "完成",
-        "信用商店": "完成",
-        "领取奖励": "完成"
+        "寮€濮嬪敜閱?: "瀹屾垚",
+        "鍒峰叧浣滄垬": "瀹屾垚",
+        "鍏紑鎷涘嫙": "瀹屾垚",
+        "鍩哄缓鎹㈢彮": "瀹屾垚",
+        "淇＄敤鍟嗗簵": "瀹屾垚",
+        "棰嗗彇濂栧姳": "瀹屾垚"
       },
       "drops": {
-        "固源�?: 21,
-        "赤金": 12,
-        "源岩": 2,
-        "龙门�?: 2592
+        "鍥烘簮宀?: 21,
+        "璧ら噾": 12,
+        "婧愬博": 2,
+        "榫欓棬甯?: 2592
       },
       "sanity": {
         "current": 5,
@@ -125,43 +125,43 @@ MAAOrch 每次任务完成后，将运行结果写�?`accounts/{account_id}/stat
 }
 ```
 
-### 字段说明
+### 瀛楁璇存槑
 
-| 字段 | 类型 | 说明 |
+| 瀛楁 | 绫诲瀷 | 璇存槑 |
 |------|------|------|
-| `runs[]` | array | 历史运行记录，按时间倒序 |
-| `runs[].ts` | string | 完成时间 (YYYY-MM-DD HH:MM:SS) |
-| `runs[].tasks` | object | 任务�?�?状态。状态：`完成` / `失败` / `运行中` |
-| `runs[].drops` | object | 材料名称 �?本次累计掉落数量 |
-| `runs[].sanity` | object | 剩余理智信息 |
-| `runs[].sanity.current` | int | 当前理智�?|
-| `runs[].sanity.max` | int | 理智上限 |
-| `runs[].sanity.deficit` | int | 距满需恢复的点�?(= max - current) |
+| `runs[]` | array | 鍘嗗彶杩愯璁板綍锛屾寜鏃堕棿鍊掑簭 |
+| `runs[].ts` | string | 瀹屾垚鏃堕棿 (YYYY-MM-DD HH:MM:SS) |
+| `runs[].tasks` | object | 浠诲姟鍚?鈫?鐘舵€併€傜姸鎬侊細`瀹屾垚` / `澶辫触` / `杩愯涓璥 |
+| `runs[].drops` | object | 鏉愭枡鍚嶇О 鈫?鏈绱鎺夎惤鏁伴噺 |
+| `runs[].sanity` | object | 鍓╀綑鐞嗘櫤淇℃伅 |
+| `runs[].sanity.current` | int | 褰撳墠鐞嗘櫤鍊?|
+| `runs[].sanity.max` | int | 鐞嗘櫤涓婇檺 |
+| `runs[].sanity.deficit` | int | 璺濇弧闇€鎭㈠鐨勭偣鏁?(= max - current) |
 
-### 可用任务�?
+### 鍙敤浠诲姟鍚?
 
-| 英文 | 中文 | 说明 |
+| 鑻辨枃 | 涓枃 | 璇存槑 |
 |------|------|------|
-| StartUp | 开始唤�?| 启动游戏、切换账�?|
-| Fight | 刷关作战 | 理智刷关 |
-| Recruit | 公开招募 | 自动公招 |
-| Infrast | 基建换班 | 智能基建排班 |
-| Mall | 信用商店 | 信用采购、收�?|
-| Award | 领取奖励 | 每日/每周奖励 |
-| Roguelike | 肉鸽探索 | 集成战略 |
-| Reclamation | 生息演算 | 生息演算 |
-| CloseDown | 关闭游戏 | 关闭明日方舟 |
+| StartUp | 寮€濮嬪敜閱?| 鍚姩娓告垙銆佸垏鎹㈣处鍙?|
+| Fight | 鍒峰叧浣滄垬 | 鐞嗘櫤鍒峰叧 |
+| Recruit | 鍏紑鎷涘嫙 | 鑷姩鍏嫑 |
+| Infrast | 鍩哄缓鎹㈢彮 | 鏅鸿兘鍩哄缓鎺掔彮 |
+| Mall | 淇＄敤鍟嗗簵 | 淇＄敤閲囪喘銆佹敹鍙?|
+| Award | 棰嗗彇濂栧姳 | 姣忔棩/姣忓懆濂栧姳 |
+| Roguelike | 鑲夐附鎺㈢储 | 闆嗘垚鎴樼暐 |
+| Reclamation | 鐢熸伅婕旂畻 | 鐢熸伅婕旂畻 |
+| CloseDown | 鍏抽棴娓告垙 | 鍏抽棴鏄庢棩鏂硅垷 |
 
-### 获取方式
+### 鑾峰彇鏂瑰紡
 
-#### 方式 A：本地文件读取（MAAOrch �?daigan 在同一台机器）
+#### 鏂瑰紡 A锛氭湰鍦版枃浠惰鍙栵紙MAAOrch 鍜?daigan 鍦ㄥ悓涓€鍙版満鍣級
 
-直接读取 JSON 文件�?
+鐩存帴璇诲彇 JSON 鏂囦欢锛?
 ```
-路径: {MAAOrch安装目录}/accounts/{account_id}/stats.json
+璺緞: {MAAOrch瀹夎鐩綍}/accounts/{account_id}/stats.json
 ```
 
-Node.js 示例�?
+Node.js 绀轰緥锛?
 ```js
 const fs = require("fs")
 const path = require("path")
@@ -170,59 +170,59 @@ const data = JSON.parse(fs.readFileSync(
 ))
 ```
 
-#### 方式 B：HTTP 推送（MAAOrch �?daigan�?
+#### 鏂瑰紡 B锛欻TTP 鎺ㄩ€侊紙MAAOrch 鈫?daigan锛?
 
-MAAOrch 设置面板配置 daigan 地址后，每次 MAA 任务完成会自�?POST �?daigan�?
+MAAOrch 璁剧疆闈㈡澘閰嶇疆 daigan 鍦板潃鍚庯紝姣忔 MAA 浠诲姟瀹屾垚浼氳嚜鍔?POST 鍒?daigan锛?
 
 ```
 POST {daigan_url}/api/maa/stats
 Content-Type: application/json
 
 {
-  "account_name": "官服大号",
+  "account_name": "瀹樻湇澶у彿",
   "account_id": "abc123",
   "ts": "2026-06-06 09:45:29",
-  "tasks": {"开始唤�?:"完成", "刷关作战":"完成", "公开招募":"完成"},
-  "drops": {"固源�?:21, "赤金":12},
+  "tasks": {"寮€濮嬪敜閱?:"瀹屾垚", "鍒峰叧浣滄垬":"瀹屾垚", "鍏紑鎷涘嫙":"瀹屾垚"},
+  "drops": {"鍥烘簮宀?:21, "璧ら噾":12},
   "sanity": {"current":5, "max":210, "deficit":205, "report_time":"2026-06-06 09:36:33"}
 }
 ```
 
-daigan 侧只需实现 `POST /api/maa/stats` 接收端点即可�?
+daigan 渚у彧闇€瀹炵幇 `POST /api/maa/stats` 鎺ユ敹绔偣鍗冲彲銆?
 
-### 方式 C：HTTP API（远�?/ 跨机器）
+### 鏂瑰紡 C锛欻TTP API锛堣繙绋?/ 璺ㄦ満鍣級
 
-**`GET /api/account/{index}/stats`** (计划�?
+**`GET /api/account/{index}/stats`** (璁″垝涓?
 
-返回账号的完�?stats.json 内容 + 当前运行状态�?
+杩斿洖璐﹀彿鐨勫畬鏁?stats.json 鍐呭 + 褰撳墠杩愯鐘舵€併€?
 
 ```json
 {
-  "account_name": "官服大号",
+  "account_name": "瀹樻湇澶у彿",
   "running": false,
-  "stats": { /* stats.json 完整内容 */ }
+  "stats": { /* stats.json 瀹屾暣鍐呭 */ }
 }
 ```
 
-当前可通过 `GET /api/status` + 本地文件读取组合实现�?
+褰撳墠鍙€氳繃 `GET /api/status` + 鏈湴鏂囦欢璇诲彇缁勫悎瀹炵幇銆?
 
-### 统计计算示例
+### 缁熻璁＄畻绀轰緥
 
-#### 月报
+#### 鏈堟姤
 
 ```js
 function monthlyReport(runs, yearMonth) {
   const monthRuns = runs.filter(r => r.ts.startsWith(yearMonth))
   return {
     total_runs: monthRuns.length,
-    task_success: {} // { "刷关作战": { success: 58, fail: 2 } },
-    total_drops: {}, // { "固源�?: 1240, "赤金": 720 }
-    avg_sanity: 0,   // 平均结束理智
+    task_success: {} // { "鍒峰叧浣滄垬": { success: 58, fail: 2 } },
+    total_drops: {}, // { "鍥烘簮宀?: 1240, "璧ら噾": 720 }
+    avg_sanity: 0,   // 骞冲潎缁撴潫鐞嗘櫤
   }
 }
 ```
 
-#### 年报 / 趋势
+#### 骞存姤 / 瓒嬪娍
 
 ```js
 function yearlySummary(runs) {
@@ -235,34 +235,34 @@ function yearlySummary(runs) {
 }
 ```
 
-### 理智恢复计算
+### 鐞嗘櫤鎭㈠璁＄畻
 
 ```
-恢复 1 点理�?= 6 分钟
-恢复至满 = deficit × 6 分钟
+鎭㈠ 1 鐐圭悊鏅?= 6 鍒嗛挓
+鎭㈠鑷虫弧 = deficit 脳 6 鍒嗛挓
 
-示例: deficit = 205, 恢复至满 = 205 × 6 = 1230 分钟 �?20.5 小时
+绀轰緥: deficit = 205, 鎭㈠鑷虫弧 = 205 脳 6 = 1230 鍒嗛挓 鈮?20.5 灏忔椂
 ```
 
-daigan 可据此计算下次最佳启动时间，用于定时调度�?
+daigan 鍙嵁姝よ绠椾笅娆℃渶浣冲惎鍔ㄦ椂闂达紝鐢ㄤ簬瀹氭椂璋冨害銆?
 
 ---
 
-## 集成示例（Node.js�?
+## 闆嗘垚绀轰緥锛圢ode.js锛?
 
 ```js
 const ORCH = "http://127.0.0.1:19999"
 const opts = { headers: { "x-agent-token": process.env.ORCH_TOKEN } }
 
-// 定时轮询状�?
+// 瀹氭椂杞鐘舵€?
 setInterval(async () => {
   const { accounts, pipeline_running } = await fetch(`${ORCH}/api/status`, opts).then(r => r.json())
   accounts.filter(a => a.running).forEach(a => {
-    console.log(`${a.name}: 运行�?${a.elapsed}s`)
+    console.log(`${a.name}: 杩愯涓?${a.elapsed}s`)
   })
 }, 5000)
 
-// 按计划启�?
+// 鎸夎鍒掑惎鍔?
 async function startIfIdle() {
   const { pipeline_running } = await fetch(`${ORCH}/api/status`, opts).then(r => r.json())
   if (!pipeline_running) {
@@ -271,8 +271,8 @@ async function startIfIdle() {
 }
 ```
 
-## 安全
+## 瀹夊叏
 
-- 仅监�?`127.0.0.1`，不暴露公网
-- Token 可选，建议生产环境设置
-- 退出时自动关闭服务
+- 浠呯洃鍚?`127.0.0.1`锛屼笉鏆撮湶鍏綉
+- Token 鍙€夛紝寤鸿鐢熶骇鐜璁剧疆
+- 閫€鍑烘椂鑷姩鍏抽棴鏈嶅姟

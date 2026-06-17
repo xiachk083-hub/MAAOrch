@@ -1,35 +1,35 @@
-# MAA v6 配置注入说明
+﻿# MAA v6 閰嶇疆娉ㄥ叆璇存槑
 
-## 剿灭关卡代码
+## 鍓跨伃鍏冲崱浠ｇ爜
 
-MAA v6 使用不同�?MAA v5 的剿灭关卡代码�?
-MAA v5 使用 `Annihilation_1/2/3` 格式�?*MAA v6 不再支持这些旧编�?*�?
+MAA v6 浣跨敤涓嶅悓浜?MAA v5 鐨勫壙鐏叧鍗′唬鐮併€?
+MAA v5 浣跨敤 `Annihilation_1/2/3` 鏍煎紡锛?*MAA v6 涓嶅啀鏀寔杩欎簺鏃х紪鐮?*銆?
 
-### MAA v6 支持的�?
+### MAA v6 鏀寔鐨勫€?
 
-| 显示�?| MAA v5 代码 | MAA v6 `AnnihilationStage` �?|
+| 鏄剧ず鍚?| MAA v5 浠ｇ爜 | MAA v6 `AnnihilationStage` 鍊?|
 |--------|------------|------------------------------|
-| 自动选择 | �?| `""` |
-| 当期剿灭 | `Annihilation` | `"Annihilation"` |
-| 切尔诺伯�?| `Annihilation_1` | `"Chernobog@Annihilation"` |
-| 龙门外环 | `Annihilation_2` | `"LungmenOutskirts@Annihilation"` |
-| 龙门市区 | `Annihilation_3` | `"LungmenDowntown@Annihilation"` |
+| 鑷姩閫夋嫨 | 鈥?| `""` |
+| 褰撴湡鍓跨伃 | `Annihilation` | `"Annihilation"` |
+| 鍒囧皵璇轰集鏍?| `Annihilation_1` | `"Chernobog@Annihilation"` |
+| 榫欓棬澶栫幆 | `Annihilation_2` | `"LungmenOutskirts@Annihilation"` |
+| 榫欓棬甯傚尯 | `Annihilation_3` | `"LungmenDowntown@Annihilation"` |
 
-### StagePlan 字段
+### StagePlan 瀛楁
 
-`StagePlan` �?MAA v6 中始终为 `["Annihilation"]`，不随具体关卡变化�?
-具体关卡�?`AnnihilationStage` 字段控制�?
+`StagePlan` 鍦?MAA v6 涓缁堜负 `["Annihilation"]`锛屼笉闅忓叿浣撳叧鍗″彉鍖栥€?
+鍏蜂綋鍏冲崱鐢?`AnnihilationStage` 瀛楁鎺у埗銆?
 
-### 字段映射来源
+### 瀛楁鏄犲皠鏉ユ簮
 
 - `maa/v6.11.1/resource/tasks/tasks.json` lines 1130-1140
-- 实例配置 `maa/instances/{N}/config/gui.new.json` �?`AnnihilationStage` 字段
+- 瀹炰緥閰嶇疆 `maa/instances/{N}/config/gui.new.json` 涓?`AnnihilationStage` 瀛楁
 
-## TaskQueue 条目格式
+## TaskQueue 鏉＄洰鏍煎紡
 
-MAA v6 �?TaskQueue 条目必须包含 `$type` 字段�?
+MAA v6 鐨?TaskQueue 鏉＄洰蹇呴』鍖呭惈 `$type` 瀛楁锛?
 
-| TaskType | `$type` �?|
+| TaskType | `$type` 鍊?|
 |----------|-----------|
 | StartUp | `StartUpTask` |
 | Fight | `FightTask` |
@@ -40,19 +40,19 @@ MAA v6 �?TaskQueue 条目必须包含 `$type` 字段�?
 | Roguelike | `RoguelikeTask` |
 | Reclamation | `ReclamationTask` |
 
-## config_injector.py inject_smart 说明
+## config_injector.py inject_smart 璇存槑
 
-`inject_smart()` 负责将智能调度的任务列表写入 MAA 实例的配置文�?`gui.new.json`�?
+`inject_smart()` 璐熻矗灏嗘櫤鑳借皟搴︾殑浠诲姟鍒楄〃鍐欏叆 MAA 瀹炰緥鐨勯厤缃枃浠?`gui.new.json`銆?
 
-### 关键逻辑
+### 鍏抽敭閫昏緫
 
-1. `task_set` = 用户的任务类型集合（小写�?
-2. 读取现有 TaskQueue，移�?`_smart_inserted` 标记的条�?
-3. 对每个条目设 `IsEnable = TaskType.lower() in task_set`
-4. Fight 条目�?`UseCustomAnnihilation` 控制是否跑剿�?
-5. 当同时有刷关和剿灭时，插入一个剿灭克隆条目放在刷关前
-6. 当只有剿灭无刷关时，修改现有 Fight 条目为剿灭模�?
+1. `task_set` = 鐢ㄦ埛鐨勪换鍔＄被鍨嬮泦鍚堬紙灏忓啓锛?
+2. 璇诲彇鐜版湁 TaskQueue锛岀Щ闄?`_smart_inserted` 鏍囪鐨勬潯鐩?
+3. 瀵规瘡涓潯鐩 `IsEnable = TaskType.lower() in task_set`
+4. Fight 鏉＄洰涓?`UseCustomAnnihilation` 鎺у埗鏄惁璺戝壙鐏?
+5. 褰撳悓鏃舵湁鍒峰叧鍜屽壙鐏椂锛屾彃鍏ヤ竴涓壙鐏厠闅嗘潯鐩斁鍦ㄥ埛鍏冲墠
+6. 褰撳彧鏈夊壙鐏棤鍒峰叧鏃讹紝淇敼鐜版湁 Fight 鏉＄洰涓哄壙鐏ā寮?
 
-### 去重逻辑
+### 鍘婚噸閫昏緫
 
-`clean_tq` 构建后，如果 Fight 条目多于 1 个，保留最后一个，删除多余重复�?
+`clean_tq` 鏋勫缓鍚庯紝濡傛灉 Fight 鏉＄洰澶氫簬 1 涓紝淇濈暀鏈€鍚庝竴涓紝鍒犻櫎澶氫綑閲嶅銆?
