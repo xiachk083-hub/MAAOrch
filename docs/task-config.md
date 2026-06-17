@@ -1,112 +1,112 @@
-# MAA 任务配置与注�?
+﻿# MAA 浠诲姟閰嶇疆涓庢敞鍏?
 
-## ConfigService 概述
+## ConfigService 姒傝堪
 
-`ConfigService`（`config_injector.py`）负责将 MAAOrch 中配置的账号连接信息和任务参数写�?MAA 的配置文件中。支持两种写入模式：
+`ConfigService`锛坄config_injector.py`锛夎礋璐ｅ皢 MAAOrch 涓厤缃殑璐﹀彿杩炴帴淇℃伅鍜屼换鍔″弬鏁板啓鍏?MAA 鐨勯厤缃枃浠朵腑銆傛敮鎸佷袱绉嶅啓鍏ユā寮忥細
 
-| 模式 | 目标文件 | 用�?|
+| 妯″紡 | 鐩爣鏂囦欢 | 鐢ㄩ€?|
 |------|----------|------|
-| `inject()` | `gui.json` + `gui.new.json` | MAA GUI 模式配置 |
-| `gtc()` | `daily.toml` + `default.toml` | maa-cli 命令行模式配�?|
+| `inject()` | `gui.json` + `gui.new.json` | MAA GUI 妯″紡閰嶇疆 |
+| `gtc()` | `daily.toml` + `default.toml` | maa-cli 鍛戒护琛屾ā寮忛厤缃?|
 
-## gui.json 注入 (`inject()`)
+## gui.json 娉ㄥ叆 (`inject()`)
 
-同时写入 `{MAA目录}/config/gui.json` �?`gui.new.json`，确保兼容各版本 MAA�?
+鍚屾椂鍐欏叆 `{MAA鐩綍}/config/gui.json` 鍜?`gui.new.json`锛岀‘淇濆吋瀹瑰悇鐗堟湰 MAA銆?
 
-### 连接配置
+### 杩炴帴閰嶇疆
 
-从账号数据映射到 MAA 配置项：
+浠庤处鍙锋暟鎹槧灏勫埌 MAA 閰嶇疆椤癸細
 
-| 账号字段 | MAA 配置�?| 说明 |
+| 璐﹀彿瀛楁 | MAA 閰嶇疆椤?| 璇存槑 |
 |----------|------------|------|
-| `adb_address` | `Connect.Address` | ADB 地址 |
-| `adb_path` | `Connect.AdbPath` | ADB 可执行文件路�?|
-| `connection_preset` | `Connect.ConnectConfig` | MuMuPro �?`MuMuEmulator12` |
-| `touch_mode` | `Connect.TouchMode` | MiniTouch �?`minitouch`, MaaTouch �?`maatouch`, ADB �?`adb` |
-| `game_client` | `Start.ClientType` | 客户端区�?|
-| - | `Connect.AdbReplaced` | 固定 `"True"` |
-| - | `Connect.AutoDetect` | 固定 `"False"` |
-| - | `Connect.AlwaysAutoDetect` | 固定 `"False"` |
+| `adb_address` | `Connect.Address` | ADB 鍦板潃 |
+| `adb_path` | `Connect.AdbPath` | ADB 鍙墽琛屾枃浠惰矾寰?|
+| `connection_preset` | `Connect.ConnectConfig` | MuMuPro 鈫?`MuMuEmulator12` |
+| `touch_mode` | `Connect.TouchMode` | MiniTouch 鈫?`minitouch`, MaaTouch 鈫?`maatouch`, ADB 鈫?`adb` |
+| `game_client` | `Start.ClientType` | 瀹㈡埛绔尯鏈?|
+| - | `Connect.AdbReplaced` | 鍥哄畾 `"True"` |
+| - | `Connect.AutoDetect` | 鍥哄畾 `"False"` |
+| - | `Connect.AlwaysAutoDetect` | 鍥哄畾 `"False"` |
 
-### 启动配置
+### 鍚姩閰嶇疆
 
-| 账号字段 | MAA 配置�?|
+| 璐﹀彿瀛楁 | MAA 閰嶇疆椤?|
 |----------|------------|
 | `start_minimized` | `Global.GUI.MinimizeToTray` |
 | `start_directly` | `Start.RunDirectly` |
 | `post_action` | `MainFunction.PostActions` |
 | `adb_retry` > 0 | `Connect.RetryOnDisconnected` |
-| `account_switch` | `Start.StartGame` + 任务队列中的 `AccountName` |
+| `account_switch` | `Start.StartGame` + 浠诲姟闃熷垪涓殑 `AccountName` |
 
-### 模拟器自动启�?
+### 妯℃嫙鍣ㄨ嚜鍔ㄥ惎鍔?
 
-�?`emu_instance_index` 非空�?`emu_launch` �?false（由 MAA 管理启动），则注入：
+鑻?`emu_instance_index` 闈炵┖涓?`emu_launch` 涓?false锛堢敱 MAA 绠＄悊鍚姩锛夛紝鍒欐敞鍏ワ細
 
 ```
-Start.EmulatorPath = mumu-cli 路径
+Start.EmulatorPath = mumu-cli 璺緞
 Start.EmulatorAddCommand = control --vmindex {index} launch
 Start.OpenEmulatorAfterLaunch = True
 Start.EmulatorWaitSeconds = {emu_wait}
 ```
 
-### 任务队列同步
+### 浠诲姟闃熷垪鍚屾
 
-�?`sync_tasks` �?`True` 时，遍历 `gui.json` 中的 `TaskQueue` 数组�?
+褰?`sync_tasks` 涓?`True` 鏃讹紝閬嶅巻 `gui.json` 涓殑 `TaskQueue` 鏁扮粍锛?
 
-1. 任务�?`task_pipeline` 列表�?�?`IsEnable = True`，填入详细参�?
-2. 任务不在列表�?�?`IsEnable = False`（禁用）
+1. 浠诲姟鍦?`task_pipeline` 鍒楄〃涓?鈫?`IsEnable = True`锛屽～鍏ヨ缁嗗弬鏁?
+2. 浠诲姟涓嶅湪鍒楄〃涓?鈫?`IsEnable = False`锛堢鐢級
 
-#### 各任务参数映�?
+#### 鍚勪换鍔″弬鏁版槧灏?
 
-**刷关作战 (Fight)**�?
-| 参数 | MAA 配置 |
+**鍒峰叧浣滄垬 (Fight)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `stage` | `StagePlan` |
 | `medicine` | `UseMedicine` + `MedicineCount` |
 
-**公开招募 (Recruit)**�?
-| 参数 | MAA 配置 |
+**鍏紑鎷涘嫙 (Recruit)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `select` | `Level3Choose` / `Level4Choose` / `Level5Choose` |
 | `confirm` | `Confirm` |
 | `times` | `MaxTimes` |
 
-**基建换班 (Infrast)**�?
-| 参数 | MAA 配置 |
+**鍩哄缓鎹㈢彮 (Infrast)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `facilities` | `RoomList` |
 | `drones` | `UsesOfDrones` |
 
-**信用商店 (Mall)**�?
-| 参数 | MAA 配置 |
+**淇＄敤鍟嗗簵 (Mall)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `shopping` | `Shopping` |
 | `blacklist` | `BlackList` |
 
-**领取奖励 (Award)**�?
-| 参数 | MAA 配置 |
+**棰嗗彇濂栧姳 (Award)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `award` | `Award` |
 | `mail` | `Mail` |
 
-**肉鸽探索 (Roguelike)**�?
-| 参数 | MAA 配置 |
+**鑲夐附鎺㈢储 (Roguelike)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `theme` | `Theme` |
 | `mode` (0/1) | `Mode` (Exp/Investment) |
 
-**生息演算 (Reclamation)**�?
-| 参数 | MAA 配置 |
+**鐢熸伅婕旂畻 (Reclamation)**锛?
+| 鍙傛暟 | MAA 閰嶇疆 |
 |------|----------|
 | `theme` | `Theme` |
 
-## maa-cli TOML 生成 (`gtc()`)
+## maa-cli TOML 鐢熸垚 (`gtc()`)
 
-�?CLI 模式生成 TOML 配置文件�?
+涓?CLI 妯″紡鐢熸垚 TOML 閰嶇疆鏂囦欢锛?
 
-### daily.toml（任务配置）
+### daily.toml锛堜换鍔￠厤缃級
 
-根据 `task_pipeline` 列表生成 `[[tasks]]` 段：
+鏍规嵁 `task_pipeline` 鍒楄〃鐢熸垚 `[[tasks]]` 娈碉細
 
 ```toml
 [[tasks]]
@@ -115,11 +115,11 @@ type="Fight"
 stage="1-7"
 ```
 
-支持的任务类型：`StartUp`、`Fight`、`Recruit`、`Infrast`、`Mall`、`Award`、`Roguelike`、`Reclamation`、`CloseDown`�?
+鏀寔鐨勪换鍔＄被鍨嬶細`StartUp`銆乣Fight`銆乣Recruit`銆乣Infrast`銆乣Mall`銆乣Award`銆乣Roguelike`銆乣Reclamation`銆乣CloseDown`銆?
 
-生成路径：`{MAA目录}/config/tasks/daily.toml`
+鐢熸垚璺緞锛歚{MAA鐩綍}/config/tasks/daily.toml`
 
-### default.toml（连接配置）
+### default.toml锛堣繛鎺ラ厤缃級
 
 ```toml
 [connection]
@@ -131,17 +131,17 @@ preset="MuMuPro"
 touch_mode="ADB"
 ```
 
-生成路径：`{MAA目录}/config/profiles/default.toml`
+鐢熸垚璺緞锛歚{MAA鐩綍}/config/profiles/default.toml`
 
-## 任务常量
+## 浠诲姟甯搁噺
 
-`task_constants.py` 中定义：
+`task_constants.py` 涓畾涔夛細
 
 ```python
 TASK_NAMES = {
-    "StartUp": "开始唤�?, "Fight": "刷关作战", "Recruit": "公开招募",
-    "Infrast": "基建换班", "Mall": "信用商店", "Award": "领取奖励",
-    "Roguelike": "肉鸽探索", "Reclamation": "生息演算", "CloseDown": "关闭游戏"
+    "StartUp": "寮€濮嬪敜閱?, "Fight": "鍒峰叧浣滄垬", "Recruit": "鍏紑鎷涘嫙",
+    "Infrast": "鍩哄缓鎹㈢彮", "Mall": "淇＄敤鍟嗗簵", "Award": "棰嗗彇濂栧姳",
+    "Roguelike": "鑲夐附鎺㈢储", "Reclamation": "鐢熸伅婕旂畻", "CloseDown": "鍏抽棴娓告垙"
 }
 
 TASK_DEFAULTS = {
@@ -155,6 +155,6 @@ TASK_DEFAULTS = {
 }
 ```
 
-## 参数模板
+## 鍙傛暟妯℃澘
 
-支持将当前任务参数保存为命名模板，后续可加载套用。模板功能通过 `TaskSettingsDialog`（`dialogs.py`）实现，数据存储在账号的 `task_settings` 字段中�?
+鏀寔灏嗗綋鍓嶄换鍔″弬鏁颁繚瀛樹负鍛藉悕妯℃澘锛屽悗缁彲鍔犺浇濂楃敤銆傛ā鏉垮姛鑳介€氳繃 `TaskSettingsDialog`锛坄dialogs.py`锛夊疄鐜帮紝鏁版嵁瀛樺偍鍦ㄨ处鍙风殑 `task_settings` 瀛楁涓€?

@@ -1,16 +1,16 @@
-# 流水线调�?
+﻿# 娴佹按绾胯皟搴?
 
-## 分组与仓�?
+## 鍒嗙粍涓庝粨搴?
 
-MAAOrch 支持将可执行程序组织为分组，按组批量启动�?
+MAAOrch 鏀寔灏嗗彲鎵ц绋嬪簭缁勭粐涓哄垎缁勶紝鎸夌粍鎵归噺鍚姩銆?
 
-### 数据结构
+### 鏁版嵁缁撴瀯
 
-**分组** (`groups[]`)�?
+**鍒嗙粍** (`groups[]`)锛?
 
 ```json
 {
-  "name": "主力账号",
+  "name": "涓诲姏璐﹀彿",
   "mode": "serial",
   "post_delay": 3,
   "programs": [
@@ -20,7 +20,7 @@ MAAOrch 支持将可执行程序组织为分组，按组批量启动�?
 }
 ```
 
-**仓库条目** (`warehouse[]`)�?
+**浠撳簱鏉＄洰** (`warehouse[]`)锛?
 
 ```json
 {
@@ -40,28 +40,28 @@ MAAOrch 支持将可执行程序组织为分组，按组批量启动�?
 }
 ```
 
-### 分组模式
+### 鍒嗙粍妯″紡
 
-| 模式 | 行为 |
+| 妯″紡 | 琛屼负 |
 |------|------|
-| `serial` | 逐个启动，每项之间有 `pre_delay` 秒间�?|
-| `parallel` | 同时启动所有程�?|
+| `serial` | 閫愪釜鍚姩锛屾瘡椤逛箣闂存湁 `pre_delay` 绉掗棿闅?|
+| `parallel` | 鍚屾椂鍚姩鎵€鏈夌▼搴?|
 
-### 程序类型
+### 绋嬪簭绫诲瀷
 
-`maa_type` 字段标识程序类型�?
+`maa_type` 瀛楁鏍囪瘑绋嬪簭绫诲瀷锛?
 
-| �?| 说明 |
+| 鍊?| 璇存槑 |
 |----|------|
-| `maa` | MAA 图形界面程序 |
-| `maa-cli` | maa-cli 命令行工�?|
-| `general` | 通用可执行程�?|
+| `maa` | MAA 鍥惧舰鐣岄潰绋嬪簭 |
+| `maa-cli` | maa-cli 鍛戒护琛屽伐鍏?|
+| `general` | 閫氱敤鍙墽琛岀▼搴?|
 
-## LaunchQueue 统一启动队列
+## LaunchQueue 缁熶竴鍚姩闃熷垪
 
-`LaunchQueue`（`launch_queue.py`）是系统的核心调度入口，所有启动请求都先进入队列�?
+`LaunchQueue`锛坄launch_queue.py`锛夋槸绯荤粺鐨勬牳蹇冭皟搴﹀叆鍙ｏ紝鎵€鏈夊惎鍔ㄨ姹傞兘鍏堣繘鍏ラ槦鍒椼€?
 
-### 队列条目
+### 闃熷垪鏉＄洰
 
 ```python
 @dataclass
@@ -72,42 +72,42 @@ class QueueEntry:
     not_before: datetime
 ```
 
-### 优先�?
+### 浼樺厛绾?
 
-| 来源 | priority | 触发方式 |
+| 鏉ユ簮 | priority | 瑙﹀彂鏂瑰紡 |
 |------|----------|----------|
-| 手动 | 0（最高） | 用户点击「▶ 启动」或 API |
-| 定时 | 1 | ScheduleThread 定时触发 |
-| 理智 | 2 | 上一轮完成后自动入队，设�?`not_before` 为恢复时�?|
+| 鎵嬪姩 | 0锛堟渶楂橈級 | 鐢ㄦ埛鐐瑰嚮銆屸柖 鍚姩銆嶆垨 API |
+| 瀹氭椂 | 1 | ScheduleThread 瀹氭椂瑙﹀彂 |
+| 鐞嗘櫤 | 2 | 涓婁竴杞畬鎴愬悗鑷姩鍏ラ槦锛岃缃?`not_before` 涓烘仮澶嶆椂闂?|
 
-### 调度规则（tick �?30 秒）
-
-```
-取队�?�?检查：
-  �?已在运行�?�?跳过
-  �?模拟器被占？ �?跳过
-  �?还没�?not_before�?�?跳过（后面的也不会到时间�?
-  �?理智不够（仅 sanity 来源）？ �?跳过
-  ── 全部满足 ──
-  �?启动 �?标记模拟器占�?
-```
-
-**核心原则：绝不中断正在运行的 MAA。只等空闲时启动下一个�?*
-
-### 理智驱动流程
+### 璋冨害瑙勫垯锛坱ick 姣?30 绉掞級
 
 ```
-account_finished(大号)
-  �?�?stats.json 获取最后理�?(5/210)
-  �?计算恢复时间: 205 × 6 = 1230min �?20.5h
-  �?LaunchQueue.enqueue("大号", "sanity", priority=2, not_before=明天04:30)
+鍙栭槦棣?鈫?妫€鏌ワ細
+  鈶?宸插湪杩愯锛?鈫?璺宠繃
+  鈶?妯℃嫙鍣ㄨ鍗狅紵 鈫?璺宠繃
+  鈶?杩樻病鍒?not_before锛?鈫?璺宠繃锛堝悗闈㈢殑涔熶笉浼氬埌鏃堕棿锛?
+  鈶?鐞嗘櫤涓嶅锛堜粎 sanity 鏉ユ簮锛夛紵 鈫?璺宠繃
+  鈹€鈹€ 鍏ㄩ儴婊¤冻 鈹€鈹€
+  鈫?鍚姩 鈫?鏍囪妯℃嫙鍣ㄥ崰鐢?
+```
 
-tick �?30s:
-  �?检查队�?�?大号 not_before 未到 �?跳过
-  �?小号满足条件 �?启动
-  �?小号跑完 �?大号还没到时�?�?跳过
-  �?...第二�?04:30...
-  �?大号 not_before 已过，模拟器空闲 �?启动
+**鏍稿績鍘熷垯锛氱粷涓嶄腑鏂鍦ㄨ繍琛岀殑 MAA銆傚彧绛夌┖闂叉椂鍚姩涓嬩竴涓€?*
+
+### 鐞嗘櫤椹卞姩娴佺▼
+
+```
+account_finished(澶у彿)
+  鈫?璇?stats.json 鑾峰彇鏈€鍚庣悊鏅?(5/210)
+  鈫?璁＄畻鎭㈠鏃堕棿: 205 脳 6 = 1230min 鈮?20.5h
+  鈫?LaunchQueue.enqueue("澶у彿", "sanity", priority=2, not_before=鏄庡ぉ04:30)
+
+tick 姣?30s:
+  鈫?妫€鏌ラ槦鍒?鈫?澶у彿 not_before 鏈埌 鈫?璺宠繃
+  鈫?灏忓彿婊¤冻鏉′欢 鈫?鍚姩
+  鈫?灏忓彿璺戝畬 鈫?澶у彿杩樻病鍒版椂闂?鈫?璺宠繃
+  鈫?...绗簩澶?04:30...
+  鈫?澶у彿 not_before 宸茶繃锛屾ā鎷熷櫒绌洪棽 鈫?鍚姩
 ```
 
 ### API
@@ -116,143 +116,143 @@ tick �?30s:
 queue.enqueue(account_id, source, priority, not_before)
 queue.enqueue_batch(source, priority, accounts)
 queue.dequeue(account_id)
-queue.pending_count          # 排队�?
-queue.active_count           # 运行中数
+queue.pending_count          # 鎺掗槦鏁?
+queue.active_count           # 杩愯涓暟
 queue.is_queued(account_id)
 queue.is_running(account_id)
-queue.pending_summary()      # 状态栏文本
-queue.get_next_for(account_id)  # 下次启动时间
+queue.pending_summary()      # 鐘舵€佹爮鏂囨湰
+queue.get_next_for(account_id)  # 涓嬫鍚姩鏃堕棿
 ```
 
-## PipelineThread 调度线程
+## PipelineThread 璋冨害绾跨▼
 
-`PipelineThread`（`pipeline_thread.py`）继�?`QThread`，用于分组批量启动（非队列模式）�?
+`PipelineThread`锛坄pipeline_thread.py`锛夌户鎵?`QThread`锛岀敤浜庡垎缁勬壒閲忓惎鍔紙闈為槦鍒楁ā寮忥級锛?
 
 ```
-for 每个分组:
+for 姣忎釜鍒嗙粍:
     if stop_flag: break
     while pause_flag: sleep(200ms)
-    发射 progress 信号
+    鍙戝皠 progress 淇″彿
     if mode == "parallel":
-        for 每个程序: _launch(程序)
+        for 姣忎釜绋嬪簭: _launch(绋嬪簭)
     else (serial):
-        for 每个程序:
+        for 姣忎釜绋嬪簭:
             sleep(pre_delay)
-            _launch(程序)
+            _launch(绋嬪簭)
     sleep(post_delay)
-发射 finished 信号
+鍙戝皠 finished 淇″彿
 ```
 
-### 程序启动 `_launch()`
+### 绋嬪簭鍚姩 `_launch()`
 
-1. 查找仓库条目获取路径、参数、工作目�?
-2. 若绑定账号（`account_ref` 非空），调用 `ConfigService.inject_for_thread()` 注入配置
-3. `subprocess.Popen()` 启动进程
-4. 将进程对象加�?`_running` 列表
-5. 发射 `program_started` 信号
+1. 鏌ユ壘浠撳簱鏉＄洰鑾峰彇璺緞銆佸弬鏁般€佸伐浣滅洰褰?
+2. 鑻ョ粦瀹氳处鍙凤紙`account_ref` 闈炵┖锛夛紝璋冪敤 `ConfigService.inject_for_thread()` 娉ㄥ叆閰嶇疆
+3. `subprocess.Popen()` 鍚姩杩涚▼
+4. 灏嗚繘绋嬪璞″姞鍏?`_running` 鍒楄〃
+5. 鍙戝皠 `program_started` 淇″彿
 
-### 暂停/恢复
+### 鏆傚仠/鎭㈠
 
-- `pause()`: 设置 `pause_flag=True`，线程在主循环中检测并进入 200ms 休眠等待
-- `resume()`: 清除 `pause_flag`，线程继续执�?
-- 暂停期间已经启动的子进程继续运行，不会终�?
-- 可通过 HTTP API `POST /api/pipeline/pause` 外部控制
+- `pause()`: 璁剧疆 `pause_flag=True`锛岀嚎绋嬪湪涓诲惊鐜腑妫€娴嬪苟杩涘叆 200ms 浼戠湢绛夊緟
+- `resume()`: 娓呴櫎 `pause_flag`锛岀嚎绋嬬户缁墽琛?
+- 鏆傚仠鏈熼棿宸茬粡鍚姩鐨勫瓙杩涚▼缁х画杩愯锛屼笉浼氱粓姝?
+- 鍙€氳繃 HTTP API `POST /api/pipeline/pause` 澶栭儴鎺у埗
 
-### 停止
+### 鍋滄
 
-- `stop()`: 设置 `stop_flag=True`，对所�?`_running` 中的进程调用 `terminate()`
+- `stop()`: 璁剧疆 `stop_flag=True`锛屽鎵€鏈?`_running` 涓殑杩涚▼璋冪敤 `terminate()`
 
-### 进程存活检�?
+### 杩涚▼瀛樻椿妫€娴?
 
-�?`_sleep()` 等待循环中，�?100ms 检查一�?`_running` 列表中进程是否退出（`poll() is None`），已退出的进程自动移除�?
+鍦?`_sleep()` 绛夊緟寰幆涓紝姣?100ms 妫€鏌ヤ竴娆?`_running` 鍒楄〃涓繘绋嬫槸鍚﹂€€鍑猴紙`poll() is None`锛夛紝宸查€€鍑虹殑杩涚▼鑷姩绉婚櫎銆?
 
-## AccountRunner 单号启动闭环
+## AccountRunner 鍗曞彿鍚姩闂幆
 
-`AccountRunner`（`runner.py`）管理单个账号的完整生命周期�?
+`AccountRunner`锛坄runner.py`锛夌鐞嗗崟涓处鍙风殑瀹屾暣鐢熷懡鍛ㄦ湡锛?
 
 ```
 launch(row)
-  �?检查前提（�?MAA 程序？绑定模拟器？模拟器空闲？）
-  �?启动/连接模拟�?
-  �?ConfigService.inject() 注入配置
-  �?subprocess.Popen() 启动 MAA
-  �?记录�?_procs[aid]
-  �?发射 account_started(aid)
+  鈫?妫€鏌ュ墠鎻愶紙鏈?MAA 绋嬪簭锛熺粦瀹氭ā鎷熷櫒锛熸ā鎷熷櫒绌洪棽锛燂級
+  鈫?鍚姩/杩炴帴妯℃嫙鍣?
+  鈫?ConfigService.inject() 娉ㄥ叆閰嶇疆
+  鈫?subprocess.Popen() 鍚姩 MAA
+  鈫?璁板綍鍒?_procs[aid]
+  鈫?鍙戝皠 account_started(aid)
 
-check_processes() (�?2s �?proc_timer 调用)
-  �?进程退出？
-     �?parse_log() 解析任务状态、理智、掉�?
-     �?RunStats.save_run() 持久�?
-     �?发射 account_finished(aid, exit_code, tasks)
-     �?LaunchQueue.on_account_finished() 释放模拟�?
+check_processes() (姣?2s 鐢?proc_timer 璋冪敤)
+  鈫?杩涚▼閫€鍑猴紵
+     鈫?parse_log() 瑙ｆ瀽浠诲姟鐘舵€併€佺悊鏅恒€佹帀钀?
+     鈫?RunStats.save_run() 鎸佷箙鍖?
+     鈫?鍙戝皠 account_finished(aid, exit_code, tasks)
+     鈫?LaunchQueue.on_account_finished() 閲婃斁妯℃嫙鍣?
 ```
 
-## 定时任务
+## 瀹氭椂浠诲姟
 
-`ScheduleThread`（`schedule_thread.py`）支持两种模式：
+`ScheduleThread`锛坄schedule_thread.py`锛夋敮鎸佷袱绉嶆ā寮忥細
 
-### 每日定时
+### 姣忔棩瀹氭椂
 
-- `type: "daily"`，`time: "08:00"`
-- 每天在指定时间触发一�?
-- 若当前时间已过目标，顺延到次�?
+- `type: "daily"`锛宍time: "08:00"`
+- 姣忓ぉ鍦ㄦ寚瀹氭椂闂磋Е鍙戜竴娆?
+- 鑻ュ綋鍓嶆椂闂村凡杩囩洰鏍囷紝椤哄欢鍒版鏃?
 
-### 每周定时
+### 姣忓懆瀹氭椂
 
-- `type: "weekly"`，`time: "08:00"`，`days_of_week: [0,3,6]`（周一=0�?
-- 仅在指定星期几触�?
-- 搜索未来 7 天内第一个匹配的触发时间
+- `type: "weekly"`锛宍time: "08:00"`锛宍days_of_week: [0,3,6]`锛堝懆涓€=0锛?
+- 浠呭湪鎸囧畾鏄熸湡鍑犺Е鍙?
+- 鎼滅储鏈潵 7 澶╁唴绗竴涓尮閰嶇殑瑙﹀彂鏃堕棿
 
-### 防重�?
+### 闃查噸澶?
 
-若上次触发在 120 秒内，跳过本次触发（防止 NTP 校时等导致重复）�?
+鑻ヤ笂娆¤Е鍙戝湪 120 绉掑唴锛岃烦杩囨湰娆¤Е鍙戯紙闃叉 NTP 鏍℃椂绛夊鑷撮噸澶嶏級銆?
 
-## 启动选项
+## 鍚姩閫夐」
 
-每个账号支持以下启动行为控制�?
+姣忎釜璐﹀彿鏀寔浠ヤ笅鍚姩琛屼负鎺у埗锛?
 
-| 选项 | 说明 |
+| 閫夐」 | 璇存槑 |
 |------|------|
-| `start_minimized` | MAA 启动后最小化到托�?|
-| `start_directly` | 跳过唤醒阶段，直接进入任务队�?|
-| `adb_fail_launch_emu` | ADB 连接失败时自动启动模拟器 |
-| `adb_retry` | ADB 连接失败重试次数 |
-| `sync_tasks` | 启动时将任务参数同步写入 gui.json |
-| `round_robin_deficit` | 距满�?N 点自动启动（0=回满�?|
+| `start_minimized` | MAA 鍚姩鍚庢渶灏忓寲鍒版墭鐩?|
+| `start_directly` | 璺宠繃鍞ら啋闃舵锛岀洿鎺ヨ繘鍏ヤ换鍔￠槦鍒?|
+| `adb_fail_launch_emu` | ADB 杩炴帴澶辫触鏃惰嚜鍔ㄥ惎鍔ㄦā鎷熷櫒 |
+| `adb_retry` | ADB 杩炴帴澶辫触閲嶈瘯娆℃暟 |
+| `sync_tasks` | 鍚姩鏃跺皢浠诲姟鍙傛暟鍚屾鍐欏叆 gui.json |
+| `round_robin_deficit` | 璺濇弧宸?N 鐐硅嚜鍔ㄥ惎鍔紙0=鍥炴弧锛?|
 
-## 循环调度
+## 寰幆璋冨害
 
-`�?调度`标签页管理全局循环调度配置�?
+`鈿?璋冨害`鏍囩椤电鐞嗗叏灞€寰幆璋冨害閰嶇疆锛?
 
-### 全局设置
+### 鍏ㄥ眬璁剧疆
 
-| 字段 | 说明 |
+| 瀛楁 | 璇存槑 |
 |------|------|
-| `daily_batch_time` | 每日批量入队时间（如 "04:00"，空=关闭�?|
-| `parallel_max` | 最大并�?MAA 进程�?|
-| `round_robin_deficit` | 距满�?N 点即自动入队�?=回满�?0=�?30 点就启动�?|
+| `daily_batch_time` | 姣忔棩鎵归噺鍏ラ槦鏃堕棿锛堝 "04:00"锛岀┖=鍏抽棴锛?|
+| `parallel_max` | 鏈€澶у苟琛?MAA 杩涚▼鏁?|
+| `round_robin_deficit` | 璺濇弧宸?N 鐐瑰嵆鑷姩鍏ラ槦锛?=鍥炴弧锛?0=宸?30 鐐瑰氨鍚姩锛?|
 
-### 调度逻辑
+### 璋冨害閫昏緫
 
 ```
-1. 每日批量: daily_batch_time 到点 �?全部账号入队 (priority=1)
-2. 跑完自动: 算恢复时�?�?距满 �?deficit 时自动入�?(priority=2)
-3. 并行控制: 同时运行 �?parallel_max，超过上限排队等�?
+1. 姣忔棩鎵归噺: daily_batch_time 鍒扮偣 鈫?鍏ㄩ儴璐﹀彿鍏ラ槦 (priority=1)
+2. 璺戝畬鑷姩: 绠楁仮澶嶆椂闂?鈫?璺濇弧 鈮?deficit 鏃惰嚜鍔ㄥ叆闃?(priority=2)
+3. 骞惰鎺у埗: 鍚屾椂杩愯 鈮?parallel_max锛岃秴杩囦笂闄愭帓闃熺瓑寰?
 ```
 
-### 与定时任务的关系
+### 涓庡畾鏃朵换鍔＄殑鍏崇郴
 
-- 定时任务（ScheduleThread）：固定时间触发（每�?每周�?
-- 循环调度：每日批�?+ 跑完自动算恢复时�?
-- 手动入队：优先级最�?0)，随时可插队
+- 瀹氭椂浠诲姟锛圫cheduleThread锛夛細鍥哄畾鏃堕棿瑙﹀彂锛堟瘡澶?姣忓懆锛?
+- 寰幆璋冨害锛氭瘡鏃ユ壒閲?+ 璺戝畬鑷姩绠楁仮澶嶆椂闂?
+- 鎵嬪姩鍏ラ槦锛氫紭鍏堢骇鏈€楂?0)锛岄殢鏃跺彲鎻掗槦
 
-## 启动后操�?
+## 鍚姩鍚庢搷浣?
 
-`post_action` 字段控制 MAA 完成后自动执行的操作，位掩码组合�?
+`post_action` 瀛楁鎺у埗 MAA 瀹屾垚鍚庤嚜鍔ㄦ墽琛岀殑鎿嶄綔锛屼綅鎺╃爜缁勫悎锛?
 
-| 操作 | 内部标签 |
+| 鎿嶄綔 | 鍐呴儴鏍囩 |
 |------|----------|
-| 返回主屏 | `ReturnToMain` |
-| 退出方�?| `ExitArknights` |
-| 关闭模拟�?| `CloseEmulator` |
-| 退�?MAA | `ExitMAA` |
+| 杩斿洖涓诲睆 | `ReturnToMain` |
+| 閫€鍑烘柟鑸?| `ExitArknights` |
+| 鍏抽棴妯℃嫙鍣?| `CloseEmulator` |
+| 閫€鍑?MAA | `ExitMAA` |
