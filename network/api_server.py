@@ -863,6 +863,7 @@ class ApiServer(QThread):
             cert = mw.config.get("ssl_cert", "") if hasattr(mw, 'config') else ""
             key = mw.config.get("ssl_key", "") if hasattr(mw, 'config') else ""
             self._httpd=HTTPServer((bind,self.port),Handler)
+            self._httpd._stopped = False
             if cert and key and Path(cert).exists() and Path(key).exists():
                 import ssl
                 self._httpd.socket = ssl.wrap_socket(self._httpd.socket, certfile=cert, keyfile=key, server_side=True)
@@ -877,6 +878,7 @@ class ApiServer(QThread):
             self.log_msg.emit(f"API 服务异常: {e}")
     def stop_server(self):
         if self._httpd:
+            self._httpd._stopped = True
             try: self._httpd.shutdown()
             except Exception:
                 pass
