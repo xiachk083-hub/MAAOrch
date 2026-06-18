@@ -30,7 +30,9 @@ type Config struct {
 }
 
 func loadConfig() {
-	data, err := os.ReadFile("agent_config.json")
+	exe, _ := os.Executable()
+	cfgPath := filepath.Join(filepath.Dir(exe), "agent_config.json")
+	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		return
 	}
