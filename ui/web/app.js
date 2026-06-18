@@ -417,7 +417,7 @@ async function refreshStats() {
     // Material chart
     const topMats = r.top_materials || [];
     if (topMats.length) {
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">`;
+      html += `<div class="dash-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">`;
       html += `<div class="card" style="padding:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">材料增长</div>`;
       html += _renderMatChart(r.daily_drops||{}, topMats);
       html += `</div>`;
@@ -638,7 +638,7 @@ async function loadDashboard() {
     // ── 运行中 + 排队 ──
     const runningProcs = procs.filter(p => p.running);
     const pending = (q.pending||[]).slice(0, 5);
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">`;
+    html += `<div class="dash-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">`;
     html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
     html += `<div style="font-size:10px;font-weight:bold;color:var(--accent);margin-bottom:4px">▶ 运行中 ${runningProcs.length}</div>`;
     if (runningProcs.length) {
@@ -673,7 +673,7 @@ async function loadDashboard() {
     const samples = d.samples || [];
     if (samples.length > 5) {
       html += `<div style="margin-bottom:8px">`;
-      html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
+    html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch;overflow-x:auto">`;
       html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">资源趋势</div>`;
       html += _trendChart(samples);
       html += `<div style="font-size:8px;color:var(--text3);margin-top:2px"><span style="color:#e74c3c">─ CPU</span> <span style="color:#3498db;margin-left:6px">─ 内存</span> <span style="color:#2ecc71;margin-left:6px">─ GPU</span></div>`;
