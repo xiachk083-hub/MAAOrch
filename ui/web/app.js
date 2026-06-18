@@ -122,7 +122,7 @@ function renderPage() {
                 settings: renderSettings, about: renderAbout, logs: renderLogs,
                 account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit,
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
-                gallery: renderGallery, chronicle: renderChronicle };
+                gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -1097,6 +1097,143 @@ async function loadChronicle() {
     html += _chronicleTimeline(gantt);
     el.innerHTML = html;
   } catch(e) { /* silent */ }
+}
+
+// ── Remote Nodes (Agent) ──
+async function renderNodes(container) {
+  // Load saved nodes from localStorage
+  let nodes = [];
+  try { nodes = JSON.parse(localStorage.getItem('maorch_nodes') || '[]'); } catch(e) {}
+  container.innerHTML = `<div>
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="color:var(--text2);font-size:12px;font-weight:bold">🌐 远程节点</span>
+      <button class="small" onclick="addNode()">＋ 添加节点</button>
+      <button class="small" onclick="refreshAllNodes()">刷新全部</button>
+    </div>
+    <div id="nodes-content">
+      ${nodes.length ? '' : '<div style="color:var(--text3);text-align:center;padding:20px;font-size:11px">暂无节点，点击「添加节点」添加远程 MAAOrch Agent</div>'}
+    </div>
+  </div>`;
+  // Render each node
+  for (const node of nodes) {
+    await renderNodeCard(node);
+  }
+}
+
+function renderNodeCard(node) {
+  // Placeholder - will be filled by refreshAllNodes or addNode
+}
+
+async function refreshAllNodes() {
+  const nodes = JSON.parse(localStorage.getItem('maorch_nodes') || '[]');
+  for (const node of nodes) {
+    await refreshNode(node);
+  }
+}
+
+async function refreshNode(node) {
+  const el = document.getElementById(`node-${node.id}`);
+  if (!el) return;
+  el.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text3)">连接中...</div>';
+  try {
+    const r = await fetch(`http://${node.addr}/api/agent/status`);
+    const data = await r.json();
+    el.innerHTML = `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:bold;font-size:11px">${data.hostname || node.addr}</span>
+        <span style="font-size:9px;color:var(--accent)">🟢 在线</span>
+      </div>
+      <div style="font-size:9px;color:var(--text3);margin-top:2px">
+        ${data.work_dir ? '工作目录: ' + data.work_dir : ''}
+        ${data.version ? ' · v' + data.version : ''}
+      </div>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="small" onclick="execOnNode('${node.id}','git_pull',[])">🔄 Git Pull</button>
+        <button class="small" onclick="execOnNode('${node.id}','start_maa',[])">▶ 启动 MAAOrch</button>
+        <button class="small" onclick="execOnNode('${node.id}','stop_maa',[])" style="color:var(--danger)">⏹ 停止</button>
+        <button class="small" onclick="removeNode('${node.id}')" style="color:var(--danger)">🗑 移除</button>
+      </div>
+      <div id="node-out-${node.id}" style="font-size:9px;color:var(--text3);margin-top:4px;max-height:150px;overflow-y:auto"></div>
+    </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="card" style="padding:8px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:bold;font-size:11px">${node.addr}</span>
+        <span style="font-size:9px;color:var(--danger)">🔴 离线</span>
+      </div>
+      <div style="font-size:9px;color:var(--text3);margin-top:2px">${e.message}</div>
+      <button class="small" onclick="removeNode('${node.id}')" style="margin-top:4px;font-size:9px">🗑 移除</button>
+    </div>`;
+  }
+}
+
+function addNode() {
+  const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
+    <div class="dialog" style="max-width:360px">
+      <div style="font-size:14px;font-weight:bold;margin-bottom:10px;color:var(--text2)">添加远程节点</div>
+      <div class="form-row"><label>地址</label><input type="text" id="node-addr-input" value="" placeholder="100.79.173.69:19998"></div>
+      <div class="form-row"><label>Token</label><input type="text" id="node-token-input" value="" placeholder="可选"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="primary" onclick="submitAddNode()">添加</button>
+        <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function submitAddNode() {
+  const addr = document.getElementById('node-addr-input')?.value?.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  const token = document.getElementById('node-token-input')?.value?.trim() || '';
+  let nodes = [];
+  try { nodes = JSON.parse(localStorage.getItem('maorch_nodes') || '[]'); } catch(e) {}
+  const id = 'node_' + Date.now().toString(36);
+  nodes.push({id, addr, token});
+  localStorage.setItem('maorch_nodes', JSON.stringify(nodes));
+  document.querySelector('.dialog-overlay')?.remove();
+  toast('节点已添加');
+  renderNodes(document.getElementById('content'));
+  setTimeout(() => refreshNode({id, addr, token}), 500);
+}
+
+function removeNode(id) {
+  let nodes = [];
+  try { nodes = JSON.parse(localStorage.getItem('maorch_nodes') || '[]'); } catch(e) {}
+  nodes = nodes.filter(n => n.id !== id);
+  localStorage.setItem('maorch_nodes', JSON.stringify(nodes));
+  renderNodes(document.getElementById('content'));
+}
+
+async function execOnNode(nodeId, action, args) {
+  const nodes = JSON.parse(localStorage.getItem('maorch_nodes') || '[]');
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  const outEl = document.getElementById(`node-out-${nodeId}`);
+  if (outEl) outEl.innerHTML = '执行中...';
+
+  let body = {};
+  if (action === 'git_pull') {
+    body = {command: 'git', args: ['pull'], dir: '', timeout: 30};
+  } else if (action === 'start_maa') {
+    body = {command: 'python', args: ['main_web.pyw'], dir: '', timeout: 10};
+  } else if (action === 'stop_maa') {
+    body = {command: 'taskkill', args: ['/F', '/IM', 'pythonw.exe'], dir: '', timeout: 10};
+  }
+
+  try {
+    const headers = {'Content-Type': 'application/json'};
+    if (node.token) headers['x-agent-token'] = node.token;
+    const r = await fetch(`http://${node.addr}/api/agent/exec`, {
+      method: 'POST', headers, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (outEl) outEl.innerHTML = `<pre style="margin:0;white-space:pre-wrap;font-family:Consolas,monospace">${data.stdout || ''}${data.stderr ? '\nSTDERR:\n' + data.stderr : ''}${data.error ? '\nERROR: ' + data.error : ''}</pre>`;
+  } catch(e) {
+    if (outEl) outEl.innerHTML = `<span style="color:var(--danger)">${e.message}</span>`;
+  }
+  // Auto refresh node status after exec
+  setTimeout(() => refreshNode(node), 2000);
 }
 
 async function renderLogs(container) {
