@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
@@ -30,10 +31,11 @@ type Config struct {
 }
 
 func loadConfig() {
-	// Try exe directory first, then CWD
 	paths := []string{"agent_config.json"}
 	exe, err := os.Executable()
-	if err == nil && exe != "" {
+	if err != nil || exe == "" {
+		fmt.Fprintf(os.Stderr, "loadConfig: os.Executable() failed: %v\n", err)
+	} else {
 		paths = []string{
 			filepath.Join(filepath.Dir(exe), "agent_config.json"),
 			"agent_config.json",
@@ -42,10 +44,17 @@ func loadConfig() {
 	for _, cfgPath := range paths {
 		data, err := os.ReadFile(cfgPath)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "loadConfig: tried %s: %v\n", cfgPath, err)
 			continue
 		}
-	var cfg Config
-	json.Unmarshal(data, &cfg)
+		// Strip UTF-8 BOM if present (PowerShell adds it)
+		data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+		var cfg Config
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "loadConfig: json error for %s: %v\n", cfgPath, err)
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "loadConfig: loaded from %s: work_dir=%q\n", cfgPath, cfg.WorkDir)
 		if cfg.Port > 0 {
 			port = cfg.Port
 		}
