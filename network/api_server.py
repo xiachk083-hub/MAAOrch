@@ -45,15 +45,15 @@ class ApiServer(QThread):
                 return True
             def _check_auth(s):
                 if not token: return s._json({"error":"token not configured"}, 403)
-                # CSRF: reject requests from non-local origins
-                ref = s.headers.get("Referer", "")
-                if ref and not ref.startswith("http://127.0.0.1") and not ref.startswith("http://localhost"):
-                    return s._json({"error":"forbidden"}, 403)
+                # Allow API token auth (browser or programmatic)
                 h=s.headers.get("x-agent-token","")
-                # Web UI (no token) allowed from localhost
-                if not h:
-                    return True
-                return hmac.compare_digest(h, token)
+                if h:
+                    return hmac.compare_digest(h, token)
+                # Web UI: allow localhost and private network (e.g. phone on same LAN)
+                ref = s.headers.get("Referer", "").lower()
+                if ref and not any(ref.startswith(p) for p in ("http://127.0.0.1","http://localhost","http://192.168.","http://10.","http://172.")):
+                    return s._json({"error":"forbidden"}, 403)
+                return True
             def _json(s,data,code=200):
                 body=json.dumps(data,ensure_ascii=False).encode()
                 s.send_response(code); s.send_header("Content-Type","application/json"); s.send_header("Content-Length",str(len(body))); s.end_headers()
