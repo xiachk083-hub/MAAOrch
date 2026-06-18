@@ -49,9 +49,9 @@ class ApiServer(QThread):
                 h=s.headers.get("x-agent-token","")
                 if h:
                     return hmac.compare_digest(h, token)
-                # Web UI: allow localhost and private network (e.g. phone on same LAN)
+                # Web UI: allow localhost, private network, and Tailscale (100.x.x.x)
                 ref = s.headers.get("Referer", "").lower()
-                if ref and not any(ref.startswith(p) for p in ("http://127.0.0.1","http://localhost","http://192.168.","http://10.","http://172.")):
+                if ref and not any(ref.startswith(p) for p in ("http://127.0.0.1","http://localhost","http://192.168.","http://10.","http://172.","http://100.")):
                     return s._json({"error":"forbidden"}, 403)
                 return True
             def _json(s,data,code=200):
