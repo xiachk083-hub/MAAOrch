@@ -379,7 +379,7 @@ func main() {
 	mux.HandleFunc("/api/agent/process/start", authMiddleware(handleProcessStart))
 	mux.HandleFunc("/api/agent/status", authMiddleware(handleStatus))
 
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
 	fmt.Printf("MAAOrch Agent starting on %s\n", addr)
 	if token != "" {
 		fmt.Println("Token auth enabled")
