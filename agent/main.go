@@ -30,22 +30,32 @@ type Config struct {
 }
 
 func loadConfig() {
-	exe, _ := os.Executable()
-	cfgPath := filepath.Join(filepath.Dir(exe), "agent_config.json")
-	data, err := os.ReadFile(cfgPath)
-	if err != nil {
-		return
+	// Try exe directory first, then CWD
+	paths := []string{"agent_config.json"}
+	exe, err := os.Executable()
+	if err == nil && exe != "" {
+		paths = []string{
+			filepath.Join(filepath.Dir(exe), "agent_config.json"),
+			"agent_config.json",
+		}
 	}
+	for _, cfgPath := range paths {
+		data, err := os.ReadFile(cfgPath)
+		if err != nil {
+			continue
+		}
 	var cfg Config
 	json.Unmarshal(data, &cfg)
-	if cfg.Port > 0 {
-		port = cfg.Port
-	}
-	if cfg.Token != "" {
-		token = cfg.Token
-	}
-	if cfg.WorkDir != "" {
-		workDir = cfg.WorkDir
+		if cfg.Port > 0 {
+			port = cfg.Port
+		}
+		if cfg.Token != "" {
+			token = cfg.Token
+		}
+		if cfg.WorkDir != "" {
+			workDir = cfg.WorkDir
+		}
+		break
 	}
 }
 
