@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAAOrch</title>
-<link rel="stylesheet" href="style.css?_v=20260618">
+<link rel="stylesheet" href="style.css?_v=20260620">
 </head>
 <body>
 <div id="app">
@@ -18,17 +18,24 @@
       </div>
     </div>
     <nav id="nav">
-      <a class="nav-item active" data-page="dashboard">🎛 调度台</a>
-      <a class="nav-item" data-page="accounts">📋 账号</a>
-      <a class="nav-item" data-page="queue">📦 队列</a>
-      <a class="nav-item" data-page="stats">📊 统计</a>
-      <a class="nav-item" data-page="logs">📋 动态</a>
-      <a class="nav-item" data-page="gallery">🖼 图库</a>
-      <a class="nav-item" data-page="chronicle">📜 编年史</a>
-      <a class="nav-item" data-page="nodes">🌐 远程节点</a>
-      <a class="nav-item" data-page="health">🔍 环境检测</a>
-      <a class="nav-item" data-page="settings">⚙ 设置</a>
-      <a class="nav-item" data-page="about">ℹ️ 关于</a>
+      <div class="nav-group nav-primary">
+        <a class="nav-item" data-page="dashboard">🎛 调度台</a>
+        <a class="nav-item" data-page="accounts">👤 账号</a>
+        <a class="nav-item" data-page="logs">📋 动态</a>
+        <a class="nav-item" data-page="settings">⚙ 设置</a>
+        <a class="mobile-more-btn" onclick="toggleMobileMenu()" style="cursor:pointer;font-size:9px;padding:4px 6px;white-space:nowrap;display:none;flex-direction:column;align-items:center;justify-content:center;min-width:48px;border-top:2px solid transparent;flex:1;min-height:44px;color:var(--text2);text-decoration:none">📌 更多</a>
+      </div>
+      <details class="nav-group nav-secondary" id="nav-more">
+        <summary style="font-size:11px;color:var(--text3);padding:6px 14px;cursor:pointer;user-select:none">▸ 更多</summary>
+        <a class="nav-item" data-page="queue">📦 队列</a>
+        <a class="nav-item" data-page="stats">📊 统计</a>
+        <a class="nav-item" data-page="chronicle">📜 编年史</a>
+        <a class="nav-item" data-page="gallery">🖼 图库</a>
+        <a class="nav-item" data-page="nodes">🌐 远程节点</a>
+        <a class="nav-item" data-page="health">🔍 环境检测</a>
+        <a class="nav-item" data-page="emus">📱 模拟器</a>
+        <a class="nav-item" data-page="about">ℹ️ 关于</a>
+      </details>
     </nav>
     <div class="sidebar-footer">
       <div id="vm-status"></div>
@@ -38,14 +45,35 @@
   <main id="main">
     <header id="topbar">
       <div id="page-title">账号</div>
-      <div id="topbar-actions"></div>
+      <div id="topbar-actions">
+        <button onclick="toggleOplog()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px" title="操作记录">📋</button>
+      </div>
     </header>
     <div id="content"></div>
   </main>
 </div>
+<div id="mobile-menu-overlay" class="mobile-menu-overlay" onclick="closeMobileMenu(event)">
+  <div class="mobile-menu-panel" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px;font-weight:bold;color:var(--text2)">更多</span>
+      <span style="flex:1"></span>
+      <button onclick="closeMobileMenu()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div class="mobile-menu-items">
+      <a class="nav-item" data-page="queue">📦 队列</a>
+      <a class="nav-item" data-page="stats">📊 统计</a>
+      <a class="nav-item" data-page="chronicle">📜 编年史</a>
+      <a class="nav-item" data-page="gallery">🖼 图库</a>
+      <a class="nav-item" data-page="nodes">🌐 远程节点</a>
+      <a class="nav-item" data-page="health">🔍 环境检测</a>
+      <a class="nav-item" data-page="emus">📱 模拟器</a>
+      <a class="nav-item" data-page="about">ℹ️ 关于</a>
+    </div>
+  </div>
+</div>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<script src="app.js?_v=20260615a"></script>
+<script src="app.js?_v=20260620b"></script>
 </body>
 </html>

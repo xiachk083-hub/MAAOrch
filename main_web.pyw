@@ -6,6 +6,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from infrastructure.platform_helper import is_admin, run_as_admin
 from infrastructure.logger import Logger
 
+_LOG = Logger("app")
+
 def main():
     if not is_admin() and "--no-elevate" not in sys.argv:
         run_as_admin()
@@ -18,12 +20,18 @@ def main():
         _ct.windll.user32.SetForegroundWindow(hwnd)
         sys.exit(0)
 
-    from PySide6.QtWidgets import QApplication
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-    app.setStyle("Fusion")
+    # PySide6 is optional — pure Web mode works without it
+    try:
+        from PySide6.QtWidgets import QApplication
+        _app = QApplication(sys.argv)
+        _app.setQuitOnLastWindowClosed(False)
+        _app.setStyle("Fusion")
+        _has_qt = True
+    except ImportError:
+        _app = None
+        _has_qt = False
+        _LOG.info("PySide6 未安装，使用纯 Web 模式（无托盘图标）")
 
-    _LOG = Logger("app")
     _LOG.info("══ MAAOrch Web 启动 ══")
 
     from infrastructure.maa_core import preload, get_version
@@ -67,14 +75,19 @@ def main():
     from services.config_injector import ConfigService
     ctx.cfg = ConfigService(ctx)
 
+    # Auto-download MAA if missing
+    from pathlib import Path as _P
+    _maa_source = _P(__file__).parent / "services" / "maa" / "source"
+    from services.maa_download import ensure_maa_available
+    ensure_maa_available(ctx, _maa_source)
+
     from services.runner import AccountRunner
     from services.launch_queue import LaunchQueue
     runner = AccountRunner(ctx)
     launch_queue = LaunchQueue(ctx)
-    runner.log_msg.connect(lambda m: _LOG.info(f"[MAA] {m}"))
-    runner.account_finished.connect(launch_queue.on_account_finished)
-    launch_queue._restore()
-    launch_queue.start()
+    runner._log_msg_callbacks.append(lambda m: _LOG.info(f"[MAA] {m}"))
+    runner._finished_callbacks.append(launch_queue.on_account_finished)
+    # Gantt history
     from pathlib import Path as _P
     _gantt_file = _P(__file__).parent / "screenshots" / "gantt_history.json"
     _gantt_events = []
@@ -86,19 +99,22 @@ def main():
     def _save_gantt():
         try:
             import json as _j
+            _gantt_file.parent.mkdir(parents=True, exist_ok=True)
             _gantt_file.write_text(_j.dumps(_gantt_events[-500:], ensure_ascii=False), encoding="utf-8")
         except: pass
-    ctx._mw = type('MW', (), {
-        'runner': runner, 'launch_queue': launch_queue, 'config': config,
-        'accounts': ctx.accounts, 'ctx': ctx, 'warehouse': [],
-        '_proc_status': set(), '_proc_start_times': {},
-        '_notifications': [],
-        '_oplog': [],
-        '_res_samples': [],
-        '_gantt_events': _gantt_events,
-        '_save_gantt': _save_gantt,
-        '_log': lambda self, msg: _LOG.info(msg),
-    })()
+    # Set ctx._mw BEFORE start() so _bg_tick can access runner
+    from app.web_context import WebContext
+    ctx._mw = WebContext(
+        runner=runner, launch_queue=launch_queue, config=config,
+        accounts=ctx.accounts, ctx=ctx, warehouse=[],
+        _proc_status=ctx.proc_status, _proc_start_times={},
+        _notifications=[], _ai_insights=[], _oplog=[], _res_samples=[],
+        _gantt_events=_gantt_events, _save_gantt=_save_gantt,
+        _log=lambda msg: _LOG.info(msg),
+    )
+    launch_queue._restore()
+    launch_queue.start()
+    launch_queue.resume()  # Queue starts paused; resume for Web UI
 
     from services.dispatch_pool import create_dispatch
     for a in ctx.accounts:
@@ -108,10 +124,15 @@ def main():
 
     port = config.get("api_port", 19999)
     token = config.get("api_token", "")
-    from network.api_server import ApiServer
-    api = ApiServer(port, token, ctx._mw)
-    api.daemon = True
-    api.start()
+    import mimetypes
+    for ext, ct in {".css":"text/css; charset=utf-8", ".html":"text/html; charset=utf-8", ".htm":"text/html; charset=utf-8", ".js":"application/javascript; charset=utf-8", ".json":"application/json; charset=utf-8", ".txt":"text/plain; charset=utf-8", ".svg":"image/svg+xml; charset=utf-8"}.items():
+        mimetypes.add_type(ct, ext)
+    from network.api_fastapi import create_app, start_server
+    import uvicorn, threading as _th
+    _fastapi_app = create_app(ctx._mw)
+    _uvicorn_config = uvicorn.Config(_fastapi_app, host="127.0.0.1", port=port, log_level="info")
+    _uvicorn_server = uvicorn.Server(_uvicorn_config)
+    _th.Thread(target=_uvicorn_server.run, daemon=True).start()
 
     url = f"http://127.0.0.1:{port}/"
     _LOG.info(f"Web UI: {url}")
@@ -119,28 +140,35 @@ def main():
     import webbrowser
     webbrowser.open(url)
 
-    from PySide6.QtWidgets import QSystemTrayIcon, QMenu
-    from PySide6.QtGui import QIcon
-    icon_path = str(Path(__file__).parent / "icon.ico")
-    icon = QIcon(icon_path) if Path(icon_path).exists() else QIcon()
-    tray = QSystemTrayIcon(icon, app)
-    tray.setToolTip("MAAOrch")
-    menu = QMenu()
-    menu.addAction("打开浏览器", lambda: webbrowser.open(url))
     def _quit():
         try:
-            if hasattr(api, 'stop_server'):
-                api.stop_server()
             for aid in list(runner._active.keys()):
                 runner.stop(aid)
         except Exception as e:
             _LOG.error(f"清理异常: {e}")
         _LOG.info("══ MAAOrch 退出 ══")
-        app.quit()
-    menu.addAction("退出", _quit)
-    tray.setContextMenu(menu)
-    tray.show()
-    sys.exit(app.exec())
+        if _app:
+            _app.quit()
+
+    if _has_qt:
+        from PySide6.QtWidgets import QSystemTrayIcon, QMenu
+        from PySide6.QtGui import QIcon
+        icon_path = str(Path(__file__).parent / "icon.ico")
+        icon = QIcon(icon_path) if Path(icon_path).exists() else QIcon()
+        tray = QSystemTrayIcon(icon, _app)
+        tray.setToolTip("MAAOrch")
+        menu = QMenu()
+        menu.addAction("打开浏览器", lambda: webbrowser.open(url))
+        menu.addAction("退出", _quit)
+        tray.setContextMenu(menu)
+        tray.show()
+        sys.exit(_app.exec())
+    else:
+        _LOG.info("按 Ctrl+C 退出")
+        try:
+            threading.Event().wait()
+        except KeyboardInterrupt:
+            _quit()
 
 if __name__ == "__main__":
     main()

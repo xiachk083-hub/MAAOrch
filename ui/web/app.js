@@ -26,7 +26,7 @@ function showEmpty(container, msg = '暂无数据') {
 }
 
 // ── State ──
-let state = { accounts: [], queue: [], config: {}, stats: {}, page: 'accounts', polling: false };
+let state = { accounts: [], queue: [], config: {}, stats: {}, page: 'accounts', polling: false, aiInsights: [] };
 let filterKey = '';
 let selectedIds = new Set();
 
@@ -82,6 +82,11 @@ function navigate(page) {
   state.page = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
   document.getElementById('page-title').textContent = document.querySelector(`.nav-item[data-page="${page}"]`)?.textContent || page;
+  // Auto-open secondary nav if the page is in the "more" section
+  const inSecondary = document.querySelector(`.nav-secondary .nav-item[data-page="${page}"]`);
+  const details = document.getElementById('nav-more');
+  if (inSecondary && details) details.open = true;
+  else if (details && details.open && !details.querySelector('.nav-item.active')) details.open = false;
   renderPage();
 }
 
@@ -122,7 +127,8 @@ function renderPage() {
                 settings: renderSettings, about: renderAbout, logs: renderLogs,
                 account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit,
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
-                gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes };
+                gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
+                emus: renderEmus };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -130,73 +136,104 @@ async function renderAccounts(container) {
     const r = await apiGet('/accounts');
     if (!r.ok) { showError(container, r.error); return; }
     state.accounts = r.accounts;
+    // Load stage library for display
+    (async () => { const sr = await apiGet('/stages'); if (sr.ok) window._stageLib = sr.stages || []; })();
 
     let searchText = (document.getElementById('search-input')?.value || '').toLowerCase();
-    let filtered = r.accounts.filter(a => {
-      const nameMatch = !searchText || a.name.toLowerCase().includes(searchText);
-      return nameMatch;
-    });
-    if (filterKey === 'running') filtered = filtered.filter(a => a.running);
-    else if (filterKey === 'waiting') filtered = filtered.filter(a => a.queued);
-    else if (filterKey === 'error') filtered = filtered.filter(a => !a.running && !a.queued && a.failures > 0 && a.failures < 6);
-    else if (filterKey === 'paused') filtered = filtered.filter(a => a.failures >= 6);
+    let serverFilter = document.getElementById('server-filter')?.value || 'all';
+    let statusFilter = document.getElementById('status-filter')?.value || 'all';
 
-    const groups = {};
-    filtered.forEach(a => {
-      const vm = a.emu_instance_index || 'unbound';
-      if (!groups[vm]) groups[vm] = [];
-      groups[vm].push(a);
+    let filtered = r.accounts.filter(a => {
+      const nameMatch = !searchText || a.name.toLowerCase().includes(searchText) || (a.note||'').toLowerCase().includes(searchText);
+      if (serverFilter !== 'all') {
+        const client = a.game_client || '';
+        if (serverFilter === 'official' && client !== 'Official') return false;
+        else if (serverFilter === 'bilibili' && client !== 'Bilibili') return false;
+        else if (serverFilter === 'yostar' && !['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
+        else if (serverFilter === 'other' && ['Official','Bilibili','YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
+      }
+      if (statusFilter === 'running' && !a.running) return false;
+      if (statusFilter === 'error' && !(!a.running && a.failures > 0 && a.failures < 6)) return false;
+      if (statusFilter === 'paused' && !(a.failures >= 6)) return false;
+      return true;
     });
-    const vmKeys = Object.keys(groups).sort((a,b) => a === 'unbound' ? 1 : b === 'unbound' ? -1 : parseInt(a) - parseInt(b));
+
     const batchCount = selectedIds.size;
+    const total = r.accounts.length;
+    const countOfficial = r.accounts.filter(a => a.game_client === 'Official').length;
+    const countBili = r.accounts.filter(a => a.game_client === 'Bilibili').length;
+    const countYoStar = r.accounts.filter(a => ['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(a.game_client)).length;
+
     let html = `<div style="display:flex;gap:4px;margin-bottom:6px">
-      <input type="text" id="search-input" placeholder="搜索账号..." 
-        oninput="searchAccounts(this.value)" 
+      <input type="text" id="search-input" placeholder="搜索名称或备注..."
+        oninput="searchAccounts(this.value)"
         style="flex:1;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
       <button onclick="showCreateAccountForm()" style="white-space:nowrap;font-size:11px">＋ 创建</button>
     </div>
-    <div style="display:flex;gap:3px;margin-bottom:6px;flex-wrap:wrap">
-      <button class="small ${!filterKey ? 'primary' : ''}" onclick="setFilter('')">全部 (${r.accounts.length})</button>
-      <button class="small ${filterKey==='running'?'primary':''}" onclick="setFilter('running')">▶ 运行中</button>
-      <button class="small ${filterKey==='waiting'?'primary':''}" onclick="setFilter('waiting')">⏳ 排队</button>
-      <button class="small ${filterKey==='error'?'primary':''}" onclick="setFilter('error')">✕ 错误</button>
-      <button class="small ${filterKey==='paused'?'primary':''}" onclick="setFilter('paused')">⏸ 暂停</button>
-    </div>
-    <div id="batch-bar" style="display:${batchCount?'flex':'none'};align-items:center;gap:6px;padding:5px 8px;margin-bottom:6px;background:var(--accent);color:#fff;border-radius:var(--radius);font-size:11px">
-      <span>已选 ${batchCount}</span>
-      <span style="flex:1"></span>
-      <button class="small" onclick="batchSmart()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">▶ 调度</button>
-      <button class="small" onclick="batchEnqueue()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">入队</button>
-      <button class="small" onclick="batchStop()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">停止</button>
-      <button class="small" onclick="batchDelete()" style="background:rgba(255,255,255,0.2);color:#fff;border-color:transparent">删除</button>
-      <button class="small" onclick="selectedIds.clear();renderPage()" style="background:transparent;color:#fff;border-color:rgba(255,255,255,0.3)">✕</button>
+    <div style="display:flex;gap:3px;margin-bottom:4px;flex-wrap:wrap">
+      <select id="server-filter" onchange="renderPage()" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+        <option value="all">全部 (${total})</option>
+        <option value="official">官服 (${countOfficial})</option>
+        <option value="bilibili">B服 (${countBili})</option>
+        <option value="yostar">外服 (${countYoStar})</option>
+      </select>
+      <select id="status-filter" onchange="renderPage()" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+        <option value="all">全部状态</option>
+        <option value="running">🟢 运行中</option>
+        <option value="error">❌ 错误</option>
+        <option value="paused">⏸ 暂停</option>
+      </select>
     </div>
     <div class="card-list">`;
-    vmKeys.forEach(vm => {
-      html += `<div style="color:var(--text3);font-size:9px;padding:6px 4px 2px;font-weight:bold">📱 VM ${vm === 'unbound' ? '未绑定' : vm}</div>`;
-      groups[vm].forEach(a => {
-        const isRunning = a.running, isQueued = a.queued;
-        const failCount = a.failures || 0;
-        const statusBadge = isRunning ? '<span style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">运行中</span>' :
-                            isQueued ? '<span style="background:var(--warn);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">排队</span>' :
-                            failCount >= 6 ? '<span style="background:var(--text3);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">暂停</span>' :
-                            failCount > 0 ? `<span style="background:var(--danger);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px">错误×${failCount}</span>` : '';
-        const checked = selectedIds.has(a.id) ? 'checked' : '';
-        html += `<div class="card" style="padding:5px 8px">
+    filtered.forEach(a => {
+      const isRunning = a.running;
+      const failCount = a.failures || 0;
+      const isError = !isRunning && failCount > 0 && failCount < 6;
+      const isPaused = failCount >= 6;
+      const dotColor = isRunning ? 'var(--accent)' : isError ? 'var(--danger)' : isPaused ? 'var(--text3)' : 'var(--border)';
+      const dotLabel = isRunning ? '运行中' : isError ? '错误' : isPaused ? '暂停' : '空闲';
+      const clientLabel = {'Official':'官服','Bilibili':'B服','YoStarEN':'美服','YoStarJP':'日服','YoStarKR':'韩服','txwy':'繁中服'}[a.game_client] || a.game_client || '?';
+      // Expiry warning
+      let expireStr = '';
+      if (a.expire_date) {
+        const d = new Date(a.expire_date), n = new Date();
+        const diff = Math.ceil((d - n) / 86400000);
+        if (diff < 0) expireStr = `<span style="color:var(--danger);font-size:9px">⚠ 过期${Math.abs(diff)}天</span>`;
+        else if (diff <= 3) expireStr = `<span style="color:var(--warn);font-size:9px">⏰ ${diff}天</span>`;
+      }
+      const checked = selectedIds.has(a.id) ? 'checked' : '';
+
+      html += `<div class="card" style="padding:4px 8px;gap:6px">
   <input type="checkbox" class="cb" ${checked} onchange="event.stopPropagation();toggleSelect('${a.id}')">
   <div style="flex:1;min-width:0;cursor:pointer" onclick="showAccountDetail('${a.id}')">
-    <div style="font-size:11px;font-weight:bold">${a.name}${a.uid ? ' <span style="font-size:9px;color:var(--text3);font-weight:normal">UID:'+a.uid+'</span>' : ''}</div>
-    <div style="font-size:9px;color:var(--text3)">VM ${a.emu_instance_index||'?'} · ${a.game_client||'?'}${a.account_switch ? ' · 切换:'+a.account_switch : ''}</div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${dotColor};display:inline-block" title="${dotLabel}"></span>
+      <span style="font-size:11px;font-weight:bold">${a.name}</span>
+      <span style="font-size:8px;color:var(--text3);background:var(--bg3);padding:1px 4px;border-radius:2px">${clientLabel}</span>
+      ${expireStr}
+    </div>
+    <div style="font-size:9px;color:var(--text3);margin-top:1px">VM ${a.emu_instance_index||'?'}${a.note ? ' · '+a.note : ''}</div>
+    ${(function(){if(!a.stages||!a.stages.length)return '';var snames=a.stages.map(function(s){var lib=window._stageLib||[];var found=lib.find(function(l){return l.id===s});return found?found.name:s});return '<div style="font-size:8px;color:var(--accent);margin-top:1px">🎯 '+snames.slice(0,3).join(', ')+(snames.length>3?' +'+(snames.length-3):'')+'</div>'})()}
   </div>
-  <div style="display:flex;align-items:center;gap:4px;margin-left:6px">
-    ${statusBadge}
-    <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')" style="font-size:9px;padding:1px 5px">▶</button>
-    <button class="small danger" onclick="event.stopPropagation();showConfirm('确认删除 ${a.name}？').then(r=>r&&deleteAccount('${a.id}'))" style="font-size:9px;padding:1px 5px">🗑</button>
+  <div style="display:flex;align-items:center;gap:3px">
+    <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')" style="font-size:9px;padding:1px 5px" title="启动">▶</button>
+    <button class="small danger" onclick="event.stopPropagation();showConfirm('确认删除 ${a.name}？').then(r=>r&&deleteAccount('${a.id}'))" style="font-size:9px;padding:1px 5px" title="删除">🗑</button>
   </div>
 </div>`;
-      });
     });
     html += '</div>';
+
+    // Batch action bar (always visible)
+    html += `<div id="batch-bar" style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:11px">
+      <span id="batch-count">已选 ${batchCount}</span>
+      <span style="flex:1"></span>
+      <button class="small" onclick="batchSmart()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">▶ 调度</button>
+      <button class="small" onclick="batchEnqueue()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">入队</button>
+      <button class="small" onclick="batchStop()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">⏹ 停止</button>
+      <button class="small" onclick="batchAssignStage()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🎯 关卡</button>
+      <button class="small" onclick="batchDelete()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🗑 删除</button>
+    </div>`;
+
     container.innerHTML = html;
   } catch(e) { showError(container, e.message); }
 }
@@ -257,7 +294,10 @@ async function renderSettings(container) {
     container.innerHTML = `<div class="tabs" id="settings-tabs">
       <div class="tab active" data-tab="general">通用</div>
       <div class="tab" data-tab="smart">智能调度</div>
+      <div class="tab" data-tab="ai">AI 分析</div>
+      <div class="tab" data-tab="notify">通知</div>
       <div class="tab" data-tab="maa">MAA 实例</div>
+      <div class="tab" data-tab="stages">关卡仓库</div>
     </div>
     <div class="tab-content active" id="tab-general">
       <div class="form-row"><label>主题</label><select id="sel-theme" onchange="setTheme(this.value)">
@@ -289,11 +329,42 @@ async function renderSettings(container) {
       <div class="form-row"><label>自动商店</label><label><input type="checkbox" id="cb-mall" ${smart.mall_enabled!==false?'checked':''}> 启用</label></div>
       <div class="btn-row"><button class="primary" onclick="saveSmart()">保存</button></div>
     </div>
+    <div class="tab-content" id="tab-ai">
+      <div class="form-row"><label>自动分析</label>
+        <label style="color:var(--text2);font-size:12px"><input type="checkbox" id="cb-ai-auto" ${cfg.ai_auto_analyze?'checked':''}> 任务失败时自动 AI 分析</label></div>
+      <div class="form-row"><label>接口</label><select id="sel-ai-provider" onchange="onAIProviderChange()">
+        <option value="openai" ${cfg.ai_provider==='openai'?'selected':''}>OpenAI</option>
+        <option value="deepseek" ${cfg.ai_provider==='deepseek'?'selected':''}>DeepSeek</option>
+        <option value="qwen" ${cfg.ai_provider==='qwen'?'selected':''}>通义千问</option>
+        <option value="siliconflow" ${cfg.ai_provider==='siliconflow'?'selected':''}>硅基流动</option>
+        <option value="custom" ${cfg.ai_provider==='custom'?'selected':''}>自定义</option>
+      </select></div>
+      <div class="form-row"><label>API Key</label><input type="password" id="input-ai-key" value="${cfg.ai_api_key||''}" placeholder="sk-..." style="font-size:10px"></div>
+      <div class="form-row"><label>接口地址</label><input type="text" id="input-ai-endpoint" value="${cfg.ai_endpoint||''}" placeholder="https://api.openai.com/v1/chat/completions" style="font-size:10px"></div>
+      <div class="form-row"><label>模型</label><input type="text" id="input-ai-model" value="${cfg.ai_model||''}" placeholder="gpt-4o-mini" style="font-size:10px"></div>
+      <div class="btn-row"><button class="primary" onclick="saveAI()">保存</button></div>
+    </div>
+    <div class="tab-content" id="tab-notify">
+      <div class="form-row"><label>Webhook</label><input type="text" id="input-webhook2" value="${cfg.webhook_url||''}" placeholder="https://example.com/webhook" style="font-size:10px">
+        <span style="color:var(--text3);font-size:9px">任务完成时 HTTP POST 推送</span></div>
+      <div style="border-top:1px solid var(--border);margin:8px 0;padding-top:8px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Telegram</div>
+        <div class="form-row"><label>Bot Token</label><input type="password" id="input-tg-token" value="${cfg.tg_token||''}" placeholder="123456:ABCdef..." style="font-size:10px">
+          <span style="color:var(--text3);font-size:9px">@BotFather 创建</span></div>
+        <div class="form-row"><label>Chat ID</label><input type="text" id="input-tg-chat" value="${cfg.tg_chat_id||''}" placeholder="123456789" style="font-size:10px">
+          <span style="color:var(--text3);font-size:9px">向 @userinfobot 发 /start 获取</span></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">任务失败时自动发送告警到 Telegram</div>
+      </div>
+      <div class="btn-row"><button class="primary" onclick="saveNotify()">保存</button></div>
+    </div>
     <div class="tab-content" id="tab-maa">
       <div class="form-row"><label>MAA 版本</label><span style="color:var(--text2);font-size:12px">${cfg.maa_version||'未安装'}</span></div>
       <div class="form-row"><label>实例数</label><span style="color:var(--text2);font-size:12px">${cfg.maa_instances||0}</span></div>
-      <div class="btn-row"><button onclick="rebuildInstances()">🔄 重建实例</button><button onclick="checkMaaUpdate()" id="btn-maa-update" style="margin-left:8px">📥 检查更新</button><button onclick="downloadLogs()" style="margin-left:8px">📦 导出日志</button><button onclick="exportConfig()" style="margin-left:8px">📤 导出配置</button><button onclick="showImportConfig()" style="margin-left:8px">📥 导入配置</button></div>
+      <div class="btn-row"><button onclick="rebuildInstances()">🔄 重建实例</button><button onclick="checkMaaUpdate()" id="btn-maa-update" style="margin-left:8px">📥 检查更新</button><button onclick="downloadLogs()" style="margin-left:8px">📦 导出日志</button><button onclick="exportConfig()" style="margin-left:8px">📤 导出配置</button><button onclick="showImportConfig()" style="margin-left:8px">📥 导入配置</button><button onclick="restartMAAOrch()" style="margin-left:8px;color:var(--warn)">🔄 重启服务</button></div>
       <div id="maa-update-result" style="font-size:10px;color:var(--text3);margin-top:4px"></div>
+    </div>
+    <div class="tab-content" id="tab-stages">
+      <div id="stage-lib-content"></div>
     </div>`;
     // Tab switching
     container.querySelectorAll('.tab').forEach(tab => {
@@ -303,11 +374,119 @@ async function renderSettings(container) {
         tab.classList.add('active');
         const tc = document.getElementById('tab-' + tab.dataset.tab);
         if (tc) tc.classList.add('active');
+        if (tab.dataset.tab === 'stages') renderStageLibrary();
       });
     });
+    // Pre-load stages content in background
+    renderStageLibrary();
   } catch(e) { showError(container); }
 }
-
+// ── Stage Library ──
+var _stageLibCache = null;
+var _stageAccountsCache = null;
+async function renderStageLibrary() {
+  try {
+    _stageLibCache = await apiGet('/stages');
+    if (!_stageLibCache.ok) { _stageLibCache = null; return; }
+    const stages = _stageLibCache.stages || [];
+    // Fetch accounts for assignment
+    _stageAccountsCache = await apiGet('/accounts');
+    const allAccts = (_stageAccountsCache.ok ? _stageAccountsCache.accounts : []) || [];
+    // Find or create the container
+    let el = document.getElementById('stage-lib-content');
+    if (!el) {
+      var tc = document.getElementById('tab-stages');
+      if (!tc) return;
+      el = document.createElement('div'); el.id = 'stage-lib-content';
+      tc.appendChild(el);
+    }
+    let html = '<div style="display:flex;gap:4px;margin-bottom:6px">';
+    html += '<button class="small primary" onclick="addStage()">＋ 新建关卡</button>';
+    html += '<span style="flex:1"></span>';
+    html += '<button class="small" onclick="saveStageLibrary()">💾 保存</button></div>';
+    html += '<div class="card-list" id="stage-card-list">';
+    stages.forEach(function(st, i) {
+      var assignedIds = (st.account_ids || []);
+      var assignedAccts = allAccts.filter(function(a){return assignedIds.indexOf(a.id)>=0});
+      html += '<div class="card" style="padding:5px 8px;flex-direction:column;align-items:stretch;margin-bottom:4px">';
+      // Stage name row
+      html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">';
+      html += '<input type="text" class="stage-name" data-idx="'+i+'" value="'+(st.name||'')+'" style="flex:1;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:12px;font-weight:bold" placeholder="关卡名">';
+      html += '<span style="font-size:9px;color:var(--text3)">'+assignedAccts.length+'个</span>';
+      html += '<button class="small" onclick="removeStage('+i+')" style="font-size:9px;padding:1px 5px;color:var(--danger)">✕</button>';
+      html += '</div>';
+      html += '<input type="text" class="stage-note" data-idx="'+i+'" value="'+(st.note||'')+'" style="width:100%;margin-bottom:4px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:3px;font-size:10px" placeholder="备注(可选)">';
+      // Account list for this stage
+      html += '<div style="display:flex;gap:2px;flex-wrap:wrap">';
+      allAccts.forEach(function(a) {
+        var has = assignedIds.indexOf(a.id) >= 0;
+        var label = {'Official':'官','Bilibili':'B','YoStarEN':'美','YoStarJP':'日','YoStarKR':'韩','txwy':'繁'}[a.game_client] || a.game_client || '?';
+        html += '<span onclick="toggleStageAccount(\''+st.id+'\',\''+a.id+'\')" style="font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;background:'+(has?'var(--accent)':'var(--bg3)')+';color:'+(has?'#fff':'var(--text3)')+';border:1px solid '+(has?'var(--accent)':'var(--border)')+'">'+label+' '+a.name.slice(0,4)+'</span>';
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+    if (!stages.length) html += '<div style="color:var(--text3);text-align:center;padding:20px;font-size:11px">暂无关卡，点击上方按钮创建</div>';
+    el.innerHTML = html;
+  } catch(e) {}
+}
+async function toggleStageAccount(stageId, accountId) {
+  var toggle = true;
+  // Check if currently assigned
+  var accts = (_stageAccountsCache && _stageAccountsCache.accounts) || [];
+  var a = accts.find(function(x){return x.id===accountId});
+  if (a && a.stages && a.stages.indexOf(stageId) >= 0) toggle = false;
+  await apiPost('/stages/apply', {stage_id:stageId,account_ids:[accountId],toggle:toggle});
+  _stageLibCache = null;
+  renderStageLibrary();
+}
+function addStage() {
+  const el = document.getElementById('stage-card-list') || document.getElementById('stage-lib-content');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.style.cssText = 'padding:5px 8px;margin-top:4px';
+  _stageIdCounter++;
+  div.innerHTML = '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px">'
+    + '<input type="text" class="stage-name" value="" style="flex:1;padding:2px 6px;background:var(--bg3);border:1px solid var(--accent);color:var(--text);border-radius:3px;font-size:12px" placeholder="关卡名如 1-7">'
+    + '<button class="small" onclick="this.parentElement.parentElement.parentElement.remove()" style="font-size:9px;padding:1px 5px;color:var(--danger)">✕</button></div>'
+    + '<input type="text" class="stage-note" value="" style="width:100%;margin-top:2px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:3px;font-size:10px" placeholder="备注(可选)">'
+    + '</div>';
+  if (el.firstChild) el.insertBefore(div, el.firstChild);
+  else el.appendChild(div);
+  div.querySelector('.stage-name').focus();
+}
+function removeStage(idx) {
+  const el = document.getElementById('stage-lib-content');
+  if (!el) return;
+  const cards = el.querySelectorAll('.stage-name');
+  if (cards[idx]) cards[idx].closest('.card')?.remove();
+}
+async function saveStageLibrary() {
+  const el = document.getElementById('stage-lib-content');
+  if (!el) return;
+  const names = el.querySelectorAll('.stage-name');
+  const notes = el.querySelectorAll('.stage-note');
+  const stages = [];
+  const usedIds = new Set();
+  names.forEach((input, i) => {
+    const name = input.value.trim();
+    if (!name) return;
+    // Collect existing data from the in-page data attributes
+    let sid = input.dataset.idx || 'new';
+    // Generate stable IDs
+    let id = 's' + (i + 1);
+    while (usedIds.has(id)) id = 's' + (id.slice(1) - 0 + 1);
+    usedIds.add(id);
+    const note = notes[i] ? notes[i].value.trim() : '';
+    stages.push({id, name, note});
+  });
+  const r = await apiPost('/stages', {stages});
+  if (r.ok) toast('关卡仓库已保存');
+  else toast(r.error || '保存失败', 'error');
+  _stageLibCache = null;
+  renderStageLibrary();
+}
 function renderOnboarding(container) {
   fetch('pages/onboarding.html').then(r => r.text()).then(html => {
     container.innerHTML = html;
@@ -591,6 +770,46 @@ async function loadDashboard() {
     html += _dashStat(`${q.pending_count||0}`, '排队中', 'var(--warn)');
     html += `</div></div>`;
 
+    // ── 到期提醒 ──
+    var expireHtml = '';
+    try {
+      var accts = (await apiGet('/accounts')).accounts || [];
+      var now = new Date();
+      accts.forEach(function(a) {
+        if (!a.expire_date) return;
+        var d = new Date(a.expire_date);
+        var diff = Math.ceil((d - now) / 86400000);
+        if (diff < 0) expireHtml += '<div style="font-size:9px;color:var(--danger);padding:2px 0">⚠ <b>'+a.name+'</b> 已过期 '+Math.abs(diff)+' 天'+(a.note ? ' ('+a.note+')' : '')+'</div>';
+        else if (diff <= 3) expireHtml += '<div style="font-size:9px;color:var(--warn);padding:2px 0">⏰ <b>'+a.name+'</b> '+diff+' 天后到期'+(a.note ? ' ('+a.note+')' : '')+'</div>';
+      });
+    } catch(e) {}
+    if (expireHtml) html += '<div class="card" style="padding:4px 8px;margin-bottom:6px;flex-direction:column;align-items:stretch;border-left:3px solid var(--danger)">'+expireHtml+'</div>';
+
+    // ── 今日汇总 ──
+    try {
+      var todayRuns = 0, todayFails = 0, todayTotal = 0;
+      var st = await apiGet('/stats');
+      if (st.ok && st.accounts) {
+        var todayKey = new Date().toISOString().slice(0, 10);
+        st.accounts.forEach(function(a) {
+          if (a.stats && a.stats[todayKey]) {
+            var day = a.stats[todayKey];
+            todayTotal += day.launches || 0;
+            if (day.total_sec > 0) todayRuns++;
+          }
+        });
+      }
+      // Count running from dashboard data
+      var runningNow = cap.running || 0;
+      var rate = todayTotal > 0 ? Math.round(todayRuns / todayTotal * 100) : 100;
+      html += '<div class="card" style="padding:4px 10px;margin-bottom:6px;flex-direction:row;gap:12px;flex-wrap:wrap">';
+      html += '<span style="font-size:9px;color:var(--text2);font-weight:bold">📊 今日</span>';
+      html += '<span style="font-size:10px">运行 <b style="color:var(--accent)">'+todayTotal+'</b> 次</span>';
+      html += '<span style="font-size:10px">在线 <b style="color:var(--accent)">'+runningNow+'</b> 个</span>';
+      html += '<span style="font-size:10px">成功率 <b style="color:'+(rate>80?'var(--accent)':'var(--warn)')+'">'+rate+'%</b></span>';
+      html += '</div>';
+    } catch(e) {}
+
     // ── 操作 + 调度配置 ──
     html += `<div class="card" style="padding:6px 8px;margin-bottom:6px;flex-direction:column;align-items:stretch">`;
     // Row 1: action buttons
@@ -669,29 +888,27 @@ async function loadDashboard() {
     }
     html += `</div></div>`;
 
-    // ── 资源趋势 ──
+    // ── 资源趋势 (折叠) ──
     const samples = d.samples || [];
     if (samples.length > 5) {
-      html += `<div style="margin-bottom:8px">`;
-    html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch;overflow-x:auto">`;
-      html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">资源趋势</div>`;
+      html += `<details id="dash-trend" style="margin-bottom:6px;font-size:10px" ${samples.length > 5 ? 'open' : ''}><summary style="cursor:pointer;color:var(--text2);font-weight:bold;padding:6px 0">📈 资源趋势</summary>`;
+      html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch;overflow-x:auto">`;
       html += _trendChart(samples);
       html += `<div style="font-size:8px;color:var(--text3);margin-top:2px"><span style="color:#e74c3c">─ CPU</span> <span style="color:#3498db;margin-left:6px">─ 内存</span> <span style="color:#2ecc71;margin-left:6px">─ GPU</span></div>`;
-      html += `</div>`;
-      html += `</div>`;
+      html += `</div></details>`;
     }
 
-    // ── 调度编年史 ──
+    // ── 调度编年史 (折叠) ──
     const gantt = d.gantt || [];
-    html += `<div class="card" style="padding:10px;margin-bottom:8px;flex-direction:column;align-items:stretch">`;
-    html += `<div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:6px">📜 调度编年史</div>`;
+    html += `<details id="dash-gantt" style="margin-bottom:6px;font-size:10px" open><summary style="cursor:pointer;color:var(--text2);font-weight:bold;padding:6px 0">📜 编年史 (${gantt.length}条)</summary>`;
+    html += `<div class="card" style="padding:10px;flex-direction:column;align-items:stretch">`;
     html += _chronicleTimeline(gantt);
-    html += `</div>`;
+    html += `</div></details>`;
 
-    // ── 进程资源表 ──
-    html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
-    html += `<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">进程资源 ${procs.length ? '' : '(空)'}</div>`;
+    // ── 进程资源表 (折叠) ──
+    html += `<details id="dash-procs" style="margin-bottom:6px;font-size:10px" open><summary style="cursor:pointer;color:var(--text2);font-weight:bold;padding:6px 0">🖥 进程资源${procs.length ? ' ('+procs.length+'个)' : ''}</summary>`;
     if (procs.length) {
+      html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
       const ncpu = sys.cpu_count || 1;
       html += `<table style="width:100%;font-size:10px;border-collapse:collapse">`;
       html += `<tr style="color:var(--text3)"><th style="text-align:left;padding:2px 4px">账号</th><th style="text-align:right;padding:2px 4px">CPU</th><th style="text-align:right;padding:2px 4px">内存</th><th style="text-align:right;padding:2px 4px">进程</th></tr>`;
@@ -705,9 +922,12 @@ async function loadDashboard() {
         html += `<tr style="border-top:1px solid var(--border)"><td style="padding:2px 4px">${label} ${p.name}</td><td style="text-align:right;padding:2px 4px">${cpu.toFixed(1)}%</td><td style="text-align:right;padding:2px 4px">${mem.toFixed(1)}G</td><td style="text-align:right;padding:2px 4px;font-size:9px;color:var(--text3)">${detail}</td></tr>`;
       }
       html += `<tr style="border-top:1px solid var(--border);color:var(--text3);font-weight:bold"><td style="padding:2px 4px">合计</td><td style="text-align:right;padding:2px 4px">${tCpu.toFixed(1)}%</td><td style="text-align:right;padding:2px 4px">${tMem.toFixed(1)}G</td><td style="text-align:right;padding:2px 4px;font-size:9px">GPU ${gpu.usage}% / ${(gpu.mem_used_mb/1024).toFixed(1)}G</td></tr>`;
-      html += `</table>`;
+      html += `</table></div>`;
     }
-    html += `</div>`;
+    html += `</details>`;
+
+    // ── AI 分析 ──
+    html += `<div id="ai-insights-area"></div>`;
 
     el.innerHTML = html;
     // Restore details open state after re-render
@@ -717,6 +937,7 @@ async function loadDashboard() {
     });
     const sub = document.getElementById('dash-subtitle');
     if (sub) sub.textContent = `并行${cap.parallel_max} · 还可${cap.max} · ${cap.limit_by||''}${gpu.name ? ' · ' + gpu.name : ''}`;
+    renderAIInsights();
     if (q && q.paused) {
       const pb = document.getElementById('dash-pause-btn');
       if (pb) pb.textContent = '▶ 恢复';
@@ -771,6 +992,10 @@ function _chronicleTimeline(events) {
       run.taskList = (tasks[aid]||[]).filter(t => t.ts >= run.start && t.ts <= run.stop).map(t => t.task);
       runs.push(run);
       delete starts[aid];
+    } else if (e.event === 'stop') {
+      // Orphaned stop (no matching start) — still show it
+      const aid = e.aid;
+      runs.push({aid, name: e.name, start: e.ts - 1, stop: e.ts, dur: 0, taskList: []});
     }
   }
   for (const [aid, ts] of Object.entries(starts)) {
@@ -1044,7 +1269,7 @@ async function loadGallery() {
     let html = '';
     for (const run of r.runs) {
       const dateStr = new Date(run.ts * 1000).toLocaleString();
-      html += `<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);font-weight:bold;margin-bottom:4px">${dateStr} (${run.shots.length}张)</div>`;
+      html += `<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text2);font-weight:bold;margin-bottom:4px">${dateStr} (${run.shots.length}张) <a href="${API}/screenshots/${r.aid}/export/${run.dir}" style="font-size:9px;font-weight:normal;color:var(--accent);text-decoration:none">📥 下载</a></div>`;
       html += `<div style="display:flex;gap:4px;overflow-x:auto;padding:4px 0">`;
       for (const shot of run.shots) {
         const ts = new Date(shot.ts * 1000).toLocaleTimeString();
@@ -1070,6 +1295,7 @@ async function renderChronicle(container) {
     <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="color:var(--text2);font-size:12px;font-weight:bold">📜 编年史</span>
       <span style="font-size:10px;color:var(--text3)">运行时间线</span>
+      <button class="small" onclick="downloadGantt()">📥 导出</button>
       <button class="small" onclick="loadChronicle()">刷新</button>
     </div>
     <div id="chronicle-content"></div>
@@ -1080,6 +1306,9 @@ async function renderChronicle(container) {
     if (state.page !== 'chronicle') { clearInterval(logTimer); logTimer = null; return; }
     loadChronicle();
   }, 10000);
+}
+function downloadGantt() {
+  window.open(API + '/export/gantt', '_blank');
 }
 async function loadChronicle() {
   try {
@@ -1236,6 +1465,88 @@ async function execOnNode(nodeId, action, args) {
   setTimeout(() => refreshNode(node), 2000);
 }
 
+// ── Emulator Management ──
+async function renderEmus(container) {
+  // Clear previous auto-refresh timer
+  if (window._emuTimer) clearInterval(window._emuTimer);
+  try {
+    const r = await apiGet('/emulators');
+    if (!r.ok) { showError(container); return; }
+    const emus = r.emulators || [];
+    const isVisible = container === document.getElementById('content');
+    container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">'
+      + '<span style="color:var(--text2);font-size:12px;font-weight:bold">📱 模拟器管理</span>'
+      + '<span style="font-size:10px;color:var(--text3)">共 ' + emus.length + ' 个 | 每5s刷新</span>'
+      + '<button class="small" onclick="renderEmus(document.getElementById(\'content\'))">刷新</button>'
+      + '</div><div class="card-list" id="emus-list"></div>';
+    const el = document.getElementById('emus-list');
+    if (!el) return;
+    let html = '';
+    for (const e of emus) {
+      const running = e.running ? true : false;
+      const port = e.adb_port || '-';
+      html += '<div class="card" style="padding:5px 8px">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;align-items:center;gap:4px">'
+        + '<span style="width:8px;height:8px;border-radius:50%;background:' + (running ? 'var(--accent)' : 'var(--border)') + ';display:inline-block"></span>'
+        + '<span style="font-size:11px;font-weight:bold">VM ' + e.index + '</span>'
+        + '<span style="font-size:9px;color:var(--text3)">' + (e.name || '') + '</span>'
+        + '<span style="font-size:9px;color:var(--text3)">ADB:' + port + '</span>'
+        + '<span style="flex:1"></span>'
+        + '<button class="small" onclick="emuControl(' + e.index + ',\'start\')" ' + (running ? 'disabled' : '') + ' style="font-size:9px;padding:1px 5px;' + (running ? 'opacity:0.4' : '') + '">▶ 启动</button>'
+        + '<button class="small" onclick="emuControl(' + e.index + ',\'stop\')" ' + (!running ? 'disabled' : '') + ' style="font-size:9px;padding:1px 5px;color:var(--danger);' + (!running ? 'opacity:0.4' : '') + '">⏹ 关闭</button>'
+        + '<button class="small" onclick="emuControl(' + e.index + ',\'restart\')" style="font-size:9px;padding:1px 5px">🔄 重启</button>'
+        + '</div></div></div>';
+    }
+    el.innerHTML = html || '<div style="color:var(--text3);text-align:center;padding:20px">未检测到模拟器</div>';
+  } catch(e) {}
+  // Auto-refresh every 5s while on this page
+  if (state.page === 'emus' && document.getElementById('content') === container) {
+    if (window._emuTimer) clearInterval(window._emuTimer);
+    window._emuTimer = setInterval(async () => {
+      if (state.page !== 'emus') { clearInterval(window._emuTimer); window._emuTimer = null; return; }
+      renderEmus(document.getElementById('content'));
+    }, 5000);
+  }
+}
+async function emuControl(idx, action) {
+  const r = await apiPost('/emulator/' + idx + '/' + action, {});
+  if (r.ok) toast(action === 'start' ? '启动中...' : action === 'stop' ? '关闭中...' : '重启中...');
+  else toast(r.error || '操作失败', 'error');
+  setTimeout(() => renderEmus(document.getElementById('content')), 2000);
+}
+
+// ── Operation Log ──
+function toggleOplog() {
+  var el = document.getElementById('oplog-panel');
+  if (el) { el.remove(); return; }
+  el = document.createElement('div');
+  el.id = 'oplog-panel';
+  el.style.cssText = 'position:fixed;top:0;right:0;width:380px;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:200;padding:12px;overflow-y:auto;font-size:11px;box-shadow:-4px 0 20px rgba(0,0,0,0.3)';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
+    + '<span style="font-size:12px;font-weight:bold;color:var(--text2)">📋 操作记录</span>'
+    + '<span style="flex:1"></span>'
+    + '<button class="small" onclick="this.parentElement.parentElement.remove()">✕</button></div>'
+    + '<div id="oplog-list"></div>';
+  document.body.appendChild(el);
+  loadOplogPanel();
+}
+async function loadOplogPanel() {
+  try {
+    var el = document.getElementById('oplog-list');
+    if (!el) return;
+    var r = await apiGet('/oplog');
+    if (!r.ok || !r.ops) { el.innerHTML = '<div style="color:var(--text3);padding:10px">暂无记录</div>'; return; }
+    el.innerHTML = r.ops.slice(-50).reverse().map(function(o) {
+      return '<div style="padding:4px 0;border-bottom:1px solid var(--border);display:flex;gap:4px">'
+        + '<span style="color:var(--text3);white-space:nowrap">' + (o.ts || '') + '</span>'
+        + '<span style="color:var(--text)">' + (o.action || '') + '</span>'
+        + (o.detail ? '<span style="color:var(--text3)">' + o.detail + '</span>' : '')
+        + '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
 async function renderLogs(container) {
   // Fetch accounts for MAA log selector
   const accts = state.accounts.length ? state.accounts : ((await apiGet('/accounts')).ok ? (await apiGet('/accounts')).accounts : []);
@@ -1251,6 +1562,7 @@ async function renderLogs(container) {
         <option value="error">仅错误</option>
       </select>
       <button class="small" onclick="clearLogView()">清空</button>
+      <button class="small" id="ai-analyze-btn" onclick="manualAIAnalyze()" style="color:var(--accent);display:none">🤖 AI 分析</button>
     </div>
     <pre id="log-feed" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-size:11px;line-height:1.4;height:calc(100vh - 120px);overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all;font-family:Consolas,'Courier New',monospace"></pre>
   </div>`;
@@ -1262,11 +1574,29 @@ async function renderLogs(container) {
   }, 3000);
 }
 
+async function manualAIAnalyze() {
+  if (!_logSource || !_logSource.startsWith('maa_')) return;
+  const aid = _logSource.replace('maa_', '');
+  const btn = document.getElementById('ai-analyze-btn');
+  if (btn) { btn.textContent = '分析中...'; btn.disabled = true; }
+  const r = await apiPost('/ai/analyze', { aid, exit_code: -11, failed_tasks: [] });
+  if (btn) { btn.textContent = '🤖 AI 分析'; btn.disabled = false; }
+  if (r.ok && r.result) {
+    const ins = r.result;
+    toast(`AI: ${ins.reason}`, ins.confidence === 'high' ? 'error' : 'info');
+    if (ins.suggestion) toast(`建议: ${ins.suggestion}`, 'info');
+  } else {
+    toast('AI 分析失败', 'error');
+  }
+}
+
 let _logSource = 'app';
 
 function switchLogSource() {
   const sel = document.getElementById('log-source');
   _logSource = sel?.value || 'app';
+  const btn = document.getElementById('ai-analyze-btn');
+  if (btn) btn.style.display = _logSource.startsWith('maa_') ? 'inline-block' : 'none';
   refreshLogFeed();
 }
 
@@ -1432,6 +1762,9 @@ async function renderAccount(container) {
     </div>
     <div class="form-row"><label>切换账号</label><input id="ed-switch" value="${a.account_switch||''}" placeholder="游戏内切换账号标识"></div>
     <div class="form-row"><label>游戏 UID</label><input id="ed-uid" value="${a.uid||''}" placeholder="游戏内 UID"></div>
+    <div class="form-row"><label>备注</label><input id="ed-note" value="${a.note||''}" placeholder="任意备注"></div>
+    <div class="form-row"><label>到期</label><input type="date" id="ed-expire" value="${a.expire_date||''}"></div>
+    <div class="form-row"><label>可刷关卡</label><div id="ed-stages" style="flex:1;display:flex;gap:3px;flex-wrap:wrap;font-size:11px">加载中...</div></div>
     <div style="border-top:1px solid var(--border);margin:8px 0;padding-top:8px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:4px">操作</div>
       <button onclick="launchAccount('${a.id}')" style="margin-right:4px">▶ 启动</button>
@@ -1446,6 +1779,17 @@ async function renderAccount(container) {
       <button class="primary" onclick="saveAccountDetail('${a.id}',${idx})">保存</button>
     </div>
   </div>`;
+  // Load stage library for account edit
+  (async () => {
+    const sr = await apiGet('/stages');
+    if (!sr.ok || !sr.stages) return;
+    const el = document.getElementById('ed-stages');
+    if (!el) return;
+    const accountStages = a.stages || [];
+    el.innerHTML = sr.stages.map(s => `<label style="display:flex;align-items:center;gap:4px;padding:2px 6px;background:var(--bg3);border-radius:3px;cursor:pointer">
+      <input type="checkbox" class="ed-stage-cb" value="${s.id}" ${accountStages.includes(s.id)?'checked':''}> ${s.name}
+    </label>`).join('') || '<span style="color:var(--text3)">暂无可用关卡，先去设置添加</span>';
+  })();
 }
 
 async function saveAccountDetail(id, idx) {
@@ -1454,9 +1798,18 @@ async function saveAccountDetail(id, idx) {
   const vm = document.getElementById('ed-vm')?.value;
   const sw = document.getElementById('ed-switch')?.value?.trim();
   const uid = document.getElementById('ed-uid')?.value?.trim();
+  const note = document.getElementById('ed-note')?.value?.trim();
+  const expire = document.getElementById('ed-expire')?.value;
   const body = { name, game_client: client, emu_instance_index: vm || '' };
   if (sw) body.account_switch = sw;
   if (uid) body.uid = uid;
+  body.note = note || '';
+  body.expire_date = expire || '';
+  // Collect stages from checkboxes
+  const stageCbs = document.querySelectorAll('.ed-stage-cb');
+  if (stageCbs.length) {
+    body.stages = [...stageCbs].filter(cb => cb.checked).map(cb => cb.value);
+  }
   const r = await apiPost(`/account/${idx}/edit`, body);
   if (r.ok) toast('已保存');
   else toast(r.error || '保存失败', 'error');
@@ -1680,10 +2033,16 @@ async function createAccount(input) {
   if (r.ok) { toast(`已创建 ${name}`); renderPage(); } else toast(r.error || '创建失败', 'error');
   input.value = '';
 }
-function showCreateAccountForm() {
+function showCreateAccountForm(preset) {
   const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
     <div class="dialog" style="max-width:420px">
-      <div style="font-size:14px;font-weight:bold;margin-bottom:10px;color:var(--text2)">创建账号</div>
+      <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:var(--text2)">创建账号</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="small" onclick="quickCreate('Official')" style="background:var(--accent);color:#fff;border-color:var(--accent);font-size:10px">＋ 官服</button>
+        <button class="small" onclick="quickCreate('Bilibili')" style="font-size:10px">＋ B服</button>
+        <button class="small" onclick="quickCreate('YoStarJP')" style="font-size:10px">＋ 日服</button>
+        <button class="small" onclick="quickCreate('YoStarEN')" style="font-size:10px">＋ 美服</button>
+      </div>
       <div id="create-form-loading" style="text-align:center;padding:20px;color:var(--text3);font-size:11px">正在检测模拟器...</div>
     </div>
   </div>`;
@@ -1708,6 +2067,8 @@ async function loadCreateForm() {
       <div id="form-auto-info" style="font-size:9px;color:var(--text3);padding:2px 0 6px;display:none"></div>
       <div class="form-row"><label>切换账号</label><input type="text" id="form-switch" value="" placeholder="游戏内切换账号标识(可选)"></div>
       <div class="form-row"><label>游戏 UID</label><input type="text" id="form-uid" value="" placeholder="游戏内 UID(可选)"></div>
+      <div class="form-row"><label>备注</label><input type="text" id="form-note" value="" placeholder="任意备注(可选)"></div>
+      <div class="form-row"><label>到期</label><input type="date" id="form-expire" value=""></div>
       <div class="btn-row" style="margin-top:10px">
         <button class="primary" onclick="submitCreateAccount()">创建</button>
         <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
@@ -1755,6 +2116,8 @@ async function submitCreateAccount() {
     game_client: document.getElementById('form-client')?.value || 'Official',
     account_switch: document.getElementById('form-switch')?.value?.trim() || '',
     uid: document.getElementById('form-uid')?.value?.trim() || '',
+    note: document.getElementById('form-note')?.value?.trim() || '',
+    expire_date: document.getElementById('form-expire')?.value || '',
   };
   const emuData = window._emuData;
   body.emu_instance_index = emuData ? emuData.idx : '';
@@ -1762,6 +2125,14 @@ async function submitCreateAccount() {
   document.querySelector('.dialog-overlay')?.remove();
   window._emuData = null;
   if (r.ok) { toast(`已创建 ${name}`); renderPage(); } else toast(r.error || '创建失败', 'error');
+}
+async function quickCreate(client) {
+  const label = {Official:'官服',Bilibili:'B服',YoStarEN:'美服',YoStarJP:'日服',YoStarKR:'韩服',txwy:'繁中服'}[client]||client;
+  const name = prompt(`输入 ${label} 账号名称:`);
+  if (!name) return;
+  const r = await apiPost('/account', {name,game_client:client,emu_instance_index:'',note:'',expire_date:''});
+  if (r.ok) { toast(`已创建 ${name} (${label})`); document.querySelector('.dialog-overlay')?.remove(); renderPage(); }
+  else toast(r.error || '创建失败','error');
 }
 async function saveGeneral() {
   const theme = document.getElementById('sel-theme').value;
@@ -1778,6 +2149,32 @@ async function saveGeneral() {
     bind_address: document.getElementById('input-bind')?.value?.trim() || '127.0.0.1',
   });
   if (r.ok) toast('已保存'); else toast(r.error || '保存失败', 'error');
+}
+function onAIProviderChange() {
+  const sel = document.getElementById('sel-ai-provider');
+  const ep = document.getElementById('input-ai-endpoint');
+  const model = document.getElementById('input-ai-model');
+  const hints = { openai: ['https://api.openai.com/v1/chat/completions', 'gpt-4o-mini'], deepseek: ['https://api.deepseek.com/v1/chat/completions', 'deepseek-chat'], qwen: ['https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', 'qwen-plus'], siliconflow: ['https://api.siliconflow.cn/v1/chat/completions', 'Qwen/Qwen2.5-7B-Instruct'] };
+  const h = hints[sel.value];
+  if (h && sel.value !== 'custom') { ep.placeholder = h[0]; model.placeholder = h[1]; if (!ep.value) ep.value = ''; if (!model.value) model.value = ''; }
+}
+async function saveAI() {
+  const r = await apiPost('/config', {
+    ai_provider: document.getElementById('sel-ai-provider')?.value || 'openai',
+    ai_api_key: document.getElementById('input-ai-key')?.value?.trim() || '',
+    ai_endpoint: document.getElementById('input-ai-endpoint')?.value?.trim() || '',
+    ai_model: document.getElementById('input-ai-model')?.value?.trim() || '',
+    ai_auto_analyze: document.getElementById('cb-ai-auto')?.checked || false,
+  });
+  if (r.ok) toast('AI 配置已保存'); else toast(r.error || '保存失败', 'error');
+}
+async function saveNotify() {
+  const r = await apiPost('/config', {
+    webhook_url: document.getElementById('input-webhook2')?.value?.trim() || '',
+    tg_token: document.getElementById('input-tg-token')?.value?.trim() || '',
+    tg_chat_id: document.getElementById('input-tg-chat')?.value?.trim() || '',
+  });
+  if (r.ok) toast('通知配置已保存'); else toast(r.error || '保存失败', 'error');
 }
 async function saveSmart() {
   const r = await apiPost('/settings/smart', {
@@ -1864,6 +2261,12 @@ async function exportConfig() {
 async function downloadLogs() {
   toast('正在打包日志...');
   window.open(API + '/export/logs', '_blank');
+}
+async function restartMAAOrch() {
+  if (!await showConfirm('确认重启服务？页面将短暂断开连接。')) return;
+  const r = await apiPost('/system/restart', {});
+  if (r.ok) { toast('重启中...'); setTimeout(() => { window.location.reload(); }, 3000); }
+  else toast(r.error || '重启失败', 'error');
 }
 function showImportConfig() {
   const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
@@ -2080,12 +2483,15 @@ function toggleSelect(id) {
   updateBatchBar();
 }
 function updateBatchBar() {
+  const count = selectedIds.size;
   const bar = document.getElementById('batch-bar');
   if (!bar) return;
-  const count = selectedIds.size;
-  bar.style.display = count ? 'flex' : 'none';
-  const countEl = bar.querySelector('.count');
+  const countEl = document.getElementById('batch-count');
   if (countEl) countEl.textContent = `已选 ${count}`;
+  bar.querySelectorAll('button').forEach(btn => {
+    btn.disabled = count === 0;
+    btn.style.opacity = count === 0 ? '0.4' : '1';
+  });
 }
 async function batchSmart() {
   if (selectedIds.size === 0) return;
@@ -2115,6 +2521,80 @@ async function batchDelete() {
   }
   selectedIds.clear(); renderPage();
 }
+// ── Batch Assign Stage ──
+async function batchAssignStage() {
+  if (selectedIds.size === 0) return;
+  const sr = await apiGet('/stages');
+  if (!sr.ok || !sr.stages || !sr.stages.length) {
+    toast('暂无可用关卡，请先去设置→关卡仓库添加', 'error');
+    return;
+  }
+  const ids = [...selectedIds];
+  const stages = sr.stages;
+  let html = stages.map(s => `<label style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer">
+    <input type="checkbox" class="stage-assign" value="${s.id}"> <span style="font-size:12px">${s.name}</span>
+    <span style="font-size:9px;color:var(--text3)">${s.count || 0}个</span>
+  </label>`).join('');
+  html = `<div class="dialog" style="max-width:360px">
+    <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:var(--text2)">分配关卡 (${ids.length}个账号)</div>
+    ${html || '<div style="color:var(--text3);padding:10px">暂无可用关卡</div>'}
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <button class="small primary" onclick="submitAssignStage()">确定添加</button>
+      <button class="small" onclick="submitRemoveStage()" style="color:var(--danger)">移除选中</button>
+      <button class="small" onclick="this.closest('.dialog-overlay').remove()">取消</button>
+    </div>
+  </div>`;
+  const ov = document.createElement('div'); ov.className = 'dialog-overlay';
+  ov.innerHTML = html; document.body.appendChild(ov);
+}
+async function submitAssignStage() {
+  const checked = document.querySelectorAll('.stage-assign:checked');
+  if (!checked.length) { toast('请选择关卡', 'error'); return; }
+  const ids = [...selectedIds];
+  for (const cb of checked) {
+    await apiPost('/stages/apply', { stage_id: cb.value, account_ids: ids, toggle: true });
+  }
+  document.querySelector('.dialog-overlay')?.remove();
+  toast('已分配');
+  _stageLibCache = null;
+  renderPage();
+}
+async function submitRemoveStage() {
+  const checked = document.querySelectorAll('.stage-assign:checked');
+  if (!checked.length) { toast('请选择关卡', 'error'); return; }
+  const ids = [...selectedIds];
+  for (const cb of checked) {
+    await apiPost('/stages/apply', { stage_id: cb.value, account_ids: ids, toggle: false });
+  }
+  document.querySelector('.dialog-overlay')?.remove();
+  toast('已移除');
+  renderPage();
+}
+
+// ── AI Insights ──
+function renderAIInsights() {
+  const area = document.getElementById('ai-insights-area');
+  if (!area) return;
+  const insights = state.aiInsights || [];
+  if (!insights.length) { area.innerHTML = ''; return; }
+  let html = '';
+  for (const ins of insights) {
+    const confColor = ins.confidence === 'high' ? 'var(--danger)' : ins.confidence === 'medium' ? 'var(--warn)' : 'var(--text3)';
+    html += `<div class="card" style="padding:6px 10px;margin-bottom:4px;flex-direction:column;align-items:stretch;border-left:3px solid ${confColor}">`;
+    html += `<div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:2px">`;
+    html += `<span>🤖 AI 分析</span>`;
+    html += `<span style="font-size:8px;color:var(--text3)">${new Date(ins.ts * 1000).toLocaleTimeString()}</span>`;
+    html += `<span style="flex:1"></span>`;
+    html += `<span style="font-size:8px;padding:1px 4px;border-radius:2px;background:${confColor}20;color:${confColor}">${ins.confidence}</span>`;
+    html += `</div>`;
+    html += `<div style="font-size:11px;color:var(--text);margin-bottom:2px">❌ ${ins.reason}</div>`;
+    if (ins.suggestion) {
+      html += `<div style="font-size:10px;color:var(--accent)">💡 ${ins.suggestion}</div>`;
+    }
+    html += `</div>`;
+  }
+  area.innerHTML = html;
+}
 
 // ── SSE (Server-Sent Events) — replace polling ──
 function startSSE() {
@@ -2136,8 +2616,17 @@ function startSSE() {
             if (!_notifIds.has(n.id)) {
               _notifIds.add(n.id);
               showNotif(n.message, n.type);
+              // Refresh emulator page if it mentions emu status
+              if (n.message.includes('模拟器') && state.page === 'emus') {
+                renderEmus(document.getElementById('content'));
+              }
             }
           }
+        }
+        // Update AI insights on dashboard
+        if (data.ai_insights && data.ai_insights.length) {
+          state.aiInsights = data.ai_insights;
+          if (state.page === 'dashboard') renderAIInsights();
         }
         // Only re-render if current page is accounts
         if (state.page === 'accounts' && document.getElementById('content')) {
@@ -2161,7 +2650,7 @@ async function checkOnboarding() {
         await apiPost('/config', { onboarding_done: true });
         return;
       }
-      if (!r.config?.maa_version) {
+      if (!r.config?.maa_version && state.page === 'dashboard') {
         navigate('onboarding');
       }
     }
@@ -2172,7 +2661,11 @@ async function checkOnboarding() {
 document.addEventListener('DOMContentLoaded', () => {
   // Navigation
   document.querySelectorAll('.nav-item').forEach(n => {
-    n.addEventListener('click', () => navigate(n.dataset.page));
+    n.addEventListener('click', () => {
+      if (!n.dataset.page) return;
+      document.getElementById('mobile-menu-overlay').style.display = 'none';
+      navigate(n.dataset.page);
+    });
   });
   // Mode switching
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -2207,3 +2700,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.altKey && e.key === 'a') { navigate('accounts'); e.preventDefault(); }
   });
 });
+// ── Mobile Menu ──
+function toggleMobileMenu() {
+  var el = document.getElementById('mobile-menu-overlay');
+  if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+function closeMobileMenu(e) {
+  if (e && e.target !== e.currentTarget) return;
+  var el = document.getElementById('mobile-menu-overlay');
+  if (el) el.style.display = 'none';
+}

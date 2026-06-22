@@ -375,12 +375,19 @@ func main() {
 	mux.HandleFunc("/api/agent/exec", authMiddleware(handleExec))
 	mux.HandleFunc("/api/agent/read", authMiddleware(handleFileRead))
 	mux.HandleFunc("/api/agent/write", authMiddleware(handleFileWrite))
+	mux.HandleFunc("/api/agent/write-range", authMiddleware(handleWriteRange))
 	mux.HandleFunc("/api/agent/process/stop", authMiddleware(handleProcessStop))
-	mux.HandleFunc("/api/agent/process/start", authMiddleware(handleProcessStart))
+	mux.HandleFunc("/api/agent/process/start", authMiddleware(handleProcessStartV2))
+	mux.HandleFunc("/api/agent/process/output", authMiddleware(handleProcessOutput))
+	mux.HandleFunc("/api/agent/process/log", authMiddleware(handleProcessLog))
+	mux.HandleFunc("/api/agent/glob", authMiddleware(handleGlob))
+	mux.HandleFunc("/api/agent/grep", authMiddleware(handleGrep))
+	mux.HandleFunc("/api/agent/diff", authMiddleware(handleDiff))
+	mux.HandleFunc("/api/agent/patch", authMiddleware(handlePatch))
 	mux.HandleFunc("/api/agent/status", authMiddleware(handleStatus))
 
 	addr := fmt.Sprintf("0.0.0.0:%d", port)
-	fmt.Printf("MAAOrch Agent starting on %s\n", addr)
+	fmt.Printf("MAAOrch Agent v0.2.0 starting on %s\n", addr)
 	if token != "" {
 		fmt.Println("Token auth enabled")
 	}

@@ -1,6 +1,22 @@
 import os,json,subprocess,time,functools
 from pathlib import Path
-from PySide6.QtCore import QThread, Signal
+try:
+    from PySide6.QtCore import QThread, Signal
+except ImportError:
+    # Stub for headless mode (Web UI without PySide6)
+    class QThread:
+        def __init__(self, *a, **kw): pass
+        def quit(self): pass
+        def wait(self, *a): return True
+        def msleep(self, *a): pass
+        def start(self, *a): pass
+    class Signal:
+        def __init__(self, *a): pass
+        def emit(self, *a): pass
+        def __get__(self, *a): return self
+    _HAS_QT = False
+else:
+    _HAS_QT = True
 
 TASK_NAMES={"StartUp":"启动游戏","Fight":"刷关作战","Recruit":"公开招募","Infrast":"基建换班",
     "Mall":"信用商店","Award":"领取奖励","Annihilation":"剿灭作战","Roguelike":"肉鸽探索","Reclamation":"生息演算","UserDataUpdate":"数据更新"}
@@ -55,7 +71,7 @@ if (ev:=os.environ.get("MUMU_CLI_HOME","")):
 def find_mumu_cli() -> str | None:
     # Check known paths + USERPROFILE
     extra=[str(Path(os.environ.get("USERPROFILE","."))/"MuMuPlayer"/"nx_main"/"mumu-cli.exe")]
-    for c in extra + MUMU_CLI_CANDIDATES:
+    for c in extra + MUMU_CLI_CANDIDATES + [str(Path(os.environ.get("LOCALAPPDATA",""))/"MuMuPlayer-12.0"/"shell"/"mumu-cli.exe")]:
         if Path(c).exists(): return c
     # Search drives for MuMuPlayer
     for drv in "CDEFGH":
@@ -64,7 +80,7 @@ def find_mumu_cli() -> str | None:
         try:
             for d in base.iterdir():
                 if d.is_dir() and "mumu" in d.name.lower():
-                    for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe"]:
+                    for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe","nx_device\\12.0\\shell\\mumu-cli.exe"]:
                         p=d/sub
                         if p.exists(): return str(p)
                 # Also check subdirectories (e.g. D:\Xiach\MuMuPlayer)
@@ -90,12 +106,13 @@ def find_adb() -> str | None:
     if cli:
         cli_p = Path(cli).parent
         mumu_p = cli_p.parent  # MuMuPlayer root
-        for cand in [cli_p/"adb.exe",
+        for cand in [mumu_p/"shell"/"adb.exe",           # Original MuMu ADB (has minitouch etc.)
+                     cli_p/"adb.exe",
                      cli_p.parent/"shell"/"adb.exe",
                      cli_p.parent.parent/"shell"/"adb.exe",
                      mumu_p/"nx_device"/"12.0"/"shell"/"adb.exe",
                      mumu_p/"nx_device"/"11.0"/"shell"/"adb.exe",
-                     mumu_p/"shell"/"adb.exe"]:
+                     Path(os.environ.get("LOCALAPPDATA",""))/"MuMuPlayer-12.0"/"shell"/"adb.exe"]:
             try:
                 if cand.exists(): return str(cand)
             except: pass

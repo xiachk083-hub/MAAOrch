@@ -5,6 +5,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Any
 from PySide6.QtCore import QThread, Signal
 
+
 # Operation log ring buffer
 _OPLOG: list[dict] = []
 def _log_op(action: str, detail: str = "") -> None:
@@ -12,6 +13,25 @@ def _log_op(action: str, detail: str = "") -> None:
     _OPLOG.append({"ts": time.strftime("%H:%M:%S"), "action": action, "detail": detail})
     if len(_OPLOG) > 100:
         _OPLOG = _OPLOG[-100:]
+
+def _get_web_schedule_tasks(mw: Any, include_anni: bool = True, only_anni: bool = False) -> list[str]:
+    """Build task list for smart scheduling (web version, no Qt dependency)."""
+    sg = mw.config.get("smart_global", {})
+    tasks = ["StartUp"]
+    if only_anni:
+        tasks.append("Annihilation")
+        return tasks
+    if sg.get("annihilation_enabled", True) and include_anni:
+        tasks.append("Annihilation")
+    tasks.append("Fight")
+    if sg.get("recruit_enabled", True):
+        tasks.append("Recruit")
+    if sg.get("infrast_enabled", True):
+        tasks.append("Infrast")
+    if sg.get("mall_enabled", True):
+        tasks.append("Mall")
+    tasks.append("Award")
+    return tasks
 
 class ApiServer(QThread):
     log_msg = Signal(str)
@@ -24,6 +44,7 @@ class ApiServer(QThread):
         # Simple rate limiter: max 200 req/min per IP (higher for localhost)
         _rate_buckets: dict[str,list[float]] = {}
         def _check_rate(ip: str, limit: int = 200) -> bool:
+            if ip in ("127.0.0.1", "::1"): return True
             now = time.time()
             bucket = _rate_buckets.get(ip, [])
             bucket = [t for t in bucket if t > now - 60]
@@ -38,9 +59,7 @@ class ApiServer(QThread):
             def _check_rate_limit(s):
                 ip = s.client_address[0]
                 if not _check_rate(ip):
-                    s.send_response(429)
-                    s.send_header("Retry-After","60")
-                    s.end_headers()
+                    s._json({"error":"rate_limited"}, 429)
                     return False
                 return True
             def _check_auth(s):
@@ -73,6 +92,8 @@ class ApiServer(QThread):
                 if p.startswith("/api/screenshots/") and "/file/" in p: return s._handle_screenshot_file(p)
                 if p.startswith("/api/screenshots/"): return s._handle_screenshots_list(p)
                 if p=="/api/export/logs": return s._handle_export_logs()
+                if p=="/api/export/gantt": return s._handle_export_gantt()
+                if p.startswith("/api/screenshots/") and "/export/" in p: return s._handle_screenshot_export(p)
                 if p=="/api/stats/dashboard": return s._handle_stats_dashboard()
                 if p=="/api/stats": return s._handle_all_stats()
                 if p=="/api/queue": return s._handle_queue_status()
@@ -85,6 +106,9 @@ class ApiServer(QThread):
                 if p=="/api/config": return s._handle_get_config()
                 if p=="/api/settings/smart": return s._handle_get_smart()
                 if p=="/api/emulators": return s._handle_emulators()
+                if p.startswith("/api/emulator/"): return s._handle_emulator_status(p)
+                if p=="/api/ai/analyze": return s._handle_ai_analyze()
+                if p=="/api/stages": return s._handle_get_stages()
                 # Static file serving for Web UI
                 if p=="/" or p.startswith("/ui/web/"):
                     return s._serve_static(p)
@@ -115,7 +139,14 @@ class ApiServer(QThread):
                 if p=="/api/queue/resume": return s._handle_queue_resume()
                 if p=="/api/config": return s._handle_save_config(body)
                 if p=="/api/settings/smart": return s._handle_save_smart(body)
+                if p=="/api/ai/analyze": return s._handle_ai_analyze(body)
+                if p=="/api/stages": return s._handle_save_stages(body)
+                if p=="/api/stages/apply": return s._handle_stages_apply(body)
                 if p=="/api/action/stop_all": return s._handle_stop_all()
+                if p.startswith("/api/emulator/"): return s._handle_emulator_control(p, body)
+                if p=="/api/system/close_popups": return s._handle_close_popups()
+                if p=="/api/system/kill_maa": return s._handle_kill_maa()
+                if p=="/api/system/restart": return s._handle_system_restart()
                 if p=="/api/action/smart_all": return s._handle_smart_all(body)
                 if p=="/api/action/smart_selected": return s._handle_smart_selected(body)
                 if p=="/api/instance/rebuild": return s._handle_rebuild()
@@ -185,17 +216,26 @@ class ApiServer(QThread):
                         })
                     q = {"count": mw.launch_queue.pending_count if hasattr(mw, 'launch_queue') and mw.launch_queue else 0}
                     notifs = getattr(mw, '_notifications', [])[-5:]
-                    return {"ok": True, "accounts": accts, "queue": q, "notifications": notifs}
+                    insights = getattr(mw, '_ai_insights', [])[-3:]
+                    return {"ok": True, "accounts": accts, "queue": q, "notifications": notifs, "ai_insights": insights}
                 except Exception:
                     return {"ok": False}
             def _handle_status(s):
                 accts=[]
                 proc_status = getattr(mw, "_proc_status", set())
                 proc_times = getattr(mw, "_proc_start_times", {})
+                # Cross-check with actual running PIDs
+                alive = set()
+                try:
+                    r = subprocess.run(["tasklist","/NH","/FI","IMAGENAME eq MAA.exe"],capture_output=True,text=True,timeout=5,creationflags=subprocess.CREATE_NO_WINDOW)
+                    for line in r.stdout.splitlines():
+                        if "MAA.exe" in line:
+                            alive.add(line.split()[1])
+                except: pass
                 for i,a in enumerate(mw.accounts):
                     progs=[w for w in mw.warehouse if w.get("account_ref")==a["id"]]
                     pid=progs[0]["id"] if progs else ""
-                    running=pid in proc_status
+                    running=pid in proc_status and pid in alive if pid else False
                     elapsed=0
                     if running and pid in proc_times: elapsed=int(time.time()-proc_times[pid])
                     accts.append({"name":a.get("name",""),"index":i,"running":running,"elapsed":elapsed,"adb":a.get("adb_address",""),"emu_index":a.get("emu_instance_index","")})
@@ -233,22 +273,51 @@ class ApiServer(QThread):
                         cpu_count = 1
                     processes = []
                     runner = getattr(mw, 'runner', None)
+                    accounts_list = getattr(mw, 'accounts', []) or []
+                    proc_status = getattr(mw, "_proc_status", set())
+                    # De-duplication across all sources
+                    seen_pids = set()
+                    seen_aids = set()
+                    # Get actual running MAA PIDs from tasklist
+                    actual_pids = set()
+                    try:
+                        r2 = _sp.run(["tasklist","/NH","/FI","IMAGENAME eq MAA.exe"],capture_output=True,text=True,timeout=5,creationflags=_sp.CREATE_NO_WINDOW)
+                        for _line in r2.stdout.splitlines():
+                            if "MAA.exe" not in _line: continue
+                            _parts = _line.split()
+                            if len(_parts) >= 2:
+                                try: actual_pids.add(int(_parts[1]))
+                                except: pass
+                    except: pass
+                    # Build process list from runner's tracking + queue active list
                     if runner and hasattr(runner, '_proc_info'):
-                        accounts_list = getattr(mw, 'accounts', []) or []
-                        proc_status = getattr(mw, "_proc_status", set())
                         for aid, info in list(runner._proc_info.items()):
                             try:
                                 ac = next((a for a in accounts_list if a.get("id") == aid), None)
                                 if not ac: continue
                                 maa = info.get("maa", {}) or {}
+                                maa_pid = maa.get("pid")
+                                # Skip if this AID already has a valid entry
+                                if aid in seen_aids:
+                                    continue
+                                # Skip entries with no PID that aren't in proc_status
+                                is_running = aid in proc_status
+                                if not maa_pid and not is_running:
+                                    continue
+                                # Skip if this PID was already added or is not actually running
+                                if maa_pid and (maa_pid in seen_pids or maa_pid not in actual_pids):
+                                    continue
+                                seen_aids.add(aid)
+                                if maa_pid:
+                                    seen_pids.add(maa_pid)
                                 emu = info.get("emu", {}) or {}
                                 processes.append({
                                     "aid": aid, "name": ac.get("name", aid),
-                                    "running": aid in proc_status,
+                                    "running": is_running if not maa_pid else maa_pid in actual_pids,
                                     "last_task": ac.get("_last_task", ""),
                                     "maa_mem_mb": maa.get("mem_mb", 0),
                                     "maa_cpu_pct": maa.get("cpu_pct", 0),
-                                    "maa_pid": maa.get("pid"),
+                                    "maa_pid": maa_pid,
                                     "emu_mem_mb": emu.get("mem_mb", 0),
                                     "emu_cpu_pct": emu.get("cpu_pct", 0),
                                     "emu_pid": emu.get("pid"),
@@ -256,6 +325,55 @@ class ApiServer(QThread):
                                 })
                             except Exception:
                                 continue
+                    # Queue active list
+                    lq = getattr(mw, "launch_queue", None)
+                    if lq and hasattr(lq, '_active_emus'):
+                        active_emus = getattr(lq, '_active_emus', {})
+                        for ac in accounts_list:
+                            aid = ac.get("id", "")
+                            if aid not in seen_aids and aid in active_emus.values():
+                                processes.append({
+                                    "aid": aid, "name": ac.get("name", aid),
+                                    "running": True,
+                                    "last_task": "", "maa_mem_mb": 0, "maa_cpu_pct": 0,
+                                    "maa_pid": None, "emu_mem_mb": 0, "emu_cpu_pct": 0,
+                                    "emu_pid": None, "emu_name": "",
+                                })
+                                seen_aids.add(aid)
+                    # Fallback: detect MAA.exe processes directly from tasklist
+                    try:
+                        r2 = _sp.run(["tasklist","/NH","/FI","IMAGENAME eq MAA.exe"],capture_output=True,text=True,timeout=5,creationflags=_sp.CREATE_NO_WINDOW)
+                        maa_count = r2.stdout.count("MAA.exe")
+                        if maa_count > 0 and len(processes) < maa_count:
+                            seen_pids = {p.get("maa_pid") for p in processes if p.get("maa_pid")}
+                            for pf in Path(__file__).parent.parent.glob("services/maa/instances/*/.pid"):
+                                try:
+                                    pid_str = pf.read_text().strip()
+                                    if not pid_str: continue
+                                    pid = int(pid_str)
+                                    # Skip if already tracked or PID is not actually running
+                                    if pid in seen_pids or pid not in actual_pids:
+                                        continue
+                                    # Read .meta for account info (survives restart)
+                                    meta_file = pf.parent / ".meta"
+                                    name = "MAA-" + pid_str[-4:]
+                                    if meta_file.exists():
+                                        meta = meta_file.read_text().strip()
+                                        if "|" in meta:
+                                            meta_aid, name = meta.split("|", 1)
+                                            if meta_aid in seen_aids:
+                                                continue
+                                    processes.append({
+                                        "aid": meta_aid if meta_file.exists() and "|" in meta else "", "name": name, "running": True,
+                                        "last_task": "", "maa_mem_mb": 0, "maa_cpu_pct": 0,
+                                        "maa_pid": pid, "emu_mem_mb": 0, "emu_cpu_pct": 0,
+                                        "emu_pid": None, "emu_name": "",
+                                    })
+                                    seen_pids.add(pid)
+                                    if meta_file.exists() and "|" in meta:
+                                        seen_aids.add(meta_aid)
+                                except: pass
+                    except: pass
                     # GPU
                     gpu = {"name": "", "usage": 0, "mem_used_mb": 0, "mem_total_mb": 0}
                     try:
@@ -265,6 +383,15 @@ class ApiServer(QThread):
                             gpu = {"name": parts[0], "usage": float(parts[1]),
                                    "mem_used_mb": int(float(parts[2])), "mem_total_mb": int(float(parts[3]))}
                     except: pass
+                    # Final dedup by name: keep the first entry per name
+                    seen = set()
+                    deduped = []
+                    for p in processes:
+                        n = p.get("name", "")
+                        if n and n not in seen:
+                            seen.add(n)
+                            deduped.append(p)
+                    processes = deduped
                     # Capacity
                     total_proc_mem = sum((p.get("maa_mem_mb",0) or 0) + (p.get("emu_mem_mb",0) or 0) for p in processes) if processes else 0
                     running = sum(1 for p in processes if p["running"])
@@ -327,13 +454,27 @@ class ApiServer(QThread):
                 running=pid in mw._proc_status
                 s._json({"account_name":a.get("name",""),"running":running,"stats":st._data})
             def _handle_account_screenshot(s,p):
-                try: idx=int(p.split("/")[3])
-                except: return s._json({"error":"bad index"},400)
-                if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
-                a=mw.accounts[idx]; addr=a.get("adb_address",""); adb=a.get("adb_path","") or "adb"
-                if not addr: return s._json({"error":"no adb address"},400)
                 try:
-                    r=subprocess.run([adb,"-s",addr,"exec-out","screencap","-p"],capture_output=True,timeout=15,creationflags=subprocess.CREATE_NO_WINDOW)
+                    idx=int(p.split("/")[3])
+                    if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
+                    a=mw.accounts[idx]; addr=a.get("adb_address",""); adb=a.get("adb_path","")
+                    # Auto-derive ADB address from emu_instance_index if not set
+                    if not addr and a.get("emu_instance_index"):
+                        try: port = 16384 + int(a["emu_instance_index"]) * 32; addr = f"127.0.0.1:{port}"
+                        except: pass
+                    if not addr: return s._json({"error":"no adb address"},400)
+                    if not adb:
+                        from infrastructure.task_constants import find_mumu_cli
+                        cli = find_mumu_cli()
+                        if cli:
+                            cand = str(Path(cli).parent / "adb.exe")
+                            if Path(cand).exists(): adb = cand
+                        if not adb: adb = "adb"
+                    import subprocess as _sp
+                    CF = _sp.CREATE_NO_WINDOW if hasattr(_sp,'CREATE_NO_WINDOW') else 0
+                    _sp.run([adb,"-s",addr,"shell","input","keyevent","KEYCODE_WAKEUP"],capture_output=True,timeout=5,creationflags=CF)
+                    _sp.run([adb,"-s",addr,"shell","input","keyevent","KEYCODE_MENU"],capture_output=True,timeout=5,creationflags=CF)
+                    r=_sp.run([adb,"-s",addr,"exec-out","screencap","-p"],capture_output=True,timeout=15,creationflags=CF)
                     if r.returncode!=0 or len(r.stdout)<100: return s._json({"error":"screencap failed"},500)
                     s.send_response(200); s.send_header("Content-Type","image/png"); s.send_header("Content-Length",str(len(r.stdout))); s.send_header("Cache-Control","no-cache"); s.end_headers()
                     s.wfile.write(r.stdout)
@@ -409,6 +550,57 @@ class ApiServer(QThread):
                     s.end_headers()
                     s.wfile.write(data)
                 except Exception as e: s._json({"error":str(e)},500)
+            def _handle_export_gantt(s):
+                try:
+                    from datetime import datetime as _dt
+                    gantt = getattr(mw, '_gantt_events', [])
+                    if not gantt:
+                        return s._json({"ok":True,"html":"<html><body><p>暂无编年史数据</p></body></html>"})
+                    rows = ""
+                    for e in gantt[-200:]:
+                        ts = _dt.fromtimestamp(e.get("ts",0)).strftime("%Y-%m-%d %H:%M") if e.get("ts") else ""
+                        name = e.get("name","?")
+                        evt = e.get("event","")
+                        color = {"start":"#4caf50","stop":"#f44336","task":"#2196f3"}.get(evt,"#999")
+                        rows += f"<tr><td>{ts}</td><td>{name}</td><td style='color:{color}'>{evt}</td></tr>"
+                    html = f"""<!DOCTYPE html><html lang=zh-cn><meta charset=utf-8><title>编年史导出</title>
+<style>body{{font-family:sans-serif;background:#1e1e1e;color:#ccc;padding:20px}}
+table{{width:100%;border-collapse:collapse;font-size:12px}}
+th,td{{padding:6px 8px;text-align:left;border-bottom:1px solid #333}}
+th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
+<h2 style=color:#498205>📜 编年史</h2><p style=color:#888;font-size:11px>导出时间: {_dt.now().strftime('%Y-%m-%d %H:%M')} | 共 {len(gantt)} 条</p>
+<table><tr><th>时间</th><th>账号</th><th>事件</th></tr>{rows}</table></html>"""
+                    data = html.encode("utf-8")
+                    s.send_response(200)
+                    s.send_header("Content-Type","text/html; charset=utf-8")
+                    s.send_header("Content-Disposition",'attachment; filename="gantt_export.html"')
+                    s.send_header("Content-Length",str(len(data)))
+                    s.end_headers()
+                    s.wfile.write(data)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_screenshot_export(s, p):
+                try:
+                    import io, zipfile
+                    parts = p.split("/")
+                    aid = parts[3]
+                    run_ts = parts[5] if len(parts) > 5 else ""
+                    ss_dir = Path(__file__).parent.parent / "screenshots" / aid
+                    run_dir = ss_dir / run_ts if run_ts else None
+                    if not run_dir or not run_dir.exists():
+                        return s._json({"error":"not found"},404)
+                    buf = io.BytesIO()
+                    with zipfile.ZipFile(buf,'w',zipfile.ZIP_DEFLATED) as zf:
+                        for f in sorted(run_dir.rglob("*")):
+                            if f.is_file():
+                                zf.write(str(f), str(f.relative_to(run_dir.parent)))
+                    data = buf.getvalue()
+                    s.send_response(200)
+                    s.send_header("Content-Type","application/zip")
+                    s.send_header("Content-Disposition",f'attachment; filename="{aid}_{run_ts}.zip"')
+                    s.send_header("Content-Length",str(len(data)))
+                    s.end_headers()
+                    s.wfile.write(data)
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_all_stats(s):
                 from models.stats import RunStats
                 result=[]
@@ -471,7 +663,13 @@ class ApiServer(QThread):
                 try: idx=int(p.split("/")[3])
                 except: return s._json({"error":"bad index"},400)
                 if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
-                try: mw._la(idx); _log_op("启动",mw.accounts[idx].get("name","")); s._json({"ok":True})
+                try:
+                    runner=getattr(mw,'runner',None)
+                    if not runner: return s._json({"error":"runner not available"},500)
+                    ok=runner.launch(idx)
+                    if ok:
+                        _log_op("启动",mw.accounts[idx].get("name",""))
+                    s._json({"ok":ok})
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_account_stop(s,p):
                 try: idx=int(p.split("/")[3])
@@ -604,7 +802,7 @@ class ApiServer(QThread):
             def _handle_get_config(s):
                 try:
                     cfg=mw.config
-                    s._json({"ok":True,"config":{"maa_version":cfg.get("maa_version",""),"parallel_max":cfg.get("parallel_max",3),"appearance_mode":cfg.get("appearance_mode","Dark"),"schedule_mode":cfg.get("schedule_mode","daily"),"maa_instances":cfg.get("maa_instances",0),"api_port":cfg.get("api_port",19999),"smart_global":cfg.get("smart_global",{}),"webhook_url":cfg.get("webhook_url",""),"bind_address":cfg.get("bind_address","127.0.0.1"),"api_token":cfg.get("api_token","")}})
+                    s._json({"ok":True,"config":{"maa_version":cfg.get("maa_version",""),"parallel_max":cfg.get("parallel_max",3),"appearance_mode":cfg.get("appearance_mode","Dark"),"schedule_mode":cfg.get("schedule_mode","daily"),"maa_instances":cfg.get("maa_instances",0),"api_port":cfg.get("api_port",19999),"smart_global":cfg.get("smart_global",{}),"webhook_url":cfg.get("webhook_url",""),"bind_address":cfg.get("bind_address","127.0.0.1"),"api_token":cfg.get("api_token",""),"ai_provider":cfg.get("ai_provider","openai"),"ai_api_key":cfg.get("ai_api_key",""),"ai_endpoint":cfg.get("ai_endpoint",""),"ai_model":cfg.get("ai_model",""),"ai_auto_analyze":cfg.get("ai_auto_analyze",False),"tg_token":cfg.get("tg_token",""),"tg_chat_id":cfg.get("tg_chat_id","")}})
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_get_smart(s):
                 try:
@@ -616,11 +814,80 @@ class ApiServer(QThread):
                     instances=detect_emu_instances()
                     s._json({"ok":True,"emulators":instances})
                 except Exception as e: s._json({"error":str(e)},500)
+            def _handle_emulator_status(s, p):
+                try:
+                    idx = p.split("/")[3]
+                    from infrastructure.task_constants import detect_emu_instances
+                    emus = detect_emu_instances()
+                    for e in emus:
+                        if str(e.get("index")) == idx:
+                            s._json({"ok":True,"emulator":e})
+                            return
+                    s._json({"error":"not found"},404)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_emulator_control(s, p, body):
+                try:
+                    import subprocess as _sp
+                    from infrastructure.task_constants import find_mumu_cli
+                    parts = p.split("/")
+                    idx = parts[3]
+                    action = parts[4] if len(parts) > 4 else "status"
+                    cli = find_mumu_cli()
+                    if not cli: return s._json({"error":"mumu-cli not found"},500)
+                    CF = _sp.CREATE_NO_WINDOW if hasattr(_sp,'CREATE_NO_WINDOW') else 0
+                    if action == "start":
+                        _sp.run([cli,"control","--vmindex",idx,"launch"],timeout=30,creationflags=CF)
+                        s._json({"ok":True,"action":"started"})
+                    elif action == "stop":
+                        _sp.run([cli,"control","--vmindex",idx,"shutdown"],timeout=15,creationflags=CF)
+                        s._json({"ok":True,"action":"stopped"})
+                    elif action == "restart":
+                        _sp.run([cli,"control","--vmindex",idx,"shutdown"],timeout=15,creationflags=CF)
+                        import time; time.sleep(3)
+                        _sp.run([cli,"control","--vmindex",idx,"launch"],timeout=30,creationflags=CF)
+                        s._json({"ok":True,"action":"restarted"})
+                    else:
+                        s._json({"error":"bad action"},400)
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_close_popups(s):
+                try:
+                    from services.runner import _close_mumu_popups
+                    _close_mumu_popups()
+                    s._json({"ok":True,"message":"弹窗已关闭"})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_kill_maa(s):
+                try:
+                    import subprocess as _sp
+                    r=_sp.run(["tasklist","/NH","/FI","IMAGENAME eq MAA.exe"],capture_output=True,text=True,timeout=5,creationflags=_sp.CREATE_NO_WINDOW)
+                    killed=0
+                    for line in r.stdout.splitlines():
+                        if "MAA.exe" not in line: continue
+                        p=line.split()
+                        if len(p)>=2:
+                            _sp.run(["taskkill","/F","/PID",p[1]],capture_output=True,timeout=3,creationflags=_sp.CREATE_NO_WINDOW)
+                            killed+=1
+                    # Also kill related processes
+                    for img in ["MAA.Updater.exe", "maa-cli.exe"]:
+                        r2=_sp.run(["taskkill","/F","/IM",img],capture_output=True,timeout=3,creationflags=_sp.CREATE_NO_WINDOW)
+                    s._json({"ok":True,"killed":killed})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_system_restart(s):
+                try:
+                    import threading as _th, time as _t, subprocess as _sp, os, sys
+                    def _do_restart():
+                        _t.sleep(2)
+                        _sp.Popen([sys.executable, "-u", "main_web.pyw", "--no-elevate"],
+                                  cwd=str(Path(__file__).parent.parent), creationflags=_sp.CREATE_NO_WINDOW)
+                        _t.sleep(1)
+                        os._exit(0)
+                    _th.Thread(target=_do_restart, daemon=True).start()
+                    s._json({"ok":True,"message":"重启中..."})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_create_account(s,body):
                 try:
                     import uuid as _uuid
                     new_id=_uuid.uuid4().hex[:12]
-                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"emu_instance_index":body.get("emu_instance_index",""),"account_switch":body.get("account_switch",""),"uid":body.get("uid",""),"consecutive_failures":0}
+                    acct={"id":new_id,"name":body.get("name",""),"game_client":body.get("game_client",""),"emu_instance_index":body.get("emu_instance_index",""),"account_switch":body.get("account_switch",""),"uid":body.get("uid",""),"note":body.get("note",""),"expire_date":body.get("expire_date",""),"consecutive_failures":0}
                     mw.accounts.append(acct)
                     mw.config["accounts"]=mw.accounts
                     from models.config_manager import save_config
@@ -632,7 +899,7 @@ class ApiServer(QThread):
                     idx=int(p.split("/")[3])
                     if idx<0 or idx>=len(mw.accounts): return s._json({"error":"not found"},404)
                     a=mw.accounts[idx]
-                    for field in ("name","game_client","emu_instance_index","account_switch","uid","suspended"):
+                    for field in ("name","game_client","emu_instance_index","account_switch","uid","suspended","note","expire_date","stages"):
                         if field in body: a[field]=body[field]
                     mw.config["accounts"]=mw.accounts
                     from models.config_manager import save_config
@@ -686,7 +953,7 @@ class ApiServer(QThread):
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_save_config(s,body):
                 try:
-                    for field in ("maa_version","parallel_max","appearance_mode","schedule_mode","deficit","stuck_timeout","webhook_url","bind_address","api_token"):
+                    for field in ("maa_version","maa_instances","parallel_max","appearance_mode","schedule_mode","deficit","stuck_timeout","webhook_url","bind_address","api_token","ai_provider","ai_api_key","ai_endpoint","ai_model","ai_auto_analyze","tg_token","tg_chat_id"):
                         if field in body: mw.config[field]=body[field]
                     if "smart_global" in body: mw.config["smart_global"]=body["smart_global"]
                     from models.config_manager import save_config
@@ -701,6 +968,73 @@ class ApiServer(QThread):
                     save_config(mw.config)
                     s._json({"ok":True})
                 except Exception as e: s._json({"error":str(e)},500)
+            def _handle_ai_analyze(s, body=None):
+                try:
+                    from services.ai_assistant import analyze_failure
+                    aid = body.get("aid", "") if body else s.path.split("?")[1].split("&")[0].split("=")[1] if "?" in s.path else ""
+                    if not aid:
+                        return s._json({"error":"missing aid"},400)
+                    acct = next((a for a in mw.accounts if a.get("id") == aid), None)
+                    if not acct:
+                        return s._json({"error":"account not found"},404)
+                    idx = next((i for i, a in enumerate(mw.accounts) if a.get("id") == aid), -1)
+                    result = analyze_failure(
+                        aid=aid,
+                        name=acct.get("name", aid),
+                        exit_code=body.get("exit_code", -11) if body else -11,
+                        failed_tasks=body.get("failed_tasks", []) if body else [],
+                        consecutive_failures=acct.get("consecutive_failures", 0),
+                        game_client=acct.get("game_client", ""),
+                        warehouse=mw.warehouse,
+                        config=mw.config,
+                    )
+                    if result:
+                        if not hasattr(mw, '_ai_insights'):
+                            mw._ai_insights = []
+                        mw._ai_insights.append({"aid": aid, "ts": time.time(), **result})
+                        if len(mw._ai_insights) > 20:
+                            mw._ai_insights = mw._ai_insights[-20:]
+                    s._json({"ok": True, "result": result})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_get_stages(s):
+                try:
+                    lib = mw.config.get("stage_library", [])
+                    accts = mw.accounts
+                    for st in lib:
+                        sid = st.get("id","")
+                        st["count"] = sum(1 for a in accts if sid in a.get("stages",[]))
+                        st["account_ids"] = [a.get("id","") for a in accts if sid in a.get("stages",[])]
+                    s._json({"ok":True,"stages":lib})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_save_stages(s,body):
+                try:
+                    stages = body.get("stages",[])
+                    mw.config["stage_library"] = stages
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
+            def _handle_stages_apply(s,body):
+                try:
+                    stage_id = body.get("stage_id","")
+                    account_ids = body.get("account_ids",[])
+                    toggle = body.get("toggle",True)  # True=add, False=remove
+                    if not stage_id or not account_ids:
+                        return s._json({"error":"missing stage_id or account_ids"},400)
+                    for a in mw.accounts:
+                        if a.get("id") in account_ids:
+                            stages = a.setdefault("stages",[])
+                            if toggle:
+                                if stage_id not in stages:
+                                    stages.append(stage_id)
+                            else:
+                                if stage_id in stages:
+                                    stages.remove(stage_id)
+                    mw.config["accounts"] = mw.accounts
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                    s._json({"ok":True})
+                except Exception as e: s._json({"error":str(e)},500)
             def _handle_stop_all(s):
                 try:
                     lq=getattr(mw,"launch_queue",None)
@@ -710,26 +1044,54 @@ class ApiServer(QThread):
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_smart_all(s,body):
                 try:
-                    from ui.side_bar import _run_smart_all
+                    from services.dispatch_pool import create_dispatch
                     include_anni=body.get("include_anni",True)
                     only_anni=body.get("only_anni",False)
-                    # Resume queue before scheduling
                     lq=getattr(mw,"launch_queue",None)
-                    if lq and lq._paused:
-                        lq.resume()
-                    _run_smart_all(mw,include_anni,only_anni)
-                    s._json({"ok":True})
+                    if not lq: return s._json({"error":"queue not available"},500)
+                    if lq._paused: lq.resume()
+                    mode=mw.config.get("schedule_mode","daily")
+                    smart=mw.config.get("smart_global",{}).get("enabled",False)
+                    tasks=_get_web_schedule_tasks(mw,include_anni,only_anni) if smart else ["StartUp","Fight","Infrast","Recruit","Mall","Award"]
+                    count=0
+                    for a in mw.accounts:
+                        aid=a.get("id","")
+                        if not a.get("adb_address","").strip() and not a.get("emu_instance_index",""): continue
+                        if a.get("suspended",False): continue
+                        if lq.is_queued(aid) or lq.is_running(aid): continue
+                        a["dispatch_id"]=create_dispatch(tasks)
+                        lq.enqueue(aid,"force",priority=0)
+                        count+=1
+                    if count:
+                        mw._log(f"▶ 调度: {count} 个账号已入队")
+                        lq.tick()
+                    s._json({"ok":True,"count":count})
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_smart_selected(s,body):
                 try:
-                    from ui.side_bar import _run_smart_all
+                    from services.dispatch_pool import create_dispatch
                     ids=body.get("account_ids",[])
                     include_anni=body.get("include_anni",True)
                     only_anni=body.get("only_anni",False)
                     lq=getattr(mw,"launch_queue",None)
-                    if lq and lq._paused: lq.resume()
-                    _run_smart_all(mw,include_anni,only_anni,account_ids=ids)
-                    s._json({"ok":True})
+                    if not lq: return s._json({"error":"queue not available"},500)
+                    if lq._paused: lq.resume()
+                    smart=mw.config.get("smart_global",{}).get("enabled",False)
+                    tasks=_get_web_schedule_tasks(mw,include_anni,only_anni) if smart else ["StartUp","Fight","Infrast","Recruit","Mall","Award"]
+                    count=0
+                    for a in mw.accounts:
+                        aid=a.get("id","")
+                        if aid not in ids: continue
+                        if not a.get("adb_address","").strip() and not a.get("emu_instance_index",""): continue
+                        if a.get("suspended",False): continue
+                        if lq.is_queued(aid) or lq.is_running(aid): continue
+                        a["dispatch_id"]=create_dispatch(tasks)
+                        lq.enqueue(aid,"force",priority=0)
+                        count+=1
+                    if count:
+                        mw._log(f"▶ 调度选中: {count} 个账号已入队")
+                        lq.tick()
+                    s._json({"ok":True,"count":count})
                 except Exception as e: s._json({"error":str(e)},500)
             def _serve_static(s, path):
                 try:

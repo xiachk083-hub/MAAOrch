@@ -10,7 +10,7 @@ from infrastructure.utils import parse_maa_version, get_platform_key, _version_t
 from infrastructure.task_constants import find_mumu_cli
 
 from services.update_service import UpdateCheckThread, UpdateDialog
-from ui.widgets.config_card import refresh_config_cards
+# from ui.widgets.config_card import refresh_config_cards  # lazy import in method
 from services.schedule_thread import ScheduleThread
 from app.service_context import ServiceContext
 
@@ -329,7 +329,7 @@ class MaintService:
             if not exe: return
             self._bind_maa(exe, tag, a["id"])
             self.ctx.save(); self.ctx.show_dashboard(row)
-            refresh_config_cards(self.ctx._mw)
+            from ui.widgets.config_card import refresh_config_cards; refresh_config_cards(self.ctx._mw)
             self.ctx.inject_config(self.ctx.warehouse[-1], a)
         t = UpdateCheckThread(); t.result_ready.connect(oc)
         self._replace_update_thread(t); t.start()
@@ -363,7 +363,7 @@ class MaintService:
         self.ctx.warehouse.append(e)
         self.ctx.save()
         self.ctx.show_dashboard(row)
-        refresh_config_cards(self.ctx._mw)
+        from ui.widgets.config_card import refresh_config_cards; refresh_config_cards(self.ctx._mw)
         self.ctx.inject_config(e, a)
         self.ctx.launch_program(e)
 

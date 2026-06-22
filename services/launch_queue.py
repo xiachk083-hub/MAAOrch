@@ -10,9 +10,10 @@ from __future__ import annotations
 import heapq
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 import threading
 
-from PySide6.QtCore import QObject, Signal, QTimer
+from collections.abc import Callable
 
 from app.service_context import ServiceContext
 from models.stats import RunStats
@@ -22,23 +23,22 @@ from infrastructure.logger import Logger
 _QUEUE_LOG = Logger("queue")
 
 
-class LaunchQueue(QObject):
+class LaunchQueue:
     """Manages a priority queue of launch requests. Drives the entire account lifecycle."""
 
-    log_msg = Signal(str)
-    launched = Signal(str)         # account_id
-    skipped = Signal(str, str)     # account_id, reason
-
     def __init__(self, ctx: ServiceContext) -> None:
-        super().__init__()
+        # Callback lists (replaces Qt Signals)
+        self._log_msg_callbacks: list[Callable[[str], None]] = []
+        self._launched_callbacks: list[Callable[[str], None]] = []
+        self._skipped_callbacks: list[Callable[[str, str], None]] = []
         self.ctx = ctx
         self._lock = threading.RLock()
         self._pending: list[QueueEntry] = []
         self._active_emus: dict[str, str] = {}  # emu_idx → account_id
-        self._tick_timer = QTimer(self)
-        self._tick_timer.timeout.connect(self._tick)
+        self._active_emus_ts: dict[str, float] = {}  # emu_idx → when added
         self._paused = True  # queue starts paused; user must explicitly start
         self._last_launch_time: float = 0  # timestamp of last successful launch (60s interval)
+        self._bg_tick_started = False
         self._import_heapq()
 
     @staticmethod
@@ -48,15 +48,23 @@ class LaunchQueue(QObject):
     def start(self, interval_sec: int = 5) -> None:
         # Clear stale state from previous process
         self._active_emus.clear()
+        self._active_emus_ts.clear()
         self._last_launch_time = 0
-        # Background thread for queue processing (works with and without Qt event loop)
+        # Guard against duplicate _bg_tick threads
+        if self._bg_tick_started:
+            return
+        self._bg_tick_started = True
         import threading as _th
         def _bg_tick():
             while True:
                 import time as _t
                 _t.sleep(interval_sec)
-                self._tick()
-        _th.Thread(target=_bg_tick, daemon=True).start()
+                try:
+                    self._clean_stale_emus()
+                    self._tick()
+                except Exception as ex:
+                    _QUEUE_LOG.error(f"_bg_tick 异常: {ex}")
+        _th.Thread(target=_bg_tick, daemon=True, name="queue_bg_tick").start()
 
     def pause(self) -> None:
         """Pause queue processing. Pending items are preserved."""
@@ -65,6 +73,7 @@ class LaunchQueue(QObject):
     def resume(self) -> None:
         """Resume queue processing and tick immediately."""
         self._paused = False
+        self._clean_stale_emus()
         self._tick()
 
     @property
@@ -72,34 +81,57 @@ class LaunchQueue(QObject):
         return self._paused
 
     def stop(self) -> None:
-        self._tick_timer.stop()
+        pass
 
     def stop_all(self) -> int:
-        """Stop all running accounts and shut down emulators immediately. Returns count."""
+        """Stop all running accounts, clear queue, close emulators."""
         count = 0
-        emus_to_stop = set()
+        # Try runner.stop for tracked accounts first
         for aid in list(self._active_emus.values()):
             if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
                 self.ctx._mw.runner.stop(aid)
                 count += 1
-            for a in self.ctx.accounts:
-                if a.get("id") == aid:
-                    emu = a.get("emu_instance_index", "")
-                    if emu:
-                        emus_to_stop.add(emu)
-                    break
         self._active_emus.clear()
-        # Shut down emulators
-        if emus_to_stop:
-            from infrastructure.task_constants import find_mumu_cli
-            cli = find_mumu_cli()
-            if cli:
-                import subprocess as _sp
-                for emu_idx in emus_to_stop:
-                    _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
-                             creationflags=_sp.CREATE_NO_WINDOW)
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(200, self._tick)
+        self._active_emus_ts.clear()
+        self._pending.clear()
+        # Kill ALL MAA.exe processes
+        import subprocess as _sp
+        _sp.run(["wmic","process","where","name='MAA.exe'","delete"],
+                capture_output=True, timeout=15, creationflags=_sp.CREATE_NO_WINDOW)
+        _sp.run(["taskkill","/F","/IM","MAA.exe","/T"],
+                capture_output=True, timeout=10, creationflags=_sp.CREATE_NO_WINDOW)
+        # Close emulators via mumu-cli
+        _sp.run([r"E:\MuMu Player 12\nx_main\mumu-cli.exe", "control", "--vmindex", "all", "shutdown"],
+                capture_output=True, timeout=30, creationflags=_sp.CREATE_NO_WINDOW)
+        try:
+            # Fallback: iterate accounts individually
+            for a in self.ctx.accounts:
+                emu = a.get("emu_instance_index", "")
+                if emu:
+                    _sp.run([r"E:\MuMu Player 12\nx_main\mumu-cli.exe", "control", "--vmindex", str(emu), "shutdown"],
+                           capture_output=True, timeout=10, creationflags=_sp.CREATE_NO_WINDOW)
+        except: pass
+        # Close popups
+        # Close emulators via mumu-cli
+        from infrastructure.task_constants import find_mumu_cli
+        cli = find_mumu_cli()
+        if cli:
+            for a in self.ctx.accounts:
+                emu = a.get("emu_instance_index", "")
+                if emu:
+                    try:
+                        _sp.run([cli, "control", "--vmindex", str(emu), "shutdown"],
+                               capture_output=True, timeout=10, creationflags=_sp.CREATE_NO_WINDOW)
+                    except: pass
+        # Close popups
+        try:
+            from services.runner import _close_mumu_popups
+            _close_mumu_popups()
+        except: pass
+        # Clean up .pid/.meta files
+        for _inst in Path(__file__).parent.glob("maa/instances/*/"):
+            (_inst / ".pid").unlink(missing_ok=True)
+            (_inst / ".meta").unlink(missing_ok=True)
         return count
 
     # ── Public API ──
@@ -108,6 +140,12 @@ class LaunchQueue(QObject):
                 priority: int = 0, not_before: datetime | None = None,
                 persist_plan: bool = False) -> None:
         """Add an account to the launch queue. Priority: 0=manual, 1=schedule, 2=sanity."""
+        # Reject if this account already has a running MAA process
+        if self._has_running_process(account_id):
+            ac = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
+            name = ac.get("name", account_id) if ac else account_id
+            self.ctx.log(f"[队列] {name} 已在运行中，跳过入队")
+            return
         with self._lock:
             self._pending = [e for e in self._pending if e.account_id != account_id]
             entry = QueueEntry.make(account_id, source, priority, not_before, persist_plan)
@@ -118,7 +156,7 @@ class LaunchQueue(QObject):
         name = ac.get("name", account_id) if ac else account_id
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
         nb_str = f" → {entry.not_before.strftime('%H:%M')}" if entry.not_before > datetime.now() else ""
-        self.log_msg.emit(f"[队列] {name} 入队 ({src_map.get(source, source)}){nb_str}")
+        self.emit_log_msg(f"[队列] {name} 入队 ({src_map.get(source, source)}){nb_str}")
 
     def enqueue_batch(self, source: str = "schedule", priority: int = 1,
                       accounts: list[str] | None = None) -> None:
@@ -177,6 +215,7 @@ class LaunchQueue(QObject):
         emu_idx = self._get_emu_key(account_id)
         with self._lock:
             old = self._active_emus.pop(emu_idx, None)
+            self._active_emus_ts.pop(emu_idx, None)
             if old != account_id:
                 return  # already processed (guard against double-trigger)
 
@@ -266,6 +305,19 @@ class LaunchQueue(QObject):
 
         self._tick()
 
+    def on_maa_task_finished(self, account_id: str, status: str) -> None:
+        """Called when MAA reports task completion via reportStatus.
+        Does NOT release the slot — that happens when MAA.exe exits (on_account_finished)."""
+        ac = next((a for a in self.ctx.accounts if a["id"] == account_id), None)
+        if not ac:
+            return
+        if status == "FAILED":
+            failures = ac.get("consecutive_failures", 0)
+            ac["consecutive_failures"] = failures + 1
+        else:
+            ac["consecutive_failures"] = 0
+        self._tick()
+
     def batch_enqueue_all(self) -> None:
         """Enqueue all accounts for the daily batch run."""
         if not self.ctx.config.get("daily_batch_time", ""):
@@ -284,12 +336,11 @@ class LaunchQueue(QObject):
         """Check queue and launch all eligible accounts (parallel across different emus)."""
         if self._paused:
             return
-        # Tick the runner resource monitor (popsulates _proc_info with maa+emu memory)
         try:
             r = getattr(self.ctx, '_mw', None)
             if r: r.runner.check_processes()
         except: pass
-        _QUEUE_LOG.info(f"_tick: start pending={len(self._pending)}")
+        _QUEUE_LOG.info(f"_tick: start pending={len(self._pending)} paused={self._paused} overloaded={getattr(getattr(getattr(self.ctx,'_mw',None),'runner',None),'_overloaded',None)}")
         with self._lock:
             now = datetime.now()
             heapq = self._import_heapq()
@@ -303,7 +354,7 @@ class LaunchQueue(QObject):
                 # ① Already running?
                 if self.is_running(entry.account_id):
                     _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 已在运行")
-                    self.skipped.emit(entry.account_id, "已在运行")
+                    self.emit_skipped(entry.account_id, "已在运行")
                     continue
 
                 # ② Not yet time? Push back, stop checking this priority level
@@ -322,7 +373,7 @@ class LaunchQueue(QObject):
                             occupant_name = a.get("name", occupant[:8])
                             break
                     _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被 {occupant_name} 占用")
-                    self.skipped.emit(entry.account_id, f"模拟器 {emu_idx} 被 {occupant_name} 占用")
+                    self.emit_skipped(entry.account_id, f"模拟器 {emu_idx} 被 {occupant_name} 占用")
                     remaining.append(entry)
                     continue
 
@@ -335,7 +386,7 @@ class LaunchQueue(QObject):
                         min_s = ac.get("min_sanity", 0)
                         if s and s.get("current", 0) < min_s:
                             _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 理智不足 ({s.get('current',0)}/{s.get('max',1)})")
-                            self.skipped.emit(entry.account_id, "理智不足")
+                            self.emit_skipped(entry.account_id, "理智不足")
                             continue
 
                 to_launch.append(entry)
@@ -355,7 +406,7 @@ class LaunchQueue(QObject):
                     _QUEUE_LOG.info(f"_tick: 过载保护已推回 pending_after={len(self._pending)}")
                     return
 
-            # Determine which entries to launch (still under lock)
+            # Determine which entries to launch
             launch_now = []
             for entry in to_launch:
                 max_parallel = self.ctx.config.get("parallel_max", 1)
@@ -373,12 +424,13 @@ class LaunchQueue(QObject):
                     _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被 {occupant_name} 占用")
                     heapq.heappush(self._pending, entry)
                     continue
-                # 60s launch interval — prevent burst launches
-                if time.time() - self._last_launch_time < 60:
-                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 启动间隔 60s (上次: {int(time.time()-self._last_launch_time)}s前)")
+                # Launch interval — prevent burst launches
+                if time.time() - self._last_launch_time < 5:
+                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 启动间隔 (上次: {int(time.time()-self._last_launch_time)}s前)")
                     heapq.heappush(self._pending, entry)
                     continue
                 self._active_emus[emu_idx] = entry.account_id
+                self._active_emus_ts[emu_idx] = time.time()
                 self._last_launch_time = time.time()
                 launch_now.append(entry)
                 # Push back remaining to_launch entries (serial launch: only one per tick)
@@ -387,14 +439,14 @@ class LaunchQueue(QObject):
                     heapq.heappush(self._pending, remaining_entry)
                 break
 
-        # Launch outside lock to avoid re-entrancy, staggered to prevent UI freeze
-        # Launch outside lock to avoid re-entrancy
+        # Launch outside lock
         import threading as _th
         for idx, entry in enumerate(launch_now):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
                 continue
             _th.Timer(max(0.1, idx * 5.0), lambda e=entry: self._do_launch(e)).start()
         _QUEUE_LOG.info(f"_tick: launch_now={len(launch_now)} pending={len(self._pending)} active_emus={len(self._active_emus)}")
+        self._clean_stale_emus()
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
@@ -407,16 +459,52 @@ class LaunchQueue(QObject):
         if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
             ok = self.ctx._mw.runner.launch_by_id(entry.account_id)
         if ok:
-            self.launched.emit(entry.account_id)
+            self.emit_launched(entry.account_id)
         elif hasattr(self.ctx._mw, "runner"):
             # Runner exists but launch failed → release and push back
             emu_idx = self._get_emu_key(entry.account_id)
-            self._active_emus.pop(emu_idx, None)
+            with self._lock:
+                self._active_emus.pop(emu_idx, None)
+                self._active_emus_ts.pop(emu_idx, None)
             heapq.heappush(self._pending, entry)
             self.ctx.log(f"[队列] {entry.account_id[:6]} 启动失败，放回队列等待重试")
         else:
             # No runner context (test mode) → optimistically mark as launched
-            self.launched.emit(entry.account_id)
+            self.emit_launched(entry.account_id)
+
+    def _clean_stale_emus(self) -> None:
+        """Release _active_emus entries whose launcher threads died without cleanup."""
+        runner = getattr(getattr(self.ctx, '_mw', None), 'runner', None)
+        if not runner:
+            _QUEUE_LOG.warn(f"清洁跳过: runner={runner}")
+            return
+        now = time.time()
+        for emu_idx, aid in list(self._active_emus.items()):
+            ts = self._active_emus_ts.get(emu_idx, 0)
+            real = runner._has_real_process(aid)
+            _QUEUE_LOG.info(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
+            if ts == 0:
+                _QUEUE_LOG.warn(f"清洁跳过(ts=0): {emu_idx}")
+                continue
+            if now - ts > 150 and not real:
+                _QUEUE_LOG.warn(f"释放残留 _active_emus[{emu_idx}]={aid[:8]} (挂起 {int(now-ts)}s)")
+                with self._lock:
+                    self._active_emus.pop(emu_idx, None)
+                    self._active_emus_ts.pop(emu_idx, None)
+                from services.dispatch_pool import remove_dispatch
+                for a in self.ctx.accounts:
+                    if a["id"] == aid:
+                        remove_dispatch(a.get("dispatch_id", ""))
+                        a["dispatch_id"] = ""
+                        a["smart_plan"] = ""
+                        break
+
+    def emit_log_msg(self, msg: str) -> None:
+        for cb in self._log_msg_callbacks: cb(msg)
+    def emit_launched(self, aid: str) -> None:
+        for cb in self._launched_callbacks: cb(aid)
+    def emit_skipped(self, aid: str, reason: str) -> None:
+        for cb in self._skipped_callbacks: cb(aid, reason)
 
     def _get_emu_key(self, account_id: str) -> str:
         """Return emu instance index, or a unique fallback for no-emu accounts."""
@@ -428,6 +516,25 @@ class LaunchQueue(QObject):
 
     def _queue_path(self) -> Path:
         return Path(__file__).parent / "queue.json"
+
+    def _has_running_process(self, account_id: str) -> bool:
+        """Check if this account already has a running MAA process (via .pid/.meta)."""
+        try:
+            for _inst in Path(__file__).parent.glob("maa/instances/*/"):
+                pf = _inst / ".pid"
+                mf = _inst / ".meta"
+                if pf.exists() and mf.exists():
+                    meta = mf.read_text().strip()
+                    if "|" in meta and meta.split("|", 1)[0] == account_id:
+                        pid = int(pf.read_text().strip())
+                        import subprocess as _sp
+                        r = _sp.run(["tasklist","/NH","/FI",f"PID eq {pid}"],
+                                   capture_output=True, text=True, timeout=3,
+                                   creationflags=_sp.CREATE_NO_WINDOW)
+                        if str(pid) in r.stdout:
+                            return True
+        except: pass
+        return False
 
     def _save_queue(self) -> None:
         """Persist queue to queue.json (separate from config.json for performance)."""

@@ -7,6 +7,46 @@
       "name": "maaorch-dev",
       "description": "MAAOrch development guide — architecture, conventions, common fixes",
       "location": ".opencode/skills/maaorch-dev.md"
+    },
+    {
+      "name": "grill-me",
+      "description": "Interview the user relentlessly about a plan or design until reaching shared understanding",
+      "location": ".agents/skills/grill-me/SKILL.md"
+    },
+    {
+      "name": "handoff",
+      "description": "Compact the current conversation into a handoff document so another agent can continue",
+      "location": ".agents/skills/handoff/SKILL.md"
+    },
+    {
+      "name": "triage",
+      "description": "Move issues through a state machine of triage roles",
+      "location": ".agents/skills/triage/SKILL.md"
+    },
+    {
+      "name": "tdd",
+      "description": "Test-driven development with red-green-refactor loop",
+      "location": ".agents/skills/tdd/SKILL.md"
+    },
+    {
+      "name": "diagnosing-bugs",
+      "description": "Disciplined diagnosis loop for hard bugs and performance regressions",
+      "location": ".agents/skills/diagnosing-bugs/SKILL.md"
+    },
+    {
+      "name": "domain-modeling",
+      "description": "Build and sharpen a project's domain model",
+      "location": ".agents/skills/domain-modeling/SKILL.md"
+    },
+    {
+      "name": "to-prd",
+      "description": "Turn the current conversation into a PRD",
+      "location": ".agents/skills/to-prd/SKILL.md"
+    },
+    {
+      "name": "improve-codebase-architecture",
+      "description": "Scan codebase for deepening opportunities, present as visual HTML report",
+      "location": ".agents/skills/improve-codebase-architecture/SKILL.md"
     }
   ],
   "plugin": ["zenox"],

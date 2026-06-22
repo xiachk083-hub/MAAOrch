@@ -15,6 +15,9 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
     "schedule_mode":"daily",
     "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[],
     "maa_version":"","maa_instances":0,"maa_instances_version":"",
+    "ai_provider":"openai","ai_api_key":"","ai_endpoint":"","ai_model":"","ai_auto_analyze":False,
+    "tg_token":"","tg_chat_id":"",
+    "stage_library":[],
     "smart_global":{"threshold":80,"expiring_medicine":True,"medicine_days":2,"annihilation_enabled":True,
         "infrast_times":["04:00","16:00"],"recruit_enabled":True,"mall_enabled":True,"post_action":"ExitEmulator,ExitSelf",
         "default_task_settings":{},
@@ -43,6 +46,10 @@ def migrate_v4_to_v5(data: dict) -> dict:
         for d in ["mon","tue","wed","thu","fri","sat","sun"]: a.setdefault(f"smart_{d}","")
         a.setdefault("smart_materials_enabled",True)
     data.setdefault("webhook_url","")
+    for k in ("ai_provider","ai_api_key","ai_endpoint","ai_model"): data.setdefault(k, "")
+    data.setdefault("ai_auto_analyze", False)
+    for k in ("tg_token","tg_chat_id"): data.setdefault(k, "")
+    data.setdefault("stage_library", DEFAULT_CONFIG["stage_library"])
     for w in data.get("warehouse",[]):
         for k,v in [("maa_type","general"),("maa_version",""),("update_channel","Stable"),
                      ("auto_update",False),("account_ref",""),("launch_mode","gui"),
@@ -88,11 +95,12 @@ def load_config() -> dict:
                         if m: a["adb_address"]="127.0.0.1:"+m.group(1)
                     a.setdefault("smart_stage",""); a.setdefault("smart_annihilation","")
                     a.setdefault("smart_annihilation_enabled",True)
-                    for d in ["mon","tue","wed","thu","fri","sat","sun"]: a.setdefault(f"smart_{d}","")
                     a.setdefault("smart_materials_enabled",True)
-                # Convert accounts to Account objects
-                data["accounts"]=[Account.from_dict(a) for a in data["accounts"]]
-                return data
+                    a.setdefault("stages",[])
+                    a.setdefault("note",""); a.setdefault("expire_date","")
+            # Convert accounts to Account objects
+            data["accounts"]=[Account.from_dict(a) for a in data["accounts"]]
+            return data
     except Exception as e:
         try:
             from infrastructure.logger import Logger

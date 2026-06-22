@@ -18,6 +18,13 @@ models/backups/
 # MAA binaries
 services/maa/
 
+# Runtime data
+services/queue.json
+stderr.log
+
+# Agent binaries
+agent/maorch-agent-test.exe
+
 # Diagnostics
 services/diagnostics/
 
