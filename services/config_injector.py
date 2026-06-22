@@ -69,15 +69,12 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            # Only write PostActions if we have mumu-cli for emulator shutdown
-            emu_cli_ok = False
-            if ac.get("emu_instance_index","") and find_mumu_cli():
-                emu_cli_ok = True
-            if ac.get("post_action") and (emu_cli_ok or not ac.get("emu_instance_index")):
+            # PostActions: ExitEmulator + ExitSelf via ADB (clean shutdown)
+            if ac.get("post_action"):
                 c["MainFunction.PostActions"] = "12"
             c["Connect.RetryOnDisconnected"]="True"
             c["Connect.AllowADBRestart"]="True"
-            c["Connect.AllowADBHardRestart"]="True"
+            c["Connect.AllowADBHardRestart"]="False"
             if ac.get("emu_instance_index",""):
                 cli=find_mumu_cli()
                 if cli:
@@ -220,6 +217,39 @@ class ConfigService:
 
     def _set_connection(self, c: dict, ac: dict, use_v6: bool) -> None:
         """Write ADB/connection settings to MAA config dict (shared by v5 and v6)."""
+        # Detect ADB port via mumu-cli first, fallback to formula
+        if ac.get("emu_instance_index"):
+            try:
+                cli = find_mumu_cli()
+                if cli:
+                    import subprocess, json as _json
+                    from infrastructure.task_constants import CF
+                    r = subprocess.run([cli, "info", "--vmindex", str(ac["emu_instance_index"])],
+                                      capture_output=True, text=True, timeout=5, creationflags=CF,
+                                      encoding="utf-8", errors="replace")
+                    if r.returncode == 0:
+                        data = _json.loads(r.stdout)
+                        _adb_port = data.get("adb_port")
+                        if _adb_port:
+                            ac["adb_address"] = f"127.0.0.1:{_adb_port}"
+            except: pass
+        if not ac.get("adb_address") and ac.get("emu_instance_index"):
+            try:
+                port = 16384 + int(ac["emu_instance_index"]) * 32
+                ac["adb_address"] = f"127.0.0.1:{port}"
+            except: pass
+        if not ac.get("adb_path"):
+            from pathlib import Path
+            from infrastructure.task_constants import find_mumu_cli, find_adb
+            cli = find_mumu_cli()
+            if cli:
+                cand = Path(cli).parent / "adb.exe"
+                if cand.exists():
+                    ac["adb_path"] = str(cand)
+            if not ac.get("adb_path"):
+                adb = find_adb()
+                if adb:
+                    ac["adb_path"] = adb
         if ac.get("adb_address"):
             c["Connect.Address"] = ac["adb_address"]
         if ac.get("adb_path"):
@@ -240,7 +270,7 @@ class ConfigService:
         if use_v6:
             c["Connect.RetryOnDisconnected"] = "True"
             c["Connect.AllowADBRestart"] = "True"
-            c["Connect.AllowADBHardRestart"] = "True"
+            c["Connect.AllowADBHardRestart"] = "False"
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
@@ -297,9 +327,8 @@ class ConfigService:
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
-            # PostActions: only write if we have mumu-cli for emulator shutdown
-            emu_cli_ok = bool(emu_idx and find_mumu_cli())
-            if ac.get("post_action") and (emu_cli_ok or not emu_idx):
+            # PostActions: ExitEmulator + ExitSelf via ADB (clean shutdown)
+            if ac.get("post_action"):
                 c["MainFunction.PostActions"] = "12"
 
             if use_v6:
@@ -589,8 +618,22 @@ class ConfigService:
                             if "increment_mode" in st: item["IncrementMode"] = st["increment_mode"]
                             if "max_craft_count" in st: item["MaxCraftCountPerRound"] = st["max_craft_count"]
                             if "clear_store" in st: item["ClearStore"] = st["clear_store"]
-            # Inject fight_stage (默认关卡) — skip annihilation Fight items
-            fs = ac.get("fight_stage", "")
+            # Inject fight_stage from account's stage whitelist
+            stage_list = ac.get("stages", [])
+            fs = ""
+            if stage_list:
+                # Look up the first stage name from the global stage library
+                lib = self.ctx.config.get("stage_library", [])
+                for sid in stage_list:
+                    match = next((s for s in lib if s.get("id") == sid), None)
+                    if match:
+                        fs = match.get("name", "")
+                        break
+                if not fs:
+                    # Fallback: treat stage IDs as direct stage names
+                    fs = stage_list[0]
+            else:
+                fs = ac.get("fight_stage", "")
             if fs and "TaskQueue" in c:
                 for item in c["TaskQueue"]:
                     tt = item.get("TaskType", "").lower()

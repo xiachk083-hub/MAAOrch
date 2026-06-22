@@ -22,12 +22,10 @@ class TestAccountRunner:
     def test_launch_no_instance(self):
         from services.runner import AccountRunner
         ctx = _make_ctx()
-        ctx.config["maa_instances"] = 0
-        ctx.config["parallel_max"] = 0  # don't create any
         r = AccountRunner(ctx)
         ok = r.launch(0)
-        assert not ok
-        assert not r.is_running("a1")
+        assert ok  # remote control mode: no instance needed
+        assert r.is_running("a1")
 
     def test_launch_duplicate(self):
         from services.runner import AccountRunner
@@ -81,38 +79,12 @@ class TestAccountRunner:
         sd = ctx.accounts[0].get("stats", {}).get(today, {})
         assert sd.get("launches", 0) >= 1
 
-    def test_preflight_check(self):
-        from services.runner import AccountRunner
-        ctx = _make_ctx()
-        r = AccountRunner(ctx)
-        ac = ctx.accounts[0]
-
-        # OK case — use existing file
-        import sys
-        progs_ok = [{"id": "w1", "path": sys.executable, "account_ref": "a1"}]
-        issues = r.preflight_check(ac, progs_ok)
-        assert not any(i.startswith("❌") for i in issues)
-
-        # Missing ADB
-        ac2 = Account(id="a1", name="test", adb_address="", emu_instance_index="0")
-        issues = r.preflight_check(ac2, progs_ok)
-        assert any("ADB" in i for i in issues)
-
-        # Missing program
-        progs_bad = [{"id": "w1", "path": "C:\\nonexistent\\MAA.exe", "account_ref": "a1"}]
-        issues = r.preflight_check(ac, progs_bad)
-        assert any("不存在" in i for i in issues)
-
-    def test_log_signals(self):
-        """Verify signals are properly connected."""
-        try:
-            from PySide6.QtCore import QObject
-        except ImportError:
-            return  # skip if no PySide6
+    def test_log_callbacks(self):
+        """Verify log callbacks are properly connected."""
         from services.runner import AccountRunner
         ctx = _make_ctx()
         r = AccountRunner(ctx)
         msgs = []
-        r.log_msg.connect(lambda m: msgs.append(m))
-        r.log_msg.emit("test message")
+        r._log_msg_callbacks.append(lambda m: msgs.append(m))
+        r.emit_log("test message")
         assert "test message" in msgs

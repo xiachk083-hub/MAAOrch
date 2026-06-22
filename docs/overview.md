@@ -48,7 +48,7 @@
 │ │ 异常自动恢复          │ │ 性能资源监控              │ │ 日志系统                 ││
 │ │ runner._cleanup      │ │ runner._check_resources  │ │ infrastructure/logger  ││
 │ │                      │ │                          │ │                         ││
-│ │ 指数退避重试 (5→300s) │ │ 系统可用内存 < 4GB        │ │ TRACE/DEBUG/INFO/WARN   ││
+│ │ 指数退避重试 (5→300s) │ │ 系统可用内存 < 1GB        │ │ TRACE/DEBUG/INFO/WARN   ││
 │ │ 1h 超时 → 队尾重排    │ │ 自动暂停新启动            │ │ 自动旋转 512KB/3 备份    ││
 │ │ 重启模拟器(失败≥3)    │ │ 单进程 > 4GB 杀          │ │ debug.log(全部级别)      ││
 │ │ 诊断收集保存           │ │ 状态栏显示内存使用        │ │ events.log(INFO+ JSON)  ││
@@ -349,7 +349,7 @@ ServiceContext / 信号事件
     │       └─ _check_resources()
     │               ↓
     │           psutil.virtual_memory()
-    │           可用内存 < 4GB → 暂停新启动
+ │ 可用内存 < 1GB → 暂停新启动
     │
     ├─→ main_poll.do_smart_tick()
     │       ↓
@@ -383,7 +383,8 @@ ServiceContext / 信号事件
 | `infrastructure/logger.py` | 日志系统（TRACE~CRASH、自动旋转、JSON 事件日志） | `Logger`, `debug.log`, `events.log`, `crash.log` |
 | `infrastructure/task_constants.py` | 任务模板、模拟器检测、ADB 查找、状态枚举、预设 | `TASK_NAMES`, `TASK_DEFAULTS`, `find_mumu_cli`, `detect_emu_instances` |
 | `infrastructure/utils.py` | 工具函数（原子写、zip slip 检测、代理设置） | `atomic_write`, `is_safe_zip_path`, `setup_proxy` |
-| `network/api_server.py` | HTTP REST API (15+ 端点)、hmac 鉴权、限流 | `ApiServer` |
+| `network/api_fastapi.py` | FastAPI HTTP REST API (50+ 端点)、hmac 鉴权、SSE、限流 | `create_app` |
+| `network/api_server.py` | 旧版 HTTPServer 实现（保留备用） | `ApiServer` |
 | `models/account.py` | 账号数据模型（dataclass，完整字段集） | `Account`, `from_dict`, `to_dict` |
 | `models/config_manager.py` | config.json 读写（原子写）+ 备份 + 迁移 | `load_config`, `save_config`, `migrate` |
 | `models/queue_entry.py` | 冻结队列条目（防 sort_key 突变） | `QueueEntry` |

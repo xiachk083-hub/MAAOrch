@@ -8,6 +8,8 @@ class Account:
     id: str = ""
     name: str = "未命名"
     game_client: str = "Official"
+    note: str = ""
+    expire_date: str = ""
     adb_path: str = ""
     adb_address: str = ""
     connection_preset: str = ""
@@ -50,6 +52,7 @@ class Account:
     smart_last_error: float = 0.0
     smart_plan: str = ""
     dispatch_id: str = ""
+    stages: list = field(default_factory=list)
 
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):

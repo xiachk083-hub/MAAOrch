@@ -5,7 +5,7 @@
 MAAOrch 是一个基于 PySide6 (Qt 6) 的多账号 MAA 调度桌面应用。`main.pyw` 无控制台窗口启动，`MainWindow`（`app/main_window.py`）管理所有 UI 和业务逻辑。
 
 ```
-main.pyw → MainWindow → ServiceContext
+main_web.pyw → QApplication + uvicorn
      ├── AccountRunner (services/runner.py)         启动→监控→完成回调
      ├── LaunchQueue   (services/launch_queue.py)   优先级队列 + 调度
      ├── ConfigService (services/config_injector.py) gui.json 双写入
@@ -15,9 +15,8 @@ main.pyw → MainWindow → ServiceContext
      ├── UpdateService (services/update_service.py) 下载/解压 MAA
      ├── HealthCheck   (services/health_check.py)   10 项健康检查
      ├── SmartScheduler(services/smart_scheduler.py) 理智/定时/material 决策
-     ├── PipelineThread(services/pipeline_thread.py) 流水线调度(legacy)
-     ├── ScheduleThread(services/schedule_thread.py) 定时调度(legacy)
-     └── ApiServer     (network/api_server.py)      HTTP API (15+ endpoints)
+     ├── DispatchPool  (services/dispatch_pool.py)  模板池创建/查询/清理
+     └── ApiServer     (network/api_fastapi.py)     FastAPI + uvicorn (50+ endpoints)
 ```
 
 ## 目录结构
@@ -74,7 +73,9 @@ main.pyw → MainWindow → ServiceContext
 | `ui/settings_window.py` | 设置对话框 |
 | `ui/widgets/config_card.py` | ConfigCard 小部件 |
 | `ui/dialogs.py` | 旧版对话框（兼容） |
-| `network/api_server.py` | HTTP REST 服务（127.0.0.1:0），15+ endpoints |
+| `network/api_fastapi.py` | HTTP REST 服务（FastAPI + uvicorn），50+ endpoints |
+| `network/api_server.py` | 旧版 HTTPServer 实现（保留备用） |
+| `ui/web/` | Web UI 前端（SPA, HTML+CSS+JS） |
 
 ## ServiceContext 设计
 
@@ -102,14 +103,11 @@ ConfigService 同时写入两种格式：
 | 线程 | 类型 | 说明 |
 |------|------|------|
 | 主线程 | GUI | Qt 事件循环，所有 UI 操作 |
-| EmuMonitor | QThread | ~30s 轮询 MuMu 实例状态 |
-| LaunchQueue 后台 | QThread | 启动调度（非阻塞） |
-| ApiServer | QThread | HTTP 服务器独立监听 |
-| PipelineThread | QThread | 流水线调度 (legacy) |
-| ScheduleThread | QThread | 定时触发 (legacy) |
-| BackgroundTask | QThread | 通用一次性后台任务 |
-
-所有线程间通信通过 Qt Signal/Slot，数据更新回主线程执行。
+| LaunchQueue 后台 | daemon thread | 5s tick，处理队列、清理残留 |
+| ApiServer | uvicorn daemon thread | FastAPI 异步 HTTP 服务 |
+| Runner `_launch_job` | daemon thread | 每个启动任务一个，崩溃自动清理 |
+| Runner `_wait_exit` | daemon thread | 等待 MAA.exe 退出后直接调 `_cleanup` |
+| BackgroundTask | daemon thread | 通用一次性后台任务 |
 
 ## 启动队列架构
 
