@@ -580,7 +580,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         except:
                             raise HTTPException(500, "read failed")
                     return {"lines": [], "name": a.get("name", "")}
-        return {"lines": [], "name": a.get("name", ""), "error": "no MAA instance bound"}
+        return {"lines": [], "name": a.get("name", ""), "error": "no .meta file found, launch MAA first"}
 
     @app.get("/api/accounts")
     def handle_accounts():

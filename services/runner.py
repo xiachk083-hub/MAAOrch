@@ -291,6 +291,11 @@ class AccountRunner:
         aid = ac["id"]
         inst_id, inst_dir = inst
         self._procs[aid] = inst_dir
+        # Write .meta before MAA starts so log endpoint can find it
+        try:
+            (Path(inst_dir) / ".meta").write_text(f"{aid}|{ac.get('name', aid)}", encoding="utf-8")
+        except:
+            pass
         import threading as _th
         try:
             _th.Thread(target=self._launch_job, args=(ac, inst), daemon=True).start()
