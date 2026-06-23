@@ -32,8 +32,8 @@ agent/
 services/diagnostics/
 
 # Generated files
-icon.ico
 MAAOrch.bat
+启动器.bat
 
 # Node
 node_modules/
