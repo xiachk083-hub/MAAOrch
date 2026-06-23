@@ -616,6 +616,19 @@ class AccountRunner:
                     tasks, sanity, drops = self._parse_log(aid)
                     self._cleanup(aid, -3, tasks, sanity, drops)
                     return
+            # Stuck at startup: MAA running but no tasks logged for 120s
+            ac = self._active.get(aid)
+            if ac:
+                started = self._start_times.get(aid, 0)
+                if started and time.time() - started > 120:
+                    tasks, _, _ = self._parse_log(aid)
+                    if not tasks:
+                        self.emit_log(f"⏱ {ac.get('name', aid)} 启动后无任务 ({int(time.time()-started)}s)，清理实例")
+                        self._log.warning(f"[卡死] {ac.get('name', aid)} 启动 {int(time.time()-started)}s 无任务")
+                        try: p.terminate(); p.wait(3)
+                        except: pass
+                        self._cleanup(aid, -3, [])
+                        return
             # ADB keepalive — log only, don't kill MAA
             ac = self._active.get(aid)
             if ac:
