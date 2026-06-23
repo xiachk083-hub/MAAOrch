@@ -427,31 +427,29 @@ class AccountRunner:
 
     def _launch_for_instance(self, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
-        smart_enabled = self.ctx.config.get("smart_global", {}).get("enabled", False)
         mode = self.ctx.config.get("schedule_mode", "daily")
         exe = Path(inst_dir) / "MAA.exe"
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
         try:
-            if smart_enabled:
-                from services.dispatch_pool import get_template
-                did = ac.get("dispatch_id", "")
-                if did:
-                    task_list = get_template(did)
-                    if task_list is None:
-                        task_list = ["StartUp", "Award"]
-                elif mode == "roguelike":
+            # Unified dispatch path: always try dispatch_id first, fallback to mode defaults
+            from services.dispatch_pool import get_template
+            did = ac.get("dispatch_id", "")
+            task_list = get_template(did) if did else None
+            if task_list is None:
+                if mode == "roguelike":
                     task_list = ["StartUp", "Roguelike"]
                 elif mode == "reclamation":
                     task_list = ["StartUp", "Reclamation"]
                 else:
-                    from services.smart_scheduler import get_tasks_for_account
-                    task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
-            else:
-                task_list = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
-                # Still respect per-account annihilation setting
-                if ac.get("smart_annihilation", ""):
+                    task_list = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
+            # Per-account annihilation (overrides dispatch template)
+            if ac.get("smart_annihilation", ""):
+                if "Annihilation" not in task_list:
                     task_list.append("Annihilation")
+            else:
+                if "Annihilation" in task_list:
+                    task_list.remove("Annihilation")
             plan_txt = ",".join(task_list)
             self.emit_log(f"🧠 智能调度: {plan_txt}")
             self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list}")
@@ -768,11 +766,11 @@ class AccountRunner:
             plan_log = f" 🧠 {plan}" if plan else ""
             self.emit_log(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             self._log.info(f"[清理] {name} exit={exit_code}")
+            from services.dispatch_pool import remove_dispatch
+            remove_dispatch(ac.get("dispatch_id", ""))
+            ac["dispatch_id"] = ""
             mode = self.ctx.config.get("schedule_mode", "daily")
             if exit_code == 0:
-                from services.dispatch_pool import remove_dispatch
-                remove_dispatch(ac.get("dispatch_id", ""))
-                ac["dispatch_id"] = ""
                 if not ac.get("_persist_plan") or mode != "daily":
                     ac["smart_plan"] = ""
                 ac.pop("_persist_plan", None)

@@ -24,6 +24,17 @@ def _log_op(action: str, detail: str = "") -> None:
 
 
 def _get_web_schedule_tasks(mw: Any, include_anni: bool = True, only_anni: bool = False) -> list[str]:
+    mode = mw.config.get("schedule_mode", "daily") if hasattr(mw, 'config') else "daily"
+    if mode == "roguelike":
+        tasks = ["StartUp", "Roguelike"]
+        if only_anni or include_anni:
+            tasks.append("Annihilation")
+        return tasks
+    if mode == "reclamation":
+        tasks = ["StartUp", "Reclamation"]
+        if only_anni or include_anni:
+            tasks.append("Annihilation")
+        return tasks
     sg = mw.config.get("smart_global", {})
     tasks = ["StartUp"]
     if only_anni:
@@ -1190,6 +1201,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             count += 1
         if count:
             mw._log(f"▶ 调度: {count} 个账号已入队")
+            _log_op("一键调度", f"{count} 个账号")
             lq.tick()
         return {"ok": True, "count": count}
 
@@ -1229,6 +1241,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             count += 1
         if count:
             mw._log(f"▶ 调度选中: {count} 个账号已入队")
+            _log_op("调度选中", f"{count} 个账号")
             lq.tick()
         return {"ok": True, "count": count}
 
