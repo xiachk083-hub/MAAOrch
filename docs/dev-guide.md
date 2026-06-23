@@ -3,7 +3,7 @@
 ## 环境搭建
 
 ```bash
-git clone <repo_url>
+git clone https://github.com/xiachk083-hub/MAAOrch.git
 cd MAAOrch
 pip install -r requirements.txt
 pip install ruff pytest
@@ -13,139 +13,109 @@ pip install ruff pytest
 
 ```
 MAAOrch/
-├── main.pyw                          # 入口 (UAC + 单实例 + 代理)
-├── main_window.py                    # 主窗口 (800+ 行，UI + 逻辑)
+├── main_web.pyw                    # Web UI 入口（推荐）
+├── main.pyw                        # Qt 桌面版入口
+├── main_web.bat                    # 双击启动器
 ├── app/
-│   ├── service_context.py            # ServiceContext 数据桥
-│   └── api_server.py                 # HTTP API 服务
-├── models/
-│   ├── config_manager.py             # 配置加载/保存/迁移
-│   ├── config_injector.py            # MAA 配置注入服务
-│   ├── account.py                    # Account dataclass (a["key"] / a.key)
-│   └── config.json                   # 全局配置 + 账号列表
+│   ├── service_context.py          # ServiceContext 数据桥
+│   └── web_context.py              # WebContext 类型化上下文（替代 type('MW',(),{})）
+├── network/
+│   ├── api_fastapi.py              # FastAPI + uvicorn HTTP 服务（50+ 端点）
+│   └── api_server.py               # 旧版 HTTPServer（保留备用）
 ├── services/
-│   ├── emu_service.py                # ADB / 模拟器操作服务
-│   ├── log_parser.py                 # 日志解析 / 统计服务
-│   ├── instance_pool.py              # 守护 / 更新 / 托盘服务
-│   ├── update_service.py             # 下载 / 更新线程
-│   └── queue.json                    # 持久化队列
+│   ├── runner.py                   # AccountRunner：MAA 全生命周期
+│   ├── launch_queue.py             # LaunchQueue：优先级队列调度
+│   ├── config_injector.py          # MAA 配置注入（gui.json + gui.new.json）
+│   ├── maa_download.py             # 自动下载 / 初始化 MAA
+│   ├── dispatch_pool.py            # 调度模板池
+│   ├── smart_scheduler.py          # 智能调度决策
+│   ├── instance_pool.py            # 实例池创建 / 重建
+│   ├── ai_assistant.py             # LLM 任务失败分析
+│   └── maa/
+│       ├── source/                 # MAA 源目录（自动下载或手动放置）
+│       └── instances/{1..N}/       # MAA 实例池（从 source 复制）
 ├── infrastructure/
-│   ├── background_thread.py          # 通用后台线程 (BackgroundTask)
-│   ├── pipeline_thread.py            # 流水线调度线程
-│   └── schedule_thread.py            # 定时任务线程
-├── models/accounts/{id}/stats.json   # 运行统计 (RunStats)
-├── services/maa/instances/{N}/       # 各实例 MAA 目录
-├── task_constants.py                 # 任务常量 / 模拟器检测
-├── themes.py                         # 暗色/亮色 QSS 样式
-├── dialogs.py                        # 对话框组件
-├── utils.py                          # 工具函数
-├── backups/                          # 配置备份
-├── tests/                            # 测试
-└── docs/                             # 文档
+│   ├── task_constants.py           # 任务常量、mumu-cli 发现、EmuMonitor
+│   ├── logger.py                   # 日志系统（debug / events / crash）
+│   ├── maa_core.py                 # MaaCore ctypes 直连（默认禁用）
+│   └── platform_helper.py          # UAC 提权 / 管理员检测
+├── ui/web/                         # Web UI 前端（SPA）
+│   ├── index.html
+│   ├── app.js
+│   ├── style.css
+│   └── pages/                      # 引导页等
+├── models/
+│   ├── config_manager.py           # 配置加载/保存/迁移
+│   ├── config.json                 # 全局配置 + 账号列表
+│   ├── account.py                  # Account dataclass
+│   ├── queue_entry.py              # QueueEntry 冻结数据类
+│   └── stats.py                    # RunStats 运行统计持久化
+├── docs/                           # 文档
+├── tests/                          # 测试（pytest，67+ 用例）
+└── requirements.txt                # 依赖：PySide6(可选) / fastapi / uvicorn
+```
+
+## 核心架构
+
+```
+用户浏览器 → FastAPI (uvicorn) → WebContext → AccountRunner / LaunchQueue
+                    ↓                            ↓
+              SSE 实时推送                MAA.exe 子进程
+```
+
+- HTTP 服务器：FastAPI + uvicorn，守护线程运行
+- 前端：纯静态 SPA（HTML+CSS+JS），通过 REST API + SSE 通信
+- 队列：LaunchQueue 每 5 秒 tick，优先级调度
+- 启动：AccountRunner._launch_job → 启动模拟器 → 等 ADB → 注入配置 → Popen MAA.exe
+- 监控：_wait_exit 线程等待 MAA 退出 → _cleanup → account_finished 回调
+
+## PySide6 可选
+
+Web 模式不需要 PySide6。如果安装了 PySide6，启动时会有系统托盘图标。
+无 PySide6 时自动纯 Web 模式（无托盘图标）。
+
+```python
+try:
+    from PySide6.QtWidgets import QApplication
+    _has_qt = True
+except ImportError:
+    _has_qt = False
 ```
 
 ## 编码规范
 
 ### 代码风格
 
-- **ruff** 检查，配置于 `pyproject.toml`
-- 行长度限制 200 字符
-- 双引号字符串，空格缩进
-- 禁止注释（除特殊情况外）
+- 缩进：4 空格
+- 行宽：120 字符
+- 命名：`snake_case`（变量/函数）、`PascalCase`（类）
+- 导入：标准库 → 第三方 → 本地，每组空行分隔
 
-### 导入风格
-
-- 标准库 → 第三方库 → 本地模块，每组空行分隔
-- 本地模块优先使用绝对导入
-
-### 命名约定
-
-- 文件名：`snake_case`
-- 类名：`PascalCase`
-- 函数/方法：`snake_case`
-- 私有方法：`_snake_case`
-- UI 组件变量：简短命名（如 `sl` = status label）
-
-### 线程安全
-
-- 所有 UI 操作必须在主线程执行
-- 子线程通过 Qt Signal 向主线程发送数据
-- 避免在子线程中直接操作 `self.mw` 等 UI 组件
-
-## Account 模型
-
-`models/account.py` 的 Account dataclass 支持 `a["key"]` 和 `a.key` 两种访问方式。`_TRANSIENT` 开头的字段不持久化。
-
-## 配置版本迁移
-
-`models/config_manager.py` 包含自动迁移机制，确保旧版本配置文件兼容。
-
-### 当前版本：v5
-
-### v4 → v5 (`migrate_v4_to_v5()`)
-
-迁移内容：
-- 为每个账号添加默认字段（`emu_launch`、`sync_tasks`、`start_minimized`、`adb_retry`、`stats` 等）
-- 为仓库条目添加 `guard_enabled`、`guard_max_restart`、`update_channel`、`launch_mode`、`account_ref`、`maa_type` 等
-- 自动检测 MAA 类型（路径含 "MAA" 或 `maa`）
-- 解析版本号
-
-### ADB 地址自动修复
-
-`load_config()` 在加载 v5 配置时自动修复编码问题：
-
-```python
-"27.0.0.1" → "127.0.0.1"  # 首字符丢失修复
-```
-
-## 线程模型
-
-| 线程 | 说明 |
-|------|------|
-| GUI 主线程 | PyQt 主循环 |
-| EmuMonitor QThread | `task_constants.py` 模拟器状态轮询 |
-| BackgroundTask | `infrastructure/background_thread.py` |
-| API 服务线程 | `app/api_server.py` |
-| launch 后台线程 | `runner._launch_job` |
-
-## 测试
+### 测试
 
 ```bash
-pytest tests/ -v
+pytest tests/ -x -q
 ```
 
-68 测试用例分布：
-- **test_core.py**: `make_id()`、`parse_maa_version()`、`load_config/save_config` 一致性、v4→v5 迁移、ADB sanitize
-- **test_critical.py**: `gui.json` 注入、ADB 端口正则、`parse_log()` 掉落解析、定时任务星期匹配
-- **test_emu.py**: 模拟器预设、ADB devices 解析、MuMu 端口公式、mumu-cli 路径发现
-- **test_maint.py**: 版本号比较、完整迁移路径（v3→v4→v5）、默认字段完整性
-- **test_queue.py**: 入队/出队、优先级排序、模拟器冲突、并行控制
-- **test_runner.py**: AccountRunner 启停、进程跟踪、统计记录、Signal 发送
-- **test_stats.py**: RunStats 持久化、理智查询、每日汇总、上限截断
+所有改动须通过全部测试（67+）。`runner.py` 和 `launch_queue.py` 已去 Qt 依赖，测试不需要 Qt 事件循环。
 
-## CI
+### 原则
 
-GitHub Actions（`.github/workflows/ci.yml`）单 job lint-and-test：
+- **不攒技术债**：现在图省事的地方，以后就是瓶颈
+- **失败当可见**：守护线程必须有 try/except + 清理兜底
+- **只更新传了的字段**：batch API 不能覆盖未传字段
 
-| 触发 | push / PR → main |
-|------|------------------|
-| 环境 | `windows-latest`, Python 3.12 |
-| 步骤 | ruff check → pytest |
+## API 端点
 
-## 主题系统
+见 `docs/http-api.md`。关键端点：
 
-`themes.py` 导出 `DARK_STYLE` / `LIGHT_STYLE` 两个 QSS 样式表。通过 `app.setStyleSheet()` 全局应用，切换时调用 `_set_theme()` 重新设置样式和 Palette。
-
-## 开机自启
-
-`config_manager.set_auto_start()` 实现：
-- **启用**：在 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup` 创建 `流水线启动器.bat`
-- **禁用**：删除该文件
-- bat 内容：`@start "" "{python路径}" "{main.pyw路径}"`
-
-## 配置备份
-
-每次 `save_config()` 保存时自动备份：
-- 目标目录：`backups/`
-- 文件命名：`config_YYYYMMDD_HHMMSS.json`
-- 保留数量：最多 10 份（超出删除最旧的）
+| 端点 | 说明 |
+|------|------|
+| `GET /api/status` | 全部账号状态 |
+| `GET /api/accounts` | 账号列表（含 stages / smart_annihilation） |
+| `POST /api/accounts/batch_save` | 批量保存（只更新传了的字段） |
+| `GET /api/accounts/export` | 导出 CSV |
+| `POST /api/accounts/csv_import` | 导入 CSV |
+| `POST /api/accounts/batch_save` | 表格模式批量保存 |
+| `POST /api/action/smart_all` | 一键调度（逐账号判断剿灭） |
+| `GET /api/sse` | SSE 实时推送 |
