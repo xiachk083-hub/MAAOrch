@@ -606,15 +606,20 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.get("/api/accounts/export")
     def handle_accounts_export():
-        """Export accounts as CSV."""
+        """Export accounts as CSV (includes stage columns)."""
         import io, csv
         output = io.StringIO()
-        _cn_headers = ["id","名称","游戏客户端","模拟器索引","切换标识","UID","备注","过期日","已暂停"]
+        _stage_lib = mw.config.get("stage_library", [])
+        _stage_ids = [s.get("id", "") for s in _stage_lib if s.get("id")]
+        _cn_headers = ["id","名称","游戏客户端","模拟器索引","切换标识","UID","备注","过期日","已暂停"] + _stage_ids
         _field_map = {"id":"id","名称":"name","游戏客户端":"game_client","模拟器索引":"emu_instance_index","切换标识":"account_switch","UID":"uid","备注":"note","过期日":"expire_date","已暂停":"suspended"}
         w = csv.writer(output)
         w.writerow(_cn_headers)
         for a in mw.accounts:
-            w.writerow([a.get(_field_map[h], "") for h in _cn_headers])
+            _ac_stages = set(a.get("stages", []) or [])
+            _row = [a.get(_field_map[h], "") for h in _cn_headers[:9]]
+            _row += ["1" if s in _ac_stages else "0" for s in _stage_ids]
+            w.writerow(_row)
         from datetime import datetime as _dt
         _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
         return StreamingResponse(io.BytesIO(output.getvalue().encode("utf-8-sig")),

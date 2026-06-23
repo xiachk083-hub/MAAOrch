@@ -2283,8 +2283,8 @@ async function quickCreate(client) {
   else toast(r.error || '创建失败','error');
 }
 function _accountsToCsv() {
-  const fields = ['id','名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停'];
-  const map = {id:'id',name:'名称',game_client:'游戏客户端',emu_instance_index:'模拟器索引',account_switch:'切换标识',uid:'UID',note:'备注',expire_date:'过期日',suspended:'已暂停'};
+  const stageIds = _tableStages || [];
+  const fields = ['id','名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停', ...stageIds];
   let csv = fields.join(',') + '\n';
   const accts = state.accounts;
   const engFields = ['id','name','game_client','emu_instance_index','account_switch','uid','note','expire_date','suspended'];
@@ -2294,6 +2294,10 @@ function _accountsToCsv() {
       if (v.includes(',') || v.includes('"') || v.includes('\n')) v = '"' + v.replace(/"/g,'""') + '"';
       return v;
     });
+    const acStages = a.stages || [];
+    for (const s of stageIds) {
+      row.push(acStages.includes(s) ? '1' : '0');
+    }
     csv += row.join(',') + '\n';
   }
   return csv;
