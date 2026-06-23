@@ -425,7 +425,7 @@ class LaunchQueue:
                     heapq.heappush(self._pending, entry)
                     continue
                 # Launch interval — prevent burst launches
-                if time.time() - self._last_launch_time < 5:
+                if time.time() - self._last_launch_time < 20:
                     _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 启动间隔 (上次: {int(time.time()-self._last_launch_time)}s前)")
                     heapq.heappush(self._pending, entry)
                     continue
@@ -444,7 +444,7 @@ class LaunchQueue:
         for idx, entry in enumerate(launch_now):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
                 continue
-            _th.Timer(max(0.1, idx * 5.0), lambda e=entry: self._do_launch(e)).start()
+            _th.Timer(max(0.1, idx * 20.0), lambda e=entry: self._do_launch(e)).start()
         _QUEUE_LOG.info(f"_tick: launch_now={len(launch_now)} pending={len(self._pending)} active_emus={len(self._active_emus)}")
         self._clean_stale_emus()
 
