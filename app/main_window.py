@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
             from models.config_manager import save_config
             save_config(self.config)
         _app = create_app(self)
-        _bind = self.config.get("bind_address", "127.0.0.1")
+        _bind = self.config.get("bind_address", "0.0.0.0")
         _config = uvicorn.Config(_app, host=_bind, port=port, log_level="info")
         _server = uvicorn.Server(_config)
         self._api_server = _server

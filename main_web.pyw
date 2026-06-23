@@ -148,7 +148,7 @@ pause
     from network.api_fastapi import create_app, start_server
     import uvicorn, threading as _th
     _fastapi_app = create_app(ctx._mw)
-    _bind = config.get("bind_address", "127.0.0.1")
+    _bind = config.get("bind_address", "0.0.0.0")
     _uvicorn_config = uvicorn.Config(_fastapi_app, host=_bind, port=port, log_level="info")
     _uvicorn_server = uvicorn.Server(_uvicorn_config)
     _th.Thread(target=_uvicorn_server.run, daemon=True).start()
