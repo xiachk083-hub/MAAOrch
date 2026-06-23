@@ -1248,7 +1248,6 @@ function showNewDispatchDialog(accts) {
     </div>
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
-  window._dispatchMode = '';
 }
 function filterDispatchList() {
   const q = (document.getElementById('dispatch-search')?.value || '').toLowerCase();
@@ -2282,8 +2281,12 @@ async function quickCreate(client) {
   if (r.ok) { toast(`已创建 ${name} (${label})`); document.querySelector('.dialog-overlay')?.remove(); renderPage(); }
   else toast(r.error || '创建失败','error');
 }
-function _accountsToCsv() {
-  const stageIds = _tableStages || [];
+async function _accountsToCsv() {
+  let stageIds = _tableStages || [];
+  if (!stageIds.length) {
+    const sr = await apiGet('/stages');
+    if (sr.ok && sr.stages) stageIds = sr.stages.map(s => s.id).filter(Boolean);
+  }
   const fields = ['id','名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停', ...stageIds];
   let csv = fields.join(',') + '\n';
   const accts = state.accounts;
@@ -2303,8 +2306,9 @@ function _accountsToCsv() {
   return csv;
 }
 function openCsvEdit() {
-  const csv = _accountsToCsv();
-  const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
+  (async () => {
+    const csv = await _accountsToCsv();
+    const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
     <div class="dialog" style="max-width:700px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:14px;font-weight:bold;color:var(--text2)">📋 CSV 编辑账号</span>
@@ -2322,7 +2326,8 @@ function openCsvEdit() {
       </div>
     </div>
   </div>`;
-  document.body.insertAdjacentHTML('beforeend', html);
+    document.body.insertAdjacentHTML('beforeend', html);
+  })();
 }
 function csvFileSelected(event) {
   const file = event.target.files[0];
