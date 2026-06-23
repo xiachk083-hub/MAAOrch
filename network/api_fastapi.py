@@ -584,8 +584,124 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "running": running, "queued": queued,
                 "failures": a.get("consecutive_failures", 0),
                 "suspended": a.get("suspended", False),
+                "stages": a.get("stages", []),
+                "smart_annihilation": a.get("smart_annihilation", ""),
             })
         return {"ok": True, "accounts": data}
+
+    @app.get("/api/accounts/export")
+    def handle_accounts_export():
+        """Export accounts as CSV."""
+        import io, csv
+        output = io.StringIO()
+        _cn_headers = ["id","名称","游戏客户端","模拟器索引","切换标识","UID","备注","过期日","已暂停"]
+        _field_map = {"id":"id","名称":"name","游戏客户端":"game_client","模拟器索引":"emu_instance_index","切换标识":"account_switch","UID":"uid","备注":"note","过期日":"expire_date","已暂停":"suspended"}
+        w = csv.writer(output)
+        w.writerow(_cn_headers)
+        for a in mw.accounts:
+            w.writerow([a.get(_field_map[h], "") for h in _cn_headers])
+        from datetime import datetime as _dt
+        _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+        return StreamingResponse(io.BytesIO(output.getvalue().encode("utf-8-sig")),
+                                 media_type="text/csv; charset=utf-8",
+                                 headers={"Content-Disposition": f"attachment; filename=accounts_{_ts}.csv"})
+
+    @app.post("/api/accounts/csv_import")
+    def handle_accounts_csv_import(body: dict):
+        """Import accounts from CSV text. Updates existing by id, creates new."""
+        import csv, io
+        csv_text = body.get("csv", "")
+        if not csv_text:
+            raise HTTPException(400, "missing csv")
+        _header_map = {
+            "id": "id", "名称": "name", "name": "name",
+            "游戏客户端": "game_client", "game_client": "game_client",
+            "模拟器索引": "emu_instance_index", "emu_instance_index": "emu_instance_index",
+            "切换标识": "account_switch", "account_switch": "account_switch",
+            "UID": "uid", "uid": "uid",
+            "备注": "note", "note": "note",
+            "过期日": "expire_date", "expire_date": "expire_date",
+            "已暂停": "suspended", "suspended": "suspended",
+        }
+        reader = csv.DictReader(io.StringIO(csv_text))
+        if not reader.fieldnames:
+            raise HTTPException(400, "empty or invalid csv")
+        updated = 0
+        created = 0
+        errors = []
+        for i, row in enumerate(reader, 2):
+            try:
+                # Map Chinese headers to English field names
+                mapped = {}
+                for k, v in row.items():
+                    fname = _header_map.get(k.strip(), k.strip())
+                    mapped[fname] = v.strip() if v else ""
+                aid = mapped.get("id", "").strip()
+                if not aid:
+                    aid = uuid.uuid4().hex[:12]
+                existing = next((a for a in mw.accounts if a["id"] == aid), None)
+                if existing:
+                    for f in ("name","game_client","emu_instance_index","account_switch","uid","note","expire_date"):
+                        if f in mapped:
+                            existing[f] = mapped[f]
+                    if "suspended" in mapped:
+                        existing["suspended"] = mapped["suspended"].lower() in ("true","1","yes")
+                    updated += 1
+                else:
+                    new = {"id": aid, "consecutive_failures": 0}
+                    for f in ("name","game_client","emu_instance_index","account_switch","uid","note","expire_date"):
+                        new[f] = mapped.get(f, "")
+                    new["suspended"] = mapped.get("suspended","").lower() in ("true","1","yes")
+                    mw.accounts.append(new)
+                    created += 1
+            except Exception as e:
+                errors.append(f"行{i}: {e}")
+        mw.config["accounts"] = mw.accounts
+        try:
+            from models.config_manager import save_config
+            save_config(mw.config)
+        except Exception:
+            pass
+        return {"ok": True, "updated": updated, "created": created, "errors": errors}
+
+    @app.post("/api/accounts/batch_save")
+    def handle_accounts_batch_save(body: dict):
+        """Save all accounts from table edit. Body: { accounts: [...], new_stages: [str] }"""
+        _stage_lib = mw.config.setdefault("stage_library", [])
+        new_stages = body.get("new_stages", [])
+        for sid in new_stages:
+            if sid and not any(s.get("id") == sid for s in _stage_lib):
+                _stage_lib.append({"id": sid, "name": sid, "count": 0})
+        updated = 0
+        created = 0
+        for ac in body.get("accounts", []):
+            aid = ac.get("id", "").strip()
+            if not aid:
+                aid = uuid.uuid4().hex[:12]
+            existing = next((a for a in mw.accounts if a["id"] == aid), None)
+            if existing:
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended"):
+                    if f in ac:
+                        existing[f] = ac[f]
+                if "stages" in ac:
+                    existing["stages"] = ac["stages"] if isinstance(ac["stages"], list) else []
+                updated += 1
+            else:
+                new_ac = {"id": aid, "consecutive_failures": 0}
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages"):
+                    if f in ac:
+                        new_ac[f] = ac[f]
+                mw.accounts.append(new_ac)
+                created += 1
+        mw.config["accounts"] = mw.accounts
+        _cfg_err = ""
+        try:
+            from models.config_manager import save_config
+            save_config(mw.config)
+        except Exception as _e:
+            _cfg_err = str(_e)
+            mw._log(f"[保存] 写入 config.json 失败: {_e}")
+        return {"ok": True, "updated": updated, "created": created, "config_error": _cfg_err}
 
     @app.get("/api/oplog")
     def handle_oplog():
@@ -679,6 +795,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     "client": a.get("game_client", ""),
                     "failures": a.get("consecutive_failures", 0),
                     "suspended": a.get("suspended", False),
+                    "stages": a.get("stages", []),
+                    "smart_annihilation": a.get("smart_annihilation", ""),
                 })
             q = {"count": mw.launch_queue.pending_count if hasattr(mw, 'launch_queue') and mw.launch_queue else 0}
             notifs = getattr(mw, '_notifications', [])[-5:]
@@ -1024,7 +1142,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if lq._paused:
             lq.resume()
         smart = mw.config.get("smart_global", {}).get("enabled", False)
-        tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
+        base_tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
             "StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
         count = 0
         for a in mw.accounts:
@@ -1035,6 +1153,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             if lq.is_queued(aid) or lq.is_running(aid):
                 continue
+            # Per-account annihilation: check smart_annihilation field
+            tasks = list(base_tasks)
+            anni = a.get("smart_annihilation", "")
+            has_anni = "Annihilation" in tasks
+            if has_anni and not anni:
+                tasks.remove("Annihilation")
+            elif not has_anni and anni:
+                tasks.append("Annihilation")
             a["dispatch_id"] = create_dispatch(tasks)
             lq.enqueue(aid, "force", priority=0)
             count += 1
@@ -1053,7 +1179,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if lq._paused:
             lq.resume()
         smart = mw.config.get("smart_global", {}).get("enabled", False)
-        tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
+        base_tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
             "StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
         count = 0
         for a in mw.accounts:
@@ -1066,6 +1192,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             if lq.is_queued(aid) or lq.is_running(aid):
                 continue
+            # Per-account annihilation
+            tasks = list(base_tasks)
+            anni = a.get("smart_annihilation", "")
+            has_anni = "Annihilation" in tasks
+            if has_anni and not anni:
+                tasks.remove("Annihilation")
+            elif not has_anni and anni:
+                tasks.append("Annihilation")
             a["dispatch_id"] = create_dispatch(tasks)
             lq.enqueue(aid, "force", priority=0)
             count += 1

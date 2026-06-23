@@ -191,7 +191,10 @@ class AccountRunner:
                 continue
             inst_path = str(inst_dir)
             already_used = any(
-                (p is not None and getattr(p, "_inst_path", None) == inst_path)
+                p is not None and (
+                    (isinstance(p, str) and p == inst_path) or
+                    (getattr(p, "_inst_path", None) == inst_path)
+                )
                 for p in self._procs.values()
             )
             if already_used:
@@ -425,6 +428,9 @@ class AccountRunner:
                     task_list = get_tasks_for_account(ac, self.ctx.config.get("smart_global", {}))
             else:
                 task_list = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
+                # Still respect per-account annihilation setting
+                if ac.get("smart_annihilation", ""):
+                    task_list.append("Annihilation")
             plan_txt = ",".join(task_list)
             self.emit_log(f"🧠 智能调度: {plan_txt}")
             self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list}")

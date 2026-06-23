@@ -108,16 +108,16 @@ class MainWindow(QMainWindow):
         self.ctx.logs = self.logs
         # ── Account runner ──
         self.runner = AccountRunner(self.ctx)
-        self.runner.log_msg.connect(lambda m: self._log(m))
-        self.runner.status_msg.connect(lambda m: self._sl(m))
-        self.runner.account_started.connect(self._on_account_started)
-        self.runner.account_finished.connect(self._on_account_finished)
-        self.runner.account_error.connect(lambda aid, err: self._log(f"❌ {err}"))
+        self.runner._log_msg_callbacks.append(lambda m: self._log(m))
+        self.runner._status_msg_callbacks.append(lambda m: self._sl(m))
+        self.runner._started_callbacks.append(self._on_account_started)
+        self.runner._finished_callbacks.append(self._on_account_finished)
+        self.runner._error_callbacks.append(lambda aid, err: self._log(f"❌ {err}"))
         self.ctx.on_account_done = self.runner.check_processes
         # ── Launch queue (unified entry for all launch sources) ──
         self.launch_queue = LaunchQueue(self.ctx)
-        self.launch_queue.log_msg.connect(lambda m: self._log(m))
-        self.runner.account_finished.connect(self.launch_queue.on_account_finished)
+        self.launch_queue._log_msg_callbacks.append(lambda m: self._log(m))
+        self.runner._finished_callbacks.append(self.launch_queue.on_account_finished)
         self.launch_queue.start()
         self._build_ui(); self.maint.restore_geometry(); self._log("══ 启动 ══")
         self._sw("accounts")
@@ -182,7 +182,13 @@ class MainWindow(QMainWindow):
         style = {"Dark": DARK_STYLE, "Light": LIGHT_STYLE, "Notepaper": NOTEPAPER_STYLE}.get(m, DARK_STYLE)
         self.setStyleSheet(style)
     def _start_api_server(self) -> None:
-        if self._api_server: self._api_server.stop_server(); self._api_server.quit(); self._api_server.wait(1000)
+        from network.api_fastapi import create_app
+        import uvicorn, threading as _th
+        if self._api_server:
+            old = self._api_server
+            try: old.should_exit = True
+            except: pass
+            self._api_server = None
         port=self.config.get("api_port",19999); token=self.config.get("api_token","")
         if not token:
             import secrets
@@ -190,9 +196,12 @@ class MainWindow(QMainWindow):
             self.config["api_token"] = token
             from models.config_manager import save_config
             save_config(self.config)
-        self._api_server=ApiServer(port,token,self)
-        self._api_server.log_msg.connect(lambda m: self._log(m))
-        self._api_server.start()
+        _app = create_app(self)
+        _config = uvicorn.Config(_app, host="127.0.0.1", port=port, log_level="info")
+        _server = uvicorn.Server(_config)
+        self._api_server = _server
+        _th.Thread(target=_server.run, daemon=True).start()
+        self._log(f"API 服务已启动: http://127.0.0.1:{port}/")
     def _sl(self, msg: str) -> None: self.sl.setText((msg[:100]+"…") if len(msg)>100 else msg)
     def _log(self, msg: str) -> None:
         msg = str(msg).replace("\n", " ").replace("\r", " ")[:1000]
@@ -263,6 +272,12 @@ class MainWindow(QMainWindow):
         self._toolbar_launch_btn.setFixedHeight(28)
         self._toolbar_launch_btn.clicked.connect(self._on_toolbar_launch)
         tb.addWidget(self._toolbar_launch_btn)
+        _web_btn = QPushButton("🌐 网页")
+        _web_btn.setFixedHeight(28)
+        import webbrowser as _wb
+        _port = self.ctx.config.get("api_port", 19999)
+        _web_btn.clicked.connect(lambda: _wb.open(f"http://127.0.0.1:{_port}/"))
+        tb.addWidget(_web_btn)
         ml.addLayout(tb)
 
         # Main content area: sidebar + smart panel

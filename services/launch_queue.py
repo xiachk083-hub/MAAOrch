@@ -482,7 +482,7 @@ class LaunchQueue:
         for emu_idx, aid in list(self._active_emus.items()):
             ts = self._active_emus_ts.get(emu_idx, 0)
             real = runner._has_real_process(aid)
-            _QUEUE_LOG.info(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
+            _QUEUE_LOG.debug(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
             if ts == 0:
                 _QUEUE_LOG.warn(f"清洁跳过(ts=0): {emu_idx}")
                 continue
@@ -563,12 +563,16 @@ class LaunchQueue:
             data = self.ctx.config.get("queue", [])
         from datetime import datetime as dt
         heapq = self._import_heapq()
+        known_ids = {a.get("id") for a in self.ctx.accounts if a.get("id")}
         for d in data:
+            aid = d.get("account_id", "")
+            if aid and known_ids and aid not in known_ids:
+                continue  # skip stale entries for deleted accounts
             try:
                 nb = dt.strptime(d["not_before"], "%Y-%m-%d %H:%M:%S")
             except Exception:
                 nb = dt.now()
-            entry = QueueEntry.make(d["account_id"], d.get("source", "saved"),
+            entry = QueueEntry.make(aid, d.get("source", "saved"),
                                     d.get("priority", 0), nb,
                                     persist_plan=d.get("persist_plan", False))
             heapq.heappush(self._pending, entry)

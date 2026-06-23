@@ -26,7 +26,7 @@ function showEmpty(container, msg = '暂无数据') {
 }
 
 // ── State ──
-let state = { accounts: [], queue: [], config: {}, stats: {}, page: 'accounts', polling: false, aiInsights: [] };
+let state = { accounts: [], queue: [], config: {}, stats: {}, page: 'accounts', polling: false, aiInsights: [], _tableMode: false };
 let filterKey = '';
 let selectedIds = new Set();
 
@@ -169,6 +169,7 @@ async function renderAccounts(container) {
         oninput="searchAccounts(this.value)"
         style="flex:1;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
       <button onclick="showCreateAccountForm()" style="white-space:nowrap;font-size:11px">＋ 创建</button>
+      <button onclick="toggleTableMode()" style="white-space:nowrap;font-size:11px">📊 表格</button>
     </div>
     <div style="display:flex;gap:3px;margin-bottom:4px;flex-wrap:wrap">
       <select id="server-filter" onchange="renderPage()" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
@@ -232,10 +233,157 @@ async function renderAccounts(container) {
       <button class="small" onclick="batchStop()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">⏹ 停止</button>
       <button class="small" onclick="batchAssignStage()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🎯 关卡</button>
       <button class="small" onclick="batchDelete()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🗑 删除</button>
+      <span style="width:1px;height:18px;background:var(--border);display:inline-block"></span>
+      <button class="small" onclick="openCsvEdit()">📋 CSV 编辑</button>
     </div>`;
 
     container.innerHTML = html;
   } catch(e) { showError(container, e.message); }
+}
+
+let _tableData = []; let _tableStages = [];
+async function toggleTableMode() {
+  state._tableMode = !state._tableMode;
+  if (!state._tableMode) { renderPage(); return; }
+  const c = document.getElementById('content');
+  showLoading(c);
+  const r = await apiGet('/accounts');
+  if (!r.ok) { showError(c, r.error); return; }
+  state.accounts = r.accounts;
+  await renderAccountTable(c, r.accounts);
+}
+let _tableContainer = null;
+async function renderAccountTable(container, accts) {
+  _tableContainer = container;
+  try {
+    _tableData = accts.map(a => ({ ...a, stages: [...(a.stages || [])] }));
+    const sr = await apiGet('/stages');
+    _tableStages = (sr.ok ? sr.stages || [] : []).map(s => s.id).filter(Boolean);
+    _renderTable();
+  } catch(e) {
+    container.innerHTML = `<div style="padding:20px;color:var(--danger)">❌ 表格加载失败: ${e.message}</div>`;
+  }
+}
+function _renderTable() {
+  const container = _tableContainer;
+  const accts = _tableData;
+  const stageIds = _tableStages;
+  const fields = ['名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停','剿灭'];
+  const eng = { '名称':'name','游戏客户端':'game_client','模拟器索引':'emu_instance_index','切换标识':'account_switch','UID':'uid','备注':'note','过期日':'expire_date','已暂停':'suspended','剿灭':'smart_annihilation' };
+  
+  let html = `<div style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:10px">
+  <table style="width:100%;border-collapse:collapse;white-space:nowrap">
+  <thead><tr style="position:sticky;top:0;background:var(--bg2);z-index:1">`;
+  html += `<th style="padding:2px 4px;border:1px solid var(--border);text-align:center;width:22px"><input type="checkbox" onchange="document.querySelectorAll('.tb-cb').forEach(c=>c.checked=this.checked)"></th>`;
+  html += `<th style="padding:2px 4px;border:1px solid var(--border)">ID</th>`;
+  for (const f of fields) html += `<th style="padding:2px 4px;border:1px solid var(--border)">${f}</th>`;
+  for (const s of stageIds) html += `<th style="padding:2px 4px;border:1px solid var(--border);text-align:center;font-weight:normal;color:var(--text3)">${s}</th>`;
+  html += `<th style="padding:2px 4px;border:1px solid var(--border);text-align:center;width:24px" onclick="addTableRow()" title="新增行">＋</th>`;
+  html += `</tr></thead><tbody>`;
+
+  for (let i = 0; i < accts.length; i++) {
+    const a = accts[i];
+    html += `<tr>`;
+    html += `<td style="padding:2px 4px;border:1px solid var(--border);text-align:center"><input type="checkbox" class="tb-cb" data-idx="${i}"></td>`;
+    html += `<td style="padding:2px 4px;border:1px solid var(--border);color:var(--text3);font-size:9px">${(a.id||'').slice(0,8)}</td>`;
+    for (const f of fields) {
+      const key = eng[f];
+      if (key === 'suspended') {
+        const checked = a[key] ? 'checked' : '';
+        html += `<td style="padding:2px 4px;border:1px solid var(--border);text-align:center"><input type="checkbox" ${checked} onchange="editTableVal(${i},'${key}',this.checked)"></td>`;
+      } else if (key === 'smart_annihilation') {
+        const v = a[key] || '';
+        html += `<td style="padding:2px 4px;border:1px solid var(--border)"><select onchange="editTableVal(${i},'${key}',this.value)" style="border:none;background:var(--bg3);color:var(--text);font-size:10px;outline:none;padding:1px 2px;border-radius:2px;cursor:pointer">`;
+        html += `<option value="">（留空=不跑剿灭）</option>`;
+        const _anniStages = ['Annihilation','龙门外环@Annihilation','龙门市区@Annihilation','切尔诺伯格@Annihilation'];
+        for (const o of _anniStages) html += `<option value="${o}" ${o===v?'selected':''}>${o}</option>`;
+        html += `</select></td>`;
+      } else if (key === 'game_client') {
+        const opts = ['Official','Bilibili','YoStarEN','YoStarJP','YoStarKR','txwy'];
+        const v = a[key] || 'Official';
+        html += `<td style="padding:2px 4px;border:1px solid var(--border)"><select onchange="editTableVal(${i},'${key}',this.value)" style="border:none;background:var(--bg3);color:var(--text);font-size:10px;outline:none;padding:1px 2px;border-radius:2px;cursor:pointer">`;
+        for (const o of opts) {
+          html += `<option value="${o}" ${o===v?'selected':''}>${o}</option>`;
+        }
+        html += `</select></td>`;
+      } else {
+        const val = a[key] !== undefined && a[key] !== null ? String(a[key]).replace(/"/g,'&quot;') : '';
+        html += `<td style="padding:2px 4px;border:1px solid var(--border)"><input type="text" value="${val}" onchange="editTableVal(${i},'${key}',this.value)" style="min-width:30px;max-width:150px;border:none;background:transparent;color:var(--text);font-size:10px;outline:none"></td>`;
+      }
+    }
+    for (const s of stageIds) {
+      const checked = a.stages.includes(s) ? 'checked' : '';
+      html += `<td style="padding:2px 4px;border:1px solid var(--border);text-align:center"><input type="checkbox" ${checked} onchange="editTableStage(${i},'${s}',this.checked)"></td>`;
+    }
+    html += `<td style="padding:2px 4px;border:1px solid var(--border);text-align:center"><span style="cursor:pointer;color:var(--danger)" onclick="deleteTableRow(${i})">✕</span></td>`;
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div>`;
+  html += `<div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end;font-size:11px">
+    <button class="small" onclick="addTableRow()">＋ 新增行</button>
+    <button class="small" onclick="addTableStage()">＋ 添加关卡列</button>
+    <button class="small danger" onclick="deleteSelectedRows()" id="tb-del-btn" disabled>🗑 删除选中</button>
+    <span style="flex:1"></span>
+    <button class="small" onclick="state._tableMode=false;renderPage()">取消</button>
+    <button class="small" style="background:var(--accent);color:#fff" onclick="saveTable()">💾 保存表格</button>
+  </div>`;
+  container.innerHTML = html;
+}
+function editTableVal(idx, key, val) {
+  if (key === 'suspended') _tableData[idx][key] = val;
+  else _tableData[idx][key] = val;
+}
+function editTableStage(idx, stageId, checked) {
+  const a = _tableData[idx];
+  if (checked) { if (!a.stages.includes(stageId)) a.stages.push(stageId); }
+  else { a.stages = a.stages.filter(s => s !== stageId); }
+}
+function addTableRow() {
+  _tableData.push({ id: '', name: '', game_client: 'Official', emu_instance_index: '', account_switch: '', uid: '', note: '', expire_date: '', suspended: false, stages: [], smart_annihilation: '' });
+  _renderTable();
+}
+function deleteTableRow(idx) {
+  _tableData.splice(idx, 1);
+  _renderTable();
+}
+function deleteSelectedRows() {
+  const cbs = document.querySelectorAll('.tb-cb:checked');
+  const indices = Array.from(cbs).map(cb => parseInt(cb.dataset.idx)).filter(i => !isNaN(i)).sort((a,b) => b-a);
+  for (const i of indices) _tableData.splice(i, 1);
+  _renderTable();
+}
+function addTableStage() {
+  const name = prompt('输入新关卡 ID（如 2-7）:');
+  if (!name || !name.trim()) return;
+  if (!_tableStages.includes(name.trim())) _tableStages.push(name.trim());
+  _renderTable();
+}
+async function saveTable() {
+  // Collect new stages that aren't in library yet
+  const sr = await apiGet('/stages');
+  const existing = (sr.ok ? sr.stages || [] : []).map(s => s.id);
+  const newStages = _tableStages.filter(s => !existing.includes(s));
+  // Build accounts payload
+  const accounts = _tableData.map(a => {
+    const out = { id: a.id };
+    for (const f of ['name','game_client','emu_instance_index','account_switch','uid','note','expire_date','suspended','smart_annihilation']) {
+      if (f === 'suspended') out[f] = !!a[f];
+      else out[f] = a[f] !== undefined ? String(a[f]) : '';
+    }
+    out.stages = a.stages || [];
+    return out;
+  });
+  const r = await apiPost('/accounts/batch_save', { accounts, new_stages: newStages });
+  if (r.ok) {
+    let msg = '';
+    if (r.updated) msg += '更新 ' + r.updated + ' 个';
+    if (r.created) msg += (msg?', ':'') + '新增 ' + r.created + ' 个';
+    toast(msg || '保存完成');
+    state._tableMode = false;
+    renderPage();
+  } else {
+    toast(r.error || '保存失败', 'error');
+  }
 }
 
 async function renderQueue(container) {
@@ -2134,6 +2282,72 @@ async function quickCreate(client) {
   if (r.ok) { toast(`已创建 ${name} (${label})`); document.querySelector('.dialog-overlay')?.remove(); renderPage(); }
   else toast(r.error || '创建失败','error');
 }
+function _accountsToCsv() {
+  const fields = ['id','名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停'];
+  const map = {id:'id',name:'名称',game_client:'游戏客户端',emu_instance_index:'模拟器索引',account_switch:'切换标识',uid:'UID',note:'备注',expire_date:'过期日',suspended:'已暂停'};
+  let csv = fields.join(',') + '\n';
+  const accts = state.accounts;
+  const engFields = ['id','name','game_client','emu_instance_index','account_switch','uid','note','expire_date','suspended'];
+  for (const a of accts) {
+    const row = engFields.map(f => {
+      let v = a[f] !== undefined ? String(a[f]) : '';
+      if (v.includes(',') || v.includes('"') || v.includes('\n')) v = '"' + v.replace(/"/g,'""') + '"';
+      return v;
+    });
+    csv += row.join(',') + '\n';
+  }
+  return csv;
+}
+function openCsvEdit() {
+  const csv = _accountsToCsv();
+  const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
+    <div class="dialog" style="max-width:700px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:14px;font-weight:bold;color:var(--text2)">📋 CSV 编辑账号</span>
+        <span style="font-size:10px;color:var(--text3)">复制到 Excel 修改后粘贴回来，点保存</span>
+      </div>
+      <textarea id="csv-text" style="width:100%;height:320px;font-family:monospace;font-size:10px;padding:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);white-space:pre;overflow:auto" readonly>${csv}</textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end">
+        <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="csvFileSelected(event)">
+        <button class="small" onclick="document.getElementById('csv-text').readOnly=false;document.getElementById('csv-text').focus()">编辑模式</button>
+        <button class="small" onclick="document.getElementById('csv-file-input').click()">📂 从文件导入</button>
+        <a href="/api/accounts/export" download="accounts.csv" style="text-decoration:none"><button class="small">⬇ 导出 CSV</button></a>
+        <span style="flex:1"></span>
+        <button class="small" onclick="this.closest('.dialog-overlay').remove()">取消</button>
+        <button class="small" style="background:var(--accent);color:#fff" onclick="saveCsvEdit()">💾 保存</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function csvFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('csv-text').value = e.target.result;
+    document.getElementById('csv-text').readOnly = false;
+    toast('文件已加载，点击保存应用更改');
+  };
+  reader.readAsText(file, 'utf-8');
+  event.target.value = '';
+}
+async function saveCsvEdit() {
+  const csv = document.getElementById('csv-text').value;
+  if (!csv.trim()) { toast('CSV 内容为空', 'error'); return; }
+  const r = await apiPost('/accounts/csv_import', { csv });
+  if (r.ok) {
+    const parts = [];
+    if (r.updated) parts.push(`更新 ${r.updated} 个`);
+    if (r.created) parts.push(`新增 ${r.created} 个`);
+    if (r.errors && r.errors.length) parts.push(`${r.errors.length} 个错误`);
+    toast(parts.join('、') || '无变化');
+    document.querySelector('.dialog-overlay')?.remove();
+    renderPage();
+  } else {
+    toast(r.error || '导入失败', 'error');
+  }
+}
 async function saveGeneral() {
   const theme = document.getElementById('sel-theme').value;
   setTheme(theme);
@@ -2628,10 +2842,7 @@ function startSSE() {
           state.aiInsights = data.ai_insights;
           if (state.page === 'dashboard') renderAIInsights();
         }
-        // Only re-render if current page is accounts
-        if (state.page === 'accounts' && document.getElementById('content')) {
-          renderPage();
-        }
+        // Don't re-render accounts page on SSE (causes flicker via innerHTML replace)
       }
     } catch(ex) { /* ignore parse errors */ }
   };

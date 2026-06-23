@@ -190,7 +190,7 @@ class ApiServer(QThread):
                 s.end_headers()
                 try:
                     while not s.server._stopped:
-                        data = json.dumps(_gather_sse_state(mw))
+                        data = json.dumps(s._gather_sse_state(mw))
                         s.wfile.write(f"data: {data}\n\n".encode())
                         s.wfile.flush()
                         import time as _t
