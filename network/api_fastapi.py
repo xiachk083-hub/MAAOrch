@@ -1028,6 +1028,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             mw.config["smart_global"] = body["smart_global"]
         from models.config_manager import save_config
         save_config(mw.config)
+        # Rebuild instances if parallel_max changed
+        if "parallel_max" in body:
+            from services.instance_pool import ensure_maa_instances_async
+            threading.Thread(target=lambda: ensure_maa_instances_async(mw.ctx, True), daemon=True).start()
         return {"ok": True}
 
     @app.post("/api/settings/smart")

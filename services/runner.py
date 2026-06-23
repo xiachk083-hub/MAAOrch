@@ -182,7 +182,7 @@ class AccountRunner:
                     return str(pid) in r.stdout
                 except Exception:
                     return True
-        max_n = self.ctx.config.get("maa_instances", 9)
+        max_n = max(self.ctx.config.get("maa_instances", 9), self.ctx.config.get("parallel_max", 1))
         pool = Path(__file__).parent / "maa" / "instances"
         for i in range(1, max_n + 1):
             inst_dir = pool / str(i)
