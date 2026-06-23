@@ -3,11 +3,11 @@
 ## 当前状态
 
 ```
-调度方式：手动（Web UI 按钮 / API）
-自动调度：未实现（旧 Qt 版有，Web UI 没有）
+调度方式：手动（Web UI 按钮 / API）+ 自动（定时 / 理智恢复）
 任务队列：LaunchQueue（每 5s tick）
-任务模板：dispatch_pool（内存，不持久化，重启丢失）
+任务模板：dispatch_pool（持久化到文件，重启不丢失）
 关卡管理：stage_library + per-account stages
+审计日志：`/api/oplog` 每次调度操作有记录
 ```
 
 ## 三层架构
@@ -51,7 +51,7 @@ runner._launch_for_instance
   → 不存在 → 回退到 ["StartUp", "Award"]
 ```
 
-**⚠️ 不持久化：** 服务器重启后 `_dispatch_templates = {}`，所有 dispatch_id 指向空。已入队的账号启动时会拿到 `["StartUp", "Award"]`（只跑启动和领奖）。
+**持久化：** 每次 `create_dispatch` / `remove_dispatch` 自动写入 `services/dispatch_pool.json`，服务器重启后恢复。不再丢失任务列表。
 
 ## 一键调度（Web UI 仪表盘）
 
@@ -101,11 +101,11 @@ smartAll() / smartSelected()
 
 ### 优先级
 
-| 来源 | 优先级 | 当前状态 |
-|------|--------|---------|
-| 手动 / 强制调度 | 0 | ✅ 正常 |
-| 定时触发 | 1 | ❌ Web UI 未实现 |
-| 理智恢复 | 2 | ❌ Web UI 未实现 |
+| 来源 | 优先级 | 说明 |
+|------|--------|------|
+| 手动 / 强制调度 | 0 | 用户点击或 API 调用 |
+| 定时触发 | 1 | `services/scheduler.py` 按 `daily_batch_time` 自动触发 |
+| 理智恢复 | 2 | `services/scheduler.py` 检测 stats.json 理智值 ≥ 阈值时自动入队 |
 
 ### tick 调度规则（每 5 秒）
 
@@ -191,14 +191,37 @@ ensure_maa_instances_async()
 
 `_get_free_instance()` 搜索上限为 `max(maa_instances, parallel_max)`。
 
+## 自动调度（services/scheduler.py）
+
+启动时自动运行的后台守护线程，每 60 秒检查一次：
+
+### 定时调度
+
+- 配置项 `daily_batch_time`（默认 `"08:00"`）
+- 每天在指定时间 ±5 分钟内触发一次 `smart_all`
+- 已调度过的日期不会重复触发
+- 任务列表：基础任务 + 逐账号剿灭判断
+
+### 理智恢复调度
+
+- 读取每个账号的 `accounts/{id}/stats.json` 最近一条理智数据
+- 当前理智 ≥ 阈值（`smart_global.threshold`，默认 80%）时自动入队
+- 优先级 2（低于强制调度和定时触发）
+- 跳过已暂停、无 ADB、已在队列或运行中的账号
+
+## 调度审计
+
+每次调度操作记录到 `_OPLOG`（内存，保留最近 100 条）：
+
+| API 端点 | 记录内容 |
+|----------|---------|
+| `POST /api/action/smart_all` | "一键调度: N 个账号" |
+| `POST /api/action/smart_selected` | "调度选中: N 个账号" |
+
+通过 `GET /api/oplog` 查看审计日志。
+
 ## 已知问题与待办
 
-| 问题 | 影响 | 优先级 |
-|------|------|--------|
-| dispatch_pool 不持久化 | 重启后任务列表丢失，回退 `["StartUp","Award"]` | 高 |
-| 两套调度路径并存 | `smart_global.enabled` 开关决定走哪套，用户难以理解 | 高 |
-| 无定时自动调度 | 旧 Qt 版有，Web UI 没有 | 中 |
-| 无理智恢复自动调度 | 旧 Qt 版有，Web UI 没有 | 中 |
-| dispatch_id 残留 | 非正常退出时不清除，get_template 可能返回 None | 中 |
-| `schedule_mode` 配置被忽略 | 有 roguelike/reclamation 模式但不生效 | 低 |
-| 调度无审计日志 | 谁什么时候调度了哪些账号，无记录 | 低 |
+| 问题 | 影响 | 优先级 | 状态 |
+|------|------|--------|------|
+| 无 | — | — | 全部已解决 |
