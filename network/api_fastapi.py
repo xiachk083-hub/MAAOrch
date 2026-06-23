@@ -565,6 +565,21 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     except:
                         raise HTTPException(500, "read failed")
                 return {"lines": [], "name": a.get("name", "")}
+        # Fallback: search instance directories via .meta file
+        _inst_root = Path(__file__).parent.parent / "services" / "maa" / "instances"
+        for _inst_dir in _inst_root.glob("*/"):
+            _meta = _inst_dir / ".meta"
+            if _meta.exists():
+                _meta_content = _meta.read_text(encoding="utf-8", errors="replace").strip()
+                if "|" in _meta_content and _meta_content.split("|", 1)[0] == aid:
+                    _lp = _inst_dir / "debug" / "asst.log"
+                    if _lp.exists():
+                        try:
+                            _content = _lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
+                            return {"lines": _content, "name": a.get("name", "")}
+                        except:
+                            raise HTTPException(500, "read failed")
+                    return {"lines": [], "name": a.get("name", "")}
         return {"lines": [], "name": a.get("name", ""), "error": "no MAA instance bound"}
 
     @app.get("/api/accounts")
