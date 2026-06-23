@@ -632,6 +632,21 @@ class AccountRunner:
                     tasks, sanity, drops = self._parse_log(aid)
                     self._cleanup(aid, -3, tasks, sanity, drops)
                     return
+            # Error threshold: ≥3 consecutive errors → kill MAA + restart emulator
+            if ac and aid not in self._stopping:
+                err_count = ac.get("_err_count", 0)
+                if err_count >= 3:
+                    self.emit_log(f"[错误] {ac.get('name', aid)} 连续 {err_count} 次异常，清理")
+                    emu_idx = ac.get("emu_instance_index", "")
+                    if emu_idx:
+                        cli = find_mumu_cli()
+                        if cli:
+                            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                                          timeout=10, capture_output=True, creationflags=CF)
+                    try: p.terminate(); p.wait(3)
+                    except: pass
+                    self._cleanup(aid, -8, [])
+                    return
             # Stuck at startup: MAA running but no tasks logged for 120s
             ac = self._active.get(aid)
             if ac:
@@ -706,6 +721,7 @@ class AccountRunner:
                     elif "[ERR]" in line:
                         err = line.split("[ERR]")[-1].strip()[:80]
                         self.emit_log(f"[MAA] {name} 错误: {err}")
+                        ac["_err_count"] = ac.get("_err_count", 0) + 1
                         if "运行终止" in err or ("重启" in err and "安卓" in err):
                             p = self._procs.get(aid)
                             if p and not isinstance(p, str):
