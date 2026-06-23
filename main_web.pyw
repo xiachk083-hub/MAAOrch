@@ -47,7 +47,25 @@ def main():
     desktop_bat = Path(os.environ.get("USERPROFILE", ".")) / "Desktop" / "MAAOrch.bat"
     if not desktop_bat.exists():
         try:
-            desktop_bat.write_text(f'@start /min "" "{sys.executable}" "{__file__}"')
+            desktop_bat.write_text(f'''@echo off
+chcp 65001 >nul
+title MAAOrch
+cd /d "{Path(__file__).parent}"
+echo [MAAOrch] 启动中...
+start /min "" "{sys.executable}" "{__file__}" --no-elevate
+set WAIT_SEC=0
+:WAIT_LOOP
+timeout /t 3 /nobreak >nul
+set /a WAIT_SEC+=3
+>nul 2>nul curl -s http://127.0.0.1:19999/ && (
+    echo [MAAOrch] 已就绪
+    start http://127.0.0.1:19999/
+    exit /b 0
+)
+if %WAIT_SEC% lss 120 goto WAIT_LOOP
+echo [MAAOrch] 启动超时
+pause
+''')
         except Exception:
             pass
 
