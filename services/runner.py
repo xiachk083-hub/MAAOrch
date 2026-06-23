@@ -327,6 +327,22 @@ class AccountRunner:
         inst_id, inst_dir = inst
         self._adb_restart_count.pop(aid, None)
 
+        # Re-detect ADB port from mumu-cli before each launch (stale formula ports can be wrong)
+        if emu_idx:
+            cli = find_mumu_cli()
+            if cli:
+                try:
+                    r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
+                                      capture_output=True, text=True, timeout=5, creationflags=CF,
+                                      encoding="utf-8", errors="replace")
+                    if r.returncode == 0:
+                        data = json.loads(r.stdout)
+                        port = data.get("adb_port")
+                        if port:
+                            ac["adb_address"] = f"127.0.0.1:{port}"
+                except:
+                    pass  # fallback to existing address (formula or previous detection)
+
         # Launch emulator
         if emu_idx:
             cli = find_mumu_cli()
