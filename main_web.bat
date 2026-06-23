@@ -7,7 +7,13 @@ echo [MAAOrch] Installing dependencies...
 pip install -r requirements.txt -q
 
 echo [MAAOrch] Starting...
-python main_web.pyw --no-elevate
+start /min "" python main_web.pyw --no-elevate
 
-echo [MAAOrch] Exited (errorlevel=%errorlevel%)
-pause
+echo [MAAOrch] Waiting for server...
+:wait
+timeout /t 2 /nobreak >nul
+curl -s http://127.0.0.1:19999/ >nul 2>&1 && (
+    start http://127.0.0.1:19999/
+    exit /b 0
+)
+goto wait
