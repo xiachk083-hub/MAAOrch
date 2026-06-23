@@ -45,6 +45,10 @@ _dispatch_templates = {
 
 每个账号有自己的 `dispatch_id`，指向其专属的任务列表。MAA 启动时从 `get_template(did)` 获取任务列表并注入配置。
 
+### ⚠️ 已知问题：dispatch_pool 不持久化
+
+dispatch_pool 只在内存中，服务器重启后清空。重启后 `get_template(dispatch_id)` 返回 None，runner 回退到 `["StartUp", "Award"]`（只跑启动和领奖）。
+
 ### 逐账号剿灭控制
 
 `smart_annihilation` 字段控制该账号是否执行剿灭：
@@ -60,7 +64,7 @@ _dispatch_templates = {
 - **CSV 导入**：剿灭列填写关卡 ID
 - **API**：`POST /api/accounts/batch_save` 或 `POST /api/account/{idx}/edit`
 
-非智能模式（`smart_global.enabled=false`）下仍然生效——runner 启动时检查 `smart_annihilation`，有值就添加 `Annihilation` 到任务列表。
+runner 启动时检查 `smart_annihilation`，有值就添加 `Annihilation` 到任务列表。
 
 ## 启动队列（LaunchQueue）
 
@@ -69,8 +73,10 @@ _dispatch_templates = {
 | 来源 | 优先级 | 说明 |
 |------|--------|------|
 | 手动 / 强制调度 | 0（最高） | 用户点击或 API 调用 |
-| 定时触发 | 1 | 智能调度定时检测 |
-| 理智恢复 | 2 | 理智回满后自动入队 |
+| 定时触发 | 1 | *Web UI 暂未实现* |
+| 理智恢复 | 2 | *Web UI 暂未实现* |
+
+> 定时触发和理智恢复是旧 Qt 桌面版的功能，Web UI 当前只能手动调度。
 
 ### 调度规则
 
@@ -83,6 +89,8 @@ _dispatch_templates = {
 5. 跳过理智不足的条目（仅 sanity 来源）
 6. 全部满足 → 启动
 
+每次 tick 还会执行 `_clean_stale_emus()`（清理卡死的残留条目，150s 超时）。
+
 ### 限制
 
 | 限制 | 配置 | 默认 | 说明 |
@@ -90,7 +98,7 @@ _dispatch_templates = {
 | 并行上限 | `parallel_max` | 1 | 同时最多运行 N 个账号 |
 | 启动间隔 | 硬编码 | 20s | 两次启动之间最少间隔 |
 | 模拟器独占 | - | - | 一个模拟器同时只能给一个账号用 |
-| 实例上限 | `maa_instances` | 9 | MAA 实例目录数量，随 `parallel_max` 自动扩展 |
+| 实例上限 | `max(maa_instances, parallel_max)` | 9 | MAA 实例目录数量 |
 | 内存过载 | 硬编码 | 1GB | 可用内存低于此值暂停全部启动 |
 
 ### 失败重试
@@ -163,3 +171,14 @@ ensure_maa_instances_async()
 - 启动时自动检测并创建缺少的实例
 - `parallel_max` 变化时自动扩展实例池
 - 实例重建触发条件：`maa_version` 变化、用户点击"重建实例"
+
+## 已知问题
+
+| 问题 | 影响 | 状态 |
+|------|------|------|
+| dispatch_pool 不持久化 | 重启后任务列表丢失，回退到 `["StartUp","Award"]` | 待修复 |
+| 两套调度路径 | `smart_global.enabled` 决定走 dispatch 还是硬编码，用户可能不知道 | 待合并 |
+| 无定时调度 | 不能按时间自动触发 | 待实现 |
+| 无理智调度 | 不能按理智回满自动触发 | 待实现 |
+| dispatch_id 残留 | 非正常退出时 dispatch_id 残留在账号上 | 待修复 |
+| schedule_mode 被忽略 | 配置有 roguelike/reclamation 模式但调度按钮没用 | 待修复 |
