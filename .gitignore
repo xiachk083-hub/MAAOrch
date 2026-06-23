@@ -20,10 +20,13 @@ services/maa/
 
 # Runtime data
 services/queue.json
+services/dispatch_pool.json
 stderr.log
+stderr.txt
+stdout.txt
 
-# Agent binaries
-agent/maorch-agent-test.exe
+# Agent (deprecated)
+agent/
 
 # Diagnostics
 services/diagnostics/
