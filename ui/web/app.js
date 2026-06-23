@@ -451,7 +451,15 @@ async function renderSettings(container) {
       <div class="form-row"><label>主题</label><select id="sel-theme" onchange="setTheme(this.value)">
         <option value="Dark">暗色</option><option value="Light">亮色</option><option value="Notepaper">Notepaper</option>
       </select></div>
-      <div class="form-row"><label>并行上限</label><input type="number" id="input-parallel" value="${cfg.parallel_max||1}" min="1" max="10"></div>
+      <div class="form-row"><label>并行上限</label>
+  <div style="display:flex;align-items:center;gap:6px">
+    <input type="range" id="input-parallel" value="${cfg.parallel_max||1}" min="1" max="30" oninput="document.getElementById('parallel-val').textContent=this.value" style="flex:1;height:4px">
+    <span id="parallel-val" style="min-width:24px;font-weight:bold;color:var(--accent)">${cfg.parallel_max||1}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);padding:0 2px;margin-top:-2px">
+    <span>1</span><span></span><span>5</span><span></span><span>10</span><span></span><span>15</span><span></span><span>20</span><span></span><span>25</span><span></span><span>30</span>
+  </div>
+</div>
       <div class="form-row"><label>调度模式</label><select id="sel-mode">
         <option value="daily" ${cfg.schedule_mode==='daily'?'selected':''}>日常</option>
         <option value="roguelike" ${cfg.schedule_mode==='roguelike'?'selected':''}>肉鸽</option>
@@ -979,7 +987,7 @@ async function loadDashboard() {
     html += `<span>卡死</span><input type="range" min="0" max="30" value="${cap.stuck_timeout||10}" id="dash-stuck" onchange="dashSaveStuck(this.value)" style="width:50px;height:4px"><span id="dash-stuck-val">${cap.stuck_timeout||10}min</span>`;
     html += `<button class="small" onclick="dashApplyAll()" style="font-size:8px">应用到全部</button>`;
     html += `<span style="background:var(--border);width:1px;height:14px"></span>`;
-    html += `<span>并行</span><input type="range" min="1" max="10" value="${cap.parallel_max||3}" id="dash-slider" oninput="dashSliderChange(this.value)" onchange="dashSaveSlider()" style="width:60px;height:4px"><span style="min-width:16px">${cap.parallel_max||3}</span>`;
+    html += `<span>并行</span><input type="range" min="1" max="30" value="${cap.parallel_max||3}" id="dash-slider" oninput="dashSliderChange(this.value)" onchange="dashSaveSlider()" style="width:80px;height:4px"><span id="dash-slider-val" style="min-width:24px;font-weight:bold;color:var(--accent)">${cap.parallel_max||3}</span>`;
     html += `<span>还可开 <b style="color:${cap.max>0?'var(--accent)':'var(--warn)'}">${cap.max}</b></span>`;
     html += `<span>内存<b>${cap.by_memory}</b> 显存<b>${cap.by_gpu}</b> <b>${cap.limit_by||''}</b></span>`;
     html += `</div></div>`;
