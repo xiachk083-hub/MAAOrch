@@ -52,19 +52,21 @@ def main():
 chcp 65001 >nul
 title MAAOrch
 cd /d "{Path(__file__).parent}"
-echo [MAAOrch] 启动中...
-start /min "" "{sys.executable}" "{__file__}" --no-elevate
+echo [MAAOrch] Starting...
+start /min "" "{sys.executable}" "{__file__}"
+echo [MAAOrch] Waiting for server...
 set WAIT_SEC=0
-:WAIT_LOOP
+:loop
 timeout /t 3 /nobreak >nul
 set /a WAIT_SEC+=3
->nul 2>nul curl -s http://127.0.0.1:19999/ && (
-    echo [MAAOrch] 已就绪
+curl -s http://127.0.0.1:19999/ >nul 2>&1
+if not errorlevel 1 (
+    echo [MAAOrch] Ready!
     start http://127.0.0.1:19999/
     exit /b 0
 )
-if %WAIT_SEC% lss 120 goto WAIT_LOOP
-echo [MAAOrch] 启动超时
+if %WAIT_SEC% lss 120 goto loop
+echo [MAAOrch] Timeout, check debug.log
 pause
 ''')
         except Exception:

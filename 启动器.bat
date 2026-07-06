@@ -4,33 +4,31 @@ title MAAOrch
 cd /d "%~dp0"
 
 echo ========================================
-echo   MAAOrch
-echo   首次启动会自动下载 MAA（约200MB）
-echo   请耐心等待
+echo   MAAOrch Launcher
+echo   First launch will download MAA (~200MB)
 echo ========================================
 echo.
 
 where python >nul 2>nul || (
     echo ========================================
-    echo   未检测到 Python
-    echo   请安装 Python 3.12+
+    echo   Python not found. Please install Python 3.12+
     echo   https://www.python.org/downloads/
     echo ========================================
     pause
     exit /b 1
 )
 
-echo [MAAOrch] 检查依赖...
+echo [MAAOrch] Installing dependencies...
 pip install -r requirements.txt -q
 if errorlevel 1 (
-    echo [MAAOrch] 安装依赖失败，尝试手动: pip install -r requirements.txt
+    echo [MAAOrch] Install failed. Try: pip install -r requirements.txt
     pause
 )
 
-echo [MAAOrch] 启动服务器...
+echo [MAAOrch] Starting server...
 start /min "" python "main_web.pyw"
 
-echo [MAAOrch] 等待服务器就绪（最多 120 秒）...
+echo [MAAOrch] Waiting for server (up to 120s)...
 set WAIT_SEC=0
 :loop
 timeout /t 3 /nobreak >nul
@@ -39,8 +37,8 @@ curl -s http://127.0.0.1:19999/ >nul 2>&1
 if not errorlevel 1 (
     echo.
     echo ========================================
-    echo   MAAOrch 已就绪！（约 %WAIT_SEC% 秒）
-    echo   浏览器已打开
+    echo   MAAOrch is ready! (%WAIT_SEC%s)
+    echo   Browser opened
     echo ========================================
     start http://127.0.0.1:19999/
     timeout /t 3 /nobreak >nul
@@ -49,8 +47,7 @@ if not errorlevel 1 (
 if %WAIT_SEC% lss 120 goto loop
 
 echo ========================================
-echo   服务器启动超时
-echo   排查: netstat -ano ^| findstr 19999
-echo   或在项目目录查看 debug.log
+echo   Timeout. Check: netstat -ano ^| findstr 19999
+echo   Or check debug.log
 echo ========================================
 pause
