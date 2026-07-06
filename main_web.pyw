@@ -9,9 +9,10 @@ from infrastructure.logger import Logger
 _LOG = Logger("app")
 
 def main():
-    if not is_admin() and "--no-elevate" not in sys.argv:
+    if "--admin" in sys.argv and not is_admin():
         run_as_admin()
         sys.exit(0)
+    # --no-elevate kept for backward compatibility (no-op now)
 
     import ctypes as _ct
     hwnd = _ct.windll.user32.FindWindowW(None, "MAAOrchWeb")
