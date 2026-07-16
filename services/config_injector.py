@@ -233,11 +233,6 @@ class ConfigService:
                         if _adb_port:
                             ac["adb_address"] = f"127.0.0.1:{_adb_port}"
             except: pass
-        if not ac.get("adb_address") and ac.get("emu_instance_index"):
-            try:
-                port = 16384 + int(ac["emu_instance_index"]) * 32
-                ac["adb_address"] = f"127.0.0.1:{port}"
-            except: pass
         if not ac.get("adb_path"):
             from pathlib import Path
             from infrastructure.task_constants import find_mumu_cli, find_adb

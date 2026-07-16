@@ -153,11 +153,6 @@ class AccountRunner:
                         if _adb_port:
                             ac["adb_address"] = f"127.0.0.1:{_adb_port}"
             except: pass
-        if not ac.get("adb_address") and ac.get("emu_instance_index"):
-            try:
-                port = 16384 + int(ac["emu_instance_index"]) * 32
-                ac["adb_address"] = f"127.0.0.1:{port}"
-            except: pass
         if not ac.get("adb_path"):
             cli = find_mumu_cli()
             if cli:
@@ -222,8 +217,11 @@ class AccountRunner:
 
         self._auto_derive(ac)
 
-        if not ac.get("adb_address") and not ac.get("emu_instance_index"):
-            self.emit_log(f"{ac.get('name', aid)} 未配置 ADB 地址和模拟器索引，跳过")
+        if not ac.get("adb_address"):
+            if ac.get("emu_instance_index"):
+                self.emit_log(f"{ac.get('name', aid)} 模拟器 #{ac['emu_instance_index']} ADB 未就绪，跳过")
+            else:
+                self.emit_log(f"{ac.get('name', aid)} 未配置模拟器索引，跳过")
             return False
         if not ac.get("adb_path"):
             self.emit_log(f"{ac.get('name', aid)} 未找到 adb.exe，跳过")
