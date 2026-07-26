@@ -9,9 +9,9 @@ class QueueEntry:
     sort_key: tuple  # (priority, not_before) — used by heapq
     account_id: str = field(compare=False)
     source: str = field(compare=False)        # "manual" | "schedule" | "sanity"
-    slot: str = field(compare=False, default="")   # "" | "maintenance" | "fight" | "annihilation"
     not_before: datetime = field(compare=False)
     persist_plan: bool = field(compare=False, default=False)
+    slot: str = field(compare=False, default="")   # "" | "maintenance" | "fight" | "annihilation"
 
     @staticmethod
     def make(account_id: str, source: str, priority: int = 0,
