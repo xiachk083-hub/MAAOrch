@@ -397,16 +397,6 @@ class AccountRunner:
         if _check_deadline("ADB连接"):
             return
 
-        # ADB server health check
-        adb = ac.get("adb_path", "") or "adb"
-        try:
-            r = subprocess.run([adb, "devices"], capture_output=True, text=True, timeout=5, creationflags=CF)
-            if "protocol fault" in r.stderr.lower() or "connection reset" in r.stderr.lower():
-                self.emit_log("ADB server 异常，重启中...")
-                subprocess.run([adb, "kill-server"], capture_output=True, timeout=5, creationflags=CF)
-                subprocess.run([adb, "start-server"], capture_output=True, timeout=5, creationflags=CF)
-        except: pass
-
         addr = ac.get("adb_address", "")
         if addr:
             for _attempt in range(3):
