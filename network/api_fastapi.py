@@ -1266,6 +1266,29 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             lq.tick()
         return {"ok": True, "count": count}
 
+    @app.post("/api/action/smart_login")
+    def handle_smart_login():
+        """Dispatch only the login slot (StartUp only, no tasks)."""
+        lq = _lq()
+        if lq._paused:
+            lq.resume()
+        count = 0
+        for a in mw.accounts:
+            aid = a.get("id", "")
+            if not _account_usable(a, lq):
+                continue
+            if lq.is_queued(aid, slot="login"):
+                continue
+            tasks = ["StartUp"]
+            _dispatch_slot(a, tasks, "login")
+            lq.enqueue(aid, "force", priority=0, slot="login")
+            count += 1
+        if count:
+            mw._log(f"▶ 登录验证: {count} 个账号")
+            _log_op("登录验证", f"{count} 个账号")
+            lq.tick()
+        return {"ok": True, "count": count}
+
     @app.post("/api/action/smart_annihilation")
     def handle_smart_annihilation():
         """Dispatch only the annihilation slot for accounts with smart_annihilation set."""

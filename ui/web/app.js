@@ -974,6 +974,7 @@ async function loadDashboard() {
     html += `<button class="small" onclick="smartMaintenance()" title="基建/公招/信用">🏗 维护</button>`;
     html += `<button class="small" onclick="smartFight()" title="理智刷关">⚔ 刷关</button>`;
     html += `<button class="small" onclick="smartAnnihilation()" title="剿灭作战">🔥 剿灭</button>`;
+    html += `<button class="small" onclick="smartLogin()" title="仅启动游戏验证登录">🔍 登录</button>`;
     html += `<span style="flex:1"></span>`;
     html += `<button class="small" onclick="stopAll()" style="color:var(--danger)">⏹ 停止全部</button>`;
     html += `<button class="small" onclick="toggleDashPause()" id="dash-pause-btn" style="color:var(--warn)">⏸ 暂停</button>`;
@@ -1321,6 +1322,10 @@ async function smartFight() {
 async function smartAnnihilation() {
   const r = await apiPost('/action/smart_annihilation', {});
   if (r.ok) toast('已发起剿灭调度'); else toast(r.error || '调度失败', 'error');
+}
+async function smartLogin() {
+  const r = await apiPost('/action/smart_login', {});
+  if (r.ok) toast('已发起登录验证'); else toast(r.error || '调度失败', 'error');
 }
 function dashSaveDeficit(val) {
   const el = document.getElementById('dash-deficit-val');
