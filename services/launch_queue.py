@@ -138,8 +138,8 @@ class LaunchQueue:
 
     def enqueue(self, account_id: str, source: str = "manual",
                 priority: int = 0, not_before: datetime | None = None,
-                persist_plan: bool = False) -> None:
-        """Add an account to the launch queue. Priority: 0=manual, 1=schedule, 2=sanity."""
+                persist_plan: bool = False, slot: str = "") -> None:
+        """Add an account to the launch queue. slot=maintenance/fight/annihilation."""
         # Reject if this account already has a running MAA process
         if self._has_running_process(account_id):
             ac = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
@@ -147,8 +147,9 @@ class LaunchQueue:
             self.ctx.log(f"[队列] {name} 已在运行中，跳过入队")
             return
         with self._lock:
-            self._pending = [e for e in self._pending if e.account_id != account_id]
-            entry = QueueEntry.make(account_id, source, priority, not_before, persist_plan)
+            # Remove only same-slot pending entries (allow different slots)
+            self._pending = [e for e in self._pending if not (e.account_id == account_id and e.slot == slot)]
+            entry = QueueEntry.make(account_id, source, priority, not_before, persist_plan, slot)
             heapq = self._import_heapq()
             heapq.heappush(self._pending, entry)
             self._save_queue()
@@ -180,7 +181,9 @@ class LaunchQueue:
     def active_count(self) -> int:
         return len(self._active_emus)
 
-    def is_queued(self, account_id: str) -> bool:
+    def is_queued(self, account_id: str, slot: str = "") -> bool:
+        if slot:
+            return any(e.account_id == account_id and e.slot == slot for e in self._pending)
         return any(e.account_id == account_id for e in self._pending)
 
     def is_running(self, account_id: str) -> bool:
@@ -450,10 +453,10 @@ class LaunchQueue:
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
-        # Store persist_plan on account so cleanup knows to keep smart_plan
         for a in self.ctx.accounts:
             if a["id"] == entry.account_id:
                 a["_persist_plan"] = entry.persist_plan
+                a["_slot"] = entry.slot  # pass slot to runner
                 break
         ok = False
         if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:

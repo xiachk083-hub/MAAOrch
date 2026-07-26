@@ -970,8 +970,10 @@ async function loadDashboard() {
     html += `<div class="card" style="padding:6px 8px;margin-bottom:6px;flex-direction:column;align-items:stretch">`;
     // Row 1: action buttons
     html += `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:4px">`;
-    html += `<button class="small primary" onclick="smartAll()">▶ 一键调度</button>`;
-    html += `<button class="small" onclick="showNewDispatch()" style="color:var(--accent)">＋ 新调度</button>`;
+    html += `<button class="small primary" onclick="smartAll()" title="同时入队维护+刷关+剿灭">▶ 一键调度</button>`;
+    html += `<button class="small" onclick="smartMaintenance()" title="基建/公招/信用">🏗 维护</button>`;
+    html += `<button class="small" onclick="smartFight()" title="理智刷关">⚔ 刷关</button>`;
+    html += `<button class="small" onclick="smartAnnihilation()" title="剿灭作战">🔥 剿灭</button>`;
     html += `<span style="flex:1"></span>`;
     html += `<button class="small" onclick="stopAll()" style="color:var(--danger)">⏹ 停止全部</button>`;
     html += `<button class="small" onclick="toggleDashPause()" id="dash-pause-btn" style="color:var(--warn)">⏸ 暂停</button>`;
@@ -1305,12 +1307,20 @@ function dashModeChange(el) {
   _dashMode = el.value;
 }
 async function smartAll() {
-  let include_anni = true, only_anni = false;
-  if (_dashMode === 'anni-only') { include_anni = true; only_anni = true; }
-  else if (_dashMode === 'anni') { include_anni = true; only_anni = false; }
-  else { include_anni = false; only_anni = false; }
-  const r = await apiPost('/action/smart_all', { include_anni, only_anni });
+  const r = await apiPost('/action/smart_all', {});
   if (r.ok) toast('已发起一键调度'); else toast(r.error || '调度失败', 'error');
+}
+async function smartMaintenance() {
+  const r = await apiPost('/action/smart_maintenance', {});
+  if (r.ok) toast('已发起维护调度'); else toast(r.error || '调度失败', 'error');
+}
+async function smartFight() {
+  const r = await apiPost('/action/smart_fight', {});
+  if (r.ok) toast('已发起刷关调度'); else toast(r.error || '调度失败', 'error');
+}
+async function smartAnnihilation() {
+  const r = await apiPost('/action/smart_annihilation', {});
+  if (r.ok) toast('已发起剿灭调度'); else toast(r.error || '调度失败', 'error');
 }
 function dashSaveDeficit(val) {
   const el = document.getElementById('dash-deficit-val');

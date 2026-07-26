@@ -108,12 +108,11 @@ def _check_sanity_recovery(ctx: Any) -> None:
 
 
 def _run_smart_all(mw: Any, source: str) -> None:
-    """Execute a smart_all dispatch programmatically."""
+    """Execute a smart_all dispatch programmatically (all three slots)."""
     lq = getattr(mw, 'launch_queue', None)
     if not lq:
         return
     from services.dispatch_pool import create_dispatch
-    tasks = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
     count = 0
     for a in mw.accounts:
         aid = a.get("id", "")
@@ -121,16 +120,25 @@ def _run_smart_all(mw: Any, source: str) -> None:
             continue
         if a.get("suspended", False):
             continue
-        if lq.is_queued(aid) or lq.is_running(aid):
+        if lq.is_running(aid):
             continue
-        _tasks = list(tasks)
-        if a.get("smart_annihilation", ""):
-            if "Annihilation" not in _tasks:
-                _tasks.append("Annihilation")
-        elif "Annihilation" in _tasks:
-            _tasks.remove("Annihilation")
-        a["dispatch_id"] = create_dispatch(_tasks)
-        lq.enqueue(aid, source, priority=1)
-        count += 1
+        # Maintenance slot
+        if not lq.is_queued(aid, slot="maintenance"):
+            maint = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
+            a["_dispatch_maintenance"] = create_dispatch(maint)
+            lq.enqueue(aid, source, priority=1, slot="maintenance")
+            count += 1
+        # Fight slot
+        if not lq.is_queued(aid, slot="fight"):
+            fight = ["StartUp", "Fight"]
+            a["_dispatch_fight"] = create_dispatch(fight)
+            lq.enqueue(aid, source, priority=1, slot="fight")
+            count += 1
+        # Annihilation slot
+        if a.get("smart_annihilation", "") and not lq.is_queued(aid, slot="annihilation"):
+            anni = ["StartUp", "Fight"]
+            a["_dispatch_annihilation"] = create_dispatch(anni)
+            lq.enqueue(aid, source, priority=1, slot="annihilation")
+            count += 1
     if count:
         lq.tick()

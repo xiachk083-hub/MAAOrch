@@ -420,9 +420,11 @@ class AccountRunner:
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
         try:
-            # Unified dispatch path: always try dispatch_id first, fallback to mode defaults
+            # Unified dispatch path: use slot-based dispatch_id
             from services.dispatch_pool import get_template
-            did = ac.get("dispatch_id", "")
+            _slot = ac.get("_slot", "")
+            _did_key = f"_dispatch_{_slot}" if _slot else "dispatch_id"
+            did = ac.get(_did_key, "") or ac.get("dispatch_id", "")
             task_list = get_template(did) if did else None
             if task_list is None:
                 if mode == "roguelike":

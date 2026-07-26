@@ -1168,40 +1168,126 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         threading.Thread(target=_do_restart, daemon=True).start()
         return {"ok": True, "message": "重启中..."}
 
+    def _dispatch_slot(ac, tasks, slot: str) -> None:
+        """Create a dispatch for the given slot and store on the account."""
+        from services.dispatch_pool import create_dispatch
+        key = f"_dispatch_{slot}" if slot else "dispatch_id"
+        ac[key] = create_dispatch(tasks)
+
+    def _account_usable(a, lq) -> bool:
+        """Check if an account can be dispatched (has ADB/emu, not running)."""
+        if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+            return False
+        if a.get("suspended", False):
+            return False
+        if lq.is_running(a.get("id", "")):
+            return False
+        return True
+
     @app.post("/api/action/smart_all")
     def handle_smart_all(body: dict):
-        from services.dispatch_pool import create_dispatch
-        include_anni = body.get("include_anni", True)
-        only_anni = body.get("only_anni", False)
+        """Dispatch all three slots for all usable accounts."""
         lq = _lq()
         if lq._paused:
             lq.resume()
-        smart = mw.config.get("smart_global", {}).get("enabled", False)
-        base_tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
-            "StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
         count = 0
         for a in mw.accounts:
             aid = a.get("id", "")
-            if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
+            if not _account_usable(a, lq):
                 continue
-            if a.get("suspended", False):
+            if lq.is_queued(aid):
                 continue
-            if lq.is_queued(aid) or lq.is_running(aid):
-                continue
-            # Per-account annihilation: check smart_annihilation field
-            tasks = list(base_tasks)
-            anni = a.get("smart_annihilation", "")
-            has_anni = "Annihilation" in tasks
-            if has_anni and not anni:
-                tasks.remove("Annihilation")
-            elif not has_anni and anni:
-                tasks.append("Annihilation")
-            a["dispatch_id"] = create_dispatch(tasks)
-            lq.enqueue(aid, "force", priority=0)
+            # Maintenance slot
+            maint_tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
+            _dispatch_slot(a, maint_tasks, "maintenance")
+            lq.enqueue(aid, "force", priority=0, slot="maintenance")
+            # Fight slot
+            fight_tasks = ["StartUp", "Fight"]
+            _dispatch_slot(a, fight_tasks, "fight")
+            lq.enqueue(aid, "force", priority=0, slot="fight")
+            # Annihilation slot
+            if a.get("smart_annihilation", ""):
+                anni_tasks = ["StartUp", "Fight"]
+                _dispatch_slot(a, anni_tasks, "annihilation")
+                lq.enqueue(aid, "force", priority=0, slot="annihilation")
             count += 1
         if count:
-            mw._log(f"▶ 调度: {count} 个账号已入队")
+            mw._log(f"▶ 全调度: {count} 个账号")
             _log_op("一键调度", f"{count} 个账号")
+            lq.tick()
+        return {"ok": True, "count": count}
+
+    @app.post("/api/action/smart_maintenance")
+    def handle_smart_maintenance():
+        """Dispatch only the maintenance slot (Infrast/Recruit/Mall/Award)."""
+        lq = _lq()
+        if lq._paused:
+            lq.resume()
+        count = 0
+        for a in mw.accounts:
+            aid = a.get("id", "")
+            if not _account_usable(a, lq):
+                continue
+            if lq.is_queued(aid, slot="maintenance"):
+                continue
+            tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
+            _dispatch_slot(a, tasks, "maintenance")
+            lq.enqueue(aid, "force", priority=0, slot="maintenance")
+            count += 1
+        if count:
+            mw._log(f"▶ 维护调度: {count} 个账号")
+            _log_op("维护调度", f"{count} 个账号")
+            lq.tick()
+        return {"ok": True, "count": count}
+
+    @app.post("/api/action/smart_fight")
+    def handle_smart_fight():
+        """Dispatch only the fight slot."""
+        lq = _lq()
+        if lq._paused:
+            lq.resume()
+        count = 0
+        for a in mw.accounts:
+            aid = a.get("id", "")
+            if not _account_usable(a, lq):
+                continue
+            if lq.is_queued(aid, slot="fight"):
+                continue
+            tasks = ["StartUp", "Fight"]
+            in_stages = a.get("stages", [])
+            if in_stages:
+                tasks = ["StartUp", "Fight"]
+            _dispatch_slot(a, tasks, "fight")
+            lq.enqueue(aid, "force", priority=0, slot="fight")
+            count += 1
+        if count:
+            mw._log(f"▶ 刷关调度: {count} 个账号")
+            _log_op("刷关调度", f"{count} 个账号")
+            lq.tick()
+        return {"ok": True, "count": count}
+
+    @app.post("/api/action/smart_annihilation")
+    def handle_smart_annihilation():
+        """Dispatch only the annihilation slot for accounts with smart_annihilation set."""
+        lq = _lq()
+        if lq._paused:
+            lq.resume()
+        count = 0
+        for a in mw.accounts:
+            aid = a.get("id", "")
+            if not _account_usable(a, lq):
+                continue
+            if not a.get("smart_annihilation", ""):
+                continue
+            if lq.is_queued(aid, slot="annihilation"):
+                continue
+            tasks = ["StartUp", "Fight"]
+            _dispatch_slot(a, tasks, "annihilation")
+            lq.enqueue(aid, "force", priority=0, slot="annihilation")
+            count += 1
+        if count:
+            mw._log(f"▶ 剿灭调度: {count} 个账号")
+            _log_op("剿灭调度", f"{count} 个账号")
             lq.tick()
         return {"ok": True, "count": count}
 
