@@ -1210,6 +1210,31 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         "作战记录": "LS-6",
     }
 
+    def _is_stage_usable(stage_id: str) -> bool:
+        """Check if a stage is within its time window (available_from/available_until)."""
+        lib = mw.config.get("stage_library", [])
+        entry = next((s for s in lib if s.get("id") == stage_id), None)
+        if not entry:
+            return True
+        now = datetime.now()
+        af = entry.get("available_from", "")
+        au = entry.get("available_until", "")
+        if af:
+            try:
+                h, m = map(int, af.split(":"))
+                if now.hour < h or (now.hour == h and now.minute < m):
+                    return False
+            except:
+                pass
+        if au:
+            try:
+                h, m = map(int, au.split(":"))
+                if now.hour > h or (now.hour == h and now.minute > m):
+                    return False
+            except:
+                pass
+        return True
+
     def _pick_fight_stage(a) -> str:
         """Pick a stage based on the account's fight strategy."""
         mode = a.get("fight_mode", "schedule")
@@ -1224,21 +1249,23 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if wd in weekly and weekly[wd]:
                 stage = weekly[wd]
                 if stage in stages or stage == "Annihilation":
-                    return stage
+                    if _is_stage_usable(stage):
+                        return stage
             # Check monthly schedule
             day = str(datetime.now().day)
             monthly = a.get("schedule_monthly", {}) or {}
             if day in monthly and monthly[day]:
                 stage = monthly[day]
                 if stage in stages or stage == "Annihilation":
-                    return stage
+                    if _is_stage_usable(stage):
+                        return stage
             return default
 
         elif mode == "priority":
             priority = a.get("fight_priority", {}) or {}
             if stages:
                 sorted_stages = sorted(
-                    [s for s in stages if s in priority],
+                    [s for s in stages if s in priority and _is_stage_usable(s)],
                     key=lambda s: priority.get(s, 0), reverse=True
                 )
                 if sorted_stages:
@@ -1252,7 +1279,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 for m in unfinished:
                     item = m.get("item", "")
                     if item in _MATERIAL_STAGES:
-                        return _MATERIAL_STAGES[item]
+                        stage = _MATERIAL_STAGES[item]
+                        if _is_stage_usable(stage):
+                            return stage
             return default
 
         return default

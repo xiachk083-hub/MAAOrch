@@ -572,6 +572,12 @@ async function renderStageLibrary() {
       html += '<button class="small" onclick="removeStage('+i+')" style="font-size:9px;padding:1px 5px;color:var(--danger)">✕</button>';
       html += '</div>';
       html += '<input type="text" class="stage-note" data-idx="'+i+'" value="'+(st.note||'')+'" style="width:100%;margin-bottom:4px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:3px;font-size:10px" placeholder="备注(可选)">';
+      html += '<div style="display:flex;gap:4px;margin-bottom:4px;align-items:center">';
+      html += '<input type="time" class="stage-available-from" data-idx="'+i+'" value="'+(st.available_from||'')+'" style="width:90px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:10px" title="开始时间">';
+      html += '<span style="font-size:9px;color:var(--text3)">→</span>';
+      html += '<input type="time" class="stage-available-until" data-idx="'+i+'" value="'+(st.available_until||'')+'" style="width:90px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:10px" title="结束时间">';
+      html += '<span style="font-size:9px;color:var(--text3)">可刷时段(留空不限)</span>';
+      html += '</div>';
       // Account list for this stage
       html += '<div style="display:flex;gap:2px;flex-wrap:wrap">';
       allAccts.forEach(function(a) {
@@ -607,6 +613,12 @@ function addStage() {
     + '<input type="text" class="stage-name" value="" style="flex:1;padding:2px 6px;background:var(--bg3);border:1px solid var(--accent);color:var(--text);border-radius:3px;font-size:12px" placeholder="关卡名如 1-7">'
     + '<button class="small" onclick="this.parentElement.parentElement.parentElement.remove()" style="font-size:9px;padding:1px 5px;color:var(--danger)">✕</button></div>'
     + '<input type="text" class="stage-note" value="" style="width:100%;margin-top:2px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:3px;font-size:10px" placeholder="备注(可选)">'
+    + '<div style="display:flex;gap:4px;margin-top:2px;align-items:center">'
+    + '<input type="time" class="stage-available-from" value="" style="width:90px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:10px" title="开始时间">'
+    + '<span style="font-size:9px;color:var(--text3)">→</span>'
+    + '<input type="time" class="stage-available-until" value="" style="width:90px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px;font-size:10px" title="结束时间">'
+    + '<span style="font-size:9px;color:var(--text3)">可刷时段</span>'
+    + '</div>'
     + '</div>';
   if (el.firstChild) el.insertBefore(div, el.firstChild);
   else el.appendChild(div);
@@ -623,6 +635,8 @@ async function saveStageLibrary() {
   if (!el) return;
   const names = el.querySelectorAll('.stage-name');
   const notes = el.querySelectorAll('.stage-note');
+  const availableFrom = el.querySelectorAll('.stage-available-from');
+  const availableUntil = el.querySelectorAll('.stage-available-until');
   const stages = [];
   const usedIds = new Set();
   names.forEach((input, i) => {
@@ -635,7 +649,7 @@ async function saveStageLibrary() {
     while (usedIds.has(id)) id = 's' + (id.slice(1) - 0 + 1);
     usedIds.add(id);
     const note = notes[i] ? notes[i].value.trim() : '';
-    stages.push({id, name, note});
+    stages.push({id, name, note, available_from: availableFrom[i]?.value?.trim() || '', available_until: availableUntil[i]?.value?.trim() || ''});
   });
   const r = await apiPost('/stages', {stages});
   if (r.ok) toast('关卡仓库已保存');
