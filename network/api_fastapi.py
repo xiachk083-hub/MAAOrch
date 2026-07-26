@@ -612,6 +612,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "suspended": a.get("suspended", False),
                 "stages": a.get("stages", []),
                 "smart_annihilation": a.get("smart_annihilation", ""),
+                "fight_mode": a.get("fight_mode", "schedule"),
+                "fight_default": a.get("fight_default", "1-7"),
+                "schedule_weekly": a.get("schedule_weekly", {}),
+                "schedule_monthly": a.get("schedule_monthly", {}),
+                "fight_priority": a.get("fight_priority", {}),
+                "fight_materials": a.get("fight_materials", []),
             })
         return {"ok": True, "accounts": data}
 
@@ -1016,6 +1022,30 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         save_config(mw.config)
         return {"ok": True}
 
+    @app.get("/api/account/{idx}/fight_config")
+    def handle_get_fight_config(idx: int):
+        a = _account_by_idx(idx)
+        return {
+            "ok": True,
+            "fight_mode": a.get("fight_mode", "schedule"),
+            "fight_default": a.get("fight_default", "1-7"),
+            "schedule_weekly": a.get("schedule_weekly", {}),
+            "schedule_monthly": a.get("schedule_monthly", {}),
+            "fight_priority": a.get("fight_priority", {}),
+            "fight_materials": a.get("fight_materials", []),
+        }
+
+    @app.post("/api/account/{idx}/fight_config")
+    def handle_save_fight_config(idx: int, body: dict):
+        a = _account_by_idx(idx)
+        for f in ("fight_mode", "fight_default", "schedule_weekly", "schedule_monthly", "fight_priority", "fight_materials"):
+            if f in body:
+                a[f] = body[f]
+        mw.config["accounts"] = mw.accounts
+        from models.config_manager import save_config
+        save_config(mw.config)
+        return {"ok": True}
+
     @app.post("/api/screenshots/{aid}/delete")
     def handle_screenshots_delete(aid: str, body: dict):
         run_dir = body.get("run_dir", "")
@@ -1174,6 +1204,59 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         key = f"_dispatch_{slot}" if slot else "dispatch_id"
         ac[key] = create_dispatch(tasks)
 
+    _MATERIAL_STAGES = {
+        "固源岩": "1-7", "装置": "S3-4", "聚酸酯": "S3-3", "酯": "S3-1",
+        "异铁": "S3-2", "酮凝集": "S3-5", "凝胶": "S3-5", "龙门币": "CE-6",
+        "作战记录": "LS-6",
+    }
+
+    def _pick_fight_stage(a) -> str:
+        """Pick a stage based on the account's fight strategy."""
+        mode = a.get("fight_mode", "schedule")
+        default = a.get("fight_default", "1-7")
+        stages = a.get("stages", []) or []
+
+        if mode == "schedule":
+            # Check weekly schedule
+            weekdays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+            wd = weekdays[datetime.now().weekday()]
+            weekly = a.get("schedule_weekly", {}) or {}
+            if wd in weekly and weekly[wd]:
+                stage = weekly[wd]
+                if stage in stages or stage == "Annihilation":
+                    return stage
+            # Check monthly schedule
+            day = str(datetime.now().day)
+            monthly = a.get("schedule_monthly", {}) or {}
+            if day in monthly and monthly[day]:
+                stage = monthly[day]
+                if stage in stages or stage == "Annihilation":
+                    return stage
+            return default
+
+        elif mode == "priority":
+            priority = a.get("fight_priority", {}) or {}
+            if stages:
+                sorted_stages = sorted(
+                    [s for s in stages if s in priority],
+                    key=lambda s: priority.get(s, 0), reverse=True
+                )
+                if sorted_stages:
+                    return sorted_stages[0]
+            return default
+
+        elif mode == "material":
+            materials = a.get("fight_materials", []) or []
+            unfinished = [m for m in materials if m.get("achieved", 0) < m.get("target", 0)]
+            if unfinished:
+                for m in unfinished:
+                    item = m.get("item", "")
+                    if item in _MATERIAL_STAGES:
+                        return _MATERIAL_STAGES[item]
+            return default
+
+        return default
+
     def _account_usable(a, lq) -> bool:
         """Check if an account can be dispatched (has ADB/emu, not running)."""
         if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
@@ -1201,8 +1284,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             maint_tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
             _dispatch_slot(a, maint_tasks, "maintenance")
             lq.enqueue(aid, "force", priority=0, slot="maintenance")
-            # Fight slot
-            fight_tasks = ["StartUp", "Fight"]
+            # Fight slot (use per-account strategy)
+            fight_stage = _pick_fight_stage(a)
+            fight_tasks = ["StartUp", f"Fight({fight_stage})"] if fight_stage else ["StartUp", "Fight"]
             _dispatch_slot(a, fight_tasks, "fight")
             lq.enqueue(aid, "force", priority=0, slot="fight")
             # Annihilation slot
@@ -1242,7 +1326,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.post("/api/action/smart_fight")
     def handle_smart_fight():
-        """Dispatch only the fight slot."""
+        """Dispatch only the fight slot, using per-account fight strategy."""
         lq = _lq()
         if lq._paused:
             lq.resume()
@@ -1253,9 +1337,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             if lq.is_queued(aid, slot="fight"):
                 continue
-            tasks = ["StartUp", "Fight"]
-            in_stages = a.get("stages", [])
-            if in_stages:
+            stage = _pick_fight_stage(a)
+            if stage:
+                tasks = ["StartUp", f"Fight({stage})"]
+            else:
                 tasks = ["StartUp", "Fight"]
             _dispatch_slot(a, tasks, "fight")
             lq.enqueue(aid, "force", priority=0, slot="fight")

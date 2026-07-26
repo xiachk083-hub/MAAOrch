@@ -1939,6 +1939,7 @@ async function renderAccount(container) {
       <div style="font-size:12px;color:var(--text2);margin-bottom:4px">操作</div>
       <button onclick="launchAccount('${a.id}')" style="margin-right:4px">▶ 启动</button>
       <button onclick="previewEmulator('${a.id}',${idx})" style="margin-right:4px">📷 画面预览</button>
+      <button onclick="showFightConfig('${a.id}')" style="margin-right:4px">⚔ 刷关策略</button>
       <button class="danger" onclick="showConfirm('确认删除 ${a.name}？').then(r=>r&&deleteAccount('${a.id}'))">🗑 删除</button>
     </div>
     <div id="emu-preview" style="display:none;margin-top:8px">
@@ -2202,6 +2203,155 @@ async function createAccount(input) {
   const r = await apiPost('/account', { name, game_client: 'Official' });
   if (r.ok) { toast(`已创建 ${name}`); renderPage(); } else toast(r.error || '创建失败', 'error');
   input.value = '';
+}
+async function showFightConfig(aid) {
+  _fcMonthly = {};
+  const r = await apiGet('/accounts');
+  if (!r.ok) return;
+  const a = r.accounts.find(x => x.id === aid);
+  if (!a) return;
+  const idx = r.accounts.indexOf(a);
+  const mode = a.fight_mode || 'schedule';
+  const defStage = a.fight_default || '1-7';
+  const weekly = a.schedule_weekly || {};
+  const monthly = a.schedule_monthly || {};
+  const prio = a.fight_priority || {};
+  const mats = a.fight_materials || [];
+  const dayNames = {mon:'周一',tue:'周二',wed:'周三',thu:'周四',fri:'周五',sat:'周六',sun:'周日'};
+
+  const html = `<div class="dialog-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="dialog" style="max-width:550px">
+      <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:var(--text2)">⚔ 刷关策略 · ${a.name}</div>
+      <div class="form-row"><label>默认关卡</label><input id="fc-default" value="${defStage}" placeholder="1-7"></div>
+      <div class="form-row"><label>刷关模式</label>
+        <select id="fc-mode" onchange="fcToggleMode(this.value)" style="flex:1;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
+          <option value="schedule" ${mode==='schedule'?'selected':''}>📅 按计划</option>
+          <option value="priority" ${mode==='priority'?'selected':''}>📊 按优先级</option>
+          <option value="material" ${mode==='material'?'selected':''}>📦 按材料</option>
+        </select>
+      </div>
+      <div id="fc-schedule" style="${mode!=='schedule'?'display:none':''}">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">每周计划（留空=不限制）</div>
+        ${Object.entries(dayNames).map(([k,v]) =>
+          `<div class="form-row"><label style="min-width:40px">${v}</label><input id="fc-w-${k}" value="${weekly[k]||''}" placeholder="如CE-6" style="flex:1"></div>`
+        ).join('')}
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:4px">每月计划（日期→关卡）</div>
+        <div id="fc-monthly-list">${Object.entries(monthly).map(([d,s]) =>
+          `<div class="form-row"><label style="min-width:40px">${d}号</label><input value="${s}" onchange="fcSetMonthly('${d}',this.value)" placeholder="关卡" style="flex:1"><button class="small" onclick="fcRemoveMonthly('${d}')">✕</button></div>`
+        ).join('')}</div>
+        <button class="small" onclick="fcAddMonthly()">＋ 添加月计划</button>
+      </div>
+      <div id="fc-priority" style="${mode!=='priority'?'display:none':''}">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">关卡优先级（数字越大越优先）</div>
+        ${(a.stages||[]).map(s =>
+          `<div class="form-row"><label style="min-width:60px">${s}</label><input type="number" id="fc-p-${s}" value="${prio[s]||0}" min="0" max="10" style="width:60px"></div>`
+        ).join('')}
+      </div>
+      <div id="fc-material" style="${mode!=='material'?'display:none':''}">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">材料目标</div>
+        <div id="fc-mat-list">${mats.map((m,i) =>
+          `<div class="form-row"><label>${m.item||'?'}</label><input id="fc-mt-${i}-target" type="number" value="${m.target||0}" min="0" style="width:60px" placeholder="目标"><input id="fc-mt-${i}-achieved" type="number" value="${m.achieved||0}" min="0" style="width:60px" placeholder="已刷"><span style="font-size:9px;color:var(--text3);min-width:40px">${m.achieved||0}/${m.target||0}</span><button class="small" onclick="fcRemoveMat(${i})">✕</button></div>`
+        ).join('')}</div>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <input id="fc-new-mat-item" placeholder="材料名" style="flex:1;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:10px">
+          <input id="fc-new-mat-target" type="number" placeholder="目标" style="width:60px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:10px">
+          <button class="small" onclick="fcAddMat()">添加</button>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="primary" onclick="saveFightConfig('${aid}',${idx})">💾 保存</button>
+        <button onclick="this.closest('.dialog-overlay').remove()">取消</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// Fight config helpers (global, used by onchange inline handlers)
+let _fcMonthly = {};
+function fcToggleMode(val) {
+  document.getElementById('fc-schedule').style.display = val==='schedule'?'':'none';
+  document.getElementById('fc-priority').style.display = val==='priority'?'':'none';
+  document.getElementById('fc-material').style.display = val==='material'?'':'none';
+}
+function fcAddMonthly() {
+  const d = prompt('输入日期（1-31）:');
+  if (!d || isNaN(d) || d<1 || d>31) return;
+  const div = document.getElementById('fc-monthly-list');
+  div.innerHTML += `<div class="form-row"><label style="min-width:40px">${d}号</label><input onchange="fcSetMonthly('${d}',this.value)" placeholder="关卡" style="flex:1"><button class="small" onclick="fcRemoveMonthly('${d}')">✕</button></div>`;
+}
+function fcSetMonthly(d, val) {
+  if (val) _fcMonthly[d] = val;
+  else delete _fcMonthly[d];
+}
+function fcRemoveMonthly(d) {
+  delete _fcMonthly[d];
+  const div = document.getElementById('fc-monthly-list');
+  const els = div.querySelectorAll('.form-row');
+  for (const el of els) {
+    if (el.querySelector('label')?.textContent === d+'号') { el.remove(); break; }
+  }
+}
+function fcAddMat() {
+  const item = document.getElementById('fc-new-mat-item')?.value?.trim();
+  const target = parseInt(document.getElementById('fc-new-mat-target')?.value) || 0;
+  if (!item || !target) return;
+  const div = document.getElementById('fc-mat-list');
+  const i = div.children.length;
+  div.innerHTML += `<div class="form-row"><label>${item}</label><input id="fc-mt-${i}-target" type="number" value="${target}" min="0" style="width:60px"><input id="fc-mt-${i}-achieved" type="number" value="0" min="0" style="width:60px"><span style="font-size:9px;color:var(--text3);min-width:40px">0/${target}</span><button class="small" onclick="fcRemoveMat(${i})">✕</button></div>`;
+  document.getElementById('fc-new-mat-item').value = '';
+  document.getElementById('fc-new-mat-target').value = '';
+}
+function fcRemoveMat(idx) {
+  const el = document.getElementById('fc-mat-list').children[idx];
+  if (el) el.remove();
+}
+async function saveFightConfig(aid, idx) {
+  const mode = document.getElementById('fc-mode')?.value || 'schedule';
+  const defStage = document.getElementById('fc-default')?.value || '1-7';
+  // Weekly schedule
+  const weekly = {};
+  for (const d of ['mon','tue','wed','thu','fri','sat','sun']) {
+    const v = document.getElementById('fc-w-'+d)?.value?.trim();
+    if (v) weekly[d] = v;
+  }
+  // Monthly schedule
+  const monthly = {};
+  for (const el of document.getElementById('fc-monthly-list')?.querySelectorAll('.form-row') || []) {
+    const label = el.querySelector('label')?.textContent || '';
+    const day = label.replace('号','');
+    const input = el.querySelector('input');
+    if (day && input?.value?.trim()) monthly[day] = input.value.trim();
+  }
+  // Priority
+  const priority = {};
+  for (const el of document.getElementById('fc-priority')?.querySelectorAll('.form-row') || []) {
+    const label = el.querySelector('label')?.textContent;
+    const val = parseInt(el.querySelector('input')?.value) || 0;
+    if (label && val > 0) priority[label] = val;
+  }
+  // Materials
+  const materials = [];
+  for (const el of document.getElementById('fc-mat-list')?.children || []) {
+    const label = el.querySelector('label')?.textContent || '';
+    const inputs = el.querySelectorAll('input');
+    const target = parseInt(inputs[0]?.value) || 0;
+    const achieved = parseInt(inputs[1]?.value) || 0;
+    if (label && target > 0) materials.push({item: label, target, achieved});
+  }
+  // Collect monthly from inline _fcMonthly
+  for (const [d, v] of Object.entries(_fcMonthly)) {
+    if (v && !monthly[d]) monthly[d] = v;
+  }
+
+  const body = { fight_mode: mode, fight_default: defStage, schedule_weekly: weekly, schedule_monthly: monthly, fight_priority: priority, fight_materials: materials };
+  const r = await apiPost(`/account/${idx}/fight_config`, body);
+  if (r.ok) {
+    toast('刷关策略已保存');
+    document.querySelector('.dialog-overlay')?.remove();
+  } else {
+    toast(r.error || '保存失败', 'error');
+  }
 }
 function showCreateAccountForm(preset) {
   const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">
