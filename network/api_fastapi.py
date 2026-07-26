@@ -1313,9 +1313,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             maint_tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
             _dispatch_slot(a, maint_tasks, "maintenance")
             lq.enqueue(aid, "force", priority=0, slot="maintenance")
-            # Fight slot (use per-account strategy)
-            fight_stage = _pick_fight_stage(a)
-            fight_tasks = ["StartUp", f"Fight({fight_stage})"] if fight_stage else ["StartUp", "Fight"]
+            # Fight slot (stage selected by inject_smart in config_injector.py)
+            fight_tasks = ["StartUp", "Fight"]
             _dispatch_slot(a, fight_tasks, "fight")
             lq.enqueue(aid, "force", priority=0, slot="fight")
             # Annihilation slot
@@ -1355,7 +1354,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.post("/api/action/smart_fight")
     def handle_smart_fight():
-        """Dispatch only the fight slot, using per-account fight strategy."""
+        """Dispatch only the fight slot (stage selected by inject_smart)."""
         lq = _lq()
         if lq._paused:
             lq.resume()
@@ -1366,11 +1365,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             if lq.is_queued(aid, slot="fight"):
                 continue
-            stage = _pick_fight_stage(a)
-            if stage:
-                tasks = ["StartUp", f"Fight({stage})"]
-            else:
-                tasks = ["StartUp", "Fight"]
+            tasks = ["StartUp", "Fight"]
             _dispatch_slot(a, tasks, "fight")
             lq.enqueue(aid, "force", priority=0, slot="fight")
             count += 1

@@ -329,16 +329,49 @@ class ConfigService:
             if use_v6:
                 task_set = {t.lower() for t in task_list}
                 run_annihilation = "annihilation" in task_set
-                from services.smart_scheduler import _arknights_now, _get_material_stage
-                weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
-                today_key = weekday_names[_arknights_now().weekday()]
-                day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
-                # If materials tracking is enabled, prefer material stage over user's default
-                if ac.get("smart_materials_enabled", True):
-                    mat_stage = _get_material_stage(ac, self.ctx.config.get("smart_global", {}))
-                    if mat_stage:
-                        day_stage = mat_stage
-                # Sanitize: only allow valid stage names
+                # Per-account fight strategy
+                fight_mode = ac.get("fight_mode", "")
+                if fight_mode:
+                    default = ac.get("fight_default", "1-7")
+                    stages = ac.get("stages", []) or []
+                    if fight_mode == "schedule":
+                        weekdays = ["mon","tue","wed","thu","fri","sat","sun"]
+                        wd = weekdays[datetime.now().weekday()]
+                        weekly = ac.get("schedule_weekly", {}) or {}
+                        if wd in weekly and weekly[wd]:
+                            day_stage = weekly[wd]
+                        else:
+                            day = str(datetime.now().day)
+                            monthly = ac.get("schedule_monthly", {}) or {}
+                            if day in monthly and monthly[day]:
+                                day_stage = monthly[day]
+                            else:
+                                day_stage = default
+                    elif fight_mode == "priority":
+                        priority = ac.get("fight_priority", {}) or {}
+                        usable = [s for s in stages if s in priority]
+                        day_stage = sorted(usable, key=lambda s: priority.get(s, 0), reverse=True)[0] if usable else default
+                    elif fight_mode == "material":
+                        _MS = {"固源岩":"1-7","装置":"S3-4","聚酸酯":"S3-3","酯":"S3-1","异铁":"S3-2","酮凝集":"S3-5","凝胶":"S3-5","龙门币":"CE-6","作战记录":"LS-6"}
+                        materials = ac.get("fight_materials", []) or []
+                        unfinished = [m for m in materials if m.get("achieved",0) < m.get("target",0)]
+                        day_stage = default
+                        for m in unfinished:
+                            stage = _MS.get(m.get("item",""))
+                            if stage:
+                                day_stage = stage
+                                break
+                    else:
+                        day_stage = default
+                else:
+                    from services.smart_scheduler import _arknights_now, _get_material_stage
+                    weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
+                    today_key = weekday_names[_arknights_now().weekday()]
+                    day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
+                    if ac.get("smart_materials_enabled", True):
+                        mat_stage = _get_material_stage(ac, self.ctx.config.get("smart_global", {}))
+                        if mat_stage:
+                            day_stage = mat_stage
                 day_stage = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff_\-]', '', day_stage) if day_stage else ""
 
                 existing_tq = c.get("TaskQueue", [])
