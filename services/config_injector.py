@@ -73,7 +73,7 @@ class ConfigService:
             if ac.get("post_action"):
                 c["MainFunction.PostActions"] = "12"
             c["Connect.RetryOnDisconnected"]="True"
-            c["Connect.AllowADBRestart"]="True"
+            c["Connect.AllowADBRestart"]="False"
             c["Connect.AllowADBHardRestart"]="False"
             if ac.get("emu_instance_index",""):
                 cli=find_mumu_cli()
@@ -264,7 +264,7 @@ class ConfigService:
         c["Start.StartGame"] = "True"
         if use_v6:
             c["Connect.RetryOnDisconnected"] = "True"
-            c["Connect.AllowADBRestart"] = "True"
+            c["Connect.AllowADBRestart"] = "False"
             c["Connect.AllowADBHardRestart"] = "False"
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
