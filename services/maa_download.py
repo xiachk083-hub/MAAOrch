@@ -1,6 +1,6 @@
 """Automatic MAA download, extract, and initialization on first run."""
 from __future__ import annotations
-import json, os, re, shutil, time, urllib.request, zipfile, io
+import json, os, re, shutil, time, threading, urllib.request, zipfile, io
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +8,11 @@ _CHUNK_SIZE = 64 * 1024  # 64KB download chunks
 _RELEASE_API = "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/releases/latest"
 _RELEASE_PAGE = "https://github.com/MaaAssistantArknights/MaaRelease/releases/latest"
 _USER_AGENT = "MAAOrch"
+
+# Global lock: ensure_maa_available may be called from the startup background
+# thread AND the /api/maa/download_update endpoint concurrently. Without this,
+# two threads can rmtree()/rebuild maa/source at the same time, corrupting it.
+_MAA_LOCK = threading.Lock()
 
 
 def _is_source_ready(source_dir: Path) -> bool:
@@ -185,10 +190,17 @@ def _init_maa_source_wrapper(source_dir: Path, log) -> bool:
 
 def ensure_maa_available(ctx: Any, source_dir: Path) -> bool:
     """Ensure MAA is available in source_dir. Auto-download if missing.
-    Returns True if MAA is usable after the attempt."""
+    Returns True if MAA is usable after the attempt.
+    Thread-safe: concurrent calls (startup bg thread + manual update) serialize."""
+    with _MAA_LOCK:
+        return _ensure_maa_available_locked(ctx, source_dir)
+
+
+def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
+    """Internal implementation — must be called with _MAA_LOCK held."""
     _log = ctx.log
 
-    # Step 0: Already ready?
+    # Step 0: Already ready? (re-check under lock — another thread may have finished)
     if _is_source_ready(source_dir):
         ver = _detect_version(source_dir)
         if ver != "unknown":
