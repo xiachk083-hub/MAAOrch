@@ -453,11 +453,24 @@ class LaunchQueue:
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
+        found = None
         for a in self.ctx.accounts:
             if a["id"] == entry.account_id:
-                a["_persist_plan"] = entry.persist_plan
-                a["_slot"] = entry.slot  # pass slot to runner
+                found = a
                 break
+        if found is None:
+            try:
+                conn = getattr(getattr(self.ctx, "_mw", None), "connect_accounts", None)
+                if conn:
+                    for a in conn:
+                        if a.get("id") == entry.account_id:
+                            found = a
+                            break
+            except Exception:
+                pass
+        if found is not None:
+            found["_persist_plan"] = entry.persist_plan
+            found["_slot"] = entry.slot  # pass slot to runner
         ok = False
         if hasattr(self.ctx._mw, "runner") and self.ctx._mw.runner:
             ok = self.ctx._mw.runner.launch_by_id(entry.account_id)

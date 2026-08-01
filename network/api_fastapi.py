@@ -597,6 +597,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     def handle_accounts():
         data = []
         for a in mw.accounts:
+            if a.get("_connect_only"):
+                continue
             aid = a.get("id", "")
             lq = getattr(mw, 'launch_queue', None)
             running = lq.is_running(aid) if lq else False
@@ -1311,6 +1313,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     def _account_usable(a, lq) -> bool:
         """Check if an account can be dispatched (has ADB/emu, not running)."""
+        if a.get("_connect_only"):
+            return False
         if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
             return False
         if a.get("suspended", False):
@@ -1397,6 +1401,59 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             _log_op("刷关调度", f"{count} 个账号")
             lq.tick()
         return {"ok": True, "count": count}
+
+    @app.post("/api/action/connect_running_emus")
+    def handle_connect_running_emus():
+        """Detect running emulators and launch a connect-only MAA instance for each.
+        No tasks are enabled — MAA just attaches to the emulator and waits for manual use."""
+        from infrastructure.task_constants import detect_emu_instances
+        lq = _lq()
+        if lq._paused:
+            lq.resume()
+        # Clean up stale connect-only accounts (previous session or stopped ones)
+        conn = getattr(mw, 'connect_accounts', None)
+        if conn is None:
+            mw.connect_accounts = []
+            conn = mw.connect_accounts
+        for ac in list(conn):
+            if ac.get("id") and not lq.is_running(ac["id"]) and not lq.is_queued(ac["id"]):
+                try: conn.remove(ac)
+                except ValueError: pass
+        # Remove old connect-only entries lingering in main accounts list
+        for a in list(mw.accounts):
+            if a.get("_connect_only"):
+                try: mw.accounts.remove(a)
+                except ValueError: pass
+
+        emus = [e for e in detect_emu_instances() if e.get("running")]
+        connected = 0
+        for e in emus:
+            idx = e.get("index", "")
+            aid = f"emu{idx}"
+            if lq.is_running(aid) or lq.is_queued(aid):
+                continue
+            port = e.get("adb_port", "")
+            ac = {
+                "id": aid,
+                "name": f"模拟器#{idx}",
+                "game_client": "",
+                "emu_instance_index": idx,
+                "adb_address": f"127.0.0.1:{port}" if port else "",
+                "adb_path": "",
+                "account_switch": "", "uid": "", "note": "仅连接(手动操作)",
+                "consecutive_failures": 0,
+                "_connect_only": True,
+            }
+            _dispatch_slot(ac, [], "connect")
+            conn.append(ac)
+            lq.enqueue(aid, "force", priority=0, slot="connect")
+            connected += 1
+            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port})")
+        if connected:
+            _log_op("连接模拟器", f"{connected} 个运行中的模拟器")
+            lq.tick()
+        mw.config["accounts"] = mw.accounts
+        return {"ok": True, "found": len(emus), "connected": connected}
 
     @app.post("/api/action/smart_login")
     def handle_smart_login():

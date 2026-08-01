@@ -1672,9 +1672,11 @@ async function renderEmus(container) {
     if (!r.ok) { showError(container); return; }
     const emus = r.emulators || [];
     const isVisible = container === document.getElementById('content');
-    container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">'
+    container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="color:var(--text2);font-size:12px;font-weight:bold">📱 模拟器管理</span>'
       + '<span style="font-size:10px;color:var(--text3)">共 ' + emus.length + ' 个 | 每5s刷新</span>'
+      + '<button class="small primary" onclick="connectRunningEmus()">🔌 连接运行中的模拟器</button>'
+      + '<span id="emu-connect-result" style="font-size:10px;color:var(--text3)"></span>'
       + '<button class="small" onclick="renderEmus(document.getElementById(\'content\'))">刷新</button>'
       + '</div><div class="card-list" id="emus-list"></div>';
     const el = document.getElementById('emus-list');
@@ -1712,6 +1714,19 @@ async function emuControl(idx, action) {
   if (r.ok) toast(action === 'start' ? '启动中...' : action === 'stop' ? '关闭中...' : '重启中...');
   else toast(r.error || '操作失败', 'error');
   setTimeout(() => renderEmus(document.getElementById('content')), 2000);
+}
+async function connectRunningEmus() {
+  const result = document.getElementById('emu-connect-result');
+  if (result) result.textContent = '连接中...';
+  const r = await apiPost('/action/connect_running_emus', {});
+  if (r.ok) {
+    const msg = `已连接 ${r.connected} / 发现 ${r.found} 个运行中的模拟器`;
+    if (result) result.textContent = msg;
+    toast('🔌 ' + msg);
+  } else {
+    if (result) result.textContent = '❌ ' + (r.error || '连接失败');
+    toast(r.error || '连接失败', 'error');
+  }
 }
 
 // ── Operation Log ──

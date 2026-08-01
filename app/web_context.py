@@ -30,3 +30,4 @@ class WebContext:
     _gantt_events: list = field(default_factory=list)
     _save_gantt: Callable[[], None] = lambda: None
     _log: Callable[[str], None] = lambda msg: None
+    connect_accounts: list = field(default_factory=list)

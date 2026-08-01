@@ -209,7 +209,9 @@ class AccountRunner:
         if row < 0 or row >= len(self.ctx.accounts):
             self.emit_log(f"无效账号索引: {row}")
             return False
-        ac = self.ctx.accounts[row]
+        return self._launch_account(self.ctx.accounts[row])
+
+    def _launch_account(self, ac: dict) -> bool:
         aid = ac["id"]
         if aid in self._active:
             self.emit_log(f"{ac.get('name', aid)} 已在运行中")
@@ -223,7 +225,7 @@ class AccountRunner:
             else:
                 self.emit_log(f"{ac.get('name', aid)} 未配置模拟器索引，跳过")
             return False
-        if not ac.get("adb_path"):
+        if not ac.get("adb_path") and not ac.get("_connect_only"):
             self.emit_log(f"{ac.get('name', aid)} 未找到 adb.exe，跳过")
             return False
         inst = self._get_free_instance()
@@ -248,6 +250,15 @@ class AccountRunner:
         for i, a in enumerate(self.ctx.accounts):
             if a["id"] == account_id:
                 return self.launch(i)
+        # Connect-only temp accounts live in ctx._mw.connect_accounts
+        try:
+            conn = getattr(getattr(self.ctx, "_mw", None), "connect_accounts", None)
+            if conn:
+                for a in conn:
+                    if a.get("id") == account_id:
+                        return self._launch_account(a)
+        except Exception:
+            pass
         return False
 
     def stop(self, account_id: str) -> None:
@@ -754,6 +765,18 @@ class AccountRunner:
         self.ctx.proc_status.discard(aid)
 
         name = ac.get("name", aid) if ac else aid
+        if ac and ac.get("_connect_only"):
+            # Connect-only temp account: release dispatch + remove from connect list
+            try:
+                from services.dispatch_pool import remove_dispatch
+                remove_dispatch(ac.get("_dispatch_connect", ""))
+                ac["_dispatch_connect"] = ""
+                conn = getattr(getattr(self.ctx, "_mw", None), "connect_accounts", None)
+                if conn:
+                    try: conn.remove(ac)
+                    except ValueError: pass
+            except Exception:
+                pass
         if exit_code == 0 and ac:
             self._log.debug(f"[完成] {name} MAA 退出 (exit=0)")
         if ac:
