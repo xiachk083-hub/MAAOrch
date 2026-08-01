@@ -128,7 +128,7 @@ function renderPage() {
                 account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit,
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
-                emus: renderEmus };
+                emus: renderEmus, connect: renderConnect };
   if (fns[state.page]) fns[state.page](c);
 }
 async function renderAccounts(container) {
@@ -1727,6 +1727,109 @@ async function connectRunningEmus() {
     if (result) result.textContent = '❌ ' + (r.error || '连接失败');
     toast(r.error || '连接失败', 'error');
   }
+}
+
+// ── Connect Mode (独立连接模式页面) ──
+async function renderConnect(container) {
+  if (window._connectTimer) clearInterval(window._connectTimer);
+  if (window._connectTimers) {
+    window._connectTimers.forEach(t => clearInterval(t));
+    window._connectTimers = [];
+  }
+  try {
+    const r = await apiGet('/connect/status');
+    if (!r.ok) { showError(container, r.error); return; }
+    const emus = r.emulators || [];
+    container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<span style="color:var(--text2);font-size:12px;font-weight:bold">🔌 连接模式</span>'
+      + '<span style="font-size:10px;color:var(--text3)">' + emus.length + ' 个运行中的模拟器 | 仅连接/日常，与调度互不干扰</span>'
+      + '<span style="flex:1"></span>'
+      + '<button class="small" onclick="renderConnect(document.getElementById(\'content\'))">刷新</button>'
+      + '</div><div class="card-list" id="connect-list"></div>';
+    const el = document.getElementById('connect-list');
+    if (!el) return;
+    if (!emus.length) {
+      el.innerHTML = '<div style="color:var(--text3);text-align:center;padding:30px;font-size:12px">没有检测到运行中的模拟器<br><span style="font-size:10px">请先启动模拟器，然后刷新本页</span></div>';
+      return;
+    }
+    el.innerHTML = emus.map(e => {
+      const aid = 'emu' + e.index;
+      const maaOn = e.maa_running;
+      const statusColor = maaOn ? 'var(--accent)' : 'var(--warn)';
+      const statusTxt = maaOn ? 'MAA 运行中' : (e.maa_queued ? '排队中...' : 'MAA 未连接');
+      return '<div class="card" style="padding:6px 8px;margin-bottom:6px;flex-direction:column;align-items:stretch">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+        + '<span style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span>'
+        + '<span style="font-size:12px;font-weight:bold">模拟器 #' + e.index + '</span>'
+        + '<span style="font-size:9px;color:var(--text3)">' + (e.name || '') + ' · ADB:' + (e.adb_port || '-') + '</span>'
+        + '<span style="flex:1"></span>'
+        + '<span style="font-size:9px;color:' + statusColor + ';font-weight:bold">● ' + statusTxt + '</span>'
+        + '</div>'
+        + '<div style="display:flex;gap:4px;margin-bottom:4px">'
+        + '<button class="small primary" onclick="launchConnect(\'' + e.index + '\',\'connect\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 启动 MAA·仅连接</button>'
+        + '<button class="small" onclick="launchConnect(\'' + e.index + '\',\'daily\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>⚙ 启动 MAA·日常</button>'
+        + '<button class="small danger" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止 MAA</button>'
+        + '<button class="small" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
+        + '<span style="flex:1"></span>'
+        + '<button class="small" onclick="emuControl(' + e.index + ',\'stop\')" style="color:var(--danger)">⏹ 关闭模拟器</button>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;align-items:flex-start">'
+        + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:160px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);flex-shrink:0" onerror="this.style.opacity=0.3">'
+        + '<details style="flex:1;font-size:10px"><summary style="color:var(--text3);cursor:pointer">📋 MAA 日志</summary>'
+        + '<pre id="connect-log-' + aid + '" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px;font-size:9px;line-height:1.4;max-height:140px;overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all;margin:4px 0 0 0">加载中...</pre></details>'
+        + '</div></div>';
+    }).join('');
+    // Live screenshot refresh (2s) + log refresh when open
+    emus.forEach(e => {
+      const aid = 'emu' + e.index;
+      const img = el.querySelector('img[src*="/' + aid + '/screenshot"]');
+      if (img) {
+        const timer = setInterval(() => {
+          if (state.page !== 'connect') { clearInterval(timer); return; }
+          img.src = '/api/connect/' + aid + '/screenshot?_t=' + Date.now();
+        }, 2000);
+        window._connectTimers = window._connectTimers || [];
+        window._connectTimers.push(timer);
+      }
+      const det = el.querySelector('details');
+      if (det) {
+        det.addEventListener('toggle', () => {
+          if (det.open) loadConnectLog(aid);
+        });
+      }
+    });
+  } catch(e) {}
+  // Refresh list every 5s
+  if (state.page === 'connect' && document.getElementById('content') === container) {
+    window._connectTimer = setInterval(async () => {
+      if (state.page !== 'connect') { clearInterval(window._connectTimer); window._connectTimer = null; return; }
+      renderConnect(document.getElementById('content'));
+    }, 5000);
+  }
+}
+async function loadConnectLog(aid) {
+  const el = document.getElementById('connect-log-' + aid);
+  if (!el) return;
+  const r = await apiGet('/connect/' + aid + '/log');
+  el.textContent = (r.ok && r.lines) ? r.lines : '暂无日志';
+}
+async function launchConnect(idx, mode) {
+  const r = await apiPost('/connect/launch', { index: idx, mode });
+  if (r.ok) toast(mode === 'daily' ? ('模拟器#' + idx + ' 日常已启动') : ('模拟器#' + idx + ' MAA 已启动'));
+  else toast(r.error || '启动失败', 'error');
+  setTimeout(() => renderConnect(document.getElementById('content')), 2000);
+}
+async function stopConnect(aid) {
+  const r = await apiPost('/connect/' + aid + '/stop', {});
+  if (r.ok) toast('已停止 ' + aid);
+  else toast(r.error || '停止失败', 'error');
+  setTimeout(() => renderConnect(document.getElementById('content')), 2000);
+}
+async function restartConnect(aid, mode) {
+  const r = await apiPost('/connect/' + aid + '/restart', { mode });
+  if (r.ok) toast('重启中...');
+  else toast(r.error || '重启失败', 'error');
+  setTimeout(() => renderConnect(document.getElementById('content')), 3000);
 }
 
 // ── Operation Log ──

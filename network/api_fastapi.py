@@ -1433,6 +1433,21 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if lq.is_running(aid) or lq.is_queued(aid):
                 continue
             port = e.get("adb_port", "")
+            ac = _connect_account(conn, idx, port, mode="connect")
+            lq.enqueue(aid, "force", priority=0, slot="connect")
+            connected += 1
+            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port})")
+        if connected:
+            _log_op("连接模拟器", f"{connected} 个运行中的模拟器")
+            lq.tick()
+        mw.config["accounts"] = mw.accounts
+        return {"ok": True, "found": len(emus), "connected": connected}
+
+    def _connect_account(conn: list, idx, port: str, mode: str = "connect") -> dict:
+        """Create (or reuse) a connect-only temp account and dispatch tasks for it."""
+        aid = f"emu{idx}"
+        ac = next((x for x in conn if x.get("id") == aid), None)
+        if ac is None:
             ac = {
                 "id": aid,
                 "name": f"模拟器#{idx}",
@@ -1444,16 +1459,140 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "consecutive_failures": 0,
                 "_connect_only": True,
             }
-            _dispatch_slot(ac, [], "connect")
             conn.append(ac)
-            lq.enqueue(aid, "force", priority=0, slot="connect")
-            connected += 1
-            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port})")
-        if connected:
-            _log_op("连接模拟器", f"{connected} 个运行中的模拟器")
-            lq.tick()
-        mw.config["accounts"] = mw.accounts
-        return {"ok": True, "found": len(emus), "connected": connected}
+        if mode == "daily":
+            tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
+            ac["note"] = "通用日常"
+        else:
+            tasks = []
+            ac["note"] = "仅连接(手动操作)"
+        _dispatch_slot(ac, tasks, "connect")
+        return ac
+
+    @app.get("/api/connect/status")
+    def handle_connect_status():
+        from infrastructure.task_constants import detect_emu_instances
+        lq = _lq()
+        conn = getattr(mw, 'connect_accounts', None) or []
+        emus = [e for e in detect_emu_instances() if e.get("running")]
+        data = []
+        for e in emus:
+            idx = e.get("index", "")
+            aid = f"emu{idx}"
+            ac = next((x for x in conn if x.get("id") == aid), None)
+            running = lq.is_running(aid) if lq else False
+            queued = lq.is_queued(aid) if lq else False
+            data.append({
+                "index": idx,
+                "name": e.get("name", ""),
+                "adb_port": e.get("adb_port", ""),
+                "running": True,
+                "maa_running": running,
+                "maa_queued": queued,
+                "mode": (ac or {}).get("note", ""),
+            })
+        return {"ok": True, "emulators": data}
+
+    @app.post("/api/connect/launch")
+    def handle_connect_launch(body: dict):
+        """Launch MAA for one emulator. mode: connect (idle) | daily (generic dailies)."""
+        idx = body.get("index", "")
+        mode = body.get("mode", "connect")
+        if mode not in ("connect", "daily"):
+            return {"ok": False, "error": f"未知模式: {mode}"}
+        from infrastructure.task_constants import detect_emu_instances
+        lq = _lq()
+        if lq._paused:
+            lq.resume()
+        emu = next((e for e in detect_emu_instances()
+                    if e.get("index") == idx and e.get("running")), None)
+        if not emu:
+            return {"ok": False, "error": f"模拟器 #{idx} 未运行"}
+        aid = f"emu{idx}"
+        if lq.is_running(aid):
+            return {"ok": False, "error": f"模拟器 #{idx} 的 MAA 已在运行"}
+        conn = getattr(mw, 'connect_accounts', None)
+        if conn is None:
+            mw.connect_accounts = []
+            conn = mw.connect_accounts
+        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode)
+        lq.enqueue(aid, "force", priority=0, slot="connect")
+        lq.tick()
+        _log_op("连接", f"模拟器#{idx} ({mode})")
+        return {"ok": True, "aid": aid, "mode": mode}
+
+    @app.post("/api/connect/{aid}/stop")
+    def handle_connect_stop(aid: str):
+        runner = _runner()
+        runner.stop(aid)
+        return {"ok": True}
+
+    @app.post("/api/connect/{aid}/restart")
+    def handle_connect_restart(aid: str, body: dict = {}):
+        runner = _runner()
+        runner.stop(aid)
+        idx = aid.replace("emu", "", 1)
+        mode = body.get("mode", "connect")
+        from infrastructure.task_constants import detect_emu_instances
+        lq = _lq()
+        emu = next((e for e in detect_emu_instances()
+                    if e.get("index") == idx and e.get("running")), None)
+        if not emu:
+            return {"ok": False, "error": f"模拟器 #{idx} 未运行"}
+        conn = getattr(mw, 'connect_accounts', None)
+        if conn is None:
+            mw.connect_accounts = []
+            conn = mw.connect_accounts
+        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode)
+        lq.enqueue(aid, "force", priority=0, slot="connect")
+        lq.tick()
+        return {"ok": True}
+
+    @app.get("/api/connect/{aid}/log")
+    def handle_connect_log(aid: str):
+        runner = _runner()
+        p = runner._procs.get(aid)
+        inst_path = getattr(p, "_inst_path", None)
+        if not inst_path:
+            return {"ok": True, "lines": ""}
+        lp = Path(inst_path) / "debug" / "asst.log"
+        try:
+            if not lp.exists():
+                return {"ok": True, "lines": ""}
+            size = lp.stat().st_size
+            start = max(0, size - 6000)
+            with open(lp, "r", encoding="utf-8", errors="replace") as f:
+                f.seek(start)
+                text = f.read()
+            lines = text.splitlines()[-30:]
+            return {"ok": True, "lines": "\n".join(lines)}
+        except Exception as e:
+            return {"ok": True, "lines": f"(日志读取失败: {e})"}
+
+    @app.get("/api/connect/{aid}/screenshot")
+    def handle_connect_screenshot(aid: str):
+        conn = getattr(mw, 'connect_accounts', None) or []
+        ac = next((x for x in conn if x.get("id") == aid), None)
+        if not ac:
+            raise HTTPException(404, "connection not found")
+        addr = ac.get("adb_address", "")
+        if not addr and ac.get("emu_instance_index"):
+            try:
+                port = 16384 + int(ac["emu_instance_index"]) * 32
+                addr = f"127.0.0.1:{port}"
+            except Exception:
+                pass
+        if not addr:
+            raise HTTPException(400, "no adb address")
+        adb = ac.get("adb_path", "") or "adb"
+        subprocess.run([adb, "-s", addr, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+                       capture_output=True, timeout=5, creationflags=_CF)
+        r = subprocess.run([adb, "-s", addr, "exec-out", "screencap", "-p"],
+                           capture_output=True, timeout=15, creationflags=_CF)
+        if r.returncode != 0 or len(r.stdout) < 100:
+            raise HTTPException(500, "screencap failed")
+        return StreamingResponse(io.BytesIO(r.stdout), media_type="image/png",
+                                 headers={"Cache-Control": "no-cache"})
 
     @app.post("/api/action/smart_login")
     def handle_smart_login():
