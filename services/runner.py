@@ -228,6 +228,11 @@ class AccountRunner:
             return False
         inst = self._get_free_instance()
         if not inst:
+            from services.maa_download import _is_source_ready
+            _src = Path(__file__).parent / "maa" / "source"
+            if not _is_source_ready(_src):
+                self.emit_log(f"{ac.get('name', aid)} MAA 未就绪（首次下载中），任务留在队列等待")
+                return False
             self.emit_log(f"{ac.get('name', aid)} 无空闲 MAA 实例")
             return False
 

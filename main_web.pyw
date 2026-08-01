@@ -96,11 +96,24 @@ pause
     from services.config_injector import ConfigService
     ctx.cfg = ConfigService(ctx)
 
-    # Auto-download MAA if missing
+    # Auto-download MAA if missing (background — do NOT block server startup)
     from pathlib import Path as _P
     _maa_source = _P(__file__).parent / "services" / "maa" / "source"
     from services.maa_download import ensure_maa_available
-    ensure_maa_available(ctx, _maa_source)
+
+    def _maa_bg():
+        try:
+            _LOG.info("[MAA] 后台检查/下载 MAA（首次启动需下载 ~200MB）")
+            if ensure_maa_available(ctx, _maa_source):
+                _LOG.info("[MAA] 下载完成，后台创建实例池...")
+                from services.instance_pool import ensure_maa_instances_async
+                ensure_maa_instances_async(ctx)
+            else:
+                _LOG.warning("[MAA] MAA 未就绪（详见日志），可稍后手动触发下载")
+        except Exception as e:
+            _LOG.error(f"[MAA] 后台初始化异常: {e}")
+
+    threading.Thread(target=_maa_bg, daemon=True).start()
 
     from services.runner import AccountRunner
     from services.launch_queue import LaunchQueue

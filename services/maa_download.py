@@ -98,6 +98,7 @@ def _download_zip(url: str, dest: Path, log) -> bool:
         total = int(resp.headers.get("Content-Length", 0))
         downloaded = 0
         last_log = 0
+        last_pct_log = 0
         with open(dest, "wb") as f:
             while True:
                 chunk = resp.read(_CHUNK_SIZE)
@@ -105,9 +106,14 @@ def _download_zip(url: str, dest: Path, log) -> bool:
                     break
                 f.write(chunk)
                 downloaded += len(chunk)
-                if total and downloaded - last_log > total // 10:
+                # Percentage-based logging when server reports Content-Length
+                if total and downloaded - last_pct_log > total // 10:
                     pct = downloaded * 100 // total
                     log(f"  下载中: {pct}% ({downloaded // 1048576}MB / {total // 1048576}MB)")
+                    last_pct_log = downloaded
+                # Byte-based fallback when Content-Length missing (GitHub often omits it)
+                elif not total and downloaded - last_log >= 8 * 1048576:
+                    log(f"  下载中: {downloaded // 1048576}MB...")
                     last_log = downloaded
         log(f"  完成: {downloaded // 1048576}MB")
         return True

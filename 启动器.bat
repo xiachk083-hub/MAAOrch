@@ -26,6 +26,7 @@ if errorlevel 1 (
 )
 
 echo [MAAOrch] Starting server...
+echo [MAAOrch] MAA first download runs in background (~200MB), UI works immediately
 start /min "" python "main_web.pyw"
 
 echo [MAAOrch] Waiting for server (up to 120s)...
