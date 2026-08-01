@@ -663,8 +663,9 @@ function renderOnboarding(container) {
   });
 }
 
-function openMaaFolder() {
-  toast('请将 MAA 文件夹放到 services/maa/source/ 目录');
+async function openMaaFolder() {
+  const r = await apiPost('/system/open_folder', { path: '/services/maa/source' });
+  if (!r.ok) toast(r.error || '无法打开文件夹', 'error');
 }
 
 async function finishOnboarding() {

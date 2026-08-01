@@ -1,0 +1,27 @@
+<div id="onboarding">
+  <div style="max-width:500px;margin:40px auto;text-align:center">
+    <h1 style="color:var(--accent);font-size:24px;margin-bottom:20px">欢迎使用 MAAOrch</h1>
+    <div id="onboarding-steps">
+      <div class="step" style="margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);text-align:left">
+        <div style="font-size:14px;font-weight:bold;margin-bottom:4px">1. 📁 放置 MAA</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">将 MAA 文件夹放到 maa/source/ 目录</div>
+        <button onclick="openMaaFolder()" class="small">打开文件夹</button>
+      </div>
+      <div class="step" style="margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);text-align:left">
+        <div style="font-size:14px;font-weight:bold;margin-bottom:4px">2. 👤 创建账号</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">添加你的第一个游戏账号</div>
+        <button onclick="navigate('accounts')" class="small primary">去创建</button>
+      </div>
+      <div class="step" style="padding:12px;border:1px solid var(--border);border-radius:var(--radius);text-align:left">
+        <div style="font-size:14px;font-weight:bold;margin-bottom:4px">3. ⚙ 开始调度</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">配置完账号后，点击"▶ 含剿灭"即可开始</div>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <label style="font-size:12px;color:var(--text2)">
+        <input type="checkbox" id="onboarding-done"> 不再显示
+      </label>
+    </div>
+    <button onclick="finishOnboarding()" class="primary" style="margin-top:12px">开始使用</button>
+  </div>
+</div>

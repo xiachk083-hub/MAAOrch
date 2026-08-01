@@ -1169,6 +1169,29 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         _close_mumu_popups()
         return {"ok": True, "message": "弹窗已关闭"}
 
+    @app.post("/api/system/open_folder")
+    def handle_open_folder(body: dict = {}):
+        target = body.get("path", "")
+        if not target:
+            return {"ok": False, "error": "missing path"}
+        from pathlib import Path as _P
+        root = _P(__file__).parent.parent.resolve()
+        # Treat leading "/" as project-root relative (Windows-safe)
+        if target.startswith("/"):
+            target = target.lstrip("/")
+            p = (root / target).resolve()
+        else:
+            p = _P(target).resolve()
+        # Path safety: only allow folders under the project root
+        if not str(p).startswith(str(root)):
+            return {"ok": False, "error": "path outside project root"}
+        p.mkdir(parents=True, exist_ok=True)
+        try:
+            os.startfile(str(p))
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     @app.post("/api/system/kill_maa")
     def handle_kill_maa():
         r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe"],
