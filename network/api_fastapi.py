@@ -1480,14 +1480,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             idx = e.get("index", "")
             aid = f"emu{idx}"
             ac = next((x for x in conn if x.get("id") == aid), None)
-            running = lq.is_running(aid) if lq else False
+            runner = _runner()
+            real = runner._has_real_process(aid) if runner else False
             queued = lq.is_queued(aid) if lq else False
             data.append({
                 "index": idx,
                 "name": e.get("name", ""),
                 "adb_port": e.get("adb_port", ""),
                 "running": True,
-                "maa_running": running,
+                "maa_running": real or queued,
                 "maa_queued": queued,
                 "mode": (ac or {}).get("note", ""),
             })

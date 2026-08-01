@@ -11,7 +11,6 @@ from infrastructure.task_constants import find_mumu_cli
 
 from services.update_service import UpdateCheckThread, UpdateDialog
 # from ui.widgets.config_card import refresh_config_cards  # lazy import in method
-from services.schedule_thread import ScheduleThread
 from app.service_context import ServiceContext
 
 
@@ -596,6 +595,10 @@ class MaintService:
     def _start_schedule_thread(self) -> None:
         if self.ctx.schedule_thread and self.ctx.schedule_thread.isRunning():
             return  # config changes propagate automatically via shared dict
+        try:
+            from services.schedule_thread import ScheduleThread  # Qt desktop legacy
+        except ImportError:
+            return  # Web mode uses services/scheduler.py instead
         self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
         self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
         self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))

@@ -528,6 +528,16 @@ class LaunchQueue:
             if a["id"] == account_id:
                 idx = a.get("emu_instance_index", "")
                 return idx if idx else f"__noemu_{account_id}"
+        # Connect-only temp accounts live in ctx._mw.connect_accounts
+        try:
+            conn = getattr(getattr(self.ctx, "_mw", None), "connect_accounts", None)
+            if conn:
+                for a in conn:
+                    if a.get("id") == account_id:
+                        idx = a.get("emu_instance_index", "")
+                        return idx if idx else f"__noemu_{account_id}"
+        except Exception:
+            pass
         return f"__unknown_{account_id}"
 
     def _queue_path(self) -> Path:
