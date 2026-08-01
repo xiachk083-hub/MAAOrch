@@ -1551,14 +1551,74 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.post("/api/orch/check_update")
     def handle_orch_check_update():
-        req = urllib.request.Request(
-            "https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest",
-            headers={"User-Agent": "MAAOrch-Updater"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            data = json.loads(r.read().decode())
-        tag = data.get("tag_name", "")
-        html_url = data.get("html_url", "")
-        return {"ok": True, "latest": tag, "html_url": html_url}
+        # Git-based detection (deployment is a git clone) — most accurate
+        root = Path(__file__).parent.parent
+        try:
+            r = subprocess.run(["git", "-C", str(root), "fetch", "origin"],
+                               capture_output=True, timeout=30, creationflags=_CF,
+                               encoding="utf-8", errors="replace")
+            if r.returncode == 0:
+                branch = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "HEAD"],
+                                        capture_output=True, timeout=10, creationflags=_CF,
+                                        encoding="utf-8", errors="replace").stdout.strip()
+                if not branch:
+                    branch = "main"
+                rev = subprocess.run(["git", "-C", str(root), "rev-list", "--count", f"HEAD..origin/{branch}"],
+                                     capture_output=True, timeout=10, creationflags=_CF,
+                                     encoding="utf-8", errors="replace")
+                if rev.returncode == 0:
+                    behind = int(rev.stdout.strip() or 0)
+                    return {"ok": True, "has_update": behind > 0, "behind": behind,
+                            "branch": branch, "method": "git"}
+        except Exception:
+            pass
+        # Fallback: GitHub release check
+        try:
+            req = urllib.request.Request(
+                "https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest",
+                headers={"User-Agent": "MAAOrch-Updater"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = json.loads(r.read().decode())
+            tag = data.get("tag_name", "")
+            html_url = data.get("html_url", "")
+            return {"ok": True, "latest": tag, "html_url": html_url, "method": "release"}
+        except Exception as e:
+            return {"ok": False, "error": str(e), "method": "release"}
+
+    @app.post("/api/orch/update")
+    def handle_orch_update():
+        root = Path(__file__).parent.parent
+        # Require clean working tree — refuse if local changes exist
+        try:
+            st = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
+                                capture_output=True, timeout=10, creationflags=_CF,
+                                encoding="utf-8", errors="replace")
+            if st.returncode == 0 and st.stdout.strip():
+                return {"ok": False, "error": "本地有未提交的改动，请先处理（git stash / commit）"}
+        except Exception:
+            return {"ok": False, "error": "git 不可用，无法自动更新"}
+        # Generate update.bat: pull + restart, run detached so it outlives this process
+        try:
+            bat = root / "update.bat"
+            bat.write_text(
+                '@echo off\r\n'
+                'chcp 65001 >nul\r\n'
+                f'cd /d "{root}"\r\n'
+                'timeout /t 2 /nobreak >nul\r\n'
+                'git pull --ff-only 2>>debug.log\r\n'
+                'if errorlevel 1 echo [update] git pull failed, restarting with old code >>debug.log\r\n'
+                f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
+                'del "%~f0"\r\n', encoding="utf-8")
+        except Exception as e:
+            return {"ok": False, "error": f"写入 update.bat 失败: {e}"}
+
+        def _do():
+            time.sleep(1)
+            subprocess.Popen([str(bat)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            time.sleep(1)
+            os._exit(0)
+        threading.Thread(target=_do, daemon=True).start()
+        return {"ok": True, "message": "正在更新并重启，页面将短暂不可用"}
 
     @app.post("/api/orch/download_update")
     def handle_orch_download_update():

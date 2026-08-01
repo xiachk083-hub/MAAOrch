@@ -707,13 +707,26 @@ async function checkOrchUpdate() {
   if (btn) { btn.textContent = '检查中...'; btn.disabled = true; }
   try {
     const r = await apiGet('/orch/check_update');
-    if (r.ok && r.latest) {
+    if (r.ok && r.method === 'git') {
+      if (r.has_update) {
+        result.innerHTML = `发现 <b>${r.behind}</b> 个新提交可更新 <button class="small" style="margin-left:6px" onclick="updateOrch()">⚡ 立即更新</button>`;
+      } else {
+        result.textContent = `已是最新（${r.branch}）`;
+      }
+    } else if (r.ok && r.latest) {
       result.innerHTML = `最新版 <b>${r.latest}</b> <a href="${r.html_url}" target="_blank">下载</a>`;
     } else {
       result.textContent = '检查失败';
     }
   } catch(e) { result.textContent = '网络错误'; }
   if (btn) { btn.textContent = '📥 检查 MAAOrch 更新'; btn.disabled = false; }
+}
+async function updateOrch() {
+  if (!confirm('确认立即更新并重启服务？更新期间页面将短暂不可用。')) return;
+  const result = document.getElementById('orch-update-result');
+  if (result) result.textContent = '更新中，服务即将重启...';
+  const r = await apiPost('/orch/update');
+  if (!r.ok && result) result.textContent = '❌ ' + (r.error || '更新失败');
 }
 async function loadOplog() {
   try {
