@@ -1,6 +1,6 @@
 """FastAPI-based API server for MAAOrch."""
 from __future__ import annotations
-import asyncio, json, time, re, os, hmac, subprocess, io, zipfile, shutil, urllib.request, uuid, mimetypes, threading
+import asyncio, json, time, re, os, hmac, subprocess, io, zipfile, shutil, urllib.request, uuid, mimetypes, threading, tempfile
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any
@@ -1861,7 +1861,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 return {"ok": False, "error": "本地有未提交的改动，请先处理（git stash / commit）"}
         except Exception:
             return {"ok": False, "error": "git 不可用，无法自动更新"}
-        # Generate update.bat: pull + restart, run detached so it outlives this process
+        # Result file lives OUTSIDE the repo (%TEMP%) so git status stays clean
+        result_file = Path(tempfile.gettempdir()) / "maorch_update_result.txt"
+        # Generate update.bat: pull + write result + restart, run detached
         try:
             bat = root / "update.bat"
             bat.write_text(
@@ -1869,20 +1871,46 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 'chcp 65001 >nul\r\n'
                 f'cd /d "{root}"\r\n'
                 'timeout /t 2 /nobreak >nul\r\n'
-                'git pull --ff-only 2>>debug.log\r\n'
-                'if errorlevel 1 echo [update] git pull failed, restarting with old code >>debug.log\r\n'
+                f'git pull --ff-only >"{result_file}" 2>&1\r\n'
+                'if errorlevel 1 (\r\n'
+                f'  echo [RESULT] FAILED >>"{result_file}"\r\n'
+                ') else (\r\n'
+                f'  echo [RESULT] OK >>"{result_file}"\r\n'
+                ')\r\n'
                 f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
                 'del "%~f0"\r\n', encoding="utf-8")
         except Exception as e:
             return {"ok": False, "error": f"写入 update.bat 失败: {e}"}
 
         def _do():
-            time.sleep(1)
+            # Graceful shutdown first: stop running MAA so they don't orphan
+            # after os._exit(0) skips the normal _quit() cleanup path.
+            runner = getattr(mw, 'runner', None)
+            if runner:
+                for aid in list(runner._active.keys()):
+                    try:
+                        runner.stop(aid)
+                    except Exception:
+                        pass
+            time.sleep(2)
             subprocess.Popen([str(bat)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             time.sleep(1)
             os._exit(0)
         threading.Thread(target=_do, daemon=True).start()
         return {"ok": True, "message": "正在更新并重启，页面将短暂不可用"}
+
+    @app.get("/api/orch/update_result")
+    def handle_orch_update_result():
+        rf = Path(tempfile.gettempdir()) / "maorch_update_result.txt"
+        if not rf.exists():
+            return {"ok": True, "has_result": False}
+        try:
+            text = rf.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            return {"ok": True, "has_result": False}
+        ok = "[RESULT] OK" in text
+        rf.unlink(missing_ok=True)  # one-shot: delete after read
+        return {"ok": True, "has_result": True, "success": ok, "detail": text[-500:]}
 
     @app.post("/api/orch/download_update")
     def handle_orch_download_update():

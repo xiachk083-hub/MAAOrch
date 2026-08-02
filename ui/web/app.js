@@ -734,8 +734,26 @@ async function updateOrch() {
   if (!confirm('确认立即更新并重启服务？更新期间页面将短暂不可用。')) return;
   const result = document.getElementById('orch-update-result');
   if (result) result.textContent = '更新中，服务即将重启...';
+  sessionStorage.setItem('orchUpdating', '1');
   const r = await apiPost('/orch/update');
   if (!r.ok && result) result.textContent = '❌ ' + (r.error || '更新失败');
+}
+async function checkOrchUpdateResult() {
+  // Called once on page load: if we restarted after an update, show the result
+  if (!sessionStorage.getItem('orchUpdating')) return;
+  sessionStorage.removeItem('orchUpdating');
+  try {
+    const r = await apiGet('/orch/update_result');
+    if (r.ok && r.has_result) {
+      toast(r.success ? '✅ MAAOrch 更新成功' : '❌ MAAOrch 更新失败', r.success ? 'info' : 'error');
+      const result = document.getElementById('orch-update-result');
+      if (result) {
+        result.innerHTML = r.success
+          ? '✅ 更新成功'
+          : '❌ 更新失败<pre style="font-size:9px;color:var(--danger);white-space:pre-wrap;margin-top:4px">' + (r.detail || '') + '</pre>';
+      }
+    }
+  } catch(e) {}
 }
 async function loadOplog() {
   try {
@@ -3317,6 +3335,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
   startSSE();
   checkOnboarding();
+  checkOrchUpdateResult();
   try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch(e) {}
   navigate('dashboard');
   // Keyboard shortcuts
