@@ -54,8 +54,10 @@ class ConfigService:
                 try: d=json.loads(gj.read_text(encoding="utf-8"))
                 except: d={}
             d.setdefault("Configurations",{}).setdefault("Default",{}); d.setdefault("Current","Default"); d.setdefault("Global",{}); c=d["Configurations"]["Default"]
-            # Resource auto-update: let MAA self-update game data
-            d.setdefault("Resource",{})["AutoUpdate"]=True
+            # Resource auto-update: disabled — MAAOrch manages MAA versions itself.
+            # If enabled, MAA.exe self-updates OTA components mid-run and can leave
+            # source files missing when we terminate it.
+            d.setdefault("Resource",{})["AutoUpdate"]=False
             if ac.get("adb_address"): c["Connect.Address"]=ac["adb_address"]
             if ac.get("adb_path"): c["Connect.AdbPath"]=ac["adb_path"]
             pr=ac.get("connection_preset",""); to=ac.get("touch_mode","")
@@ -284,7 +286,7 @@ class ConfigService:
             d.setdefault("Current", "Default")
             c = d["Configurations"]["Default"]
             d.setdefault("Global", {})
-            d.setdefault("Resource", {})["AutoUpdate"] = True
+            d.setdefault("Resource", {})["AutoUpdate"] = False
             # Clean up v5 flat keys that may linger from old inject_smart runs
             if use_v6:
                 for k in list(c.keys()):

@@ -1746,6 +1746,73 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         threading.Thread(target=_do_update, daemon=True).start()
         return {"ok": True, "message": "更新已开始后台下载"}
 
+    @app.get("/api/maa/download_status")
+    def handle_maa_download_status():
+        from services.maa_download import get_download_status
+        return {"ok": True, **get_download_status()}
+
+    @app.get("/api/maa/status")
+    def handle_maa_status():
+        from services.maa_download import get_download_status, _is_source_ready
+        source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
+        ready = _is_source_ready(source_dir)
+        version = mw.config.get("maa_version", "")
+        pool = Path(__file__).parent.parent / "services" / "maa" / "instances"
+        total = 0
+        running = 0
+        if pool.exists():
+            for d in sorted(pool.glob("*"), key=lambda x: x.name):
+                if not d.is_dir() or not d.name.isdigit():
+                    continue
+                total += 1
+                pid_file = d / ".pid"
+                if pid_file.exists():
+                    try:
+                        pid = int(pid_file.read_text().strip())
+                        r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                                           capture_output=True, text=True, timeout=2,
+                                           creationflags=_CF)
+                        if str(pid) in r.stdout:
+                            running += 1
+                    except Exception:
+                        pass
+        dl = get_download_status()
+        return {"ok": True, "ready": ready, "version": version,
+                "instances": total, "instances_running": running,
+                "download": dl}
+
+    @app.get("/api/maa/instances")
+    def handle_maa_instances_list():
+        pool = Path(__file__).parent.parent / "services" / "maa" / "instances"
+        items = []
+        if pool.exists():
+            for d in sorted(pool.glob("*"), key=lambda x: x.name):
+                if not d.is_dir() or not d.name.isdigit():
+                    continue
+                exe = d / "MAA.exe"
+                pid_file = d / ".pid"
+                meta_file = d / ".meta"
+                pid = ""
+                running = False
+                meta = ""
+                if pid_file.exists():
+                    try:
+                        pid = pid_file.read_text().strip()
+                        r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                                           capture_output=True, text=True, timeout=2,
+                                           creationflags=_CF)
+                        running = str(pid) in r.stdout
+                    except Exception:
+                        pass
+                if meta_file.exists():
+                    try:
+                        meta = meta_file.read_text(encoding="utf-8", errors="replace").strip()
+                    except Exception:
+                        pass
+                items.append({"index": d.name, "exe": exe.exists(), "pid": pid,
+                              "running": running, "meta": meta})
+        return {"ok": True, "instances": items}
+
     @app.post("/api/orch/check_update")
     def handle_orch_check_update():
         # Git-based detection (deployment is a git clone) — most accurate

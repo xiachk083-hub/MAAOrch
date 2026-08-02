@@ -514,9 +514,17 @@ async function renderSettings(container) {
       <div class="btn-row"><button class="primary" onclick="saveNotify()">保存</button></div>
     </div>
     <div class="tab-content" id="tab-maa">
-      <div class="form-row"><label>MAA 版本</label><span style="color:var(--text2);font-size:12px">${cfg.maa_version||'未安装'}</span></div>
-      <div class="form-row"><label>实例数</label><span style="color:var(--text2);font-size:12px">${cfg.maa_instances||0}</span></div>
-      <div class="btn-row"><button onclick="rebuildInstances()">🔄 重建实例</button><button onclick="checkMaaUpdate()" id="btn-maa-update" style="margin-left:8px">📥 检查更新</button><button onclick="downloadLogs()" style="margin-left:8px">📦 导出日志</button><button onclick="exportConfig()" style="margin-left:8px">📤 导出配置</button><button onclick="showImportConfig()" style="margin-left:8px">📥 导入配置</button><button onclick="restartMAAOrch()" style="margin-left:8px;color:var(--warn)">🔄 重启服务</button></div>
+      <div id="maa-status-card" style="margin-bottom:8px"><div style="color:var(--text3);font-size:10px;text-align:center;padding:8px">加载中...</div></div>
+      <div id="maa-instance-list" style="margin-bottom:8px"></div>
+      <div class="btn-row">
+        <button class="small" onclick="rebuildInstances()">🔄 重建实例</button>
+        <button class="small" onclick="checkMaaUpdate()" id="btn-maa-update">📥 检查更新</button>
+        <button class="small" onclick="downloadMaaUpdate()" id="btn-maa-download" style="display:none">⬇ 下载更新</button>
+        <button class="small" onclick="downloadLogs()">📦 导出日志</button>
+        <button class="small" onclick="exportConfig()">📤 导出配置</button>
+        <button class="small" onclick="showImportConfig()">📥 导入配置</button>
+        <button class="small" onclick="restartMAAOrch()" style="color:var(--warn)">🔄 重启服务</button>
+      </div>
       <div id="maa-update-result" style="font-size:10px;color:var(--text3);margin-top:4px"></div>
     </div>
     <div class="tab-content" id="tab-stages">
@@ -531,6 +539,7 @@ async function renderSettings(container) {
         const tc = document.getElementById('tab-' + tab.dataset.tab);
         if (tc) tc.classList.add('active');
         if (tab.dataset.tab === 'stages') renderStageLibrary();
+        if (tab.dataset.tab === 'maa') refreshMaaStatus(true);
       });
     });
     // Pre-load stages content in background
@@ -2729,6 +2738,78 @@ async function saveSmart() {
   });
   if (r.ok) toast('已保存'); else toast(r.error || '保存失败', 'error');
 }
+async function refreshMaaStatus(force) {
+  // Poll every 3s while MAA tab is open and visible; stop otherwise
+  if (window._maaTimer) clearInterval(window._maaTimer);
+  window._maaTimer = null;
+  if (force || document.querySelector('#tab-maa.active')) {
+    await _loadMaaStatus();
+    if (document.querySelector('#tab-maa.active')) {
+      window._maaTimer = setInterval(() => {
+        if (!document.querySelector('#tab-maa.active')) { clearInterval(window._maaTimer); window._maaTimer = null; return; }
+        _loadMaaStatus();
+      }, 3000);
+    }
+  }
+}
+async function _loadMaaStatus() {
+  const card = document.getElementById('maa-status-card');
+  if (!card) return;
+  try {
+    const r = await apiGet('/maa/status');
+    if (!r.ok) { card.innerHTML = '<div style="color:var(--danger);font-size:10px;text-align:center;padding:8px">状态获取失败</div>'; return; }
+    const dl = r.download || {};
+    const dlActive = dl.state === 'downloading' || dl.state === 'extracting' || dl.state === 'init';
+    const readyColor = r.ready ? 'var(--accent)' : 'var(--warn)';
+    const readyTxt = r.ready ? '✓ 就绪' : (dlActive ? '⏳ 处理中' : '✕ 未就绪');
+    let html = '<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">';
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<span style="font-size:12px;font-weight:bold;color:' + readyColor + '">● ' + readyTxt + '</span>'
+      + '<span style="font-size:11px">MAA <b>' + (r.version || '未安装') + '</b></span>'
+      + '<span style="font-size:10px;color:var(--text3)">实例 ' + r.instances + ' 个' + (r.instances_running ? ' (运行 ' + r.instances_running + ')' : '') + '</span>'
+      + '</div>';
+    // Download progress bar
+    if (dlActive || dl.state === 'error') {
+      const pct = dl.pct || 0;
+      const mb = Math.floor((dl.downloaded||0)/1048576);
+      const mbT = dl.total ? ' / ' + Math.floor(dl.total/1048576) + 'MB' : 'MB';
+      const label = dl.state === 'extracting' ? '解压中...' : dl.state === 'init' ? '初始化中...' : (dl.message || (dl.state === 'error' ? '下载失败' : '下载中'));
+      const barColor = dl.state === 'error' ? 'var(--danger)' : 'var(--accent)';
+      html += '<div style="margin-top:6px">'
+        + '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:2px">'
+        + '<span>' + label + '</span><span>' + mb + mbT + ' · ' + pct + '%</span></div>'
+        + '<div style="background:var(--bg3);border-radius:4px;height:8px;overflow:hidden">'
+        + '<div style="background:' + barColor + ';height:100%;width:' + Math.min(100, pct) + '%;transition:width .5s"></div>'
+        + '</div></div>';
+    }
+    html += '</div>';
+    card.innerHTML = html;
+    await renderMaaInstances();
+  } catch(e) { /* ignore */ }
+}
+async function renderMaaInstances() {
+  const el = document.getElementById('maa-instance-list');
+  if (!el) return;
+  try {
+    const r = await apiGet('/maa/instances');
+    const items = (r.ok ? r.instances : []) || [];
+    if (!items.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:10px;text-align:center;padding:8px">暂无实例（点击"重建实例"创建）</div>';
+      return;
+    }
+    el.innerHTML = '<div style="font-size:10px;font-weight:bold;color:var(--text2);margin-bottom:4px">实例列表</div>'
+      + items.map(it => {
+        const color = it.running ? 'var(--accent)' : (it.exe ? 'var(--text3)' : 'var(--danger)');
+        const status = it.running ? '运行中' : (it.exe ? '就绪' : '缺失');
+        return '<div class="card" style="padding:4px 8px;margin-bottom:3px;font-size:10px">'
+          + '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';display:inline-block"></span> '
+          + '<b>#' + it.index + '</b> ' + status
+          + (it.meta ? ' · <span style="color:var(--text3)">' + it.meta.split('|').slice(0,2).join(' ') + '</span>' : '')
+          + (it.pid ? ' · PID ' + it.pid : '')
+          + '</div>';
+      }).join('');
+  } catch(e) { el.innerHTML = ''; }
+}
 async function rebuildInstances() {
   const r = await apiPost('/instance/rebuild', {});
   if (r.ok) toast('重建完成'); else toast(r.error || '重建失败', 'error');
@@ -2736,14 +2817,19 @@ async function rebuildInstances() {
 async function checkMaaUpdate() {
   const btn = document.getElementById('btn-maa-update');
   const result = document.getElementById('maa-update-result');
+  const dlBtn = document.getElementById('btn-maa-download');
   if (btn) btn.disabled = true;
   if (result) result.textContent = '检查中...';
   try {
     const r = await apiPost('/maa/check_update');
     if (r.ok) {
-      if (result) result.innerHTML = r.has_update
-        ? `发现新版本 <b>${r.latest}</b> (当前 ${r.current}) <a href="#" onclick="downloadMaaUpdate();return false">立即更新</a>`
-        : `已是最新版本 (${r.current})`;
+      if (r.has_update) {
+        if (result) result.innerHTML = `发现新版本 <b>${r.latest}</b> (当前 ${r.current})`;
+        if (dlBtn) dlBtn.style.display = '';
+      } else {
+        if (result) result.textContent = `已是最新版本 (${r.current})`;
+        if (dlBtn) dlBtn.style.display = 'none';
+      }
     } else {
       if (result) result.innerHTML = `❌ ${r.error || '检查失败'} <a href="${r.manual_url || 'https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases'}" target="_blank" style="color:var(--accent)">手动查看</a>`;
     }
@@ -2754,17 +2840,21 @@ async function checkMaaUpdate() {
 }
 async function downloadMaaUpdate() {
   const btn = document.getElementById('btn-maa-update');
+  const dlBtn = document.getElementById('btn-maa-download');
   if (btn) btn.disabled = true;
+  if (dlBtn) { dlBtn.disabled = true; dlBtn.textContent = '下载中...'; }
   document.getElementById('maa-update-result').textContent = '开始下载更新...';
   const r = await apiPost('/maa/download_update');
   if (r.ok) {
-    document.getElementById('maa-update-result').innerHTML = '✅ 更新已后台下载，完成后会自动重建实例';
+    document.getElementById('maa-update-result').textContent = '下载已开始（进度见上方状态卡）';
     toast('更新下载中...');
+    refreshMaaStatus(true);
   } else {
     document.getElementById('maa-update-result').textContent = '❌ ' + (r.error || '下载失败');
     toast(r.error || '下载失败', 'error');
   }
   if (btn) btn.disabled = false;
+  if (dlBtn) { dlBtn.disabled = false; dlBtn.textContent = '⬇ 下载更新'; }
 }
 async function renderHealth(container) {
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">正在检测...</div>';

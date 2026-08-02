@@ -108,6 +108,10 @@ def _init_maa_source(source: Path) -> bool:
         d.setdefault("GUI", {})["MinimizeToTray"] = "True"
         d.setdefault("GUI", {})["UseTray"] = "True"
         d.setdefault("Global", {})["Start.MinimizeDirectly"] = "True"
+        # Disable MAA self-update: MAAOrch manages MAA versions itself. If left on,
+        # MAA.exe starts downloading OTA components and gets killed mid-update by
+        # our $type wait loop → source files end up missing.
+        d.setdefault("Resource", {})["AutoUpdate"] = "False"
         gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass

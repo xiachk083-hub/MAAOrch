@@ -14,6 +14,22 @@ _USER_AGENT = "MAAOrch"
 # two threads can rmtree()/rebuild maa/source at the same time, corrupting it.
 _MAA_LOCK = threading.Lock()
 
+# Download progress state — queried by /api/maa/download_status for the UI.
+# {state: idle|downloading|extracting|init|done|error, pct, downloaded, total, version, error, message}
+_dl_status: dict = {"state": "idle", "pct": 0, "downloaded": 0, "total": 0,
+                    "version": "", "error": "", "message": ""}
+_dl_status_lock = threading.Lock()
+
+
+def _dl_update(**kw) -> None:
+    with _dl_status_lock:
+        _dl_status.update(kw)
+
+
+def get_download_status() -> dict:
+    with _dl_status_lock:
+        return dict(_dl_status)
+
 
 def _is_source_ready(source_dir: Path) -> bool:
     """Quick check: source MAA exists and has $type config."""
@@ -93,39 +109,59 @@ def _get_download_url() -> tuple[str, str] | None:
     return None
 
 
-def _download_zip(url: str, dest: Path, log) -> bool:
+def _download_zip(url: str, dest: Path, log, version: str = "") -> bool:
     """Download zip file to disk in chunks (avoids loading 200MB into RAM).
+    Uses per-chunk read timeout (not just connect timeout) and retries 3x on stalls.
     Returns True on success."""
     log(f"下载 MAA: {url.split('/')[-1]}")
+    import socket
+    _dl_update(state="downloading", version=version, error="", message="")
+    # Read timeout: urllib's `timeout` only covers connect; a stalled read would
+    # block forever. Setting the socket timeout covers each read() call.
+    old_to = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(60)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-        resp = urllib.request.urlopen(req, timeout=120)
-        total = int(resp.headers.get("Content-Length", 0))
-        downloaded = 0
-        last_log = 0
-        last_pct_log = 0
-        with open(dest, "wb") as f:
-            while True:
-                chunk = resp.read(_CHUNK_SIZE)
-                if not chunk:
-                    break
-                f.write(chunk)
-                downloaded += len(chunk)
-                # Percentage-based logging when server reports Content-Length
-                if total and downloaded - last_pct_log > total // 10:
-                    pct = downloaded * 100 // total
-                    log(f"  下载中: {pct}% ({downloaded // 1048576}MB / {total // 1048576}MB)")
-                    last_pct_log = downloaded
-                # Byte-based fallback when Content-Length missing (GitHub often omits it)
-                elif not total and downloaded - last_log >= 8 * 1048576:
-                    log(f"  下载中: {downloaded // 1048576}MB...")
-                    last_log = downloaded
-        log(f"  完成: {downloaded // 1048576}MB")
-        return True
-    except Exception as e:
-        log(f"下载失败: {e}")
-        dest.unlink(missing_ok=True)
-        return False
+        for attempt in range(1, 4):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+                resp = urllib.request.urlopen(req, timeout=60)
+                total = int(resp.headers.get("Content-Length", 0))
+                downloaded = 0
+                last_log = 0
+                last_pct_log = 0
+                with open(dest, "wb") as f:
+                    while True:
+                        chunk = resp.read(_CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        # Percentage-based logging when server reports Content-Length
+                        if total and downloaded - last_pct_log > total // 10:
+                            pct = downloaded * 100 // total
+                            log(f"  下载中: {pct}% ({downloaded // 1048576}MB / {total // 1048576}MB)")
+                            _dl_update(pct=pct, downloaded=downloaded, total=total)
+                            last_pct_log = downloaded
+                        # Byte-based fallback when Content-Length missing (GitHub often omits it)
+                        elif not total and downloaded - last_log >= 8 * 1048576:
+                            log(f"  下载中: {downloaded // 1048576}MB...")
+                            _dl_update(downloaded=downloaded, total=0)
+                            last_log = downloaded
+                log(f"  完成: {downloaded // 1048576}MB")
+                _dl_update(state="done", pct=100, downloaded=downloaded, total=total or downloaded)
+                return True
+            except Exception as e:
+                log(f"  第 {attempt} 次下载中断: {e}")
+                if attempt < 3:
+                    log(f"  重试中 ({attempt}/3)...")
+                    _dl_update(message=f"下载中断，重试 {attempt}/3: {e}")
+                    time.sleep(3)
+                else:
+                    _dl_update(state="error", error=str(e), message=f"下载失败: {e}")
+                    raise
+    finally:
+        socket.setdefaulttimeout(old_to)
+    return False
 
 
 def _extract_zip(zip_path: Path, source_dir: Path, log) -> bool:
@@ -205,6 +241,7 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
         ver = _detect_version(source_dir)
         if ver != "unknown":
             ctx.config["maa_version"] = ver
+        _dl_update(state="done", pct=100, version=ver, message="就绪")
         return True
 
     # If source exists but MAA.exe missing, it's corrupted → clean up
@@ -224,21 +261,25 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
         return False
     dl_url, tag = result
     _log(f"[MAA] 发现新版: {tag}")
+    _dl_update(state="downloading", version=tag, pct=0, downloaded=0, total=0, error="", message="")
 
     # Step 2: Download to temp file
     source_dir.mkdir(parents=True, exist_ok=True)
     temp_zip = source_dir.parent / f"_download_{int(time.time())}.zip"
-    if not _download_zip(dl_url, temp_zip, _log):
+    if not _download_zip(dl_url, temp_zip, _log, version=tag):
         temp_zip.unlink(missing_ok=True)
         return False
 
     # Step 3: Extract
+    _dl_update(state="extracting", message="解压中...")
     if not _extract_zip(temp_zip, source_dir, _log):
         temp_zip.unlink(missing_ok=True)
+        _dl_update(state="error", error="解压失败", message="解压失败")
         return False
     temp_zip.unlink(missing_ok=True)
 
     # Step 4: Init MAA (generate $type)
+    _dl_update(state="init", message="初始化 MAA 配置...")
     _init_maa_source_wrapper(source_dir, _log)
 
     # Step 5: Record version
@@ -255,7 +296,9 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
 
     if _is_source_ready(source_dir):
         _log(f"[MAA] 就绪 (版本 {version})")
+        _dl_update(state="done", pct=100, version=version, message="就绪")
         return True
     else:
         _log("[MAA] MAA 已下载但初始化不完全，请手动运行一次 MAA.exe")
+        _dl_update(state="error", version=version, message="初始化不完全")
         return False
