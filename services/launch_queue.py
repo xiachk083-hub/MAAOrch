@@ -446,7 +446,13 @@ class LaunchQueue:
         import threading as _th
         for idx, entry in enumerate(launch_now):
             if not any(a["id"] == entry.account_id for a in self.ctx.accounts):
-                continue
+                # Connect-only temp accounts live in ctx._mw.connect_accounts
+                try:
+                    conn = getattr(getattr(self.ctx, "_mw", None), "connect_accounts", None)
+                    if not conn or not any(a.get("id") == entry.account_id for a in conn):
+                        continue
+                except Exception:
+                    continue
             _th.Timer(max(0.1, idx * 20.0), lambda e=entry: self._do_launch(e)).start()
         _QUEUE_LOG.info(f"_tick: launch_now={len(launch_now)} pending={len(self._pending)} active_emus={len(self._active_emus)}")
         self._clean_stale_emus()

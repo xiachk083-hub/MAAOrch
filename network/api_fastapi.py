@@ -1426,11 +1426,13 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 except ValueError: pass
 
         emus = [e for e in detect_emu_instances() if e.get("running")]
+        runner = _runner()
         connected = 0
         for e in emus:
             idx = e.get("index", "")
             aid = f"emu{idx}"
-            if lq.is_running(aid) or lq.is_queued(aid):
+            real = runner._has_real_process(aid) if runner else False
+            if real or lq.is_queued(aid):
                 continue
             port = e.get("adb_port", "")
             ac = _connect_account(conn, idx, port, mode="connect")
@@ -1510,8 +1512,13 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if not emu:
             return {"ok": False, "error": f"模拟器 #{idx} 未运行"}
         aid = f"emu{idx}"
-        if lq.is_running(aid):
+        # Use real process check, not queue marks — stale _active_emus entries
+        # would otherwise block relaunch after a crash/stop.
+        runner = _runner()
+        if runner and runner._has_real_process(aid):
             return {"ok": False, "error": f"模拟器 #{idx} 的 MAA 已在运行"}
+        if lq.is_queued(aid):
+            return {"ok": False, "error": f"模拟器 #{idx} 的 MAA 排队中"}
         conn = getattr(mw, 'connect_accounts', None)
         if conn is None:
             mw.connect_accounts = []

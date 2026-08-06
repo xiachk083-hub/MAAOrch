@@ -272,6 +272,17 @@ class AccountRunner:
             except: pass
         self._active.pop(account_id, None)
         self.ctx.proc_status.discard(account_id)
+        # Release queue-side occupancy marks immediately so a relaunch isn't
+        # blocked by the 150s stale-cleaner for connect-only accounts.
+        try:
+            lq = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
+            if lq:
+                key = lq._get_emu_key(account_id)
+                with lq._lock:
+                    lq._active_emus.pop(key, None)
+                    lq._active_emus_ts.pop(key, None)
+        except Exception:
+            pass
 
     def _find_emu_pid(self, addr: str) -> int | None:
         if not addr:
