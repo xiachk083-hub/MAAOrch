@@ -159,6 +159,14 @@ class AccountRunner:
                 cand = Path(cli).parent / "adb.exe"
                 if cand.exists():
                     ac["adb_path"] = str(cand)
+        if not ac.get("adb_path"):
+            # MuMu 12 has no mumu-cli — fall back to drive-wide adb search
+            # (covers nx_main/MuMuManager installs). Without this, adb_path stays
+            # empty and the code falls back to bare "adb" (system PATH) → connect fails.
+            from infrastructure.task_constants import find_adb
+            adb = find_adb()
+            if adb:
+                ac["adb_path"] = adb
         ac.setdefault("connection_preset", "MuMuEmulator12")
         ac.setdefault("touch_mode", "MiniTouch")
         ac.setdefault("post_action", "ExitEmulator,ExitSelf")
