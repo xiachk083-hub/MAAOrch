@@ -1,6 +1,6 @@
 """FastAPI-based API server for MAAOrch."""
 from __future__ import annotations
-import asyncio, json, time, re, os, hmac, subprocess, io, zipfile, shutil, urllib.request, uuid, mimetypes, threading, tempfile
+import asyncio, json, time, re, os, sys, hmac, subprocess, io, zipfile, shutil, urllib.request, uuid, mimetypes, threading, tempfile
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Any
