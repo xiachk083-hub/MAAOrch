@@ -1760,10 +1760,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.get("/api/maa/status")
     def handle_maa_status():
-        from services.maa_download import get_download_status, _is_source_ready
+        from services.maa_download import get_download_status, _is_source_ready, _detect_version
         source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
         ready = _is_source_ready(source_dir)
         version = mw.config.get("maa_version", "")
+        source_exe = source_dir / "MAA.exe"
+        source_running = False
+        if source_exe.exists():
+            r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe"],
+                               capture_output=True, text=True, timeout=3, creationflags=_CF)
+            source_running = "MAA.exe" in r.stdout
         pool = Path(__file__).parent.parent / "services" / "maa" / "instances"
         total = 0
         running = 0
@@ -1785,8 +1791,43 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         pass
         dl = get_download_status()
         return {"ok": True, "ready": ready, "version": version,
+                "source_ready": ready, "source_version": _detect_version(source_dir),
+                "source_running": source_running,
                 "instances": total, "instances_running": running,
                 "download": dl}
+
+    @app.post("/api/maa/launch_source")
+    def handle_maa_launch_source():
+        """Launch the source MAA.exe in a normal window so the user can complete
+        first-run initialization (protocol/hot-update) manually, then close it."""
+        source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
+        exe = source_dir / "MAA.exe"
+        if not exe.exists():
+            return {"ok": False, "error": "源 MAA 未安装，请先下载"}
+        r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe"],
+                           capture_output=True, text=True, timeout=3, creationflags=_CF)
+        if "MAA.exe" in r.stdout:
+            return {"ok": False, "error": "MAA 已在运行"}
+        try:
+            subprocess.Popen([str(exe)])  # normal window — user needs to see/operate it
+            mw._log("🚀 启动源 MAA（请完成初始化后关闭窗口）")
+            return {"ok": True, "message": "源 MAA 已启动"}
+        except Exception as e:
+            return {"ok": False, "error": f"启动失败: {e}"}
+
+    @app.post("/api/maa/check_source")
+    def handle_maa_check_source():
+        from services.maa_download import _is_source_ready, _detect_version
+        source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
+        exe = source_dir / "MAA.exe"
+        r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe"],
+                           capture_output=True, text=True, timeout=3, creationflags=_CF)
+        running = "MAA.exe" in r.stdout
+        return {"ok": True,
+                "exe_exists": exe.exists(),
+                "ready": _is_source_ready(source_dir) if exe.exists() else False,
+                "version": _detect_version(source_dir) if exe.exists() else "",
+                "running": running}
 
     @app.get("/api/maa/instances")
     def handle_maa_instances_list():

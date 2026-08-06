@@ -2778,9 +2778,29 @@ async function _loadMaaStatus() {
     if (!r.ok) { card.innerHTML = '<div style="color:var(--danger);font-size:10px;text-align:center;padding:8px">状态获取失败</div>'; return; }
     const dl = r.download || {};
     const dlActive = dl.state === 'downloading' || dl.state === 'extracting' || dl.state === 'init';
+    // ── 源 MAA 区块 ──
+    let html = '<div class="card" style="padding:8px;flex-direction:column;align-items:stretch;margin-bottom:6px">';
+    const srcReady = r.source_ready;
+    const srcVersion = r.source_version || '未知';
+    const srcRunning = r.source_running;
+    const srcColor = srcRunning ? 'var(--accent)' : (srcReady ? 'var(--accent)' : 'var(--warn)');
+    let srcTxt;
+    if (srcRunning) srcTxt = '运行中';
+    else if (srcReady) srcTxt = '已初始化 (' + srcVersion + ')';
+    else srcTxt = '未初始化 — 需手动运行一次完成首次初始化';
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<span style="font-size:12px;font-weight:bold;color:var(--text2)">源 MAA</span>'
+      + '<span style="font-size:10px;color:' + srcColor + ';font-weight:bold">● ' + srcTxt + '</span>'
+      + '<span style="flex:1"></span>'
+      + '<button class="small" onclick="launchSourceMaa()" ' + (srcRunning ? 'disabled style="opacity:0.4"' : '') + '>🚀 启动源 MAA</button>'
+      + '<button class="small" onclick="checkSourceMaa()">🔍 检测初始化</button>'
+      + '<button class="small" onclick="checkMaaUpdate()" id="btn-maa-update2">📥 检查更新</button>'
+      + '</div>'
+      + '<div style="font-size:9px;color:var(--text3);margin-top:4px">首次使用：点"启动源 MAA" → 在窗口中完成初始化/热更新 → 关闭窗口 → 点"检测初始化" → 再"重建实例"</div>'
+      + '</div>';
     const readyColor = r.ready ? 'var(--accent)' : 'var(--warn)';
     const readyTxt = r.ready ? '✓ 就绪' : (dlActive ? '⏳ 处理中' : '✕ 未就绪');
-    let html = '<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">';
+    html += '<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">';
     html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="font-size:12px;font-weight:bold;color:' + readyColor + '">● ' + readyTxt + '</span>'
       + '<span style="font-size:11px">MAA <b>' + (r.version || '未安装') + '</b></span>'
@@ -2804,6 +2824,26 @@ async function _loadMaaStatus() {
     card.innerHTML = html;
     await renderMaaInstances();
   } catch(e) { /* ignore */ }
+}
+async function launchSourceMaa() {
+  const r = await apiPost('/maa/launch_source', {});
+  if (r.ok) {
+    toast('源 MAA 已启动，请完成初始化后关闭窗口');
+  } else {
+    toast(r.error || '启动失败', 'error');
+  }
+  refreshMaaStatus(true);
+}
+async function checkSourceMaa() {
+  const r = await apiPost('/maa/check_source', {});
+  if (r.ok) {
+    if (r.ready) toast('✓ 源 MAA 已初始化 (' + (r.version || '') + ')');
+    else if (r.running) toast('源 MAA 运行中，请完成初始化后关闭窗口');
+    else toast('✕ 未初始化 — 请先启动源 MAA 完成首次运行', 'error');
+  } else {
+    toast(r.error || '检测失败', 'error');
+  }
+  refreshMaaStatus(true);
 }
 async function renderMaaInstances() {
   const el = document.getElementById('maa-instance-list');
