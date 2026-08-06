@@ -715,7 +715,7 @@ async function checkOrchUpdate() {
   const result = document.getElementById('orch-update-result');
   if (btn) { btn.textContent = '检查中...'; btn.disabled = true; }
   try {
-    const r = await apiGet('/orch/check_update');
+    const r = await apiPost('/orch/check_update', {});
     if (r.ok && r.method === 'git') {
       if (r.has_update) {
         result.innerHTML = `发现 <b>${r.behind}</b> 个新提交可更新 <button class="small" style="margin-left:6px" onclick="updateOrch()">⚡ 立即更新</button>`;
@@ -723,7 +723,8 @@ async function checkOrchUpdate() {
         result.textContent = `已是最新（${r.branch}）`;
       }
     } else if (r.ok && r.latest) {
-      result.innerHTML = `最新版 <b>${r.latest}</b> <a href="${r.html_url}" target="_blank">下载</a>`;
+      result.innerHTML = `最新版 <b>${r.latest}</b> <a href="${r.html_url}" target="_blank">下载</a>`
+        + (r.git_error ? `<span style="color:var(--warn)">（git 不可用: ${r.git_error}）</span>` : '');
     } else {
       result.textContent = '检查失败';
     }

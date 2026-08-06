@@ -1865,11 +1865,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     def handle_orch_check_update():
         # Git-based detection (deployment is a git clone) — most accurate
         root = Path(__file__).parent.parent
+        git_error = ""
         try:
             r = subprocess.run(["git", "-C", str(root), "fetch", "origin"],
                                capture_output=True, timeout=30, creationflags=_CF,
                                encoding="utf-8", errors="replace")
-            if r.returncode == 0:
+            if r.returncode != 0:
+                git_error = (r.stderr or "git fetch failed").strip().splitlines()
+                git_error = git_error[0][:80] if git_error else "git fetch failed"
+            else:
                 branch = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "HEAD"],
                                         capture_output=True, timeout=10, creationflags=_CF,
                                         encoding="utf-8", errors="replace").stdout.strip()
@@ -1882,8 +1886,13 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     behind = int(rev.stdout.strip() or 0)
                     return {"ok": True, "has_update": behind > 0, "behind": behind,
                             "branch": branch, "method": "git"}
-        except Exception:
-            pass
+                git_error = "git rev-list failed"
+        except FileNotFoundError:
+            git_error = "git 未安装"
+        except subprocess.TimeoutExpired:
+            git_error = "git fetch 超时（网络慢）"
+        except Exception as e:
+            git_error = str(e)[:80]
         # Fallback: GitHub release check
         try:
             req = urllib.request.Request(
@@ -1893,9 +1902,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 data = json.loads(r.read().decode())
             tag = data.get("tag_name", "")
             html_url = data.get("html_url", "")
-            return {"ok": True, "latest": tag, "html_url": html_url, "method": "release"}
+            return {"ok": True, "latest": tag, "html_url": html_url,
+                    "method": "release", "git_error": git_error}
         except Exception as e:
-            return {"ok": False, "error": str(e), "method": "release"}
+            return {"ok": False, "error": str(e), "method": "release",
+                    "git_error": git_error}
 
     @app.post("/api/orch/update")
     def handle_orch_update():
