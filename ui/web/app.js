@@ -1794,24 +1794,25 @@ async function renderConnect(container) {
         + '<span style="font-size:12px;font-weight:bold">模拟器 #' + e.index + '</span>'
         + '<span style="font-size:9px;color:var(--text3)">' + (e.name || '') + ' · ADB:' + (e.adb_port || '-') + '</span>'
         + '<span style="flex:1"></span>'
-        + '<span style="font-size:9px;color:' + statusColor + ';font-weight:bold">● ' + statusTxt + '</span>'
+        + '<span class="conn-status" style="font-size:9px;color:' + statusColor + ';font-weight:bold">● ' + statusTxt + '</span>'
         + '</div>'
         + '<div style="display:flex;gap:4px;margin-bottom:4px">'
-        + '<button class="small primary" onclick="launchConnect(\'' + e.index + '\',\'connect\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 启动 MAA·仅连接</button>'
-        + '<button class="small" onclick="launchConnect(\'' + e.index + '\',\'daily\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>⚙ 启动 MAA·日常</button>'
-        + '<button class="small danger" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止 MAA</button>'
-        + '<button class="small" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
+        + '<button class="small primary conn-launch" onclick="launchConnect(\'' + e.index + '\',\'connect\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 启动 MAA·仅连接</button>'
+        + '<button class="small conn-launch-daily" onclick="launchConnect(\'' + e.index + '\',\'daily\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>⚙ 启动 MAA·日常</button>'
+        + '<button class="small danger conn-stop" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止 MAA</button>'
+        + '<button class="small conn-restart" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
         + '<span style="flex:1"></span>'
         + '<button class="small" onclick="emuControl(' + e.index + ',\'stop\')" style="color:var(--danger)">⏹ 关闭模拟器</button>'
         + '</div>'
         + '<div style="display:flex;gap:6px;align-items:flex-start">'
-        + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:160px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);flex-shrink:0" onerror="this.style.opacity=0.3">'
+        + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:160px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);flex-shrink:0" onerror="this.style.opacity=0.3" onload="this.style.opacity=1">'
         + '<details style="flex:1;font-size:10px"><summary style="color:var(--text3);cursor:pointer">📋 MAA 日志</summary>'
         + '<pre id="connect-log-' + aid + '" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px;font-size:9px;line-height:1.4;max-height:140px;overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all;margin:4px 0 0 0">加载中...</pre></details>'
         + '</div></div>';
     }).join('');
     // Live screenshot refresh (2s) + log refresh when open
-    emus.forEach(e => {
+    const allDetails = el.querySelectorAll('details');
+    emus.forEach((e, i) => {
       const aid = 'emu' + e.index;
       const img = el.querySelector('img[src*="/' + aid + '/screenshot"]');
       if (img) {
@@ -1822,7 +1823,7 @@ async function renderConnect(container) {
         window._connectTimers = window._connectTimers || [];
         window._connectTimers.push(timer);
       }
-      const det = el.querySelector('details');
+      const det = allDetails[i];
       if (det) {
         det.addEventListener('toggle', () => {
           if (det.open) loadConnectLog(aid);
@@ -1830,13 +1831,51 @@ async function renderConnect(container) {
       }
     });
   } catch(e) {}
-  // Refresh list every 5s
+  // Refresh list every 5s — incremental update (no full DOM rebuild → no flicker)
   if (state.page === 'connect' && document.getElementById('content') === container) {
     window._connectTimer = setInterval(async () => {
       if (state.page !== 'connect') { clearInterval(window._connectTimer); window._connectTimer = null; return; }
-      renderConnect(document.getElementById('content'));
+      await _updateConnectStatus(container);
     }, 5000);
   }
+}
+async function _updateConnectStatus(container) {
+  // Incremental update: only rebuild DOM when the emulator list changes.
+  // Otherwise just refresh status text/buttons — screenshots keep their image,
+  // so the page stops flickering every 5s.
+  try {
+    const r = await apiGet('/connect/status');
+    if (!r.ok) return;
+    const emus = r.emulators || [];
+    const el = document.getElementById('connect-list');
+    if (!el) return;
+    const cards = el.querySelectorAll('.card');
+    if (cards.length !== emus.length) {
+      // Emulator set changed → full re-render (screenshots re-init in renderConnect)
+      renderConnect(container);
+      return;
+    }
+    emus.forEach((e, i) => {
+      const card = cards[i];
+      if (!card) return;
+      const maaOn = e.maa_running;
+      const queued = e.maa_queued;
+      const statusEl = card.querySelector('.conn-status');
+      if (statusEl) {
+        statusEl.textContent = '● ' + (maaOn ? 'MAA 运行中' : (queued ? '排队中...' : 'MAA 未连接'));
+        statusEl.style.color = maaOn ? 'var(--accent)' : 'var(--warn)';
+      }
+      // Buttons: launch disabled when running; stop/restart enabled when running
+      const launch = card.querySelector('.conn-launch');
+      const launchDaily = card.querySelector('.conn-launch-daily');
+      const stop = card.querySelector('.conn-stop');
+      const restart = card.querySelector('.conn-restart');
+      if (launch) { launch.disabled = maaOn; launch.style.opacity = maaOn ? 0.4 : 1; }
+      if (launchDaily) { launchDaily.disabled = maaOn; launchDaily.style.opacity = maaOn ? 0.4 : 1; }
+      if (stop) { stop.disabled = !maaOn; stop.style.opacity = maaOn ? 1 : 0.4; }
+      if (restart) { restart.disabled = !maaOn; restart.style.opacity = maaOn ? 1 : 0.4; }
+    });
+  } catch(e) { /* ignore */ }
 }
 async function loadConnectLog(aid) {
   const el = document.getElementById('connect-log-' + aid);
