@@ -1146,6 +1146,33 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         count = lq.stop_all()
         return {"ok": True, "stopped": count}
 
+    def _stop_maa_for_emu(emu_idx) -> None:
+        """Stop any MAA connected to this emulator before shutting it down.
+        Otherwise MAA's ADB keepalive (RetryOnDisconnected) keeps reconnecting
+        during shutdown, corrupting the emulator's state."""
+        runner = _runner()
+        if not runner:
+            return
+        for aid, ac in list(runner._active.items()):
+            if str(ac.get("emu_instance_index", "")) == str(emu_idx):
+                runner.stop(aid)
+
+    def _wait_emu_stopped(cli: str, idx: str, timeout: int = 30) -> bool:
+        """Poll mumu-cli info until the emulator fully exits (both process and android off)."""
+        for _ in range(timeout):
+            try:
+                r = subprocess.run([cli, "info", "--vmindex", str(idx)],
+                                   capture_output=True, text=True, timeout=5,
+                                   creationflags=_CF, encoding="utf-8", errors="replace")
+                if r.returncode == 0:
+                    d = json.loads(r.stdout)
+                    if not d.get("is_process_started") and not d.get("is_android_started"):
+                        return True
+            except Exception:
+                pass
+            time.sleep(1)
+        return False
+
     @app.post("/api/emulator/{idx}/{action}")
     def handle_emulator_control(idx: str, action: str):
         from infrastructure.task_constants import find_mumu_cli
@@ -1156,11 +1183,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
             return {"ok": True, "action": "started"}
         elif action == "stop":
+            _stop_maa_for_emu(idx)
+            time.sleep(2)  # let MAA exit and release ADB before shutting down
             subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
             return {"ok": True, "action": "stopped"}
         elif action == "restart":
+            _stop_maa_for_emu(idx)
+            time.sleep(2)
             subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
-            time.sleep(3)
+            _wait_emu_stopped(cli, idx)  # wait for full exit instead of fixed 3s
+            time.sleep(2)
             subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
             return {"ok": True, "action": "restarted"}
         raise HTTPException(400, "bad action")
