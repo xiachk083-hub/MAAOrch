@@ -725,6 +725,9 @@ async function checkOrchUpdate() {
     } else if (r.ok && r.latest) {
       result.innerHTML = `最新版 <b>${r.latest}</b> <a href="${r.html_url}" target="_blank">下载</a>`
         + (r.git_error ? `<span style="color:var(--warn)">（git 不可用: ${r.git_error}）</span>` : '');
+      if (r.zip_mode) {
+        result.innerHTML += ` <button class="small primary" style="margin-left:6px" onclick="updateOrch()">⬇ 下载更新 (zip)</button>`;
+      }
     } else {
       result.textContent = '检查失败';
     }

@@ -1902,49 +1902,26 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 data = json.loads(r.read().decode())
             tag = data.get("tag_name", "")
             html_url = data.get("html_url", "")
+            # Zip mode: git unavailable (zip deployment) — offer main-branch zip download
             return {"ok": True, "latest": tag, "html_url": html_url,
-                    "method": "release", "git_error": git_error}
+                    "method": "release", "git_error": git_error,
+                    "zip_mode": True,
+                    "zip_url": "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip"}
         except Exception as e:
             return {"ok": False, "error": str(e), "method": "release",
                     "git_error": git_error}
 
-    @app.post("/api/orch/update")
-    def handle_orch_update():
-        root = Path(__file__).parent.parent
-        # Require clean working tree — refuse if local changes exist
+    def _orch_update_zip(root: Path, result_file: Path, mw_ref) -> None:
+        """Zip-deployment update: download main.zip, extract to _update/, then
+        replace via replace.bat (taskkill → xcopy → restart). Runs in background."""
+        import shutil as _sh
+        from infrastructure.utils import is_safe_zip_path
+        _log = mw_ref._log
+        _log("[更新] git 不可用，使用 zip 模式更新（main 分支最新）")
+        zip_url = "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip"
         try:
-            st = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
-                                capture_output=True, timeout=10, creationflags=_CF,
-                                encoding="utf-8", errors="replace")
-            if st.returncode == 0 and st.stdout.strip():
-                return {"ok": False, "error": "本地有未提交的改动，请先处理（git stash / commit）"}
-        except Exception:
-            return {"ok": False, "error": "git 不可用，无法自动更新"}
-        # Result file lives OUTSIDE the repo (%TEMP%) so git status stays clean
-        result_file = Path(tempfile.gettempdir()) / "maorch_update_result.txt"
-        # Generate update.bat: pull + write result + restart, run detached
-        try:
-            bat = root / "update.bat"
-            bat.write_text(
-                '@echo off\r\n'
-                'chcp 65001 >nul\r\n'
-                f'cd /d "{root}"\r\n'
-                'timeout /t 2 /nobreak >nul\r\n'
-                f'git pull --ff-only >"{result_file}" 2>&1\r\n'
-                'if errorlevel 1 (\r\n'
-                f'  echo [RESULT] FAILED >>"{result_file}"\r\n'
-                ') else (\r\n'
-                f'  echo [RESULT] OK >>"{result_file}"\r\n'
-                ')\r\n'
-                f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
-                'del "%~f0"\r\n', encoding="utf-8")
-        except Exception as e:
-            return {"ok": False, "error": f"写入 update.bat 失败: {e}"}
-
-        def _do():
-            # Graceful shutdown first: stop running MAA so they don't orphan
-            # after os._exit(0) skips the normal _quit() cleanup path.
-            runner = getattr(mw, 'runner', None)
+            # Graceful shutdown: stop running MAA first
+            runner = getattr(mw_ref, 'runner', None)
             if runner:
                 for aid in list(runner._active.keys()):
                     try:
@@ -1952,11 +1929,122 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     except Exception:
                         pass
             time.sleep(2)
+            # Download main.zip (small: gitignored files excluded)
+            tmp_dir = Path(tempfile.mkdtemp(prefix="maorch_upd_"))
+            tmp_zip = tmp_dir / "main.zip"
+            _log(f"[更新] 下载 {zip_url.split('/')[-1]}")
+            req = urllib.request.Request(zip_url, headers={"User-Agent": "MAAOrch-Updater"})
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                with open(tmp_zip, "wb") as f:
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+            _log(f"[更新] 下载完成 {tmp_zip.stat().st_size // 1024}KB")
+            # Extract to _update/ (strip top-level folder, zip-slip safe)
+            update_dir = root / "_update"
+            if update_dir.exists():
+                _sh.rmtree(str(update_dir), ignore_errors=True)
+            update_dir.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(str(tmp_zip)) as zf:
+                for member in zf.namelist():
+                    if not is_safe_zip_path(member, update_dir.parent):
+                        raise ValueError(f"zip slip: {member}")
+                    parts = member.split("/", 1)
+                    if len(parts) < 2 or not parts[1]:
+                        continue  # top-level folder itself
+                    target = update_dir / parts[1]
+                    if member.endswith("/"):
+                        target.mkdir(parents=True, exist_ok=True)
+                    else:
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        with zf.open(member) as src, open(str(target), "wb") as dst:
+                            dst.write(src.read())
+            _sh.rmtree(str(tmp_dir), ignore_errors=True)
+            _log(f"[更新] 解压完成 {update_dir}")
+            # Generate replace.bat
+            bat = root / "replace.bat"
+            bat.write_text(
+                '@echo off\r\n'
+                'chcp 65001 >nul\r\n'
+                f'taskkill /f /fi "WINDOWTITLE eq MAAOrch" 2>nul\r\n'
+                'timeout /t 3 /nobreak >nul\r\n'
+                f'cd /d "{root}"\r\n'
+                f'xcopy /E /Y "{root}\\_update\\*" "{root}" >"{result_file}" 2>&1\r\n'
+                'if errorlevel 1 (\r\n'
+                f'  echo [RESULT] FAILED >>"{result_file}"\r\n'
+                ') else (\r\n'
+                f'  echo [RESULT] OK >>"{result_file}"\r\n'
+                ')\r\n'
+                f'rmdir /S /Q "{root}\\_update"\r\n'
+                f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
+                'del "%~f0"\r\n', encoding="utf-8")
             subprocess.Popen([str(bat)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             time.sleep(1)
             os._exit(0)
-        threading.Thread(target=_do, daemon=True).start()
-        return {"ok": True, "message": "正在更新并重启，页面将短暂不可用"}
+        except Exception as e:
+            try:
+                result_file.write_text(f"[RESULT] FAILED\n{e}", encoding="utf-8")
+            except Exception:
+                pass
+            _log(f"[更新] zip 更新失败: {e}")
+            os._exit(0)
+
+    @app.post("/api/orch/update")
+    def handle_orch_update():
+        root = Path(__file__).parent.parent
+        result_file = Path(tempfile.gettempdir()) / "maorch_update_result.txt"
+        # Try git mode first; fall back to zip mode for zip deployments
+        git_ok = False
+        try:
+            st = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
+                                capture_output=True, timeout=10, creationflags=_CF,
+                                encoding="utf-8", errors="replace")
+            if st.returncode == 0:
+                git_ok = True
+                if st.stdout.strip():
+                    return {"ok": False, "error": "本地有未提交的改动，请先处理（git stash / commit）"}
+        except Exception:
+            git_ok = False
+        if git_ok:
+            # Generate update.bat: pull + write result + restart, run detached
+            try:
+                bat = root / "update.bat"
+                bat.write_text(
+                    '@echo off\r\n'
+                    'chcp 65001 >nul\r\n'
+                    f'cd /d "{root}"\r\n'
+                    'timeout /t 2 /nobreak >nul\r\n'
+                    f'git pull --ff-only >"{result_file}" 2>&1\r\n'
+                    'if errorlevel 1 (\r\n'
+                    f'  echo [RESULT] FAILED >>"{result_file}"\r\n'
+                    ') else (\r\n'
+                    f'  echo [RESULT] OK >>"{result_file}"\r\n'
+                    ')\r\n'
+                    f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
+                    'del "%~f0"\r\n', encoding="utf-8")
+            except Exception as e:
+                return {"ok": False, "error": f"写入 update.bat 失败: {e}"}
+
+            def _do_git():
+                runner = getattr(mw, 'runner', None)
+                if runner:
+                    for aid in list(runner._active.keys()):
+                        try:
+                            runner.stop(aid)
+                        except Exception:
+                            pass
+                time.sleep(2)
+                subprocess.Popen([str(bat)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(1)
+                os._exit(0)
+            threading.Thread(target=_do_git, daemon=True).start()
+            return {"ok": True, "message": "正在更新并重启，页面将短暂不可用"}
+        # Zip mode (git unavailable — zip deployment)
+        threading.Thread(target=_orch_update_zip,
+                         args=(root, result_file, mw), daemon=True).start()
+        return {"ok": True, "message": "正在下载并更新（zip 模式），页面将短暂不可用"}
 
     @app.get("/api/orch/update_result")
     def handle_orch_update_result():
