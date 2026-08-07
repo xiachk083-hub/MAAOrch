@@ -1197,6 +1197,54 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             return {"ok": True, "action": "restarted"}
         raise HTTPException(400, "bad action")
 
+    @app.post("/api/emulator/batch/{action}")
+    def handle_emulator_batch(action: str, body: dict = {}):
+        """Batch emulator control. body: {indexes: [..]} — default:
+        start → all not-running, stop/restart → all running.
+        Serial with small gaps to avoid concurrent mumu-cli conflicts."""
+        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli
+        if action not in ("start", "stop", "restart"):
+            raise HTTPException(400, "bad action")
+        cli = find_mumu_cli()
+        if not cli:
+            return {"ok": False, "error": "mumu-cli not found"}
+        idxs = [str(x) for x in (body.get("indexes") or [])]
+        try:
+            emus = detect_emu_instances()
+        except Exception:
+            emus = []
+        targets = []
+        for e in emus:
+            idx = str(e.get("index", ""))
+            if idxs and idx not in idxs:
+                continue
+            running = bool(e.get("running"))
+            if action == "start" and running:
+                continue
+            if action in ("stop", "restart") and not running:
+                continue
+            targets.append(idx)
+        done = 0
+        for idx in targets:
+            try:
+                if action == "start":
+                    subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+                else:
+                    _stop_maa_for_emu(idx)
+                    time.sleep(2)
+                    subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
+                    if action == "restart":
+                        _wait_emu_stopped(cli, idx)
+                        time.sleep(2)
+                        subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+                done += 1
+                mw._log(f"⏯ 批量{action}模拟器 #{idx}")
+            except Exception as ex:
+                mw._log(f"[批量{action}] #{idx} 失败: {ex}")
+            time.sleep(1.5)
+        _log_op(f"批量{action}模拟器", f"{done} 个")
+        return {"ok": True, action: done, "total": len(targets)}
+
     @app.post("/api/system/close_popups")
     def handle_close_popups():
         from services.runner import _close_mumu_popups

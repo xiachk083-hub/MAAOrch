@@ -1706,6 +1706,12 @@ async function renderEmus(container) {
     container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="color:var(--text2);font-size:12px;font-weight:bold">📱 模拟器管理</span>'
       + '<span style="font-size:10px;color:var(--text3)">共 ' + emus.length + ' 个 | 每5s刷新</span>'
+      + '<label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="emu-check-all" onchange="emuToggleAll(this.checked)"> 全选</label>'
+      + '<span id="emu-sel-count" style="font-size:10px;color:var(--text3)">已选 0 个</span>'
+      + '<button class="small primary" id="btn-emu-start" onclick="emuBatch(\'start\')" disabled style="opacity:0.4">▶ 批量启动</button>'
+      + '<button class="small" id="btn-emu-restart" onclick="emuBatch(\'restart\')" disabled style="opacity:0.4">🔄 批量重启</button>'
+      + '<button class="small" id="btn-emu-stop" onclick="emuBatch(\'stop\')" disabled style="opacity:0.4;color:var(--danger)">⏹ 批量关闭</button>'
+      + '<span id="emu-batch-result" style="font-size:10px;color:var(--text3)"></span>'
       + '<button class="small primary" onclick="connectRunningEmus()">🔌 连接运行中的模拟器</button>'
       + '<span id="emu-connect-result" style="font-size:10px;color:var(--text3)"></span>'
       + '<button class="small" onclick="renderEmus(document.getElementById(\'content\'))">刷新</button>'
@@ -1716,7 +1722,9 @@ async function renderEmus(container) {
     for (const e of emus) {
       const running = e.running ? true : false;
       const port = e.adb_port || '-';
+      const checked = window._emuChecks && window._emuChecks[e.index] ? 'checked' : '';
       html += '<div class="card" style="padding:5px 8px">'
+        + '<input type="checkbox" class="emu-check" data-idx="' + e.index + '" ' + checked + ' onchange="emuSelUpdate()" style="margin-right:6px">'
         + '<div style="flex:1;min-width:0">'
         + '<div style="display:flex;align-items:center;gap:4px">'
         + '<span style="width:8px;height:8px;border-radius:50%;background:' + (running ? 'var(--accent)' : 'var(--border)') + ';display:inline-block"></span>'
@@ -1730,6 +1738,7 @@ async function renderEmus(container) {
         + '</div></div></div>';
     }
     el.innerHTML = html || '<div style="color:var(--text3);text-align:center;padding:20px">未检测到模拟器</div>';
+    emuSelUpdate();
   } catch(e) {}
   // Auto-refresh every 5s while on this page
   if (state.page === 'emus' && document.getElementById('content') === container) {
@@ -1739,6 +1748,36 @@ async function renderEmus(container) {
       renderEmus(document.getElementById('content'));
     }, 5000);
   }
+}
+function emuSelUpdate() {
+  window._emuChecks = window._emuChecks || {};
+  const checks = document.querySelectorAll('.emu-check');
+  checks.forEach(c => { window._emuChecks[c.dataset.idx] = c.checked; });
+  const n = document.querySelectorAll('.emu-check:checked').length;
+  const cnt = document.getElementById('emu-sel-count');
+  if (cnt) cnt.textContent = '已选 ' + n + ' 个';
+  ['btn-emu-start', 'btn-emu-stop', 'btn-emu-restart'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.disabled = n === 0; b.style.opacity = n === 0 ? 0.4 : 1; }
+  });
+  const all = document.getElementById('emu-check-all');
+  if (all) all.checked = n > 0 && n === checks.length;
+}
+function emuToggleAll(checked) {
+  document.querySelectorAll('.emu-check').forEach(c => c.checked = checked);
+  emuSelUpdate();
+}
+async function emuBatch(action) {
+  const idxs = [...document.querySelectorAll('.emu-check:checked')].map(c => c.dataset.idx);
+  if (!idxs.length) return;
+  if (action === 'stop' && !confirm('确定关闭选中的 ' + idxs.length + ' 个模拟器？将先停止其 MAA 再关闭。')) return;
+  const out = document.getElementById('emu-batch-result');
+  if (out) out.textContent = '执行中...';
+  const r = await apiPost('/emulator/batch/' + action, { indexes: idxs });
+  const n = r.ok ? r[action] : 0;
+  if (out) out.textContent = r.ok ? `完成 ${n} / ${r.total} 个` : '❌ ' + (r.error || '失败');
+  toast(r.ok ? `${action === 'start' ? '▶' : action === 'stop' ? '⏹' : '🔄'} 已${action === 'start' ? '启动' : action === 'stop' ? '关闭' : '重启'} ${n} 个模拟器` : (r.error || '批量操作失败'), r.ok ? '' : 'error');
+  setTimeout(() => renderEmus(document.getElementById('content')), 3000);
 }
 async function emuControl(idx, action) {
   const r = await apiPost('/emulator/' + idx + '/' + action, {});
