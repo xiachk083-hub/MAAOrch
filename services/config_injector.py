@@ -323,10 +323,25 @@ class ConfigService:
         ss["EmulatorWaitSeconds"] = int(ac.get("emu_wait", 60) or 60)
         # 6.16 game client (server) — Gui.RuntimeSettings.ClientType
         # (gui.json flat key Start.ClientType is not read by 6.16)
+        # 6.16 stores enum MEMBER names via JsonStringEnumConverter:
+        # Official/Bilibili/EN/JP/KR/Txwy — "YoStarJP" is the UI display
+        # name, NOT the JSON value (invalid enum → InvalidEnumValueRemoveConverter
+        # silently resets it back to Official on save).
         if ac.get("game_client"):
-            rs = gui.setdefault("RuntimeSettings", {})
-            rs["ClientType"] = ac["game_client"]
-            rs["StartGame"] = True
+            _client_enum = {
+                "Official": "Official",
+                "Bilibili": "Bilibili",
+                "YoStarEN": "EN",
+                "YoStarJP": "JP",
+                "YoStarKR": "KR",
+                "Txwy": "Txwy",
+                "txwy": "Txwy",
+            }
+            client_enum = _client_enum.get(ac.get("game_client", ""))
+            if client_enum:
+                rs = gui.setdefault("RuntimeSettings", {})
+                rs["ClientType"] = client_enum
+                rs["StartGame"] = True
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
