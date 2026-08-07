@@ -1047,6 +1047,10 @@ class AccountRunner:
         is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):
             is_real_error = False
+        # Connect-only mode: MAA exits on its own (no tasks, GUI idle) — that's
+        # normal, never treat as an error or shut down the emulator.
+        if ac and ac.get("_connect_only"):
+            is_real_error = False
 
         # Kill residual process
         if old_proc and hasattr(old_proc, 'pid'):
