@@ -1897,9 +1897,20 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     @app.post("/api/maa/check_update")
     def handle_maa_check_update():
         cur = mw.config.get("maa_version", "未知")
+        from services.maa_download import _is_source_ready
+        source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
+        # Source integrity FIRST — a corrupted/partial source (e.g. a failed
+        # project replace) must trigger a re-download even if the version number
+        # matches the latest release.
+        if not _is_source_ready(source_dir):
+            return {"ok": True, "has_update": True, "corrupted": True,
+                    "current": cur, "latest": cur,
+                    "reason": "MAA source 不完整（可能替换失败损坏），需要重新下载"}
         urls = [
             "https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
             "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/releases/latest",
+            "https://ghfast.top/https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
+            "https://ghproxy.net/https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
         ]
         tag = ""
         for url in urls:

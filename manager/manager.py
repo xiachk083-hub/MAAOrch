@@ -346,6 +346,16 @@ def download_project() -> tuple[bool, str]:
             if not running:
                 break
             time.sleep(1)
+        # Kill orphaned MAA.exe children — MAAOrch spawns MAA.exe subprocesses
+        # that survive the MAAOrch process exit and lock services\maa\ files,
+        # which made rmtree fail and left a half-broken project behind.
+        try:
+            subprocess.run(["taskkill", "/F", "/IM", "MAA.exe"],
+                           capture_output=True, timeout=10,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+            log("已清理残留 MAA.exe 进程")
+        except Exception:
+            pass
         # Replace
         old_dir = None
         if root.exists():

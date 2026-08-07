@@ -3169,7 +3169,10 @@ async function checkMaaUpdate() {
   try {
     const r = await apiPost('/maa/check_update');
     if (r.ok) {
-      if (r.has_update) {
+      if (r.corrupted) {
+        if (result) result.innerHTML = `⚠ <b style="color:var(--danger)">MAA 源已损坏</b>（${r.reason || '替换失败导致'}'）<br>需要重新下载`;
+        if (dlBtn) dlBtn.style.display = '';
+      } else if (r.has_update) {
         if (result) result.innerHTML = `发现新版本 <b>${r.latest}</b> (当前 ${r.current})`;
         if (dlBtn) dlBtn.style.display = '';
       } else {
