@@ -239,8 +239,14 @@ def download_zip(url: str, dest: Path) -> bool:
 
 def is_safe_zip_path(member: str, extract_dir: Path) -> bool:
     p = Path(member)
-    resolved = (extract_dir / member).resolve()
-    return not member.startswith("/") and ".." not in p.parts and resolved.is_relative_to(extract_dir)
+    if member.startswith("/") or ".." in p.parts:
+        return False
+    try:
+        resolved = (extract_dir / member).resolve(strict=False)
+        base = extract_dir.resolve(strict=False)
+        return resolved == base or base in resolved.parents
+    except Exception:
+        return False
 
 
 def extract_zip(zip_path: Path, out_dir: Path) -> bool:
@@ -260,7 +266,7 @@ def extract_zip(zip_path: Path, out_dir: Path) -> bool:
             top = list(top_dirs)[0] if has_top and list(top_dirs)[0] else ""
             for m in names:
                 if not is_safe_zip_path(m, out_dir):
-                    log(f"危险路径跳过: {m}")
+                    log(f"跳过(路径检查失败): {m}")
                     continue
                 rel = m[len(top) + 1:] if top and m.startswith(top + "/") else (m if not top else m)
                 if not rel:
