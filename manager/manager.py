@@ -32,6 +32,12 @@ LOG_FILE = BASE_DIR / "manager.log"
 BACKUP_DIR = BASE_DIR / "backups"
 REPO_URL = "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip"
 RAW_BASE = "https://raw.githubusercontent.com/xiachk083-hub/MAAOrch/main/"
+# Mirror fallbacks for slow GitHub connections (tried in order)
+MIRRORS = [
+    "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip",
+    "https://ghproxy.net/https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip",
+    "https://gh-proxy.com/https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip",
+]
 DEFAULT_CONFIG = {
     "project_dir": "E:\\MAAOrch",
     "port": 19998,
@@ -193,14 +199,16 @@ def stop_project() -> tuple[bool, str]:
 def download_zip(url: str, dest: Path) -> bool:
     """Download with per-chunk read timeout + retries (self-contained)."""
     old_to = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(60)
+    socket.setdefaulttimeout(30)
     try:
         for attempt in range(1, 4):
             try:
+                log(f"下载开始 (第{attempt}次): {url}")
                 req = urllib.request.Request(url, headers={"User-Agent": "MAAOrch-Manager"})
-                resp = urllib.request.urlopen(req, timeout=60)
+                resp = urllib.request.urlopen(req, timeout=30)
                 total = int(resp.headers.get("Content-Length", 0))
                 downloaded = 0
+                last_log = 0
                 with open(dest, "wb") as f:
                     while True:
                         chunk = resp.read(65536)
@@ -210,13 +218,19 @@ def download_zip(url: str, dest: Path) -> bool:
                         downloaded += len(chunk)
                         if total:
                             set_progress(pct=int(downloaded * 100 / total))
+                        # Log every ~2MB so stalls are visible
+                        if downloaded - last_log >= 2 * 1048576:
+                            log(f"下载中: {downloaded // 1048576}MB"
+                                + (f"/{total // 1048576}MB" if total else ""))
+                            last_log = downloaded
                 log(f"下载完成: {dest.stat().st_size // 1024}KB")
                 return True
             except Exception as e:
-                log(f"第 {attempt} 次下载中断: {e}")
+                log(f"第 {attempt} 次下载失败: {e}")
                 if attempt < 3:
                     time.sleep(3)
                 else:
+                    set_progress(state="error", message=f"下载失败: {e}")
                     return False
     finally:
         socket.setdefaulttimeout(old_to)
@@ -265,16 +279,26 @@ def extract_zip(zip_path: Path, out_dir: Path) -> bool:
 
 
 def download_project() -> tuple[bool, str]:
-    """Download main.zip, replace project dir (preserving config.json + services/maa/), restart."""
+    """Download main.zip (with mirror fallbacks), replace project dir, restart."""
     cfg = load_config()
     root = Path(cfg["project_dir"])
     try:
         set_progress(state="downloading", pct=0, message="下载 main.zip")
         tmp_dir = Path(tempfile.mkdtemp(prefix="maorch_mgr_"))
         tmp_zip = tmp_dir / "main.zip"
-        if not download_zip(REPO_URL, tmp_zip):
-            set_progress(state="error", message="下载失败")
-            return False, "下载失败"
+        # Try mirrors in order until one succeeds
+        ok = False
+        for url in MIRRORS:
+            log(f"尝试镜像: {url[:60]}...")
+            set_progress(message=f"下载中: {url[:50]}")
+            if download_zip(url, tmp_zip):
+                ok = True
+                break
+            tmp_zip.unlink(missing_ok=True)
+        if not ok:
+            set_progress(state="error", message="所有镜像下载失败")
+            shutil.rmtree(str(tmp_dir), ignore_errors=True)
+            return False, "所有镜像下载失败"
 
         set_progress(state="extracting", message="解压")
         extract_dir = tmp_dir / "extract"
