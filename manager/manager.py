@@ -336,6 +336,16 @@ def download_project() -> tuple[bool, str]:
                 log(f"保留用户数据: {rel}")
 
         set_progress(state="replacing", message="替换项目目录")
+        # Stop project FIRST — running MAAOrch/MAA locks files (services\maa\),
+        # rename/rmtree fails with WinError 183 otherwise.
+        log("替换前停止 MAAOrch...")
+        stop_project()
+        time.sleep(3)
+        for _ in range(10):
+            running, _ = is_project_running()
+            if not running:
+                break
+            time.sleep(1)
         # Replace
         old_dir = None
         if root.exists():
