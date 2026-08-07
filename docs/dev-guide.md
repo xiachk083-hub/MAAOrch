@@ -119,3 +119,43 @@ pytest tests/ -x -q
 | `POST /api/accounts/batch_save` | 表格模式批量保存 |
 | `POST /api/action/smart_all` | 一键调度（逐账号判断剿灭） |
 | `GET /api/sse` | SSE 实时推送 |
+
+## MAA 配置注入机制（血泪教训）
+
+### MAA v6 双配置源
+
+| 文件 | 管理方 | 内容 |
+|------|--------|------|
+| `config/gui.json` | `ConfigurationHelper` | **连接/启动设置**：`Connect.*`、`Start.*`、`MainFunction.PostActions` |
+| `config/gui.new.json` | `ConfigFactory` | **任务队列**：`TaskQueue`（StartUp/Fight/Infrast/...） |
+
+MAAOrch 注入（`config_injector.inject_smart`）**两个文件都写**。
+
+### 连接设置关键键（gui.json `Configurations.Default`）
+
+| 键 | 值 | 作用 |
+|----|-----|------|
+| `Connect.Address` | `127.0.0.1:<port>` | ADB 地址（**AutoDetect 开启时 UI 禁用此框**） |
+| `Connect.AutoDetect` | `False` | 关闭自动检测（默认 True） |
+| `Connect.AlwaysAutoDetect` | `False` | 关闭持续自动检测 |
+| `Connect.AdbPath` | adb.exe 路径 | 用 `find_adb()` 全盘搜索（MuMu 12 无 mumu-cli，adb 在 `nx_main\adb.exe`） |
+| `Connect.ConnectConfig` | `MuMuEmulator12` | 连接配置 |
+| `Start.RunDirectly` | `True` | **"启动 MAA 后直接运行"** — MAA GUI 启动后自动 LinkStart（前提：TryToStartEmulator 不卡住） |
+| `Start.StartGame` | `True` | 启动游戏 |
+| `Start.OpenEmulatorAfterLaunch` | `False` | **必须 False** — 模拟器由 MAAOrch 管理；MAA 若尝试启动模拟器（mumu-cli 索引错位）会卡住 TryToStartEmulator → 阻塞 RunDirectly 的 LinkStart |
+| `Start.EmulatorPath` | mumu-cli / MuMuManager | 模拟器 CLI 路径（MuMu 12 无 mumu-cli 时 fallback `MuMuManager.exe`） |
+
+### 已踩的坑（务必遵守）
+
+1. **端口重检测只在 `adb_address` 为空时执行** — `_auto_derive`/`_launch_job_body`/`_set_connection` 三处。MuMu 12 的 mumu-cli 单查 `--vmindex` 索引错位会**覆盖正确端口**（16992 vs 16708）。`detect_emu_instances`（`--vmindex all`）的端口是对的。
+2. **注入后删除 `.bak`** — MAA 启动解析失败会从 `.bak` 回退旧 `Connect.Address`（旧模拟器端口残留）。`config_injector._write` 写后 `unlink(gj.bak)`。
+3. **MaaCore 直连**（`infrastructure/maa_core.py`）— ctypes 绑定完整（AsstConnect/AppendTask/Start/Stop + 回调），但默认禁用。`runner._launch_core_daily()` 已实现（任务参数构造 + 回调日志），供调度台自动化用。**连接页保持 MAA GUI（手动辅助）**。
+4. **MAA GUI 无人值守不可靠**：RunDirectly 依赖 GUI 完整初始化 + TryToStartEmulator 不卡住；AutoDetect 默认 True（GUI 里地址框禁用）。自动跑任务建议用 Core 直连。
+5. **MAA 进程启动 `cwd`**：MAA 启动时 `Directory.SetCurrentDirectory(BaseDirectory)`（exe 目录）— cwd 参数不影响配置读取，但 junction 实例目录作 cwd 会 E_FAIL 崩溃，用 `Path(inst_dir).resolve()`。
+6. **优雅关闭**：`runner.stop()` 用 WM_CLOSE（`_graceful_close`）→ MAA 走 OnClose 释放 ADB/minitouch；硬杀（TerminateProcess）残留触摸服务 → MuMu 弹"运行异常"。
+7. **连接模式（`_connect_only`）MAA 退出是正常** — 空任务自退不应触发模拟器关机（`is_real_error` 排除）。
+8. **模拟器"运行异常"**：MuMu 进程在但 Android 没起来（ADB 连不上）→ 需重启模拟器（`POST /api/emulator/{idx}/restart`）。
+
+### 诊断端点
+
+`GET /api/maa/instances/{n}/config` — 看 MAA 实际读的配置：Connect.Address / AddressHistory / dir_files（含 bak）/ task_queue / Start.RunDirectly / Start.EmulatorPath 等。
