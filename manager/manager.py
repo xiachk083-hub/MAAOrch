@@ -32,6 +32,11 @@ LOG_FILE = BASE_DIR / "manager.log"
 BACKUP_DIR = BASE_DIR / "backups"
 REPO_URL = "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip"
 RAW_BASE = "https://raw.githubusercontent.com/xiachk083-hub/MAAOrch/main/"
+RAW_MIRRORS = [
+    "https://raw.githubusercontent.com/xiachk083-hub/MAAOrch/main/",
+    "https://ghfast.top/https://raw.githubusercontent.com/xiachk083-hub/MAAOrch/main/",
+    "https://ghproxy.net/https://raw.githubusercontent.com/xiachk083-hub/MAAOrch/main/",
+]
 # Mirror fallbacks for slow GitHub connections (tried in order)
 MIRRORS = [
     "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip",
@@ -424,21 +429,27 @@ def delete_project(confirm: bool) -> tuple[bool, str]:
 
 def update_manager() -> tuple[bool, str]:
     try:
-        url = RAW_BASE + "manager/manager.py"
-        req = urllib.request.Request(url, headers={"User-Agent": "MAAOrch-Manager"})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            content = r.read().decode("utf-8", errors="replace")
-        if "MAAOrch-Manager" not in content or len(content) < 5000:
-            return False, "内容校验失败（可能拉错文件）"
-        target = Path(__file__).resolve()
-        tmp = target.with_suffix(".py.new")
-        tmp.write_text(content, encoding="utf-8")
-        # Sanity: new file must compile
-        compile(tmp.read_text(encoding="utf-8"), str(tmp), "exec")
-        log("管理器新版本已下载，准备替换重启")
-        tmp.replace(target)
-        threading.Thread(target=_restart_manager, daemon=True).start()
-        return True, "updated, restarting"
+        for base in RAW_MIRRORS:
+            url = base + "manager/manager.py"
+            log(f"管理器更新尝试: {url[:60]}...")
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "MAAOrch-Manager"})
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    content = r.read().decode("utf-8", errors="replace")
+                if "MAAOrch-Manager" not in content or len(content) < 5000:
+                    log("内容校验失败，试下一个镜像")
+                    continue
+                target = Path(__file__).resolve()
+                tmp = target.with_suffix(".py.new")
+                tmp.write_text(content, encoding="utf-8")
+                compile(tmp.read_text(encoding="utf-8"), str(tmp), "exec")
+                log("管理器新版本已下载，准备替换重启")
+                tmp.replace(target)
+                threading.Thread(target=_restart_manager, daemon=True).start()
+                return True, "updated, restarting"
+            except Exception as e:
+                log(f"镜像失败: {e}")
+        return False, "所有镜像更新失败"
     except Exception as e:
         log(f"管理器更新失败: {e}")
         return False, str(e)
