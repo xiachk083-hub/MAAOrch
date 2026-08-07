@@ -1173,35 +1173,13 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             time.sleep(1)
         return False
 
-    @app.post("/api/emulator/{idx}/{action}")
-    def handle_emulator_control(idx: str, action: str):
-        from infrastructure.task_constants import find_mumu_cli
-        cli = find_mumu_cli()
-        if not cli:
-            raise HTTPException(500, "mumu-cli not found")
-        if action == "start":
-            subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
-            return {"ok": True, "action": "started"}
-        elif action == "stop":
-            _stop_maa_for_emu(idx)
-            time.sleep(2)  # let MAA exit and release ADB before shutting down
-            subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
-            return {"ok": True, "action": "stopped"}
-        elif action == "restart":
-            _stop_maa_for_emu(idx)
-            time.sleep(2)
-            subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
-            _wait_emu_stopped(cli, idx)  # wait for full exit instead of fixed 3s
-            time.sleep(2)
-            subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
-            return {"ok": True, "action": "restarted"}
-        raise HTTPException(400, "bad action")
-
     @app.post("/api/emulator/batch/{action}")
     def handle_emulator_batch(action: str, body: dict = {}):
         """Batch emulator control. body: {indexes: [..]} — default:
         start → all not-running, stop/restart → all running.
-        Serial with small gaps to avoid concurrent mumu-cli conflicts."""
+        Serial with small gaps to avoid concurrent mumu-cli conflicts.
+        NOTE: registered BEFORE /api/emulator/{idx}/{action} — otherwise
+        'batch' would match as an emulator index."""
         from infrastructure.task_constants import detect_emu_instances, find_mumu_cli
         if action not in ("start", "stop", "restart"):
             raise HTTPException(400, "bad action")
@@ -1244,6 +1222,30 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             time.sleep(1.5)
         _log_op(f"批量{action}模拟器", f"{done} 个")
         return {"ok": True, action: done, "total": len(targets)}
+
+    @app.post("/api/emulator/{idx}/{action}")
+    def handle_emulator_control(idx: str, action: str):
+        from infrastructure.task_constants import find_mumu_cli
+        cli = find_mumu_cli()
+        if not cli:
+            raise HTTPException(500, "mumu-cli not found")
+        if action == "start":
+            subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+            return {"ok": True, "action": "started"}
+        elif action == "stop":
+            _stop_maa_for_emu(idx)
+            time.sleep(2)  # let MAA exit and release ADB before shutting down
+            subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
+            return {"ok": True, "action": "stopped"}
+        elif action == "restart":
+            _stop_maa_for_emu(idx)
+            time.sleep(2)
+            subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
+            _wait_emu_stopped(cli, idx)  # wait for full exit instead of fixed 3s
+            time.sleep(2)
+            subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+            return {"ok": True, "action": "restarted"}
+        raise HTTPException(400, "bad action")
 
     @app.post("/api/system/close_popups")
     def handle_close_popups():
