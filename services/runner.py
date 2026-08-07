@@ -536,13 +536,12 @@ class AccountRunner:
         try: (Path(inst_dir) / "debug" / "asst.log").write_text("")
         except: pass
         self._log_positions[aid] = 0
-        # cwd MUST be the instance dir: MAA resolves .\config\gui.json relative to
-        # the process working directory. Without cwd it inherits MAAOrch's cwd,
-        # misses the injected config, falls back to defaults (RunDirectly=False),
-        # and never auto-starts tasks.
-        # NOTE: cwd=inst_dir made MAA.exe crash instantly (E_FAIL) when inst_dir
-        # is a junction — disabled pending a safer approach.
-        p = subprocess.Popen([str(exe)], shell=False)
+        # MAA resolves .\config\gui.json relative to the process working dir.
+        # We MUST run with cwd=instance dir or MAA misses the injected config
+        # (RunDirectly=False → never auto-starts). Use resolved real path —
+        # junction (unresolved) cwd crashed MAA.exe with E_FAIL.
+        real_dir = str(Path(inst_dir).resolve())
+        p = subprocess.Popen([str(exe)], shell=False, cwd=real_dir)
         p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
         self._start_times[aid] = time.time()
