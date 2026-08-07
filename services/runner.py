@@ -291,8 +291,11 @@ class AccountRunner:
                 except: pass
         self._active.pop(account_id, None)
         self.ctx.proc_status.discard(account_id)
-        # Release queue-side occupancy marks immediately so a relaunch isn't
-        # blocked by the 150s stale-cleaner for connect-only accounts.
+        self._release_emu_mark(account_id)
+
+    def _release_emu_mark(self, account_id: str) -> None:
+        """Release queue-side occupancy marks immediately so a relaunch isn't
+        blocked by the 150s stale-cleaner (covers stop, crash, and cleanup paths)."""
         try:
             lq = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
             if lq:
@@ -533,7 +536,11 @@ class AccountRunner:
         try: (Path(inst_dir) / "debug" / "asst.log").write_text("")
         except: pass
         self._log_positions[aid] = 0
-        p = subprocess.Popen([str(exe)], shell=False)
+        # cwd MUST be the instance dir: MAA resolves .\config\gui.json relative to
+        # the process working directory. Without cwd it inherits MAAOrch's cwd,
+        # misses the injected config, falls back to defaults (RunDirectly=False),
+        # and never auto-starts tasks.
+        p = subprocess.Popen([str(exe)], shell=False, cwd=str(inst_dir))
         p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
         self._start_times[aid] = time.time()
@@ -821,6 +828,9 @@ class AccountRunner:
         duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)
         self.ctx.proc_status.discard(aid)
+        # Release queue mark on ANY exit (crash/kill included) — stale marks
+        # blocked relaunches for up to 150s before this fix.
+        self._release_emu_mark(aid)
 
         name = ac.get("name", aid) if ac else aid
         if ac and ac.get("_connect_only"):

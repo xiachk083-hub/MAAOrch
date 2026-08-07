@@ -196,7 +196,9 @@ def ensure_maa_instances_async(ctx, force=False, progress_cb=None, sync=False) -
         try:
             s_stat = src_exe.stat()
             i_stat = inst1_exe.stat()
-            if s_stat.st_mtime != i_stat.st_mtime or s_stat.st_size != i_stat.st_size:
+            # Compare size only — mtime is unreliable (MAA.exe running rewrites
+            # timestamps, causing infinite rebuild loops).
+            if s_stat.st_size != i_stat.st_size:
                 ctx.log("[实例] maa/source/ 已更新，重建实例池...")
                 _delete_instances(pool)
                 with _INSTANCE_LOCK:
