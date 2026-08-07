@@ -613,6 +613,18 @@ def main() -> None:
     host = "0.0.0.0"
     log(f"MAAOrch-Manager v1.0.0 启动 | 项目: {cfg['project_dir']} | 端口: {port}")
     log(f"Token: {cfg['token']}")
+    # Auto-start the project if it isn't running — one-click recovery after reboot:
+    # user only needs to start the manager (double-click manager.bat), the project
+    # comes up automatically.
+    try:
+        running, pid = is_project_running()
+        if running:
+            log(f"项目已在运行 (PID {pid})")
+        else:
+            ok, msg = start_project()
+            log(f"自动启动项目: {msg}")
+    except Exception as e:
+        log(f"自动启动项目失败: {e}")
     try:
         server = ThreadingHTTPServer((host, port), Handler)
         log(f"监听 {host}:{port}")

@@ -1899,7 +1899,7 @@ async function renderConnect(container) {
     connSelUpdate();
     // Live screenshot refresh (chained: load-finished → next tick, staggered
     // start offsets so N emulators don't all request at the same instant).
-    const shotInterval = emus.length > 6 ? 4000 : 3000;
+    const shotInterval = 5000;
     const allDetails = el.querySelectorAll('details');
     emus.forEach((e, i) => {
       const aid = 'emu' + e.index;

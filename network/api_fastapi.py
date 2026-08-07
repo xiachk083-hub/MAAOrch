@@ -71,6 +71,14 @@ def _check_rate(ip: str, limit: int = 200) -> bool:
     return True
 
 
+# ── Screenshot cache (connect wall) ──
+# 2.5s per-emulator cache + global serialization of adb screencap:
+# N emulators polling every 3-5s would otherwise saturate the adb channel
+# and slow down MAA tasks running on the same adb server.
+_shot_cache: dict[str, tuple[float, bytes]] = {}
+_shot_lock = threading.Lock()
+
+
 # ── App factory ──
 
 def create_app(mw: Any) -> FastAPI:
@@ -1764,6 +1772,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 pass
         if not addr:
             raise HTTPException(400, "no adb address")
+        # 2.5s per-emulator cache — the connect wall polls every 3-5s, so
+        # most requests hit the cache and adb screencap runs once per tick.
+        import time as _time
+        _now = _time.time()
+        cached = _shot_cache.get(aid)
+        if cached and _now - cached[0] < 2.5:
+            return StreamingResponse(io.BytesIO(cached[1]), media_type="image/png",
+                                     headers={"Cache-Control": "no-cache"})
         adb = ac.get("adb_path", "") or ""
         if not adb:
             try:
@@ -1771,12 +1787,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 adb = find_adb() or "adb"
             except Exception:
                 adb = "adb"
-        subprocess.run([adb, "-s", addr, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
-                       capture_output=True, timeout=5, creationflags=_CF)
-        r = subprocess.run([adb, "-s", addr, "exec-out", "screencap", "-p"],
-                           capture_output=True, timeout=15, creationflags=_CF)
+        # Serialize screencaps globally — N emulators screencapping at once
+        # saturates the adb channel and slows down MAA tasks themselves.
+        with _shot_lock:
+            r = subprocess.run([adb, "-s", addr, "exec-out", "screencap", "-p"],
+                               capture_output=True, timeout=15, creationflags=_CF)
         if r.returncode != 0 or len(r.stdout) < 100:
             raise HTTPException(500, "screencap failed")
+        _shot_cache[aid] = (_time.time(), r.stdout)
+        if len(_shot_cache) > 32:
+            _shot_cache.clear()
         return StreamingResponse(io.BytesIO(r.stdout), media_type="image/png",
                                  headers={"Cache-Control": "no-cache"})
 
