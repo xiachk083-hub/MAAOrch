@@ -1923,6 +1923,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         "Start.ClientType": c.get("Start.ClientType", ""),
                         "Start.RunDirectly": c.get("Start.RunDirectly", ""),
                         "Start.StartGame": c.get("Start.StartGame", ""),
+                        "Start.EmulatorPath": c.get("Start.EmulatorPath", ""),
+                        "Start.EmulatorAddCommand": c.get("Start.EmulatorAddCommand", ""),
+                        "Start.OpenEmulatorAfterLaunch": c.get("Start.OpenEmulatorAfterLaunch", ""),
                         "MainFunction.PostActions": c.get("MainFunction.PostActions", ""),
                     }
                     tq = c.get("TaskQueue", [])
