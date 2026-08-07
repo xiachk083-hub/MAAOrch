@@ -363,8 +363,11 @@ def download_project() -> tuple[bool, str]:
             dest = root / item.name
             if item.is_dir():
                 if dest.exists():
-                    shutil.rmtree(str(dest), ignore_errors=True)
-                shutil.copytree(item, dest)
+                    # Leftover from a partial previous replace (e.g. rmtree failed
+                    # on a locked file) — merge instead of failing with WinError 183.
+                    shutil.copytree(item, dest, dirs_exist_ok=True)
+                else:
+                    shutil.copytree(item, dest)
             else:
                 shutil.copy2(item, dest)
 
@@ -393,6 +396,18 @@ def download_project() -> tuple[bool, str]:
         log(f"项目已更新并重启: {msg}")
         return True, f"updated and restarted ({msg})"
     except Exception as e:
+        # Rollback: if the replace failed mid-way and we renamed the old project
+        # aside, put it back so the project is never left half-broken.
+        try:
+            if old_dir and old_dir.exists() and not (root / "ui" / "web" / "index.html").exists():
+                log("替换失败，回滚旧项目...")
+                if root.exists():
+                    shutil.rmtree(str(root), ignore_errors=True)
+                os.rename(str(old_dir), str(root))
+                old_dir = None
+                log("回滚完成")
+        except Exception as rb:
+            log(f"回滚失败: {rb}")
         set_progress(state="error", message=str(e))
         log(f"更新失败: {e}")
         return False, str(e)
