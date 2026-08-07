@@ -1695,13 +1695,31 @@ async function execOnNode(nodeId, action, args) {
 }
 
 // ── Emulator Management ──
+function _natCmp(a, b) {
+  // Natural compare: digit runs compared numerically (官-2 < 官-10),
+  // other chunks by pinyin. Tie-break by remaining chunk count.
+  const pa = String(a).match(/\d+|\D+/g) || [];
+  const pb = String(b).match(/\d+|\D+/g) || [];
+  const n = Math.min(pa.length, pb.length);
+  for (let i = 0; i < n; i++) {
+    const xa = pa[i], xb = pb[i];
+    if (/^\d+$/.test(xa) && /^\d+$/.test(xb)) {
+      const d = parseInt(xa, 10) - parseInt(xb, 10);
+      if (d) return d;
+    } else {
+      const d = xa.localeCompare(xb, 'zh-Hans-CN');
+      if (d) return d;
+    }
+  }
+  return pa.length - pb.length;
+}
 function _sortEmus(emus) {
-  // Default: name (pinyin) order; toggle via emuSortToggle (persisted).
+  // Default: name (pinyin, natural) order; toggle via emuSortToggle (persisted).
   const mode = localStorage.getItem('maorch_emu_sort') || 'name';
   const arr = [...(emus || [])];
   if (mode === 'name') {
-    arr.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-Hans-CN')
-                       || Number(a.index) - Number(b.index));
+    arr.sort((a, b) => _natCmp(a.name || '', b.name || '')
+                       || _natCmp(String(a.index), String(b.index)));
   } else {
     arr.sort((a, b) => Number(a.index) - Number(b.index));
   }
