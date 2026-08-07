@@ -496,6 +496,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "lines": lines})
             else:
                 self._json(200, {"ok": True, "lines": []})
+        elif path == "/api/project_log":
+            # Read MAAOrch's debug.log tail (for diagnosing startup crashes)
+            root = project_dir()
+            dp = root / "debug.log"
+            if dp.exists():
+                lines = dp.read_text(encoding="utf-8", errors="replace").splitlines()[-100:]
+                self._json(200, {"ok": True, "lines": lines})
+            else:
+                self._json(200, {"ok": True, "lines": ["debug.log 不存在"], "dir": str(dp)})
         else:
             self._json(404, {"ok": False, "error": "not found"})
 
