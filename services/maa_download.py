@@ -258,8 +258,23 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
         exe = source_dir / "MAA.exe"
         if not exe.exists():
             _log("[MAA] source 目录不完整，清理后重新下载")
-            shutil.rmtree(source_dir, ignore_errors=True)
-            source_dir.mkdir(parents=True)
+            # Orphaned MAA.exe processes hold locks on source files and make
+            # rmtree fail → mkdir then hits WinError 183. Kill them first.
+            try:
+                import subprocess as _sp
+                _sp.run(["taskkill", "/F", "/IM", "MAA.exe"],
+                        capture_output=True, timeout=10,
+                        creationflags=_sp.CREATE_NO_WINDOW)
+            except Exception:
+                pass
+            time.sleep(2)
+            for _ in range(5):
+                try:
+                    shutil.rmtree(source_dir)
+                    break
+                except Exception:
+                    time.sleep(2)
+            source_dir.mkdir(parents=True, exist_ok=True)
 
     # Step 1: Get download URL
     _log("[MAA] 检查 GitHub 最新版本...")
