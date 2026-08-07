@@ -323,6 +323,18 @@ def download_project() -> tuple[bool, str]:
 
         # Preserve user data
         preserve = {}
+        # Extra safety: always snapshot config.json to manager backups before
+        # any deploy — the in-project preservation once silently produced an
+        # empty accounts list and accounts were only recoverable from here.
+        try:
+            src_cfg = root / "models" / "config.json"
+            if src_cfg.exists():
+                BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+                bk = BACKUP_DIR / f"config_predeploy_{time.strftime('%Y%m%d_%H%M%S')}.json"
+                shutil.copy2(str(src_cfg), str(bk))
+                log(f"部署前备份 config.json → {bk.name}")
+        except Exception as e:
+            log(f"部署前备份失败: {e}")
         for rel in ("models/config.json", "services/maa"):
             src = root / rel
             if src.exists():
@@ -392,6 +404,23 @@ def download_project() -> tuple[bool, str]:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(bak, dest)
             log(f"恢复用户数据: {rel}")
+
+        # Post-deploy integrity check: config.json must exist and carry accounts —
+        # a silently replaced default config loses all accounts (happened once).
+        try:
+            cfg_path = root / "models" / "config.json"
+            if cfg_path.exists():
+                raw = cfg_path.read_text(encoding="utf-8", errors="replace")
+                if len(raw) < 500 or '"accounts"' not in raw:
+                    log("警告: config.json 疑似被默认配置覆盖，尝试从备份恢复...")
+                    bk = BACKUP_DIR / "config.json"
+                    if bk.exists() and len(bk.read_text(encoding="utf-8", errors="replace")) > len(raw):
+                        shutil.copy2(str(bk), str(cfg_path))
+                        log("已从管理器备份恢复 config.json")
+            else:
+                log("警告: config.json 缺失")
+        except Exception as e:
+            log(f"config.json 校验失败: {e}")
 
         # Cleanup old + temp
         if old_dir and old_dir.exists():

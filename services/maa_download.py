@@ -174,11 +174,18 @@ def _download_zip(url: str, dest: Path, log, version: str = "") -> bool:
 
 
 def _extract_zip(zip_path: Path, source_dir: Path, log) -> bool:
-    """Extract zip to source_dir, handling possible top-level directory nesting."""
+    """Extract zip to source_dir, handling possible top-level directory nesting.
+    File-by-file with progress logging + per-file fault tolerance — extractall()
+    on 9000+ files gave zero progress and hung silently under AV scanning."""
     log("解压中...")
     if source_dir.exists():
-        shutil.rmtree(source_dir, ignore_errors=True)
-    source_dir.mkdir(parents=True)
+        for _ in range(5):
+            try:
+                shutil.rmtree(source_dir)
+                break
+            except Exception:
+                time.sleep(2)
+    source_dir.mkdir(parents=True, exist_ok=True)
     try:
         with zipfile.ZipFile(zip_path) as zf:
             members = zf.namelist()
@@ -191,24 +198,29 @@ def _extract_zip(zip_path: Path, source_dir: Path, log) -> bool:
                 m.startswith(list(top_dirs)[0] + "/") or m == list(top_dirs)[0] or m == list(top_dirs)[0] + "/"
                 for m in members if m
             )
-            if has_top and list(top_dirs)[0]:
-                top = list(top_dirs)[0]
-                log(f"  检测到顶层目录: {top}")
-                for m in members:
-                    if m == top or m == top + "/":
-                        continue
-                    rel = m[len(top) + 1:] if m.startswith(top + "/") else m
-                    if not rel:
-                        continue
-                    dest = source_dir / rel
+            top = list(top_dirs)[0] if has_top and list(top_dirs)[0] else ""
+            total = len(members)
+            done = 0
+            for m in members:
+                if m == top or m == top + "/":
+                    continue
+                rel = m[len(top) + 1:] if top and m.startswith(top + "/") else m
+                if not rel:
+                    continue
+                dest = source_dir / rel
+                try:
                     if m.endswith("/"):
                         dest.mkdir(parents=True, exist_ok=True)
                     else:
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         with zf.open(m) as src, open(dest, "wb") as dst:
                             dst.write(src.read())
-            else:
-                zf.extractall(source_dir)
+                except Exception as e:
+                    log(f"  跳过文件(损坏): {m}: {e}")
+                done += 1
+                if done % 1000 == 0:
+                    log(f"  解压进度: {done}/{total}")
+                    _dl_update(message=f"解压 {done}/{total}")
         for f in source_dir.rglob("*"):
             try:
                 os.chmod(f, 0o755)
@@ -275,6 +287,23 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
                 except Exception:
                     time.sleep(2)
             source_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            # MAA.exe present but config not initialized (fresh official zip has
+            # no config/) — run MAA once to generate $type instead of re-downloading
+            # the whole 250MB package (previous behavior looped forever).
+            gj = source_dir / "config" / "gui.new.json"
+            if not gj.exists():
+                _log("[MAA] MAA.exe 存在但配置缺失，尝试初始化...")
+                try:
+                    _init_maa_source_wrapper(source_dir, _log)
+                except Exception as e:
+                    _log(f"[MAA] 初始化失败: {e}")
+                if _is_source_ready(source_dir):
+                    ver = _detect_version(source_dir)
+                    if ver != "unknown":
+                        ctx.config["maa_version"] = ver
+                    _dl_update(state="done", pct=100, version=ver, message="就绪(初始化完成)")
+                    return True
 
     # Step 1: Get download URL
     _log("[MAA] 检查 GitHub 最新版本...")
