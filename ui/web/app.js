@@ -2124,6 +2124,7 @@ async function renderLogs(container) {
         <option value="error">仅错误</option>
       </select>
       <button class="small" onclick="clearLogView()">清空</button>
+      <button class="small" onclick="openLogHistory()">📁 历史</button>
       <button class="small" id="ai-analyze-btn" onclick="manualAIAnalyze()" style="color:var(--accent);display:none">🤖 AI 分析</button>
     </div>
     <pre id="log-feed" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px;font-size:11px;line-height:1.4;height:calc(100vh - 120px);overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all;font-family:Consolas,'Courier New',monospace"></pre>
@@ -2136,8 +2137,65 @@ async function renderLogs(container) {
   }, 3000);
 }
 
-async function manualAIAnalyze() {
-  if (!_logSource || !_logSource.startsWith('maa_')) return;
+// ── Archived MAA logs (logs/maa_history) ──
+async function openLogHistory() {
+  let el = document.getElementById('log-hist-panel');
+  if (el) { el.remove(); return; }
+  el = document.createElement('div');
+  el.id = 'log-hist-panel';
+  el.style.cssText = 'position:fixed;top:0;right:0;width:500px;max-width:100vw;height:100vh;background:var(--bg2);border-left:1px solid var(--border);z-index:200;padding:12px;overflow-y:auto;font-size:11px;box-shadow:-4px 0 20px rgba(0,0,0,0.3)';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
+    + '<span style="font-size:12px;font-weight:bold;color:var(--text2)">📁 MAA 历史日志</span>'
+    + '<select id="hist-aid" onchange="loadHistFiles()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">'
+    + '<option value="">选择账号...</option></select>'
+    + '<span style="flex:1"></span>'
+    + '<button class="small" onclick="this.parentElement.parentElement.remove()">✕</button></div>'
+    + '<div id="hist-files" style="color:var(--text3);margin-bottom:8px">加载中...</div>'
+    + '<pre id="hist-content" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px;font-size:10px;line-height:1.4;max-height:60vh;overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all;font-family:Consolas,\'Courier New\',monospace"></pre>';
+  document.body.appendChild(el);
+  const r = await apiGet('/maa/logs_history');
+  const sel = el.querySelector('#hist-aid');
+  if (r.ok && r.accounts && r.accounts.length) {
+    sel.innerHTML = '<option value="">选择账号...</option>'
+      + r.accounts.map(a => `<option value="${a}">${a}</option>`).join('');
+  } else {
+    document.getElementById('hist-files').textContent = '暂无归档日志（任务完成后自动归档）';
+  }
+}
+async function loadHistFiles() {
+  const aid = document.getElementById('hist-aid').value;
+  const box = document.getElementById('hist-files');
+  const content = document.getElementById('hist-content');
+  if (content) content.style.display = 'none';
+  if (!aid) { box.innerHTML = ''; return; }
+  box.innerHTML = '加载中...';
+  const r = await apiGet('/maa/logs_history?aid=' + aid);
+  if (!r.ok || !r.files || !r.files.length) { box.innerHTML = '暂无历史日志（任务完成后自动归档）'; return; }
+  box.innerHTML = r.files.map(f => {
+    const ts = (f.name.split('_')[0] || '').slice(0, 15);
+    const kind = f.name.includes('gui') ? 'gui' : 'asst';
+    return '<div style="padding:3px 0;display:flex;gap:4px;align-items:center;border-bottom:1px solid var(--border)">'
+      + '<span style="color:var(--text3);white-space:nowrap">' + ts + '</span>'
+      + '<span style="color:' + (kind === 'gui' ? 'var(--warn)' : 'var(--accent)') + ';font-weight:bold">' + kind + '</span>'
+      + '<span style="flex:1"></span>'
+      + '<button class="small" onclick="viewHistLog(\'' + aid + '\',\'' + f.name + '\')">查看</button></div>';
+  }).join('');
+}
+async function viewHistLog(aid, file) {
+  const r = await apiGet('/maa/logs_history?aid=' + aid + '&file=' + file + '&lines=400');
+  const content = document.getElementById('hist-content');
+  if (!content) return;
+  if (r.ok && r.lines) {
+    content.textContent = r.lines.join('\n');
+    content.style.display = 'block';
+    content.scrollTop = 0;
+  } else {
+    content.textContent = '读取失败';
+    content.style.display = 'block';
+  }
+}
+
+async function manualAIAnalyze() {  if (!_logSource || !_logSource.startsWith('maa_')) return;
   const aid = _logSource.replace('maa_', '');
   const btn = document.getElementById('ai-analyze-btn');
   if (btn) { btn.textContent = '分析中...'; btn.disabled = true; }

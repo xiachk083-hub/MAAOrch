@@ -1001,10 +1001,48 @@ class AccountRunner:
 
     # ── Completion ──
 
+    def _archive_maa_logs(self, aid: str, inst_path: str | None) -> None:
+        """Archive MAA asst.log + gui.log after a run ends (any exit path).
+        Kept under logs/maa_history/{aid}/ — asst.log is wiped on every launch,
+        so without archiving past runs are unrecoverable."""
+        if not inst_path:
+            return
+        try:
+            from datetime import datetime as _dt
+            hist = Path(__file__).parent.parent / "logs" / "maa_history" / str(aid)
+            hist.mkdir(parents=True, exist_ok=True)
+            ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+            dbg = Path(inst_path) / "debug"
+            saved = 0
+            for src_name, dst_name in (("asst.log", "asst"), ("gui.log", "gui")):
+                src = dbg / src_name
+                if src.exists() and src.stat().st_size > 0:
+                    dst = hist / f"{ts}_{dst_name}.log"
+                    try:
+                        import shutil as _su
+                        _su.copy2(str(src), str(dst))
+                        saved += 1
+                    except Exception:
+                        pass
+            if saved:
+                self._log.info(f"[归档] {aid} MAA 日志 → logs/maa_history/{aid}/{ts}_*.log")
+            # Retention: keep newest 30 runs per account, drop the oldest
+            runs = sorted(hist.glob("*.log"))
+            while len(runs) > 60:  # 30 runs × 2 files
+                try:
+                    runs[0].unlink()
+                except Exception:
+                    pass
+                runs = runs[1:]
+        except Exception as e:
+            self._log.warning(f"[归档] {aid} 日志归档失败: {e}")
+
     def _cleanup(self, aid: str, exit_code: int, tasks: list[dict], sanity: dict | None = None, drops: dict | None = None) -> None:
         ac = self._active.pop(aid, None)
+        old_procs = self._procs.pop(aid, None)
+        if old_procs and not isinstance(old_procs, str):
+            self._archive_maa_logs(aid, getattr(old_procs, '_inst_path', None))
         old_progs = self._progs.pop(aid, None)
-        old_proc = self._procs.pop(aid, None)
         fh = self._log_handles.pop(aid, None)
         if fh and not fh.closed:
             try: fh.close()

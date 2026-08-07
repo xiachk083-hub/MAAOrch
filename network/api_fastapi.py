@@ -593,6 +593,31 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     return {"lines": [], "name": a.get("name", "")}
         return {"lines": [], "name": a.get("name", ""), "error": "no .meta file found, launch MAA first"}
 
+    @app.get("/api/maa/logs_history")
+    def handle_maa_logs_history(aid: str = "", file: str = "", lines: int = 200):
+        """List archived MAA logs (logs/maa_history/<aid>/). With ?file= read content."""
+        hist_root = Path(__file__).parent.parent / "logs" / "maa_history"
+        if not aid:
+            dirs = sorted([d.name for d in hist_root.iterdir() if d.is_dir()]) if hist_root.exists() else []
+            return {"ok": True, "accounts": dirs}
+        hist = hist_root / str(aid)
+        if not hist.exists():
+            return {"ok": True, "files": []}
+        if file:
+            fp = (hist / file).resolve()
+            if not str(fp).startswith(str(hist.resolve())) or not fp.exists():
+                raise HTTPException(404, "log not found")
+            try:
+                content = fp.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
+                return {"ok": True, "aid": aid, "file": file, "lines": content}
+            except Exception as e:
+                raise HTTPException(500, f"read failed: {e}")
+        files = []
+        for f in sorted(hist.glob("*.log"), reverse=True)[:60]:
+            files.append({"name": f.name, "size": f.stat().st_size,
+                          "mtime": f.stat().st_mtime})
+        return {"ok": True, "aid": aid, "files": files}
+
     @app.get("/api/accounts")
     def handle_accounts():
         data = []
