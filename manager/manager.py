@@ -155,8 +155,12 @@ def start_project() -> tuple[bool, str]:
             exe = sys.executable
         else:
             exe = shutil.which("pythonw") or sys.executable
+        # Capture stderr so startup crashes are diagnosable
+        err_f = open(BASE_DIR / "project_stderr.log", "w", encoding="utf-8", errors="replace")
         proc = subprocess.Popen([exe, str(main_py)], cwd=str(root),
-                                creationflags=subprocess.CREATE_NO_WINDOW)
+                                creationflags=subprocess.CREATE_NO_WINDOW,
+                                stdout=subprocess.DEVNULL, stderr=err_f)
+        err_f.close()
         try:
             PID_FILE.write_text(str(proc.pid), encoding="utf-8")
         except Exception:
@@ -497,14 +501,18 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json(200, {"ok": True, "lines": []})
         elif path == "/api/project_log":
-            # Read MAAOrch's debug.log tail (for diagnosing startup crashes)
+            # Read MAAOrch logs: debug.log (default) or ?file=stderr / ?file=crash
             root = project_dir()
-            dp = root / "debug.log"
+            fname = self.path.split("?", 1)[1].split("file=")[1].split("&")[0] if "file=" in self.path else "debug.log"
+            allowed = {"debug.log": root / "debug.log",
+                       "stderr": BASE_DIR / "project_stderr.log",
+                       "crash": root / "crash.log"}
+            dp = allowed.get(fname, root / "debug.log")
             if dp.exists():
                 lines = dp.read_text(encoding="utf-8", errors="replace").splitlines()[-100:]
-                self._json(200, {"ok": True, "lines": lines})
+                self._json(200, {"ok": True, "file": fname, "lines": lines})
             else:
-                self._json(200, {"ok": True, "lines": ["debug.log 不存在"], "dir": str(dp)})
+                self._json(200, {"ok": True, "file": fname, "lines": [f"{dp} 不存在"]})
         else:
             self._json(404, {"ok": False, "error": "not found"})
 
