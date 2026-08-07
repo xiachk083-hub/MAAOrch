@@ -1497,11 +1497,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if mode == "daily":
             tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
             ac["note"] = "通用日常"
-            ac["_core_daily"] = True  # drive via MaaCore directly (no GUI)
         else:
             tasks = []
             ac["note"] = "仅连接(手动操作)"
-            ac.pop("_core_daily", None)
         _dispatch_slot(ac, tasks, "connect")
         return ac
 
