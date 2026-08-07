@@ -65,6 +65,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); over
 .conn-card:hover { border-color: var(--border); }
 .conn-card:hover .card-actions { display: flex; }
 
+/* Launch submenu (server picker) */
+.conn-menu { position: absolute; top: 100%; left: 0; z-index: 200; min-width: 150px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35); overflow: hidden; }
+.conn-menu-item { padding: 6px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.conn-menu-item:hover { background: var(--accent); color: #fff; }
+.conn-menu-item:not(:last-child) { border-bottom: 1px solid var(--border); }
+
 /* Tables */
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }

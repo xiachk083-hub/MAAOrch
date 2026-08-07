@@ -1493,6 +1493,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         mode = body.get("mode", "connect")
         if mode not in ("connect", "daily"):
             mode = "connect"
+        game_client = str(body.get("game_client", "") or "")
         idxs = [str(x) for x in (body.get("indexes") or [])]
         lq = _lq()
         if lq._paused:
@@ -1523,17 +1524,18 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if real or lq.is_queued(aid):
                 continue
             port = e.get("adb_port", "")
-            ac = _connect_account(conn, idx, port, mode=mode)
+            ac = _connect_account(conn, idx, port, mode=mode, game_client=game_client)
             lq.enqueue(aid, "force", priority=0, slot="connect")
             connected += 1
-            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port}) mode={mode}")
+            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port}) mode={mode} client={game_client or '默认'}")
         if connected:
             _log_op("连接模拟器", f"{connected} 个运行中的模拟器 ({mode})")
             lq.tick()
         mw.config["accounts"] = mw.accounts
         return {"ok": True, "found": len(emus), "connected": connected, "mode": mode}
 
-    def _connect_account(conn: list, idx, port: str, mode: str = "connect") -> dict:
+    def _connect_account(conn: list, idx, port: str, mode: str = "connect",
+                         game_client: str = "") -> dict:
         """Create (or reuse) a connect-only temp account and dispatch tasks for it."""
         aid = f"emu{idx}"
         ac = next((x for x in conn if x.get("id") == aid), None)
@@ -1541,7 +1543,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             ac = {
                 "id": aid,
                 "name": f"模拟器#{idx}",
-                "game_client": "",
+                "game_client": game_client,
                 "emu_instance_index": idx,
                 "adb_address": f"127.0.0.1:{port}" if port else "",
                 "adb_path": "",
@@ -1550,6 +1552,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "_connect_only": True,
             }
             conn.append(ac)
+        elif game_client:
+            ac["game_client"] = game_client
         if mode == "daily":
             tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
             ac["note"] = "通用日常"
@@ -1611,7 +1615,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if conn is None:
             mw.connect_accounts = []
             conn = mw.connect_accounts
-        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode)
+        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode,
+                              game_client=str(body.get("game_client", "") or ""))
         lq.enqueue(aid, "force", priority=0, slot="connect")
         lq.tick()
         _log_op("连接", f"模拟器#{idx} ({mode})")
@@ -1639,7 +1644,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if conn is None:
             mw.connect_accounts = []
             conn = mw.connect_accounts
-        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode)
+        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode,
+                              game_client=str(body.get("game_client", "") or ""))
         lq.enqueue(aid, "force", priority=0, slot="connect")
         lq.tick()
         return {"ok": True}

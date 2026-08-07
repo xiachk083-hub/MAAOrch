@@ -1856,8 +1856,7 @@ async function renderConnect(container) {
       + '<span style="flex:1"></span>'
       + '<label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="conn-check-all" onchange="connectToggleAll(this.checked)"> 全选</label>'
       + '<span id="conn-sel-count" style="font-size:10px;color:var(--text3)">已选 0 个</span>'
-      + '<button class="small primary" id="btn-batch-launch" onclick="connectBatch(\'connect\')" disabled style="opacity:0.4">🚀 启动·仅连接</button>'
-      + '<button class="small primary" id="btn-batch-daily" onclick="connectBatch(\'daily\')" disabled style="opacity:0.4">⚙ 启动·日常</button>'
+      + _batchLaunchMenuHTML()
       + '<button class="small" id="btn-batch-stop" onclick="connectBatchStop()" disabled style="opacity:0.4">⏹ 停止 MAA</button>'
       + '<button class="small" id="btn-batch-emustop" onclick="connectBatchEmuStop()" disabled style="opacity:0.4;color:var(--danger)">⏹ 关闭模拟器</button>'
       + '<span id="connect-batch-result" style="font-size:10px;color:var(--text3)"></span>'
@@ -1888,8 +1887,7 @@ async function renderConnect(container) {
         + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:4px;border:1px solid var(--border);background:var(--bg3);display:block" onerror="this.style.opacity=0.3" onload="this.style.opacity=1">'
         + '</div>'
         + '<div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap">'
-        + '<button class="small primary conn-launch" onclick="launchConnect(\'' + e.index + '\',\'connect\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 仅连接</button>'
-        + '<button class="small conn-launch-daily" onclick="launchConnect(\'' + e.index + '\',\'daily\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>⚙ 日常</button>'
+        + _launchMenuHTML(e.index, maaOn)
         + '<button class="small danger conn-stop" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止</button>'
         + '<button class="small conn-restart" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
         + '<button class="small" onclick="emuControl(' + e.index + ',\'stop\')" style="color:var(--danger)">⏹ 关模拟器</button>'
@@ -1972,9 +1970,9 @@ async function loadConnectLog(aid) {
   const r = await apiGet('/connect/' + aid + '/log');
   el.textContent = (r.ok && r.lines) ? r.lines : '暂无日志';
 }
-async function launchConnect(idx, mode) {
-  const r = await apiPost('/connect/launch', { index: idx, mode });
-  if (r.ok) toast(mode === 'daily' ? ('模拟器#' + idx + ' 日常已启动') : ('模拟器#' + idx + ' MAA 已启动'));
+async function launchConnect(idx, mode, client) {
+  const r = await apiPost('/connect/launch', { index: idx, mode, game_client: client || '' });
+  if (r.ok) toast(mode === 'daily' ? ('模拟器#' + idx + ' ' + (client || '官服') + '日常已启动') : ('模拟器#' + idx + ' MAA 已启动'));
   else toast(r.error || '启动失败', 'error');
   setTimeout(() => renderConnect(document.getElementById('content')), 2000);
 }
@@ -1992,6 +1990,45 @@ async function restartConnect(aid, mode) {
 }
 
 // ── Connect batch ops (grid checkboxes) ──
+const _CLIENT_MENU = [
+  ['connect', '', '🔌 仅连接'],
+  ['daily', 'Official', '⚙ 日常 · 官服'],
+  ['daily', 'Bilibili', '⚙ 日常 · B服'],
+  ['daily', 'YoStarJP', '⚙ 日常 · 日服'],
+  ['daily', 'YoStarEN', '⚙ 日常 · 国际服'],
+  ['daily', 'YoStarKR', '⚙ 日常 · 韩服'],
+  ['daily', 'Txwy', '⚙ 日常 · 繁中'],
+];
+function _toggleMenu(id) {
+  const m = document.getElementById(id);
+  if (!m) return;
+  const show = m.style.display !== 'block';
+  document.querySelectorAll('.conn-menu').forEach(x => x.style.display = 'none');
+  m.style.display = show ? 'block' : 'none';
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.conn-menu-wrap')) {
+    document.querySelectorAll('.conn-menu').forEach(x => x.style.display = 'none');
+  }
+});
+function _menuItemsHTML(call) {
+  // call(mode, client) → onclick JS string
+  return _CLIENT_MENU.map(m => '<div class="conn-menu-item" onclick="' + call(m[0], m[1]) + '">' + m[2] + '</div>').join('');
+}
+function _batchLaunchMenuHTML() {
+  return '<div class="conn-menu-wrap" style="position:relative;display:inline-block">'
+    + '<button class="small primary" id="btn-batch-launch" onclick="event.stopPropagation();_toggleMenu(\'menu-batch-launch\')" disabled style="opacity:0.4">▶ 批量启动 ▾</button>'
+    + '<div id="menu-batch-launch" class="conn-menu" style="display:none">'
+    + _menuItemsHTML((mode, client) => "connectBatch('" + mode + "','" + client + "')")
+    + '</div></div>';
+}
+function _launchMenuHTML(idx, maaOn) {
+  return '<div class="conn-menu-wrap" style="position:relative;display:inline-block">'
+    + '<button class="small primary conn-launch" onclick="event.stopPropagation();_toggleMenu(\'menu-launch-' + idx + '\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 启动 ▾</button>'
+    + '<div id="menu-launch-' + idx + '" class="conn-menu" style="display:none">'
+    + _menuItemsHTML((mode, client) => "launchConnect('" + idx + "','" + mode + "','" + client + "')")
+    + '</div></div>';
+}
 function connSelUpdate() {
   const checks = document.querySelectorAll('.conn-check');
   const n = document.querySelectorAll('.conn-check:checked').length;
@@ -2011,15 +2048,19 @@ function connectToggleAll(checked) {
 function _connSelectedIndexes() {
   return [...document.querySelectorAll('.conn-check:checked')].map(c => c.dataset.idx);
 }
-async function connectBatch(mode) {
+async function connectBatch(mode, client) {
   const idxs = _connSelectedIndexes();
   if (!idxs.length) return;
   const out = document.getElementById('connect-batch-result');
   if (out) out.textContent = '启动中...';
-  const r = await apiPost('/action/connect_running_emus', { mode, indexes: idxs });
+  const r = await apiPost('/action/connect_running_emus', { mode, indexes: idxs, game_client: client || '' });
   if (out) out.textContent = r.ok ? `已入队 ${r.connected} / ${r.found} 个` : '❌ ' + (r.error || '失败');
-  toast(r.ok ? (mode === 'daily' ? `⚙ ${r.connected} 个日常已入队` : `🔌 ${r.connected} 个已入队`) : (r.error || '批量启动失败'), r.ok ? '' : 'error');
+  const label = mode === 'daily' ? (client ? `日常·${_clientLabel(client)}` : '日常') : '仅连接';
+  toast(r.ok ? `${label} ${r.connected} 个已入队` : (r.error || '批量启动失败'), r.ok ? '' : 'error');
   setTimeout(() => renderConnect(document.getElementById('content')), 2000);
+}
+function _clientLabel(client) {
+  return ({ 'Official': '官服', 'Bilibili': 'B服', 'YoStarJP': '日服', 'YoStarEN': '国际服', 'YoStarKR': '韩服', 'Txwy': '繁中' })[client] || client;
 }
 async function connectBatchStop() {
   const idxs = _connSelectedIndexes();

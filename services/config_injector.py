@@ -321,6 +321,12 @@ class ConfigService:
         if cli and emu_idx:
             ss["EmulatorAddCommand"] = f"control --vmindex {emu_idx} launch"
         ss["EmulatorWaitSeconds"] = int(ac.get("emu_wait", 60) or 60)
+        # 6.16 game client (server) — Gui.RuntimeSettings.ClientType
+        # (gui.json flat key Start.ClientType is not read by 6.16)
+        if ac.get("game_client"):
+            rs = gui.setdefault("RuntimeSettings", {})
+            rs["ClientType"] = ac["game_client"]
+            rs["StartGame"] = True
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
