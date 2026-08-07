@@ -89,10 +89,14 @@ def create_app(mw: Any) -> FastAPI:
     @app.middleware("http")
     async def auth_rate_middleware(request: Request, call_next):
         ip = request.client.host if request.client else "127.0.0.1"
-        if not _check_rate(ip):
+        path = request.url.path
+        # Screenshot polling is a required high-frequency read-only resource
+        # (N emulators × every 2s easily exceeds the 200/min limit and gets
+        # 429'd → the connect wall shows broken images). Exempt it from the
+        # rate limiter; all other APIs keep the limit.
+        if not path.endswith("/screenshot") and not _check_rate(ip):
             return JSONResponse({"error": "rate_limited"}, 429)
         # Static files and SSE don't need auth
-        path = request.url.path
         if path.startswith("/api/") and path != "/api/sse" and token:
             h = request.headers.get("x-agent-token", "")
             if h and not hmac.compare_digest(h, token):

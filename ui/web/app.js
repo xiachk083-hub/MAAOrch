@@ -1897,16 +1897,27 @@ async function renderConnect(container) {
         + '</div>';
     }).join('');
     connSelUpdate();
-    // Live screenshot refresh (2s) + log refresh when open
+    // Live screenshot refresh (chained: load-finished → next tick, staggered
+    // start offsets so N emulators don't all request at the same instant).
+    const shotInterval = emus.length > 6 ? 4000 : 3000;
     const allDetails = el.querySelectorAll('details');
     emus.forEach((e, i) => {
       const aid = 'emu' + e.index;
       const img = el.querySelector('img[src*="/' + aid + '/screenshot"]');
       if (img) {
-        const timer = setInterval(() => {
-          if (state.page !== 'connect') { clearInterval(timer); return; }
+        const tick = () => {
+          if (state.page !== 'connect' || !img.isConnected) { return; }
           img.src = '/api/connect/' + aid + '/screenshot?_t=' + Date.now();
-        }, 2000);
+        };
+        // Stagger first load, then chain on load/error (no request pile-up)
+        let timer = setTimeout(() => {
+          if (state.page !== 'connect' || !img.isConnected) { return; }
+          tick();
+          timer = setInterval(() => {
+            if (state.page !== 'connect' || !img.isConnected) { clearInterval(timer); return; }
+            tick();
+          }, shotInterval);
+        }, (i * 400) % shotInterval);
         window._connectTimers = window._connectTimers || [];
         window._connectTimers.push(timer);
       }
