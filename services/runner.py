@@ -507,13 +507,6 @@ class AccountRunner:
     def _launch_for_instance(self, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
         mode = self.ctx.config.get("schedule_mode", "daily")
-        # Connect-mode daily: drive MaaCore directly — MAA GUI needs a manual
-        # "Link Start" click and ignores injected RunDirectly/AutoDetect config,
-        # so GUI mode cannot run dailies unattended.
-        if ac.get("_core_daily"):
-            if self._launch_core_daily(ac, inst_dir):
-                return
-            self.emit_log(f"{ac.get('name', aid)} Core 直连不可用，回退 GUI 模式")
         exe = Path(inst_dir) / "MAA.exe"
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)

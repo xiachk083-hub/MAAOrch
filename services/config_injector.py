@@ -315,6 +315,16 @@ class ConfigService:
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
                 cli = find_mumu_cli()
+                # MuMu 12 has no mumu-cli — use MuMuManager.exe instead.
+                # Start.EmulatorPath must exist or MAA's RunDirectly flow
+                # (TryToStartEmulator → LinkStart) stalls and tasks never start.
+                if cli is None:
+                    try:
+                        adb = c.get("Connect.AdbPath", "")
+                        if adb and Path(adb).parent.joinpath("MuMuManager.exe").exists():
+                            cli = str(Path(adb).parent / "MuMuManager.exe")
+                    except Exception:
+                        pass
                 if cli:
                     c["Start.EmulatorPath"] = str(cli)
                     c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
