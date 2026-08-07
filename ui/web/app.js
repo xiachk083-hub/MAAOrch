@@ -1695,13 +1695,34 @@ async function execOnNode(nodeId, action, args) {
 }
 
 // ── Emulator Management ──
+function _sortEmus(emus) {
+  // Default: name (pinyin) order; toggle via emuSortToggle (persisted).
+  const mode = localStorage.getItem('maorch_emu_sort') || 'name';
+  const arr = [...(emus || [])];
+  if (mode === 'name') {
+    arr.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-Hans-CN')
+                       || Number(a.index) - Number(b.index));
+  } else {
+    arr.sort((a, b) => Number(a.index) - Number(b.index));
+  }
+  return arr;
+}
+function emuSortToggle() {
+  const cur = localStorage.getItem('maorch_emu_sort') || 'name';
+  localStorage.setItem('maorch_emu_sort', cur === 'name' ? 'index' : 'name');
+  if (state.page === 'emus') renderEmus(document.getElementById('content'));
+  else if (state.page === 'connect') renderConnect(document.getElementById('content'));
+}
+function _emuSortLabel() {
+  return localStorage.getItem('maorch_emu_sort') === 'index' ? '索引' : '名称';
+}
 async function renderEmus(container) {
   // Clear previous auto-refresh timer
   if (window._emuTimer) clearInterval(window._emuTimer);
   try {
     const r = await apiGet('/emulators');
     if (!r.ok) { showError(container); return; }
-    const emus = r.emulators || [];
+    const emus = _sortEmus(r.emulators || []);
     const isVisible = container === document.getElementById('content');
     container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="color:var(--text2);font-size:12px;font-weight:bold">📱 模拟器管理</span>'
@@ -1714,6 +1735,7 @@ async function renderEmus(container) {
       + '<span id="emu-batch-result" style="font-size:10px;color:var(--text3)"></span>'
       + '<button class="small primary" onclick="connectRunningEmus()">🔌 连接运行中的模拟器</button>'
       + '<span id="emu-connect-result" style="font-size:10px;color:var(--text3)"></span>'
+      + '<button class="small" onclick="emuSortToggle()">↕ ' + _emuSortLabel() + '</button>'
       + '<button class="small" onclick="renderEmus(document.getElementById(\'content\'))">刷新</button>'
       + '</div><div class="card-list" id="emus-list"></div>';
     const el = document.getElementById('emus-list');
@@ -1809,7 +1831,7 @@ async function renderConnect(container) {
   try {
     const r = await apiGet('/connect/status');
     if (!r.ok) { showError(container, r.error); return; }
-    const emus = r.emulators || [];
+    const emus = _sortEmus(r.emulators || []);
     container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="color:var(--text2);font-size:12px;font-weight:bold">🔌 连接模式</span>'
       + '<span style="font-size:10px;color:var(--text3)">' + emus.length + ' 个运行中的模拟器 | 与调度互不干扰</span>'
@@ -1821,6 +1843,7 @@ async function renderConnect(container) {
       + '<button class="small" id="btn-batch-stop" onclick="connectBatchStop()" disabled style="opacity:0.4">⏹ 停止 MAA</button>'
       + '<button class="small" id="btn-batch-emustop" onclick="connectBatchEmuStop()" disabled style="opacity:0.4;color:var(--danger)">⏹ 关闭模拟器</button>'
       + '<span id="connect-batch-result" style="font-size:10px;color:var(--text3)"></span>'
+      + '<button class="small" onclick="emuSortToggle()">↕ ' + _emuSortLabel() + '</button>'
       + '<button class="small" onclick="renderConnect(document.getElementById(\'content\'))">刷新</button>'
       + '</div><div class="conn-grid" id="connect-list"></div>';
     const el = document.getElementById('connect-list');
@@ -1894,7 +1917,7 @@ async function _updateConnectStatus(container) {
   try {
     const r = await apiGet('/connect/status');
     if (!r.ok) return;
-    const emus = r.emulators || [];
+    const emus = _sortEmus(r.emulators || []);
     const el = document.getElementById('connect-list');
     if (!el) return;
     const cards = el.querySelectorAll('.card');
