@@ -1935,6 +1935,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     ]
                     entry["global"] = {k: v for k, v in d.get("Global", {}).items()
                                        if k.startswith(("GUI.", "Start."))}
+                    gui = c.get("Gui", {})
+                    entry["gui_connect"] = gui.get("ConnectSettings", {})
+                    entry["gui_startup"] = gui.get("StartUpSettings", {})
+                    entry["gui_postactions"] = gui.get("PostActions", "")
                 except Exception as e:
                     entry["error"] = str(e)
             result["files"][fn] = entry

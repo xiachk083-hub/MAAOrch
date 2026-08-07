@@ -536,6 +536,33 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "file": fname, "lines": lines})
             else:
                 self._json(200, {"ok": True, "file": fname, "lines": [f"{dp} 不存在"]})
+        elif path == "/api/config_backup":
+            # Read MAAOrch config backups: ?file=<name> returns JSON content,
+            # no file param lists available backups (config.json itself included).
+            root = project_dir()
+            cfg_file = root / "models" / "config.json"
+            bk_dir = root / "models" / "backups"
+            files = [cfg_file] if cfg_file.exists() else []
+            if bk_dir.exists():
+                files += sorted(bk_dir.glob("config_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            fname = self.path.split("?", 1)[1].split("file=")[1].split("&")[0] if "file=" in self.path else ""
+            if fname:
+                target = next((f for f in files if f.name == fname), None)
+                if target is None:
+                    self._json(404, {"ok": False, "error": f"{fname} 不存在"})
+                    return
+                try:
+                    content = json.loads(target.read_text(encoding="utf-8"))
+                except Exception as e:
+                    self._json(500, {"ok": False, "error": f"读取失败: {e}"})
+                    return
+                self._json(200, {"ok": True, "name": target.name,
+                                 "mtime": target.stat().st_mtime,
+                                 "accounts": content.get("accounts", [])})
+            else:
+                self._json(200, {"ok": True, "files": [
+                    {"name": f.name, "mtime": f.stat().st_mtime, "size": f.stat().st_size}
+                    for f in files[:12]]})
         else:
             self._json(404, {"ok": False, "error": "not found"})
 

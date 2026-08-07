@@ -269,6 +269,63 @@ class ConfigService:
             c["Connect.RetryOnDisconnected"] = "True"
             c["Connect.AllowADBRestart"] = "False"
             c["Connect.AllowADBHardRestart"] = "False"
+            self._set_connection_v6_gui(c, ac)
+
+    def _set_connection_v6_gui(self, c: dict, ac: dict) -> None:
+        """MAA 6.16+: connection/startup settings live in gui.new.json under
+        Configurations.Default.Gui.* (nested), NOT gui.json flat keys.
+        AutoDetect defaults to True → injected Address is ignored and the
+        emulator index detection picks a wrong MuMu12 port (e.g. 16992 vs 16708).
+        SkipStartupAutoRunAfterUpdate=True also silently skips RunDirectly
+        right after a MAA self-update — reset it on every injection."""
+        gui = c.setdefault("Gui", {})
+        cs = gui.setdefault("ConnectSettings", {})
+        cs.update({
+            "AutoDetect": False,
+            "AlwaysAutoDetect": False,
+            "AdbReplaced": True,
+            "AllowAdbRestart": False,
+            "AllowAdbHardRestart": False,
+            "EnableAdbLite": False,
+            "KillAdbOnExit": False,
+        })
+        pr = ac.get("connection_preset", "") or "MuMuEmulator12"
+        cs["Config"] = {"MuMuPro": "MuMuEmulator12"}.get(pr, pr)
+        to = ac.get("touch_mode", "MiniTouch")
+        cs["TouchMode"] = {"MiniTouch": "MiniTouch", "MaaTouch": "MaaTouch", "ADB": "ADB"}.get(to, "MiniTouch")
+        if ac.get("adb_address"):
+            cs["Address"] = ac["adb_address"]
+        if ac.get("adb_path"):
+            cs["AdbPath"] = ac["adb_path"]
+        emu_idx = str(ac.get("emu_instance_index", "") or "")
+        cli = find_mumu_cli()
+        if cli is None and ac.get("adb_path"):
+            try:
+                cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                if cand.exists():
+                    cli = str(cand)
+            except Exception:
+                pass
+        if emu_idx and str(emu_idx).isdigit():
+            extras = cs.setdefault("Extras", {}).setdefault("MuMuEmulator12", {})
+            extras["InstanceIndex"] = int(emu_idx)
+            extras["IsEnabled"] = False
+            extras["EnableBridgeConnection"] = False
+            extras["EnableTouch"] = False
+            if cli:
+                extras["EmulatorPath"] = str(cli)
+        ss = gui.setdefault("StartUpSettings", {})
+        ss.update({
+            "RunDirectly": True,
+            "SkipStartupAutoRunAfterUpdate": False,
+            "StartEmulator": False,
+            "RestartEmulatorWhenAdbFailed": False,
+        })
+        if cli:
+            ss["EmulatorPath"] = str(cli)
+        if cli and emu_idx:
+            ss["EmulatorAddCommand"] = f"control --vmindex {emu_idx} launch"
+        ss["EmulatorWaitSeconds"] = int(ac.get("emu_wait", 60) or 60)
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""

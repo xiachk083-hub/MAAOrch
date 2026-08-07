@@ -82,6 +82,7 @@ def load_config() -> dict:
                 data["warehouse"]=warehouse; data["version"]=4; ver=4
             if ver in (4,): data=migrate_v4_to_v5(data); ver=5
             if ver>=5:
+                data.setdefault("accounts", [])
                 data.setdefault("maa_version", "")
                 data.setdefault("maa_instances", 0)
                 data.setdefault("schedule_mode", "daily")
