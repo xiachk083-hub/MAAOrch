@@ -40,7 +40,7 @@ class ApiServer(QThread):
         super().__init__(); self.port=port; self.token=token; self.mw=mw; self._httpd=None
     def run(self) -> None:
         mw=self.mw; token=self.token
-        bind = mw.config.get("bind_address", "127.0.0.1") if hasattr(mw, 'config') else "127.0.0.1"
+        bind = mw.config.get("bind_address", "0.0.0.0") if hasattr(mw, 'config') else "0.0.0.0"
         # Simple rate limiter: max 200 req/min per IP (higher for localhost)
         _rate_buckets: dict[str,list[float]] = {}
         def _check_rate(ip: str, limit: int = 200) -> bool:

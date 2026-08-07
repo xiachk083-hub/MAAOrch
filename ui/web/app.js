@@ -466,7 +466,7 @@ async function renderSettings(container) {
         <option value="reclamation" ${cfg.schedule_mode==='reclamation'?'selected':''}>生息</option>
       </select></div>
       <div class="form-row"><label>API 端口</label><input type="number" id="input-port" value="${cfg.api_port||19999}"></div>
-      <div class="form-row"><label>绑定地址</label><input type="text" id="input-bind" value="${cfg.bind_address||'127.0.0.1'}" placeholder="127.0.0.1" style="font-size:10px">
+      <div class="form-row"><label>绑定地址</label><input type="text" id="input-bind" value="${cfg.bind_address||'0.0.0.0'}" placeholder="0.0.0.0" style="font-size:10px">
         <span style="color:var(--text3);font-size:9px">0.0.0.0 允许远程访问</span></div>
       <div class="form-row"><label>Webhook</label><input type="text" id="input-webhook" value="${cfg.webhook_url||''}" placeholder="https://example.com/webhook" style="font-size:10px">
         <span style="color:var(--text3);font-size:9px">任务完成时推送</span></div>

@@ -758,7 +758,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             "api_port": cfg.get("api_port", 19999),
             "smart_global": cfg.get("smart_global", {}),
             "webhook_url": cfg.get("webhook_url", ""),
-            "bind_address": cfg.get("bind_address", "127.0.0.1"),
+            "bind_address": cfg.get("bind_address", "0.0.0.0"),
             "api_token": cfg.get("api_token", ""),
             "ai_provider": cfg.get("ai_provider", "openai"),
             "ai_api_key": cfg.get("ai_api_key", ""),
@@ -2141,7 +2141,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
 
 def start_server(mw: Any, port: int = 19999) -> None:
-    bind = mw.config.get("bind_address", "127.0.0.1") if hasattr(mw, 'config') else "127.0.0.1"
+    bind = mw.config.get("bind_address", "0.0.0.0") if hasattr(mw, 'config') else "0.0.0.0"
     cert = mw.config.get("ssl_cert", "") if hasattr(mw, 'config') else ""
     key = mw.config.get("ssl_key", "") if hasattr(mw, 'config') else ""
     app = create_app(mw)
