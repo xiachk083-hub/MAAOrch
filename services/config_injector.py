@@ -328,10 +328,10 @@ class ConfigService:
                 if cli:
                     c["Start.EmulatorPath"] = str(cli)
                     c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
-                    if ac.get("emu_launch"):
-                        c["Start.OpenEmulatorAfterLaunch"] = "False"
-                    else:
-                        c["Start.OpenEmulatorAfterLaunch"] = "True"
+                    # Emulator is managed by MAAOrch — MAA must NOT try to launch
+                    # it (mumu-cli index mismatch can stall TryToStartEmulator,
+                    # which blocks RunDirectly's LinkStart). Force skip.
+                    c["Start.OpenEmulatorAfterLaunch"] = "False"
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
