@@ -527,7 +527,9 @@ class Handler(BaseHTTPRequestHandler):
             fname = self.path.split("?", 1)[1].split("file=")[1].split("&")[0] if "file=" in self.path else "debug.log"
             allowed = {"debug.log": root / "debug.log",
                        "stderr": BASE_DIR / "project_stderr.log",
-                       "crash": root / "crash.log"}
+                       "crash": root / "crash.log",
+                       "maa_gui": root / "services" / "maa" / "instances" / "1" / "debug" / "gui.log",
+                       "maa_asst": root / "services" / "maa" / "instances" / "1" / "debug" / "asst.log"}
             dp = allowed.get(fname, root / "debug.log")
             if dp.exists():
                 lines = dp.read_text(encoding="utf-8", errors="replace").splitlines()[-100:]
