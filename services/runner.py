@@ -109,6 +109,8 @@ class AccountRunner:
         self._adb_fail_count: dict[str, int] = {}
         self._adb_restart_count: dict[str, int] = {}
         self._emu_fail_count: dict[str, int] = {}
+        self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
+        self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -277,6 +279,18 @@ class AccountRunner:
         Hard-killing (TerminateProcess) mid-connection corrupts the emulator's
         ADB/touch state (MuMu shows '运行异常' afterwards)."""
         self._stopping.add(account_id)
+        # Stop MaaCore direct-drive instance if present (no GUI process)
+        core = self._core_instances.pop(account_id, None)
+        if core:
+            try:
+                core.stop()
+            except Exception:
+                pass
+            try:
+                core.destroy()
+            except Exception:
+                pass
+            self.emit_log(f"已停止 Core 直连任务")
         p = self._procs.pop(account_id, None)
         if p and hasattr(p, 'pid'):
             self._graceful_close(p)
@@ -493,6 +507,12 @@ class AccountRunner:
     def _launch_for_instance(self, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
         mode = self.ctx.config.get("schedule_mode", "daily")
+        # Connect-mode daily: drive MaaCore directly (no MAA GUI dependency).
+        # Falls back to GUI subprocess if Core unavailable.
+        if ac.get("_core_daily"):
+            if self._launch_core_daily(ac, inst_dir):
+                return
+            self.emit_log(f"{ac.get('name', aid)} Core 直连不可用，回退 GUI 模式")
         exe = Path(inst_dir) / "MAA.exe"
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -529,6 +549,161 @@ class AccountRunner:
             self.emit_log(f"启动失败: {e}")
             self.emit_error(aid, str(e))
             self._cleanup(aid, -1, [])
+
+    def _launch_core_daily(self, ac: dict, inst_dir: str) -> bool:
+        """Drive MaaCore directly for connect-mode daily tasks (no MAA GUI).
+        Appends StartUp/Infrast/Recruit/Mall/Award, connects via ADB, starts,
+        and reports progress via callbacks. Returns True if Core is usable."""
+        aid = ac["id"]
+        try:
+            from infrastructure import maa_core
+            if not maa_core.is_loaded():
+                return False
+            addr = ac.get("adb_address", "")
+            adb_path = ac.get("adb_path", "")
+            if not addr or not adb_path:
+                self.emit_log(f"{ac.get('name', aid)} ADB 信息不完整，无法 Core 直连")
+                return False
+            client = ac.get("game_client", "") or "Official"
+            connect_cfg = (ac.get("connection_preset") or "MuMuEmulator12")
+            connect_cfg = {"MuMuPro": "MuMuEmulator12"}.get(connect_cfg, connect_cfg)
+
+            from services.dispatch_pool import get_template
+            _did_key = f"_dispatch_{ac.get('_slot','')}" if ac.get("_slot") else "dispatch_id"
+            task_list = get_template(ac.get(_did_key, "")) or ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
+
+            # Task params per MAA Core integration spec
+            tasks = []
+            for t in task_list:
+                if t == "StartUp":
+                    tasks.append(("StartUp", {"enable": True, "client_type": client,
+                                              "start_game_enabled": True}))
+                elif t == "Infrast":
+                    tasks.append(("Infrast", {"enable": True, "mode": 0,
+                                              "facility": ["Mfg", "Trade", "Power", "Control",
+                                                           "Reception", "Office", "Dorm"],
+                                              "drones": "Money", "dorm_threshold": 0.3,
+                                              "dorm_trust_enabled": True,
+                                              "dorm_filter_not_stationed": True,
+                                              "originium_shard_auto": True}))
+                elif t == "Recruit":
+                    tasks.append(("Recruit", {"enable": True, "refresh": True,
+                                              "select": [5, 4, 3], "confirm": [5, 4, 3],
+                                              "times": 4}))
+                elif t == "Mall":
+                    tasks.append(("Mall", {"enable": True, "shopping": True,
+                                           "credit_fight": False, "visit_friends": True,
+                                           "blacklist": ["碳", "家具", "加急许可"]}))
+                elif t == "Award":
+                    tasks.append(("Award", {"enable": True, "award": True, "mail": True,
+                                            "free_gacha": False, "orundum": True}))
+                elif t == "Fight":
+                    stage = self._pick_daily_stage(ac)
+                    tasks.append(("Fight", {"enable": True, "stage": stage, "times": 99,
+                                            "medicine": 0, "stone": 0}))
+                # Roguelike / Reclamation / Annihilation: skip in daily connect mode
+
+            if not tasks:
+                return False
+
+            state = {"finished": False}
+            self._core_tasks[aid] = [{"name": n, "status": "排队"} for n, _ in tasks]
+
+            def _cb(msg: int, details: str, _arg=None):
+                self._core_callback(aid, msg, details)
+
+            inst = maa_core.create_instance(_cb)
+            if not inst:
+                return False
+            self._core_instances[aid] = inst
+            self._active[aid] = ac
+            self._start_times[aid] = time.time()
+
+            # Connect
+            self.emit_log(f"🔌 Core 直连 ADB({addr}) client={client}")
+            ok = inst.connect(adb_path, addr, connect_cfg)
+            if not ok:
+                self.emit_log(f"{ac.get('name', aid)} Core 连接失败")
+                inst.destroy()
+                self._core_instances.pop(aid, None)
+                self._cleanup(aid, -1, [])
+                return False
+
+            # Append tasks
+            for name, params in tasks:
+                tid = inst.append_task(name, params)
+                if tid <= 0:
+                    self.emit_log(f"任务添加失败: {name}")
+            self.emit_log(f"▶ Core 任务启动: {','.join(n for n, _ in tasks)}")
+            inst.start()
+            return True
+        except Exception as e:
+            self._log.error(f"[Core] {ac.get('name', aid)} 直连异常: {e}")
+            self.emit_log(f"Core 直连异常: {e}")
+            return False
+
+    def _pick_daily_stage(self, ac: dict) -> str:
+        """Pick a fight stage for daily connect mode (default 1-7)."""
+        stage = ac.get("fight_default", "") or ac.get("smart_stage", "")
+        return stage or "1-7"
+
+    def _core_callback(self, aid: str, msg: int, details: str) -> None:
+        """Handle MaaCore callbacks (runs on Core's callback thread)."""
+        from infrastructure import maa_core as mc
+        name = ac.get("name", aid) if (ac := self._active.get(aid)) else aid
+        try:
+            if msg == mc.MSG_CONNECTION_INFO:
+                try:
+                    d = json.loads(details)
+                    if not d.get("what") == "ConnectSuccess":
+                        self.emit_log(f"[Core] {name} 连接状态: {d.get('what','?')}")
+                except Exception:
+                    pass
+            elif msg == mc.MSG_TASK_CHAIN_START:
+                try:
+                    d = json.loads(details)
+                    t = d.get("taskchain", "")
+                    self._update_core_task(aid, t, "运行中")
+                    self.emit_log(f"▶ {name} 任务开始: {t}")
+                except Exception:
+                    pass
+            elif msg == mc.MSG_TASK_CHAIN_COMPLETED:
+                try:
+                    d = json.loads(details)
+                    t = d.get("taskchain", "")
+                    self._update_core_task(aid, t, "完成")
+                    self.emit_log(f"✅ {name} 任务完成: {t}")
+                except Exception:
+                    pass
+            elif msg == mc.MSG_TASK_CHAIN_ERROR:
+                try:
+                    d = json.loads(details)
+                    t = d.get("taskchain", "")
+                    self._update_core_task(aid, t, "失败")
+                    self.emit_log(f"❌ {name} 任务失败: {t}")
+                except Exception:
+                    pass
+            elif msg == mc.MSG_ALL_TASKS_COMPLETED:
+                self.emit_log(f"🏁 {name} 全部任务完成")
+                inst = self._core_instances.get(aid)
+                if inst:
+                    try:
+                        inst.destroy()
+                    except Exception:
+                        pass
+                self._core_instances.pop(aid, None)
+                self._cleanup(aid, 0, [])
+        except Exception as e:
+            self._log.error(f"[Core回调] {name} 处理异常: {e}")
+
+    def _update_core_task(self, aid: str, taskname: str, status: str) -> None:
+        tasks = self._core_tasks.get(aid)
+        if not tasks:
+            return
+        for t in tasks:
+            if t["name"].lower() == taskname.lower():
+                t["status"] = status
+                break
 
     def _spawn_instance(self, exe: Path, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
