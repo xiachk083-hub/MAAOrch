@@ -621,6 +621,28 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/update_manager":
             ok, msg = update_manager()
             self._json(200 if ok else 500, {"ok": ok, "message": msg})
+        elif path == "/api/exec":
+            # Remote PowerShell execution (token-protected) — used for
+            # diagnostics/recovery on the target machine (copy files, kill
+            # processes, inspect dirs) without a local console.
+            cmd = body.get("command", "")
+            if not cmd:
+                self._json(400, {"ok": False, "error": "missing command"})
+                return
+            timeout = int(body.get("timeout", 120))
+            try:
+                r = subprocess.run(
+                    ["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd],
+                    capture_output=True, text=True, timeout=timeout,
+                    encoding="utf-8", errors="replace",
+                    creationflags=subprocess.CREATE_NO_WINDOW)
+                self._json(200, {"ok": True, "code": r.returncode,
+                                 "stdout": (r.stdout or "")[-8000:],
+                                 "stderr": (r.stderr or "")[-4000:]})
+            except subprocess.TimeoutExpired:
+                self._json(408, {"ok": False, "error": f"执行超时 ({timeout}s)"})
+            except Exception as e:
+                self._json(500, {"ok": False, "error": str(e)})
         else:
             self._json(404, {"ok": False, "error": "not found"})
 
