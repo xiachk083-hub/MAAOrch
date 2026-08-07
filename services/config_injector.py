@@ -219,8 +219,9 @@ class ConfigService:
 
     def _set_connection(self, c: dict, ac: dict, use_v6: bool) -> None:
         """Write ADB/connection settings to MAA config dict (shared by v5 and v6)."""
-        # Detect ADB port via mumu-cli first, fallback to formula
-        if ac.get("emu_instance_index"):
+        # Detect ADB port via mumu-cli — only when no address is set yet.
+        # Overwriting breaks MuMu 12 (single-query index mismatch → wrong port).
+        if ac.get("emu_instance_index") and not ac.get("adb_address"):
             try:
                 cli = find_mumu_cli()
                 if cli:

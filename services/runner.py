@@ -139,8 +139,10 @@ class AccountRunner:
 
     def _auto_derive(self, ac: dict) -> None:
         """Auto-fill runtime fields — with mumu-cli ADB port detection."""
-        # ADB port via mumu-cli info first
-        if ac.get("emu_instance_index"):
+        # ADB port via mumu-cli info first — only when no address is set yet.
+        # Re-detection overwrote the correct port from detect_emu_instances
+        # (MuMu 12 mumu-cli single-query index mismatch returns wrong ports).
+        if ac.get("emu_instance_index") and not ac.get("adb_address"):
             try:
                 cli = find_mumu_cli()
                 if cli:
@@ -395,8 +397,10 @@ class AccountRunner:
         inst_id, inst_dir = inst
         self._adb_restart_count.pop(aid, None)
 
-        # Re-detect ADB port from mumu-cli before each launch (stale formula ports can be wrong)
-        if emu_idx:
+        # Re-detect ADB port from mumu-cli before each launch — only if empty.
+        # Overwriting an existing address breaks MuMu 12 (single-query index
+        # mismatch returns a wrong port, e.g. 16992 instead of 16708).
+        if emu_idx and not ac.get("adb_address"):
             cli = find_mumu_cli()
             if cli:
                 try:
