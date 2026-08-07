@@ -540,7 +540,9 @@ class AccountRunner:
         # the process working directory. Without cwd it inherits MAAOrch's cwd,
         # misses the injected config, falls back to defaults (RunDirectly=False),
         # and never auto-starts tasks.
-        p = subprocess.Popen([str(exe)], shell=False, cwd=str(inst_dir))
+        # NOTE: cwd=inst_dir made MAA.exe crash instantly (E_FAIL) when inst_dir
+        # is a junction — disabled pending a safer approach.
+        p = subprocess.Popen([str(exe)], shell=False)
         p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
         self._start_times[aid] = time.time()
