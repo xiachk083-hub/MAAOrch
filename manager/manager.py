@@ -523,19 +523,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, {"ok": True, "lines": []})
         elif path == "/api/project_log":
             # Read MAAOrch logs: debug.log (default) or ?file=stderr / ?file=crash
+            # MAA logs: ?file=maa_gui / maa_asst (instance 1) — add &inst=N for other instances
             root = project_dir()
-            fname = self.path.split("?", 1)[1].split("file=")[1].split("&")[0] if "file=" in self.path else "debug.log"
+            query = self.path.split("?", 1)[1] if "?" in self.path else ""
+            fname = query.split("file=")[1].split("&")[0] if "file=" in query else "debug.log"
+            inst = query.split("inst=")[1].split("&")[0] if "inst=" in query else "1"
             allowed = {"debug.log": root / "debug.log",
                        "stderr": BASE_DIR / "project_stderr.log",
                        "crash": root / "crash.log",
-                       "maa_gui": root / "services" / "maa" / "instances" / "1" / "debug" / "gui.log",
-                       "maa_asst": root / "services" / "maa" / "instances" / "1" / "debug" / "asst.log"}
+                       "maa_gui": root / "services" / "maa" / "instances" / inst / "debug" / "gui.log",
+                       "maa_asst": root / "services" / "maa" / "instances" / inst / "debug" / "asst.log"}
             dp = allowed.get(fname, root / "debug.log")
             if dp.exists():
                 lines = dp.read_text(encoding="utf-8", errors="replace").splitlines()[-100:]
-                self._json(200, {"ok": True, "file": fname, "lines": lines})
+                self._json(200, {"ok": True, "file": fname, "inst": inst, "lines": lines})
             else:
-                self._json(200, {"ok": True, "file": fname, "lines": [f"{dp} 不存在"]})
+                self._json(200, {"ok": True, "file": fname, "inst": inst, "lines": [f"{dp} 不存在"]})
         elif path == "/api/config_backup":
             # Read MAAOrch config backups: ?file=<name> returns JSON content,
             # no file param lists available backups (config.json itself included).
