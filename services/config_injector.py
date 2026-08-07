@@ -705,6 +705,15 @@ class ConfigService:
             _CONFIG_LOG.info(f"写入 {fn} (use_v6={use_v6}, tasks={len(c.get('TaskQueue',[]))}, infra_mode={infra_mode})")
             tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(gj)
+            # Remove .bak — MAA falls back to it when the main config seems
+            # incomplete, restoring stale Connect.Address (wrong emulator port).
+            # Deleting it forces MAA to use the freshly written config.
+            try:
+                bak = Path(str(gj) + ".bak")
+                if bak.exists():
+                    bak.unlink(missing_ok=True)
+            except Exception:
+                pass
 
         _write("gui.json", use_v6=False)
         _write("gui.new.json", use_v6=True)

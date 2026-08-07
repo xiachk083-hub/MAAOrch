@@ -1896,11 +1896,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     @app.get("/api/maa/instances/{n}/config")
     def handle_maa_instance_config(n: str):
         """Diagnostic: show connection-related keys in an instance's MAA config files.
-        Read-only — used to verify what MAA actually reads (Connect.Address etc.)."""
+        Read-only — used to verify what MAA actually reads (Connect.Address etc.).
+        Also lists all files in the config dir (incl. .bak which MAA may fall back to)."""
         inst_dir = Path(__file__).parent.parent / "services" / "maa" / "instances" / str(n)
+        cfg_dir = inst_dir / "config"
         result = {"ok": True, "index": n, "files": {}}
-        for fn in ("gui.json", "gui.new.json"):
-            fp = inst_dir / "config" / fn
+        # List all files in config dir (bak files matter — MAA restores from them)
+        result["dir_files"] = sorted(f.name for f in cfg_dir.iterdir()) if cfg_dir.exists() else []
+        for fn in ("gui.json", "gui.new.json", "gui.json.bak", "gui.new.json.bak"):
+            fp = cfg_dir / fn
             entry = {"exists": fp.exists()}
             if fp.exists():
                 try:
