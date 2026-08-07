@@ -882,11 +882,15 @@ class AccountRunner:
                     except: pass
                     self._cleanup(aid, -8, [])
                     return
-            # Stuck at startup: MAA running but no tasks logged for 120s
+            # Stuck at startup / idle hang cleanup:
+            # - daily/schedule: no tasks 120s after launch → stuck, kill
+            # - daily/schedule: tasks done but MAA hangs (asst.log silent 5min) → release instance
+            # - connect mode (no tasks): hang is NORMAL (manual use) → never kill
             ac = self._active.get(aid)
             if ac:
                 started = self._start_times.get(aid, 0)
-                if started and time.time() - started > 120:
+                is_connect = bool(ac.get("_connect_only"))
+                if started and time.time() - started > 120 and not is_connect:
                     tasks, _, _ = self._parse_log(aid)
                     if not tasks:
                         self.emit_log(f"⏱ {ac.get('name', aid)} 启动后无任务 ({int(time.time()-started)}s)，清理实例")
@@ -894,6 +898,21 @@ class AccountRunner:
                         try: p.terminate(); p.wait(3)
                         except: pass
                         self._cleanup(aid, -3, [])
+                        return
+                    # Tasks exist → MAA likely finished and is idling. asst.log keeps
+                    # getting written while tasks run; 5min silence = done/hung.
+                    _inst_path = getattr(p, '_inst_path', None)
+                    _idle = 9999.0
+                    if _inst_path:
+                        try:
+                            _idle = time.time() - (Path(_inst_path) / "debug" / "asst.log").stat().st_mtime
+                        except Exception:
+                            pass
+                    if _idle > 300:
+                        self.emit_log(f"⏱ {ac.get('name', aid)} 任务完成挂起 (日志静止 {int(_idle)}s)，清理实例")
+                        try: p.terminate(); p.wait(3)
+                        except: pass
+                        self._cleanup(aid, 0, tasks)
                         return
             # ADB keepalive — log only, don't kill MAA
             ac = self._active.get(aid)

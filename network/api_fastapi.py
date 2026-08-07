@@ -1735,7 +1735,13 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 pass
         if not addr:
             raise HTTPException(400, "no adb address")
-        adb = ac.get("adb_path", "") or "adb"
+        adb = ac.get("adb_path", "") or ""
+        if not adb:
+            try:
+                from infrastructure.task_constants import find_adb
+                adb = find_adb() or "adb"
+            except Exception:
+                adb = "adb"
         subprocess.run([adb, "-s", addr, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
                        capture_output=True, timeout=5, creationflags=_CF)
         r = subprocess.run([adb, "-s", addr, "exec-out", "screencap", "-p"],
