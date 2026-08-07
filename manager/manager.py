@@ -322,6 +322,7 @@ def download_project() -> tuple[bool, str]:
 
         set_progress(state="replacing", message="替换项目目录")
         # Replace
+        old_dir = None
         if root.exists():
             # Try rename old first (faster, safer), fallback to rmtree
             old_dir = tmp_dir / "old_project"
