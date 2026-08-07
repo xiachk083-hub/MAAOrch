@@ -41,7 +41,7 @@ def main():
         if preload(source_path):
             _LOG.info(f"MaaCore 已加载 (版本: {get_version()})")
         else:
-            _LOG.warning("MaaCore 加载失败，回退到子进程模式")
+            _LOG.warn("MaaCore 加载失败，回退到子进程模式")
     else:
         _LOG.info("MaaCore.dll 未找到，使用子进程模式")
 
