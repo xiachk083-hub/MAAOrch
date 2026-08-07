@@ -219,23 +219,18 @@ class ConfigService:
 
     def _set_connection(self, c: dict, ac: dict, use_v6: bool) -> None:
         """Write ADB/connection settings to MAA config dict (shared by v5 and v6)."""
-        # Detect ADB port via mumu-cli — only when no address is set yet.
-        # Overwriting breaks MuMu 12 (single-query index mismatch → wrong port).
+        # Detect ADB port via detect_emu_instances (--vmindex all) — only when no
+        # address is set yet. mumu-cli single-query (--vmindex N) returns a wrong
+        # port on MuMu 12 multi-instance (e.g. 16992 vs 16708).
         if ac.get("emu_instance_index") and not ac.get("adb_address"):
             try:
-                cli = find_mumu_cli()
-                if cli:
-                    import subprocess, json as _json
-                    from infrastructure.task_constants import CF
-                    r = subprocess.run([cli, "info", "--vmindex", str(ac["emu_instance_index"])],
-                                      capture_output=True, text=True, timeout=5, creationflags=CF,
-                                      encoding="utf-8", errors="replace")
-                    if r.returncode == 0:
-                        data = _json.loads(r.stdout)
-                        _adb_port = data.get("adb_port")
-                        if _adb_port:
-                            ac["adb_address"] = f"127.0.0.1:{_adb_port}"
-            except: pass
+                from infrastructure.task_constants import detect_emu_instances
+                for e in detect_emu_instances():
+                    if str(e.get("index", "")) == str(ac["emu_instance_index"]) and e.get("adb_port"):
+                        ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
+                        break
+            except Exception:
+                pass
         if not ac.get("adb_path"):
             from pathlib import Path
             from infrastructure.task_constants import find_mumu_cli, find_adb

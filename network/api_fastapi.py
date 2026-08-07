@@ -719,7 +719,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 aid = uuid.uuid4().hex[:12]
             existing = next((a for a in mw.accounts if a["id"] == aid), None)
             if existing:
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended"):
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "adb_address"):
                     if f in ac:
                         existing[f] = ac[f]
                 if "stages" in ac:
@@ -727,7 +727,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 updated += 1
             else:
                 new_ac = {"id": aid, "consecutive_failures": 0}
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages"):
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages", "adb_address"):
                     if f in ac:
                         new_ac[f] = ac[f]
                 mw.accounts.append(new_ac)

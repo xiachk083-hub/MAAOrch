@@ -417,20 +417,16 @@ class AccountRunner:
         # Re-detect ADB port from mumu-cli before each launch — only if empty.
         # Overwriting an existing address breaks MuMu 12 (single-query index
         # mismatch returns a wrong port, e.g. 16992 instead of 16708).
+        # Use detect_emu_instances (--vmindex all) which returns correct ports.
         if emu_idx and not ac.get("adb_address"):
-            cli = find_mumu_cli()
-            if cli:
-                try:
-                    r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
-                                      capture_output=True, text=True, timeout=5, creationflags=CF,
-                                      encoding="utf-8", errors="replace")
-                    if r.returncode == 0:
-                        data = json.loads(r.stdout)
-                        port = data.get("adb_port")
-                        if port:
-                            ac["adb_address"] = f"127.0.0.1:{port}"
-                except:
-                    pass  # fallback to existing address (formula or previous detection)
+            try:
+                from infrastructure.task_constants import detect_emu_instances
+                for e in detect_emu_instances():
+                    if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
+                        ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
+                        break
+            except Exception:
+                pass
 
         # Launch emulator
         if emu_idx:
