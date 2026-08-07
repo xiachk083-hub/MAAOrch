@@ -1773,10 +1773,17 @@ async function renderConnect(container) {
     const emus = r.emulators || [];
     container.innerHTML = '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="color:var(--text2);font-size:12px;font-weight:bold">🔌 连接模式</span>'
-      + '<span style="font-size:10px;color:var(--text3)">' + emus.length + ' 个运行中的模拟器 | 仅连接/日常，与调度互不干扰</span>'
+      + '<span style="font-size:10px;color:var(--text3)">' + emus.length + ' 个运行中的模拟器 | 与调度互不干扰</span>'
       + '<span style="flex:1"></span>'
+      + '<label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="conn-check-all" onchange="connectToggleAll(this.checked)"> 全选</label>'
+      + '<span id="conn-sel-count" style="font-size:10px;color:var(--text3)">已选 0 个</span>'
+      + '<button class="small primary" id="btn-batch-launch" onclick="connectBatch(\'connect\')" disabled style="opacity:0.4">🚀 启动·仅连接</button>'
+      + '<button class="small primary" id="btn-batch-daily" onclick="connectBatch(\'daily\')" disabled style="opacity:0.4">⚙ 启动·日常</button>'
+      + '<button class="small" id="btn-batch-stop" onclick="connectBatchStop()" disabled style="opacity:0.4">⏹ 停止 MAA</button>'
+      + '<button class="small" id="btn-batch-emustop" onclick="connectBatchEmuStop()" disabled style="opacity:0.4;color:var(--danger)">⏹ 关闭模拟器</button>'
+      + '<span id="connect-batch-result" style="font-size:10px;color:var(--text3)"></span>'
       + '<button class="small" onclick="renderConnect(document.getElementById(\'content\'))">刷新</button>'
-      + '</div><div class="card-list" id="connect-list"></div>';
+      + '</div><div class="conn-grid" id="connect-list"></div>';
     const el = document.getElementById('connect-list');
     if (!el) return;
     if (!emus.length) {
@@ -1788,28 +1795,30 @@ async function renderConnect(container) {
       const maaOn = e.maa_running;
       const statusColor = maaOn ? 'var(--accent)' : 'var(--warn)';
       const statusTxt = maaOn ? 'MAA 运行中' : (e.maa_queued ? '排队中...' : 'MAA 未连接');
-      return '<div class="card" style="padding:6px 8px;margin-bottom:6px;flex-direction:column;align-items:stretch">'
+      return '<div class="card conn-card">'
         + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-        + '<span style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span>'
+        + '<input type="checkbox" class="conn-check" data-idx="' + e.index + '" onchange="connSelUpdate()">'
+        + '<span style="width:8px;height:8px;border-radius:50%;background:' + (maaOn ? 'var(--accent)' : 'var(--warn)') + ';display:inline-block"></span>'
         + '<span style="font-size:12px;font-weight:bold">模拟器 #' + e.index + '</span>'
         + '<span style="font-size:9px;color:var(--text3)">' + (e.name || '') + ' · ADB:' + (e.adb_port || '-') + '</span>'
         + '<span style="flex:1"></span>'
         + '<span class="conn-status" style="font-size:9px;color:' + statusColor + ';font-weight:bold">● ' + statusTxt + '</span>'
         + '</div>'
-        + '<div style="display:flex;gap:4px;margin-bottom:4px">'
-        + '<button class="small primary conn-launch" onclick="launchConnect(\'' + e.index + '\',\'connect\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 启动 MAA·仅连接</button>'
-        + '<button class="small conn-launch-daily" onclick="launchConnect(\'' + e.index + '\',\'daily\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>⚙ 启动 MAA·日常</button>'
-        + '<button class="small danger conn-stop" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止 MAA</button>'
-        + '<button class="small conn-restart" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
-        + '<span style="flex:1"></span>'
-        + '<button class="small" onclick="emuControl(' + e.index + ',\'stop\')" style="color:var(--danger)">⏹ 关闭模拟器</button>'
+        + '<div style="margin-bottom:4px">'
+        + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:4px;border:1px solid var(--border);background:var(--bg3);display:block" onerror="this.style.opacity=0.3" onload="this.style.opacity=1">'
         + '</div>'
-        + '<div style="display:flex;gap:6px;align-items:flex-start">'
-        + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:160px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);flex-shrink:0" onerror="this.style.opacity=0.3" onload="this.style.opacity=1">'
-        + '<details style="flex:1;font-size:10px"><summary style="color:var(--text3);cursor:pointer">📋 MAA 日志</summary>'
+        + '<div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap">'
+        + '<button class="small primary conn-launch" onclick="launchConnect(\'' + e.index + '\',\'connect\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>🚀 仅连接</button>'
+        + '<button class="small conn-launch-daily" onclick="launchConnect(\'' + e.index + '\',\'daily\')" ' + (maaOn ? 'disabled style="opacity:0.4"' : '') + '>⚙ 日常</button>'
+        + '<button class="small danger conn-stop" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止</button>'
+        + '<button class="small conn-restart" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
+        + '<button class="small" onclick="emuControl(' + e.index + ',\'stop\')" style="color:var(--danger)">⏹ 关模拟器</button>'
+        + '</div>'
+        + '<details style="font-size:10px"><summary style="color:var(--text3);cursor:pointer">📋 MAA 日志</summary>'
         + '<pre id="connect-log-' + aid + '" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px;font-size:9px;line-height:1.4;max-height:140px;overflow-y:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all;margin:4px 0 0 0">加载中...</pre></details>'
-        + '</div></div>';
+        + '</div>';
     }).join('');
+    connSelUpdate();
     // Live screenshot refresh (2s) + log refresh when open
     const allDetails = el.querySelectorAll('details');
     emus.forEach((e, i) => {
@@ -1899,6 +1908,52 @@ async function restartConnect(aid, mode) {
   const r = await apiPost('/connect/' + aid + '/restart', { mode });
   if (r.ok) toast('重启中...');
   else toast(r.error || '重启失败', 'error');
+  setTimeout(() => renderConnect(document.getElementById('content')), 3000);
+}
+
+// ── Connect batch ops (grid checkboxes) ──
+function connSelUpdate() {
+  const checks = document.querySelectorAll('.conn-check');
+  const n = document.querySelectorAll('.conn-check:checked').length;
+  const cnt = document.getElementById('conn-sel-count');
+  if (cnt) cnt.textContent = '已选 ' + n + ' 个';
+  ['btn-batch-launch', 'btn-batch-daily', 'btn-batch-stop', 'btn-batch-emustop'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.disabled = n === 0; b.style.opacity = n === 0 ? 0.4 : 1; }
+  });
+  const all = document.getElementById('conn-check-all');
+  if (all) all.checked = n > 0 && n === checks.length;
+}
+function connectToggleAll(checked) {
+  document.querySelectorAll('.conn-check').forEach(c => c.checked = checked);
+  connSelUpdate();
+}
+function _connSelectedIndexes() {
+  return [...document.querySelectorAll('.conn-check:checked')].map(c => c.dataset.idx);
+}
+async function connectBatch(mode) {
+  const idxs = _connSelectedIndexes();
+  if (!idxs.length) return;
+  const out = document.getElementById('connect-batch-result');
+  if (out) out.textContent = '启动中...';
+  const r = await apiPost('/action/connect_running_emus', { mode, indexes: idxs });
+  if (out) out.textContent = r.ok ? `已入队 ${r.connected} / ${r.found} 个` : '❌ ' + (r.error || '失败');
+  toast(r.ok ? (mode === 'daily' ? `⚙ ${r.connected} 个日常已入队` : `🔌 ${r.connected} 个已入队`) : (r.error || '批量启动失败'), r.ok ? '' : 'error');
+  setTimeout(() => renderConnect(document.getElementById('content')), 2000);
+}
+async function connectBatchStop() {
+  const idxs = _connSelectedIndexes();
+  if (!idxs.length) return;
+  const r = await apiPost('/connect/batch_stop', { indexes: idxs });
+  toast(r.ok ? `已停止 ${r.stopped} 个 MAA` : (r.error || '批量停止失败'), r.ok ? '' : 'error');
+  setTimeout(() => renderConnect(document.getElementById('content')), 2000);
+}
+async function connectBatchEmuStop() {
+  const idxs = _connSelectedIndexes();
+  if (!idxs.length) return;
+  if (!confirm('确定关闭选中的 ' + idxs.length + ' 个模拟器？将先停止其 MAA 再关闭。')) return;
+  const r = await apiPost('/connect/batch_emu_stop', { indexes: idxs });
+  toast(r.ok ? `已关闭 ${r.stopped} 个模拟器` : (r.error || '批量关闭失败'), r.ok ? '' : 'error');
   setTimeout(() => renderConnect(document.getElementById('content')), 3000);
 }
 

@@ -1435,10 +1435,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         return {"ok": True, "count": count}
 
     @app.post("/api/action/connect_running_emus")
-    def handle_connect_running_emus():
+    def handle_connect_running_emus(body: dict = {}):
         """Detect running emulators and launch a connect-only MAA instance for each.
-        No tasks are enabled — MAA just attaches to the emulator and waits for manual use."""
+        No tasks are enabled — MAA just attaches to the emulator and waits for manual use.
+        mode: connect (idle) | daily (generic dailies) — from body, default connect."""
         from infrastructure.task_constants import detect_emu_instances
+        mode = body.get("mode", "connect")
+        if mode not in ("connect", "daily"):
+            mode = "connect"
+        idxs = [str(x) for x in (body.get("indexes") or [])]
         lq = _lq()
         if lq._paused:
             lq.resume()
@@ -1457,7 +1462,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 try: mw.accounts.remove(a)
                 except ValueError: pass
 
-        emus = [e for e in detect_emu_instances() if e.get("running")]
+        emus = [e for e in detect_emu_instances()
+                if e.get("running") and (not idxs or str(e.get("index", "")) in idxs)]
         runner = _runner()
         connected = 0
         for e in emus:
@@ -1467,15 +1473,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if real or lq.is_queued(aid):
                 continue
             port = e.get("adb_port", "")
-            ac = _connect_account(conn, idx, port, mode="connect")
+            ac = _connect_account(conn, idx, port, mode=mode)
             lq.enqueue(aid, "force", priority=0, slot="connect")
             connected += 1
-            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port})")
+            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port}) mode={mode}")
         if connected:
-            _log_op("连接模拟器", f"{connected} 个运行中的模拟器")
+            _log_op("连接模拟器", f"{connected} 个运行中的模拟器 ({mode})")
             lq.tick()
         mw.config["accounts"] = mw.accounts
-        return {"ok": True, "found": len(emus), "connected": connected}
+        return {"ok": True, "found": len(emus), "connected": connected, "mode": mode}
 
     def _connect_account(conn: list, idx, port: str, mode: str = "connect") -> dict:
         """Create (or reuse) a connect-only temp account and dispatch tasks for it."""
@@ -1587,6 +1593,55 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         lq.enqueue(aid, "force", priority=0, slot="connect")
         lq.tick()
         return {"ok": True}
+
+    @app.post("/api/connect/batch_stop")
+    def handle_connect_batch_stop(body: dict = {}):
+        """Stop connect-mode MAA for selected emulators (or all if no indexes).
+        Only touches connect_accounts — scheduled accounts are never affected."""
+        idxs = [str(x) for x in (body.get("indexes") or [])]
+        runner = _runner()
+        conn = getattr(mw, 'connect_accounts', None) or []
+        stopped = 0
+        for ac in list(conn):
+            aid = ac.get("id", "")
+            if not aid:
+                continue
+            if idxs and str(ac.get("emu_instance_index", "")) not in idxs:
+                continue
+            if runner and runner._has_real_process(aid):
+                runner.stop(aid)
+                stopped += 1
+        return {"ok": True, "stopped": stopped}
+
+    @app.post("/api/connect/batch_emu_stop")
+    def handle_connect_batch_emu_stop(body: dict = {}):
+        """Shut down selected running emulators (all if no indexes).
+        Stops connected MAA first, then shuts down one by one."""
+        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli
+        idxs = [str(x) for x in (body.get("indexes") or [])]
+        cli = find_mumu_cli()
+        if not cli:
+            return {"ok": False, "error": "mumu-cli not found"}
+        emus = [e for e in detect_emu_instances()
+                if e.get("running") and (not idxs or str(e.get("index", "")) in idxs)]
+        stopped = 0
+        for e in emus:
+            idx = str(e.get("index", ""))
+            try:
+                _stop_maa_for_emu(idx)
+            except Exception:
+                pass
+            time.sleep(1.5)  # let MAA exit and release ADB before shutdown
+            try:
+                subprocess.run([cli, "control", "--vmindex", idx, "shutdown"],
+                               timeout=15, creationflags=_CF)
+                stopped += 1
+                mw._log(f"⏹ 批量关闭模拟器 #{idx}")
+            except Exception as ex:
+                mw._log(f"[批量关模拟器] #{idx} 失败: {ex}")
+            time.sleep(1)
+        _log_op("批量关闭模拟器", f"{stopped} 个")
+        return {"ok": True, "stopped": stopped}
 
     @app.get("/api/connect/{aid}/log")
     def handle_connect_log(aid: str):
