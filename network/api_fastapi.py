@@ -1916,7 +1916,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         "Connect.ConnectConfig": c.get("Connect.ConnectConfig", ""),
                         "Connect.TouchMode": c.get("Connect.TouchMode", ""),
                         "Start.ClientType": c.get("Start.ClientType", ""),
+                        "Start.RunDirectly": c.get("Start.RunDirectly", ""),
+                        "Start.StartGame": c.get("Start.StartGame", ""),
+                        "MainFunction.PostActions": c.get("MainFunction.PostActions", ""),
                     }
+                    tq = c.get("TaskQueue", [])
+                    entry["task_queue"] = [
+                        {"type": t.get("TaskType", ""), "enable": t.get("IsEnable", False)}
+                        for t in tq if isinstance(t, dict)
+                    ]
                     entry["global"] = {k: v for k, v in d.get("Global", {}).items()
                                        if k.startswith(("GUI.", "Start."))}
                 except Exception as e:
