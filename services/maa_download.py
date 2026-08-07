@@ -112,53 +112,62 @@ def _get_download_url() -> tuple[str, str] | None:
 def _download_zip(url: str, dest: Path, log, version: str = "") -> bool:
     """Download zip file to disk in chunks (avoids loading 200MB into RAM).
     Uses per-chunk read timeout (not just connect timeout) and retries 3x on stalls.
-    Returns True on success."""
-    log(f"下载 MAA: {url.split('/')[-1]}")
+    Falls back to GitHub mirrors (ghfast.top etc.) — direct GitHub is often
+    slow/blocked on the target machine. Returns True on success."""
     import socket
     _dl_update(state="downloading", version=version, error="", message="")
     # Read timeout: urllib's `timeout` only covers connect; a stalled read would
     # block forever. Setting the socket timeout covers each read() call.
     old_to = socket.getdefaulttimeout()
     socket.setdefaulttimeout(60)
+    mirrors = [
+        url,
+        "https://ghfast.top/" + url,
+        "https://ghproxy.net/" + url,
+        "https://gh-proxy.com/" + url,
+    ]
     try:
-        for attempt in range(1, 4):
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-                resp = urllib.request.urlopen(req, timeout=60)
-                total = int(resp.headers.get("Content-Length", 0))
-                downloaded = 0
-                last_log = 0
-                last_pct_log = 0
-                with open(dest, "wb") as f:
-                    while True:
-                        chunk = resp.read(_CHUNK_SIZE)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        # Percentage-based logging when server reports Content-Length
-                        if total and downloaded - last_pct_log > total // 10:
-                            pct = downloaded * 100 // total
-                            log(f"  下载中: {pct}% ({downloaded // 1048576}MB / {total // 1048576}MB)")
-                            _dl_update(pct=pct, downloaded=downloaded, total=total)
-                            last_pct_log = downloaded
-                        # Byte-based fallback when Content-Length missing (GitHub often omits it)
-                        elif not total and downloaded - last_log >= 8 * 1048576:
-                            log(f"  下载中: {downloaded // 1048576}MB...")
-                            _dl_update(downloaded=downloaded, total=0)
-                            last_log = downloaded
-                log(f"  完成: {downloaded // 1048576}MB")
-                _dl_update(state="done", pct=100, downloaded=downloaded, total=total or downloaded)
-                return True
-            except Exception as e:
-                log(f"  第 {attempt} 次下载中断: {e}")
-                if attempt < 3:
-                    log(f"  重试中 ({attempt}/3)...")
-                    _dl_update(message=f"下载中断，重试 {attempt}/3: {e}")
-                    time.sleep(3)
-                else:
-                    _dl_update(state="error", error=str(e), message=f"下载失败: {e}")
-                    raise
+        for idx, cand in enumerate(mirrors):
+            for attempt in range(1, 4):
+                try:
+                    if idx > 0:
+                        log(f"  尝试镜像: {cand.split('/')[2]}")
+                    req = urllib.request.Request(cand, headers={"User-Agent": _USER_AGENT})
+                    resp = urllib.request.urlopen(req, timeout=60)
+                    total = int(resp.headers.get("Content-Length", 0))
+                    downloaded = 0
+                    last_log = 0
+                    last_pct_log = 0
+                    with open(dest, "wb") as f:
+                        while True:
+                            chunk = resp.read(_CHUNK_SIZE)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            # Percentage-based logging when server reports Content-Length
+                            if total and downloaded - last_pct_log > total // 10:
+                                pct = downloaded * 100 // total
+                                log(f"  下载中: {pct}% ({downloaded // 1048576}MB / {total // 1048576}MB)")
+                                _dl_update(pct=pct, downloaded=downloaded, total=total)
+                                last_pct_log = downloaded
+                            # Byte-based fallback when Content-Length missing (GitHub often omits it)
+                            elif not total and downloaded - last_log >= 8 * 1048576:
+                                log(f"  下载中: {downloaded // 1048576}MB...")
+                                _dl_update(downloaded=downloaded, total=0)
+                                last_log = downloaded
+                    log(f"  完成: {downloaded // 1048576}MB")
+                    _dl_update(state="done", pct=100, downloaded=downloaded, total=total or downloaded)
+                    return True
+                except Exception as e:
+                    log(f"  第 {attempt} 次下载中断: {e}")
+                    if attempt < 3:
+                        log(f"  重试中 ({attempt}/3)...")
+                        _dl_update(message=f"下载中断，重试 {attempt}/3: {e}")
+                        time.sleep(3)
+                    else:
+                        _dl_update(state="error", error=str(e), message=f"下载失败: {e}")
+                        break
     finally:
         socket.setdefaulttimeout(old_to)
     return False
