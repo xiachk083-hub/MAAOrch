@@ -270,14 +270,23 @@ class AccountRunner:
         return False
 
     def stop(self, account_id: str) -> None:
-        """Force-stop a running account's MAA process."""
+        """Stop a running account's MAA process — gracefully (WM_CLOSE) first,
+        so MAA releases its ADB connection and touch services before exit.
+        Hard-killing (TerminateProcess) mid-connection corrupts the emulator's
+        ADB/touch state (MuMu shows '运行异常' afterwards)."""
         self._stopping.add(account_id)
         p = self._procs.pop(account_id, None)
-        if p and hasattr(p, 'terminate'):
-            try: p.terminate(); p.wait(2)
-            except: pass
-            try: p.kill()
-            except: pass
+        if p and hasattr(p, 'pid'):
+            self._graceful_close(p)
+            try:
+                p.wait(5)  # MAA usually exits <1s after WM_CLOSE
+            except Exception:
+                pass
+            if p.poll() is None:  # still alive → fall back to hard kill
+                try: p.terminate(); p.wait(2)
+                except: pass
+                try: p.kill()
+                except: pass
         self._active.pop(account_id, None)
         self.ctx.proc_status.discard(account_id)
         # Release queue-side occupancy marks immediately so a relaunch isn't
@@ -291,6 +300,32 @@ class AccountRunner:
                     lq._active_emus_ts.pop(key, None)
         except Exception:
             pass
+
+    def _graceful_close(self, proc) -> bool:
+        """Send WM_CLOSE to the process's main window → MAA's OnClose runs
+        Bootstrapper.Shutdown() which releases ADB/touch resources cleanly."""
+        try:
+            import ctypes
+            from ctypes import wintypes
+            user32 = ctypes.windll.user32
+            found = []
+
+            @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+            def _cb(hwnd, _lp):
+                pid = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                if pid.value == proc.pid and user32.IsWindowVisible(hwnd):
+                    found.append(hwnd)
+                    return False  # found main window → stop enumerating
+                return True
+
+            user32.EnumWindows(_cb, 0)
+            if found:
+                user32.PostMessageW(found[0], 0x0010, 0, 0)  # WM_CLOSE
+                return True
+        except Exception:
+            pass
+        return False
 
     def _find_emu_pid(self, addr: str) -> int | None:
         if not addr:
