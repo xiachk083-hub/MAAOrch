@@ -2049,6 +2049,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     gui = c.get("Gui", {})
                     entry["gui_connect"] = gui.get("ConnectSettings", {})
                     entry["gui_startup"] = gui.get("StartUpSettings", {})
+                    entry["gui_runtime"] = {k: v for k, v in gui.get("RuntimeSettings", {}).items()
+                                            if k in ("ClientType", "StartGame")}
                     entry["gui_postactions"] = gui.get("PostActions", "")
                 except Exception as e:
                     entry["error"] = str(e)
