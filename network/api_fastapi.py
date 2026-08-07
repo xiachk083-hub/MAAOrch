@@ -1914,6 +1914,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     entry["current"] = d.get("Current", "")
                     entry["connect"] = {
                         "Connect.Address": c.get("Connect.Address", ""),
+                        "Connect.AddressHistory": c.get("Connect.AddressHistory", ""),
                         "Connect.AdbPath": c.get("Connect.AdbPath", ""),
                         "Connect.AutoDetect": c.get("Connect.AutoDetect", ""),
                         "Connect.AlwaysAutoDetect": c.get("Connect.AlwaysAutoDetect", ""),
