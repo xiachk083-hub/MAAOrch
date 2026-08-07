@@ -59,12 +59,8 @@ accounts/               各账号 MAA 目录
 |------|------|
 | [快速上手](docs/getting-started.md) | 使用流程、仪表盘、分组、故障排除 |
 | [系统架构](docs/architecture.md) | 模块划分、数据流、线程模型 |
-| [智能调度](docs/smart-scheduling.md) | 全局配置、账号覆盖、决策逻辑、材料监控 |
-| [多账号与模拟器](docs/account-management.md) | Account 类、ADB、mumu-cli |
-| [流水线调度](docs/pipeline.md) | 队列、分组、循环调度 |
-| [任务配置注入](docs/task-config.md) | gui.json、maa-cli TOML |
-| [日志与监控](docs/monitoring.md) | asst.log 解析、统计、守护 |
-| [下载更新与代理](docs/update-download.md) | 下载、版本切换、代理检测 |
+| [MAA 配置映射](docs/maa-config-mapping.md) | MAA 6.16 配置读取位置、字段映射全表、症状速查 |
+| [调度系统](docs/scheduling.md) | 队列、调度模式、dispatch 模板池 |
 | [HTTP API](docs/http-api.md) | REST 接口完整参考 |
 | [开发指南](docs/dev-guide.md) | 环境搭建、编码规范、测试 |
 
