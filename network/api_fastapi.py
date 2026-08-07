@@ -1893,6 +1893,37 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                               "running": running, "meta": meta})
         return {"ok": True, "instances": items}
 
+    @app.get("/api/maa/instances/{n}/config")
+    def handle_maa_instance_config(n: str):
+        """Diagnostic: show connection-related keys in an instance's MAA config files.
+        Read-only — used to verify what MAA actually reads (Connect.Address etc.)."""
+        inst_dir = Path(__file__).parent.parent / "services" / "maa" / "instances" / str(n)
+        result = {"ok": True, "index": n, "files": {}}
+        for fn in ("gui.json", "gui.new.json"):
+            fp = inst_dir / "config" / fn
+            entry = {"exists": fp.exists()}
+            if fp.exists():
+                try:
+                    d = json.loads(fp.read_text(encoding="utf-8"))
+                    entry["top_keys"] = list(d.keys())
+                    c = d.get("Configurations", {}).get("Default", {})
+                    entry["current"] = d.get("Current", "")
+                    entry["connect"] = {
+                        "Connect.Address": c.get("Connect.Address", ""),
+                        "Connect.AdbPath": c.get("Connect.AdbPath", ""),
+                        "Connect.AutoDetect": c.get("Connect.AutoDetect", ""),
+                        "Connect.AlwaysAutoDetect": c.get("Connect.AlwaysAutoDetect", ""),
+                        "Connect.ConnectConfig": c.get("Connect.ConnectConfig", ""),
+                        "Connect.TouchMode": c.get("Connect.TouchMode", ""),
+                        "Start.ClientType": c.get("Start.ClientType", ""),
+                    }
+                    entry["global"] = {k: v for k, v in d.get("Global", {}).items()
+                                       if k.startswith(("GUI.", "Start."))}
+                except Exception as e:
+                    entry["error"] = str(e)
+            result["files"][fn] = entry
+        return result
+
     @app.post("/api/orch/check_update")
     def handle_orch_check_update():
         # Git-based detection (deployment is a git clone) — most accurate
