@@ -752,29 +752,33 @@ class ConfigService:
                             if "increment_mode" in st: item["IncrementMode"] = st["increment_mode"]
                             if "max_craft_count" in st: item["MaxCraftCountPerRound"] = st["max_craft_count"]
                             if "clear_store" in st: item["ClearStore"] = st["clear_store"]
-            # Inject fight_stage from account's stage whitelist
-            stage_list = ac.get("stages", [])
-            fs = ""
-            if stage_list:
-                # Look up the first stage name from the global stage library
-                lib = self.ctx.config.get("stage_library", [])
-                for sid in stage_list:
-                    match = next((s for s in lib if s.get("id") == sid), None)
-                    if match:
-                        fs = match.get("name", "")
-                        break
-                if not fs:
-                    # Fallback: treat stage IDs as direct stage names
-                    fs = stage_list[0]
-            else:
-                fs = ac.get("fight_stage", "")
-            if fs and "TaskQueue" in c:
-                for item in c["TaskQueue"]:
-                    tt = item.get("TaskType", "").lower()
-                    if tt == "fight" and not item.get("UseCustomAnnihilation", False):
-                        item["StagePlan"] = [fs]
-                        item["IsStageManually"] = True
-                        break
+            # Inject fight_stage from account's stage whitelist — LEGACY path,
+            # only for accounts WITHOUT a fight_mode strategy (new strategy
+            # modes schedule/priority/material already set StagePlan above).
+            # Previously this overwrote the strategy-selected stage with stages[0].
+            if not ac.get("fight_mode"):
+                stage_list = ac.get("stages", [])
+                fs = ""
+                if stage_list:
+                    # Look up the first stage name from the global stage library
+                    lib = self.ctx.config.get("stage_library", [])
+                    for sid in stage_list:
+                        match = next((s for s in lib if s.get("id") == sid), None)
+                        if match:
+                            fs = match.get("name", "")
+                            break
+                    if not fs:
+                        # Fallback: treat stage IDs as direct stage names
+                        fs = stage_list[0]
+                else:
+                    fs = ac.get("fight_stage", "")
+                if fs and "TaskQueue" in c:
+                    for item in c["TaskQueue"]:
+                        tt = item.get("TaskType", "").lower()
+                        if tt == "fight" and not item.get("UseCustomAnnihilation", False):
+                            item["StagePlan"] = [fs]
+                            item["IsStageManually"] = True
+                            break
             # Inject account_switch (账号切换)
             sw = ac.get("account_switch", "")
             if sw and "TaskQueue" in c:
