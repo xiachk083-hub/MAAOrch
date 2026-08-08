@@ -1139,8 +1139,14 @@ class AccountRunner:
         if not inst_dir:
             return False
         try:
-            p.terminate()
-            p.wait(3)
+            # Graceful close (WM_CLOSE → MAA releases ADB/minitouch) — hard
+            # terminate leaves minitouch residue that crashes the emulator
+            # (MuMu "运行异常" popup). Fall back to terminate only if it hangs.
+            self._graceful_close(p)
+            p.wait(5)
+            if p.poll() is None:
+                p.terminate()
+                p.wait(3)
         except Exception:
             pass
         # Re-inject with the next stage — full daily chain (StartUp + Fight +
