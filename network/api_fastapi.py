@@ -23,6 +23,61 @@ def _log_op(action: str, detail: str = "") -> None:
         _OPLOG = _OPLOG[-100:]
 
 
+def _restart_hot(root: Path, mw: Any = None) -> None:
+    """Stop tasks and restart main_web.pyw in-place (manager/launcher relaunches)."""
+    runner = getattr(mw, 'runner', None) if mw else None
+    if runner:
+        for aid in list(runner._active.keys()):
+            try:
+                runner.stop(aid)
+            except Exception:
+                pass
+    time.sleep(2)
+    subprocess.Popen([sys.executable, str(root / "main_web.pyw")],
+                     creationflags=subprocess.CREATE_NO_WINDOW)
+    time.sleep(1)
+    os._exit(0)
+
+
+def _hot_reload_zip(root: Path, mw: Any) -> None:
+    """Zip-mode hot reload: download main.zip, extract ONLY code files
+    (skip services/maa, models/config.json, logs — user data preserved)."""
+    try:
+        import tempfile
+        from services.maa_download import _get_download_url, _download_zip
+        tmp = Path(tempfile.gettempdir()) / f"maorch_hot_{uuid.uuid4().hex[:8]}"
+        tmp.mkdir(parents=True, exist_ok=True)
+        url, _tag = _get_download_url()
+        if not url:
+            return
+        zpath = tmp / "main.zip"
+        if not _download_zip(url, zpath, lambda m: None):
+            return
+        with zipfile.ZipFile(zpath) as z:
+            names = z.namelist()
+            # Strip top-level dir (main-<branch>)
+            top = names[0].split("/")[0] if names else ""
+            skip_dirs = ("services/maa", "models/config.json", "logs/")
+            for n in names:
+                rel = n[len(top) + 1:] if top and n.startswith(top + "/") else n
+                if not rel or rel.endswith("/"):
+                    continue
+                if any(rel == s or rel.startswith(s) for s in skip_dirs):
+                    continue
+                dst = root / rel
+                try:
+                    if n.endswith("/"):
+                        dst.mkdir(parents=True, exist_ok=True)
+                    else:
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        dst.write_bytes(z.read(n))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    _restart_hot(root, mw)
+
+
 def _get_web_schedule_tasks(mw: Any, include_anni: bool = True, only_anni: bool = False) -> list[str]:
     mode = mw.config.get("schedule_mode", "daily") if hasattr(mw, 'config') else "daily"
     if mode == "roguelike":
@@ -2280,34 +2335,23 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.post("/api/orch/hot_reload")
     def handle_orch_hot_reload():
-        """Hot reload: git pull latest code + restart this process.
-        Manager (or the startup script) relaunches main_web.pyw automatically.
-        No zip download / config replace — seconds instead of minutes."""
+        """Hot reload: pull latest code + restart. Git mode when available,
+        otherwise re-download main.zip and extract ONLY code files (skip
+        services/maa, models/config.json, logs — data is preserved). Seconds
+        instead of the full deploy's minutes."""
         root = Path(__file__).parent.parent
         try:
             st = subprocess.run(["git", "-C", str(root), "pull", "--ff-only"],
                                 capture_output=True, timeout=60, creationflags=_CF,
                                 encoding="utf-8", errors="replace")
-            if st.returncode != 0:
-                return {"ok": False, "error": f"git pull 失败: {st.stderr[:300]}"}
-        except Exception as e:
-            return {"ok": False, "error": f"git pull 异常: {e}"}
-
-        def _restart():
-            runner = getattr(mw, 'runner', None)
-            if runner:
-                for aid in list(runner._active.keys()):
-                    try:
-                        runner.stop(aid)
-                    except Exception:
-                        pass
-            time.sleep(2)
-            subprocess.Popen([sys.executable, str(root / "main_web.pyw")],
-                             creationflags=subprocess.CREATE_NO_WINDOW)
-            time.sleep(1)
-            os._exit(0)
-        threading.Thread(target=_restart, daemon=True).start()
-        return {"ok": True, "message": "已拉取最新代码并重启"}
+            if st.returncode == 0:
+                _restart_hot(root, mw)
+                return {"ok": True, "message": "已拉取最新代码并重启"}
+        except Exception:
+            pass
+        # Zip mode fallback
+        threading.Thread(target=_hot_reload_zip, args=(root, mw), daemon=True).start()
+        return {"ok": True, "message": "正在下载最新代码并重启（zip 模式）"}
 
     @app.post("/api/orch/update")
     def handle_orch_update():
