@@ -797,6 +797,14 @@ class AccountRunner:
     def _on_process_exit(self, aid: str, p: subprocess.Popen) -> None:
         rc = p.poll()
         tasks, sanity, drops = self._parse_log(aid) if aid in self._active else ([], None, None)
+        # MAA exiting within 60s of launch with no completed tasks = startup
+        # failure (emulator didn't come up / ADB lost), NOT a normal "done".
+        # Otherwise a failed boot is recorded as a successful run and the
+        # emulator gets shut down while the queue moves on.
+        started = self._start_times.get(aid, 0)
+        if rc == 0 and started and time.time() - started < 60 and not tasks:
+            self._log.warning(f"[启动失败] {aid} MAA {int(time.time()-started)}s 退出且无任务，按失败处理")
+            rc = -12
         self._cleanup(aid, rc or 0, tasks, sanity, drops)
 
     # ── Monitoring ──
@@ -1379,11 +1387,17 @@ class AccountRunner:
         if ac and ac.get("_connect_only"):
             is_real_error = False
 
-        # Kill residual process
-        if old_proc and hasattr(old_proc, 'pid'):
+        # Kill residual process — old_procs (was `old_proc`, a NameError that
+        # left orphan MAA.exe processes behind).
+        if old_procs and not isinstance(old_procs, str) and hasattr(old_procs, 'pid'):
             try:
-                subprocess.run(["taskkill","/F","/PID",str(old_proc.pid)], capture_output=True, timeout=3,
-                              creationflags=subprocess.CREATE_NO_WINDOW)
+                if old_procs.poll() is None:
+                    old_procs.terminate()
+                    try: old_procs.wait(3)
+                    except: pass
+                if old_procs.poll() is None:
+                    subprocess.run(["taskkill","/F","/PID",str(old_procs.pid)], capture_output=True, timeout=3,
+                                  creationflags=subprocess.CREATE_NO_WINDOW)
             except: pass
 
         # Close emulator on error via ADB
