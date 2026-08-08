@@ -1071,10 +1071,20 @@ class AccountRunner:
             return
         tasks, sanity, _ = self._parse_log(aid)
         fight = next((t for t in tasks if t.get("TaskType", "").lower() == "fight"), None)
-        if not fight or fight.get("status") != "失败":
-            return
-        if fight.get("fight_finished"):
-            return  # finished=true = 次数刷完(正常), 非失败
+        if fight:
+            if fight.get("status") != "失败":
+                return
+            if fight.get("fight_finished"):
+                return  # finished=true = 次数刷完(正常), 非失败
+        else:
+            # Fight never started (invalid stage → AsstAppendTask rejected) but the
+            # queue moved on to later chains → treat as stage failure → downgrade.
+            later = [t for t in tasks if t.get("TaskType", "").lower() in ("infrast", "recruit", "mall", "award")]
+            if not later:
+                return
+            cur_stage = ac.get("_stage_current", "")
+            if not cur_stage:
+                return
         # Sanity gate: if sanity is very low, all stages are unplayable → stop
         cur = (sanity or {}).get("current")
         if cur is not None and cur < 20:
