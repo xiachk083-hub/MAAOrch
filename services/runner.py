@@ -1,6 +1,6 @@
 """Single-account launch → monitor → complete cycle runner."""
 from __future__ import annotations
-import time, subprocess, re, json, os
+import time, subprocess, re, json, os, threading
 from pathlib import Path
 from datetime import datetime
 from typing import Any
@@ -82,6 +82,11 @@ def _close_mumu_popups():
 
 class AccountRunner:
     """Encapsulates single-account launch → monitor → complete lifecycle."""
+
+    # MuMu 12 can't handle concurrent `control launch` (2nd instance fails to
+    # boot, ADB never comes up). Serialize emulator launches globally; MAA
+    # tasks still run in parallel afterwards.
+    _EMU_LAUNCH_LOCK = threading.Lock()
 
     MAX_TOTAL_MEM_MB = 12288
     RESUME_MEM_MB = 6144
@@ -452,24 +457,27 @@ class AccountRunner:
                 except Exception:
                     pass
             if cli:
-                # CLI syntax differs: mumu-cli uses --vmindex, MuMuManager -v
-                use_mm = "MuMuManager" in cli
-                idx_flag = "-v" if use_mm else "--vmindex"
-                already_running = False
-                try:
-                    import json as _json
-                    r = subprocess.run([cli, "info", idx_flag, str(emu_idx)],
-                                      capture_output=True, text=True, timeout=5, creationflags=CF,
-                                      encoding="utf-8", errors="replace")
-                    if r.returncode == 0:
-                        data = _json.loads(r.stdout)
-                        if data.get("is_android_started") or data.get("is_process_started"):
-                            already_running = True
-                except: pass
-                if already_running:
-                    self.emit_log(f"模拟器 #{emu_idx} 已在运行")
-                else:
-                    self.emit_log(f"启动模拟器 #{emu_idx}")
+                # Serialize emulator launch: MuMu 12 fails when 2+ `control
+                # launch` run concurrently (2nd instance never boots).
+                with self._EMU_LAUNCH_LOCK:
+                    # CLI syntax differs: mumu-cli uses --vmindex, MuMuManager -v
+                    use_mm = "MuMuManager" in cli
+                    idx_flag = "-v" if use_mm else "--vmindex"
+                    already_running = False
+                    try:
+                        import json as _json
+                        r = subprocess.run([cli, "info", idx_flag, str(emu_idx)],
+                                          capture_output=True, text=True, timeout=5, creationflags=CF,
+                                          encoding="utf-8", errors="replace")
+                        if r.returncode == 0:
+                            data = _json.loads(r.stdout)
+                            if data.get("is_android_started") or data.get("is_process_started"):
+                                already_running = True
+                    except: pass
+                    if already_running:
+                        self.emit_log(f"模拟器 #{emu_idx} 已在运行")
+                    else:
+                        self.emit_log(f"启动模拟器 #{emu_idx}")
                     try:
                         subprocess.run([cli, "control", idx_flag, str(emu_idx), "launch"], creationflags=CF, timeout=15)
                     except Exception as e:
