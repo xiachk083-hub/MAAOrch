@@ -368,16 +368,36 @@ def download_project() -> tuple[bool, str]:
             log("已清理残留 MAA.exe 进程")
         except Exception:
             pass
-        # Shut down all emulators too — otherwise every deploy leaves N orphan
-        # emulators running (MAA dies, emulator stays). MuMuManager has no
-        # global shutdown; kill the headless VMs directly (equivalent, and the
-        # emulators will be cold-booted by the next task anyway).
+        # Shut down all emulators gracefully — taskkill on MuMuVMMHeadless
+        # triggers MuMu's "运行终止" protection and the emulators refuse to
+        # die (orphans). MuMuManager `control -v <idx> shutdown` is the clean
+        # path; scan a generous index range (instances are 1..N, up to ~60).
         try:
-            for img in ("MuMuVMMHeadless.exe", "MuMuNxDevice.exe"):
-                subprocess.run(["taskkill", "/F", "/IM", img],
-                               capture_output=True, timeout=10,
-                               creationflags=subprocess.CREATE_NO_WINDOW)
-            log("已关闭全部模拟器")
+            mm = None
+            try:
+                import glob as _g
+                adb_cands = _g.glob(str(root / "services" / "maa" / "source" / "**" / "adb.exe"), recursive=True)
+                if adb_cands:
+                    mm_cand = os.path.join(os.path.dirname(adb_cands[0]), "MuMuManager.exe")
+                    if os.path.exists(mm_cand):
+                        mm = mm_cand
+            except Exception:
+                pass
+            if mm is None:
+                for cand in (r"E:\MuMu Player 12\nx_main\MuMuManager.exe",
+                             r"C:\Program Files\Netease\MuMuPlayer-12.0\nx_main\MuMuManager.exe"):
+                    if os.path.exists(cand):
+                        mm = cand
+                        break
+            if mm:
+                for idx in range(1, 61):
+                    try:
+                        subprocess.run([mm, "control", "-v", str(idx), "shutdown"],
+                                       capture_output=True, timeout=10,
+                                       creationflags=subprocess.CREATE_NO_WINDOW)
+                    except Exception:
+                        pass
+                log("已优雅关闭全部模拟器 (MuMuManager)")
         except Exception:
             pass
         # Replace
