@@ -831,6 +831,31 @@ class AccountRunner:
         # Task completion detection
         ac = self._active.get(aid)
         if ac and hasattr(p, '_inst_path'):
+            # Per-account stage downgrade — Fight rejected as invalid stage
+            # ("理智作战: ... 添加任务失败" in gui.log). Checked every tick,
+            # independent of asst.log activity (MAA may hang with a dead asst.log).
+            if (ac.get("_stage_fallback") and aid not in self._stopping
+                    and not self._downgrading.get(aid)):
+                glp = Path(p._inst_path) / "debug" / "gui.log"
+                if glp.exists():
+                    try:
+                        gsize = glp.stat().st_size
+                        gpos = self._gui_log_positions.get(aid, 0)
+                        if gsize >= gpos:
+                            with glp.open("r", encoding="utf-8", errors="replace") as gf:
+                                gf.seek(gpos)
+                                gnew = gf.read(gsize - gpos)
+                            self._gui_log_positions[aid] = gsize
+                            if "添加任务失败" in gnew and "理智" in gnew:
+                                self.emit_log(f"⬇ {ac.get('name', aid)} Fight 关卡无效，触发降级")
+                                self._downgrading[aid] = True
+                                try:
+                                    self._downgrade_stage(aid, ac, p)
+                                finally:
+                                    self._downgrading.pop(aid, None)
+                                return
+                    except Exception:
+                        pass
             lp = Path(p._inst_path) / "debug" / "asst.log"
             if lp.exists():
                 try:
@@ -841,29 +866,6 @@ class AccountRunner:
                             _f.seek(last_pos)
                             new_content = _f.read(current_size - last_pos)
                         self._log_positions[aid] = current_size
-                        # Per-account stage downgrade: Fight rejected as invalid
-                        # ("添加任务失败" in gui.log — stage code invalid/unlocked).
-                        if ac.get("_stage_fallback") and aid not in self._stopping:
-                            glp = Path(p._inst_path) / "debug" / "gui.log"
-                            if glp.exists():
-                                try:
-                                    gsize = glp.stat().st_size
-                                    gpos = self._gui_log_positions.get(aid, 0)
-                                    if gsize >= gpos:
-                                        with glp.open("r", encoding="utf-8", errors="replace") as gf:
-                                            gf.seek(gpos)
-                                            gnew = gf.read(gsize - gpos)
-                                        self._gui_log_positions[aid] = gsize
-                                        if "添加任务失败" in gnew and "理智" in gnew:
-                                            self.emit_log(f"⬇ {ac.get('name', aid)} Fight 关卡无效，触发降级")
-                                            self._downgrading[aid] = True
-                                            try:
-                                                self._downgrade_stage(aid, ac, p)
-                                            finally:
-                                                self._downgrading.pop(aid, None)
-                                            return
-                                except Exception:
-                                    pass
                         if "AllTasksCompleted" in new_content:
                             self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
                             tasks, sanity, drops = self._parse_log(aid)
