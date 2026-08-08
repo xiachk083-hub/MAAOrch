@@ -1380,13 +1380,14 @@ class AccountRunner:
                     except ValueError: pass
             except Exception:
                 pass
-        # Close the account's emulator on ANY exit (normal / crash / manual
-        # stop / deploy restart) — each account is bound to its own emulator
-        # one-to-one, so leaving it running accumulates orphan emulators
-        # (40 accounts → 40 open emulators). Skip connect-only (manual use)
-        # and auto-restart (re-enqueued immediately — cold boot is fine,
-        # orphans are worse).
-        if ac and not ac.get("_connect_only") and not ac.get("_auto_restart_count"):
+        # Close the account's emulator ONLY on normal completion (exit==0).
+        # On abnormal exit (connection lost etc.) the auto-restart re-enqueues
+        # the account and needs the emulator still alive — closing it here
+        # caused a death loop (close → restart can't connect → fail → close).
+        # One-to-one binding means completed accounts leave their emulator
+        # running forever otherwise — that's what this closes. Connect-only
+        # (manual use) never closes.
+        if ac and exit_code == 0 and not ac.get("_connect_only"):
             try:
                 emu_idx = ac.get("emu_instance_index", "")
                 if emu_idx:
@@ -1452,8 +1453,10 @@ class AccountRunner:
                                   creationflags=subprocess.CREATE_NO_WINDOW)
             except: pass
 
-        # Close emulator on error via ADB
-        if is_real_error and ac:
+        # Close emulator on error via ADB — but NOT when auto-restart will
+        # re-enqueue (the restarted MAA needs the emulator alive; closing it
+        # here loops: close → restart can't connect → fail → close again).
+        if is_real_error and ac and not ac.get("_auto_restart_count"):
             emu_idx = ac.get("emu_instance_index", "")
             addr = ac.get("adb_address", "")
             adb_path = ac.get("adb_path", "") or "adb"
