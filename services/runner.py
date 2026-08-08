@@ -963,28 +963,6 @@ class AccountRunner:
                             try: p.terminate(); p.wait(3)
                             except: pass
                             return
-                        # Sanity threshold: stop fighting once the remaining
-                        # sanity is enough to FULLY regenerate within the
-                        # account's window (default 12h). Regeneration is
-                        # 1pt/6min = 10pt/h, so stop at max - hours*10.
-                        # E.g. cap 210, 12h → stop at 90 (grinding to 7 wastes
-                        # 20h of regen). Only applies while Fight chain runs.
-                        if ac and not ac.get("_connect_only"):
-                            _hours = float(ac.get("fight_sanity_hours", 12) or 12)
-                            _tasks, _sanity, _ = self._parse_log(aid)
-                            _cur = (_sanity or {}).get("current")
-                            _max = (_sanity or {}).get("max") or 210
-                            _stop_at = max(0, int(_max - _hours * 10))
-                            _fighting = any(t.get("TaskType", "").lower() == "fight"
-                                            and t.get("status") == "运行中" for t in _tasks)
-                            if _cur is not None and _cur <= _stop_at and _fighting:
-                                self.emit_log(f"⏱ {ac.get('name', aid)} 理智 {_cur} ≤ {_stop_at}（{_hours:.0f}h 回满），停止刷图")
-                                self._log.info(f"[理智阈值] {ac.get('name', aid)} 停止刷图 (cur={_cur}, stop_at={_stop_at})")
-                                tasks, sanity, drops = self._parse_log(aid)
-                                self._cleanup(aid, 0, tasks, sanity, drops)
-                                try: p.terminate(); p.wait(3)
-                                except: pass
-                                return
                         # Per-account stage downgrade: Fight task failed (nav/unlock)
                         # while a fallback chain exists → record + retry next stage.
                         if ac.get("_stage_fallback") and aid not in self._stopping and "TaskChainCompleted" in new_content:

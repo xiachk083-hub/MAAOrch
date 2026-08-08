@@ -392,6 +392,26 @@ class LaunchQueue:
                             self.emit_skipped(entry.account_id, "理智不足")
                             continue
 
+                # ④b Enough-sanity skip (all sources): if the account's sanity is
+                # already high enough to fully regen within `fight_sanity_hours`
+                # (default 12h, 10pt/h), it doesn't need a farming run today.
+                # Entry gate only — once launched, farming runs to exhaustion.
+                # Sanity is read from the latest archived asst.log (RunStats is
+                # unreliable — save_run never fired when MAA hung in round 2).
+                try:
+                    _ac = next((a for a in self.ctx.accounts if a.get("id") == entry.account_id), None)
+                    if _ac and not _ac.get("_connect_only"):
+                        _cur, _max = self._last_archived_sanity(entry.account_id)
+                        if _cur is not None and _max:
+                            _hours = float(_ac.get("fight_sanity_hours", 12) or 12)
+                            _enough = int(_max - _hours * 10)
+                            if _cur >= _enough:
+                                _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 理智充足 ({_cur}/{_max} ≥ {_enough})")
+                                self.emit_skipped(entry.account_id, f"理智充足 {_cur}/{_max}")
+                                continue
+                except Exception:
+                    pass
+
                 to_launch.append(entry)
 
             # Push back remaining entries
@@ -548,6 +568,27 @@ class LaunchQueue:
 
     def _queue_path(self) -> Path:
         return Path(__file__).parent / "queue.json"
+
+    def _last_archived_sanity(self, account_id: str) -> tuple[int | None, int | None]:
+        """Read the last recorded sanity (current, max) from the newest archived
+        asst.log for this account. Returns (None, None) if no archive exists."""
+        try:
+            hist = Path(__file__).parent.parent / "logs" / "maa_history" / str(account_id)
+            if not hist.exists():
+                return None, None
+            files = sorted(hist.glob("*_asst.log"), key=lambda p: p.stat().st_mtime)
+            if not files:
+                return None, None
+            import re
+            cur = mx = None
+            with files[-1].open("r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    m = re.search(r"Current Sanity:\s*(\d+)\s*,\s*Max Sanity:\s*(\d+)", line)
+                    if m:
+                        cur, mx = int(m.group(1)), int(m.group(2))
+            return cur, mx
+        except Exception:
+            return None, None
 
     def _has_running_process(self, account_id: str) -> bool:
         """Check if this account already has a running MAA process (via .pid/.meta)."""
