@@ -107,6 +107,7 @@ class AccountRunner:
         self._overloaded = False
         self._log_buffers: dict[str, list[str]] = {}
         self._log_positions: dict[str, int] = {}
+        self._gui_log_positions: dict[str, int] = {}
         self._log_handles: dict[str, Any] = {}
         self._adb_fail_count: dict[str, int] = {}
         self._adb_restart_count: dict[str, int] = {}
@@ -840,6 +841,29 @@ class AccountRunner:
                             _f.seek(last_pos)
                             new_content = _f.read(current_size - last_pos)
                         self._log_positions[aid] = current_size
+                        # Per-account stage downgrade: Fight rejected as invalid
+                        # ("添加任务失败" in gui.log — stage code invalid/unlocked).
+                        if ac.get("_stage_fallback") and aid not in self._stopping:
+                            glp = Path(p._inst_path) / "debug" / "gui.log"
+                            if glp.exists():
+                                try:
+                                    gsize = glp.stat().st_size
+                                    gpos = self._gui_log_positions.get(aid, 0)
+                                    if gsize >= gpos:
+                                        with glp.open("r", encoding="utf-8", errors="replace") as gf:
+                                            gf.seek(gpos)
+                                            gnew = gf.read(gsize - gpos)
+                                        self._gui_log_positions[aid] = gsize
+                                        if "添加任务失败" in gnew and "Fight" in gnew:
+                                            self.emit_log(f"⬇ {ac.get('name', aid)} Fight 关卡无效，触发降级")
+                                            self._downgrading[aid] = True
+                                            try:
+                                                self._downgrade_stage(aid, ac, p)
+                                            finally:
+                                                self._downgrading.pop(aid, None)
+                                            return
+                                except Exception:
+                                    pass
                         if "AllTasksCompleted" in new_content:
                             self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
                             tasks, sanity, drops = self._parse_log(aid)
