@@ -193,12 +193,12 @@ main_web.pyw (可选 PySide6) → WebContext → AccountRunner / LaunchQueue
 
 | 端点 | 用途 |
 |------|------|
-| `POST /api/status` | 项目运行状态 |
+| `GET /api/status` | 项目运行状态 |
 | `POST /api/download` | 部署最新 main（备份 config + 校验 + 回滚保护） |
 | `POST /api/start` / `stop` / `delete` | 启停/删除项目 |
 | `POST /api/update_manager` | 更新 manager 自身（含新端点） |
 | `POST /api/exec` | 远程 PowerShell（token 保护）— `{command, timeout}` |
-| `POST /api/config_backup?file=<name>` | 读 config.json / backups |
+| `GET /api/config_backup?file=<name>` | 读 config.json / backups |
 | `GET /api/project_log?file=<name>&inst=<n>` | 读 debug/stderr/crash/MAA 实例日志 |
 
 **Manager 自启**：`E:\MAAOrch-Manager\manager.bat` 双击启动 → **新版自动拉起项目**（重启只需启动 manager）。开机自启需在目标机器跑 `install.bat`（当前**未注册** — 用户已知）。
@@ -267,7 +267,7 @@ main_web.pyw (可选 PySide6) → WebContext → AccountRunner / LaunchQueue
 
 ## 8. 敏感信息
 
-- **Manager token**：`E:\MAAOrch-Manager\config.json`（`e210ad4863f14c4e` — 已在会话中使用，如需轮换在 manager 停运行时改该文件）
-- **API token**：MAAOrch 设置页 `api_token`（`cdab9ec6e0d53501af4513557b45ff15` — 远程调试用，建议正式环境轮换）
+- **Manager token**：存于 `E:\MAAOrch-Manager\config.json`（如需轮换在 manager 停运行时改该文件）
+- **API token**：MAAOrch 设置页 `api_token` 字段（远程调试用，建议正式环境轮换）
 - **config.json 含账号数据** — 已加入 .gitignore，**切勿提交**
 - z.ai API Key：待接入时填设置页（存 config.json — 注意勿提交）

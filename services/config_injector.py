@@ -548,7 +548,11 @@ class ConfigService:
                             _series = int(ac.get("fight_series", 1) or 1)
                             item["Series"] = _series if -1 <= _series <= 10 else 1
                             # Per-stage times limit (MAA native EnableTimesLimit)
-                            if fight_mode == "priority" and day_stage:
+                            # — Series (倍率) only controls speed, NOT count.
+                            # Without EnableTimesLimit MAA runs the stage until
+                            # sanity runs out. Apply to ALL fight modes so the
+                            # frontend "每关次数" field is always honored.
+                            if day_stage:
                                 _times = int(ac.get("fight_times_per_stage", 3) or 3)
                                 item["EnableTimesLimit"] = True
                                 item["TimesLimit"] = max(1, _times)
