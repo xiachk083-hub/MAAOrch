@@ -73,6 +73,11 @@ def find_mumu_cli() -> str | None:
     extra=[str(Path(os.environ.get("USERPROFILE","."))/"MuMuPlayer"/"nx_main"/"mumu-cli.exe")]
     for c in extra + MUMU_CLI_CANDIDATES + [str(Path(os.environ.get("LOCALAPPDATA",""))/"MuMuPlayer-12.0"/"shell"/"mumu-cli.exe")]:
         if Path(c).exists(): return c
+    # MuMu 12 has NO mumu-cli — use MuMuManager.exe (nx_main). Its CLI syntax
+    # differs (-v <idx> instead of --vmindex <idx>); callers must branch on it.
+    _MM = [str(Path(os.environ.get("LOCALAPPDATA",""))/"MuMuPlayer-12.0"/"nx_main"/"MuMuManager.exe")]
+    for c in _MM:
+        if Path(c).exists(): return c
     # Search drives for MuMuPlayer
     for drv in "CDEFGH":
         base=Path(f"{drv}:\\")
@@ -83,12 +88,19 @@ def find_mumu_cli() -> str | None:
                     for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe","nx_device\\12.0\\shell\\mumu-cli.exe"]:
                         p=d/sub
                         if p.exists(): return str(p)
+                    # MuMu 12 fallback: MuMuManager.exe next to mumu-cli locations
+                    for sub in ["nx_main\\MuMuManager.exe"]:
+                        p=d/sub
+                        if p.exists(): return str(p)
                 # Also check subdirectories (e.g. D:\Xiach\MuMuPlayer)
                 if d.is_dir():
                     try:
                         for sd in d.iterdir():
                             if sd.is_dir() and "mumu" in sd.name.lower():
                                 for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe"]:
+                                    p=sd/sub
+                                    if p.exists(): return str(p)
+                                for sub in ["nx_main\\MuMuManager.exe"]:
                                     p=sd/sub
                                     if p.exists(): return str(p)
                     except PermissionError: pass

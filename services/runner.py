@@ -443,11 +443,22 @@ class AccountRunner:
         # Launch emulator
         if emu_idx:
             cli = find_mumu_cli()
+            if cli is None and ac.get("adb_path"):
+                # MuMu 12: no mumu-cli — MuMuManager.exe lives next to adb.exe
+                try:
+                    cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                    if cand.exists():
+                        cli = str(cand)
+                except Exception:
+                    pass
             if cli:
+                # CLI syntax differs: mumu-cli uses --vmindex, MuMuManager -v
+                use_mm = "MuMuManager" in cli
+                idx_flag = "-v" if use_mm else "--vmindex"
                 already_running = False
                 try:
                     import json as _json
-                    r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
+                    r = subprocess.run([cli, "info", idx_flag, str(emu_idx)],
                                       capture_output=True, text=True, timeout=5, creationflags=CF,
                                       encoding="utf-8", errors="replace")
                     if r.returncode == 0:
@@ -460,7 +471,7 @@ class AccountRunner:
                 else:
                     self.emit_log(f"启动模拟器 #{emu_idx}")
                     try:
-                        subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
+                        subprocess.run([cli, "control", idx_flag, str(emu_idx), "launch"], creationflags=CF, timeout=15)
                     except Exception as e:
                         self.emit_log(f"启动模拟器失败: {e}")
             # Re-detect ADB port AFTER launching — detect_emu_instances only
@@ -874,11 +885,19 @@ class AccountRunner:
                     return
                 emu_idx = ac.get("emu_instance_index", "")
                 cli = find_mumu_cli()
+                if cli is None and ac.get("adb_path"):
+                    try:
+                        cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                        if cand.exists():
+                            cli = str(cand)
+                    except Exception:
+                        pass
                 if cli and emu_idx:
+                    idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
                     self.emit_log(f"[进程组] {name} 重启模拟器 #{emu_idx}")
-                    subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                    subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
                                   timeout=10, capture_output=True, creationflags=CF)
-                    subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"],
+                    subprocess.run([cli, "control", idx_flag, str(emu_idx), "launch"],
                                   timeout=10, capture_output=True, creationflags=CF)
                 return
         # Task completion detection
@@ -965,8 +984,16 @@ class AccountRunner:
                     emu_idx = ac.get("emu_instance_index", "")
                     if emu_idx:
                         cli = find_mumu_cli()
+                        if cli is None and ac.get("adb_path"):
+                            try:
+                                cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                                if cand.exists():
+                                    cli = str(cand)
+                            except Exception:
+                                pass
                         if cli:
-                            subprocess.run([cli, "control", "--vmindex", str(emu_idx), "shutdown"],
+                            idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
+                            subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
                                           timeout=10, capture_output=True, creationflags=CF)
                     try: p.terminate(); p.wait(3)
                     except: pass
