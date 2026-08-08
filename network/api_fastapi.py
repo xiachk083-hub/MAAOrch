@@ -1050,7 +1050,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     def handle_edit_account(idx: int, body: dict):
         a = _account_by_idx(idx)
         for field in ("name", "game_client", "emu_instance_index", "account_switch",
-                      "uid", "suspended", "note", "expire_date", "stages"):
+                      "uid", "suspended", "note", "expire_date", "stages",
+                      "skip_daily"):
             if field in body:
                 a[field] = body[field]
         mw.config["accounts"] = mw.accounts
