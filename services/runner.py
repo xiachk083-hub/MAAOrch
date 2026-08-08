@@ -310,6 +310,17 @@ class AccountRunner:
         self._active.pop(account_id, None)
         self.ctx.proc_status.discard(account_id)
         self._release_emu_mark(account_id)
+        # Remove .pid/.meta so the instance isn't treated as occupied/stale on
+        # the next launch (stop() doesn't go through _cleanup). Without this,
+        # a stopped task leaves a stale .pid that `_get_free_instance` skips
+        # (PID reuse false-positive) and .meta that mislabels the instance.
+        try:
+            if p is not None and getattr(p, "_inst_path", None):
+                _ip = Path(p._inst_path)
+                (_ip / ".pid").unlink(missing_ok=True)
+                (_ip / ".meta").unlink(missing_ok=True)
+        except Exception:
+            pass
 
     def _release_emu_mark(self, account_id: str) -> None:
         """Release queue-side occupancy marks immediately so a relaunch isn't
@@ -1197,6 +1208,16 @@ class AccountRunner:
         old_procs = self._procs.pop(aid, None)
         if old_procs and not isinstance(old_procs, str):
             self._archive_maa_logs(aid, getattr(old_procs, '_inst_path', None))
+            # Process is gone — remove .pid/.meta so the instance is cleanly
+            # reusable (stale pid risks PID-reuse false positive in
+            # _get_free_instance / _launch_for_instance, stale .meta mislabels
+            # the instance in dashboard fallbacks).
+            try:
+                _ip = Path(getattr(old_procs, '_inst_path'))
+                (_ip / ".pid").unlink(missing_ok=True)
+                (_ip / ".meta").unlink(missing_ok=True)
+            except Exception:
+                pass
         old_progs = self._progs.pop(aid, None)
         fh = self._log_handles.pop(aid, None)
         if fh and not fh.closed:
