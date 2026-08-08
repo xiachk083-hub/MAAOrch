@@ -549,13 +549,16 @@ class ConfigService:
                             item["Series"] = _series if -1 <= _series <= 10 else 1
                             # Per-stage times limit (MAA native EnableTimesLimit)
                             # — Series (倍率) only controls speed, NOT count.
-                            # Without EnableTimesLimit MAA runs the stage until
+                            # times<=0 (frontend "每关次数"=0) = no limit: run until
                             # sanity runs out. Apply to ALL fight modes so the
                             # frontend "每关次数" field is always honored.
-                            if day_stage:
-                                _times = int(ac.get("fight_times_per_stage", 3) or 3)
+                            _times = int(ac.get("fight_times_per_stage", 3) or 3)
+                            if day_stage and _times > 0:
                                 item["EnableTimesLimit"] = True
                                 item["TimesLimit"] = max(1, _times)
+                            else:
+                                item["EnableTimesLimit"] = False
+                                item["TimesLimit"] = 2147483647
                     # Move Award to the end (reward collecting always last)
                     award_idx = next((i for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "award"), None)
                     if award_idx is not None:

@@ -2708,7 +2708,7 @@ async function showFightConfig(aid) {
           `<div class="form-row"><label style="min-width:60px">${s}</label><input type="number" id="fc-p-${s}" value="${prio[s]||0}" min="0" max="10" style="width:60px"></div>`
         ).join('')}
       </div>
-      <div class="form-row"><label>每关次数</label><input id="fc-times" type="number" value="${a.fight_times_per_stage || 3}" min="1" max="99" style="width:70px"><span style="font-size:9px;color:var(--text3)">次（MAA 次数限制，防体力全耗）</span></div>
+      <div class="form-row"><label>每关次数</label><input id="fc-times" type="number" value="${a.fight_times_per_stage == null ? 3 : a.fight_times_per_stage}" min="0" max="99" style="width:70px"><span style="font-size:9px;color:var(--text3)">次（0 = 不限制，刷到体力耗尽）</span></div>
       <div class="form-row"><label>代理倍率</label><input id="fc-series" type="number" value="${a.fight_series || 1}" min="1" max="10" style="width:70px"><span style="font-size:9px;color:var(--text3)">倍（AUTO 会快速耗体力，默认 1）</span></div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:6px">🔍 关卡检测记录</div>
       <div id="fc-checks" style="font-size:10px;color:var(--text3);margin-bottom:8px">加载中...</div>
@@ -2810,7 +2810,8 @@ async function saveFightConfig(aid, idx) {
     if (v && !monthly[d]) monthly[d] = v;
   }
 
-  const times = parseInt(document.getElementById('fc-times')?.value) || 3;
+  const timesEl = document.getElementById('fc-times');
+  const times = timesEl && timesEl.value !== '' ? parseInt(timesEl.value) || 0 : 3;
   const series = parseInt(document.getElementById('fc-series')?.value) || 1;
   const body = { fight_mode: mode, fight_default: defStage, schedule_weekly: weekly, schedule_monthly: monthly, fight_priority: priority, fight_materials: materials, fight_times_per_stage: times, fight_series: series };
   const r = await apiPost(`/account/${idx}/fight_config`, body);
