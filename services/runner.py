@@ -854,7 +854,7 @@ class AccountRunner:
                                             gf.seek(gpos)
                                             gnew = gf.read(gsize - gpos)
                                         self._gui_log_positions[aid] = gsize
-                                        if "添加任务失败" in gnew and "Fight" in gnew:
+                                        if "添加任务失败" in gnew and "理智" in gnew:
                                             self.emit_log(f"⬇ {ac.get('name', aid)} Fight 关卡无效，触发降级")
                                             self._downgrading[aid] = True
                                             try:
