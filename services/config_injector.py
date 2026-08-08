@@ -274,6 +274,9 @@ class ConfigService:
         SkipStartupAutoRunAfterUpdate=True also silently skips RunDirectly
         right after a MAA self-update — reset it on every injection."""
         gui = c.setdefault("Gui", {})
+        # Skip MAA's first-launch wizard (GuideStep 1→7 blocks task start
+        # until manually clicked through). 7 = all guide steps done.
+        gui["GuideStep"] = 7
         cs = gui.setdefault("ConnectSettings", {})
         cs.update({
             "AutoDetect": False,

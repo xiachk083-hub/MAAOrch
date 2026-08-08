@@ -465,16 +465,27 @@ class AccountRunner:
                         self.emit_log(f"启动模拟器失败: {e}")
             # Re-detect ADB port AFTER launching — detect_emu_instances only
             # returns running emulators, so a cold start needs a second pass.
-            # (MuMu 12 single-query --vmindex returns wrong ports; all-query is safe.)
+            # Retry loop: right after `launch` the Android guest isn't up yet
+            # and port detection returns empty/wrong ports (e.g. 16708 vs real
+            # 16768). Keep probing until a valid port appears or timeout.
             if emu_idx and not ac.get("adb_address"):
-                try:
-                    from infrastructure.task_constants import detect_emu_instances
-                    for e in detect_emu_instances():
-                        if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
-                            ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
+                from infrastructure.task_constants import detect_emu_instances
+                wait = int(ac.get("emu_wait", 60))
+                deadline = time.time() + wait
+                while time.time() < deadline:
+                    try:
+                        for e in detect_emu_instances():
+                            if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
+                                ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
+                                break
+                        if ac.get("adb_address"):
+                            self.emit_log(f"模拟器 #{emu_idx} ADB 端口 {ac['adb_address']}")
                             break
-                except Exception:
-                    pass
+                    except Exception:
+                        pass
+                    time.sleep(5)
+                if not ac.get("adb_address"):
+                    self.emit_log(f"警告: 模拟器 #{emu_idx} 端口探测超时")
             adb = ac.get("adb_path", "") or "adb"
             addr = ac.get("adb_address", "")
             if addr:
