@@ -833,6 +833,10 @@ class AccountRunner:
         self.emit_started(aid)
 
     def _on_process_exit(self, aid: str, p: subprocess.Popen) -> None:
+        # Re-entrancy guard: _wait_exit thread AND _check_one poll-detection can
+        # both fire on the same exit — only the first one cleans up.
+        if aid not in self._procs:
+            return
         rc = p.poll()
         tasks, sanity, drops = self._parse_log(aid) if aid in self._active else ([], None, None)
         # MAA exiting within 60s of launch with no completed tasks = startup

@@ -60,6 +60,10 @@ def _hot_reload_zip(root: Path, mw: Any) -> None:
         if not _download_zip(url, zpath, lambda m: None):
             return
         with zipfile.ZipFile(zpath) as z:
+            # Integrity check — a corrupted zip would overwrite code and break
+            # the project. Only proceed if the archive passes CRC validation.
+            if z.testzip() is not None:
+                return
             names = z.namelist()
             # Strip top-level dir (main-<branch>)
             top = names[0].split("/")[0] if names else ""
@@ -70,13 +74,20 @@ def _hot_reload_zip(root: Path, mw: Any) -> None:
                     continue
                 if any(rel == s or rel.startswith(s) for s in skip_dirs):
                     continue
+                # Only update code files (.py/.html/.js/.css/.bat) — never
+                # binary data; a truncated download can't corrupt the project.
+                if not rel.endswith((".py", ".html", ".js", ".css", ".bat", ".md")):
+                    continue
                 dst = root / rel
                 try:
                     if n.endswith("/"):
                         dst.mkdir(parents=True, exist_ok=True)
                     else:
+                        data = z.read(n)
+                        if not data:  # empty file in zip = corrupt
+                            continue
                         dst.parent.mkdir(parents=True, exist_ok=True)
-                        dst.write_bytes(z.read(n))
+                        dst.write_bytes(data)
                 except Exception:
                     pass
     except Exception:
