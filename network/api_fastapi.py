@@ -24,24 +24,30 @@ def _log_op(action: str, detail: str = "") -> None:
 
 
 def _restart_hot(root: Path, mw: Any = None) -> None:
-    """Stop tasks and restart main_web.pyw in-place (manager/launcher relaunches)."""
-    runner = getattr(mw, 'runner', None) if mw else None
-    if runner:
-        for aid in list(runner._active.keys()):
+    """TRUE hot reload: re-import changed modules in-place, no restart.
+    Running tasks keep their process; next task launch uses the new code."""
+    import importlib
+    for mod in ("services.config_injector", "services.runner",
+                "services.launch_queue", "services.scheduler",
+                "services.dispatch_pool", "services.instance_pool",
+                "services.maa_download", "services.log_parser",
+                "infrastructure.task_constants", "models.config_manager",
+                "models.account"):
+        try:
+            importlib.reload(sys.modules[mod])
+        except KeyError:
             try:
-                runner.stop(aid)
+                importlib.import_module(mod)
             except Exception:
                 pass
-    time.sleep(2)
-    subprocess.Popen([sys.executable, str(root / "main_web.pyw")],
-                     creationflags=subprocess.CREATE_NO_WINDOW)
-    time.sleep(1)
-    os._exit(0)
+        except Exception:
+            pass
 
 
 def _hot_reload_zip(root: Path, mw: Any) -> None:
     """Zip-mode hot reload: download main.zip, extract ONLY code files
-    (skip services/maa, models/config.json, logs — user data preserved)."""
+    (skip services/maa, models/config.json, logs — user data preserved),
+    then importlib.reload the changed modules — no process restart."""
     try:
         import tempfile
         from services.maa_download import _get_download_url, _download_zip
