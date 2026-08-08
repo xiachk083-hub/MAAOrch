@@ -1247,6 +1247,11 @@ class AccountRunner:
             if p.poll() is None:
                 p.terminate()
                 p.wait(3)
+            if p.poll() is None:
+                # Still alive — hard kill. A leftover MAA becomes an orphan
+                # holding the instance slot (9 instances for 8 parallel).
+                subprocess.run(["taskkill", "/F", "/PID", str(p.pid)],
+                               capture_output=True, timeout=5, creationflags=CF)
         except Exception:
             pass
         # Re-inject with the next stage — full daily chain (StartUp + Fight +
