@@ -335,7 +335,7 @@ def download_project() -> tuple[bool, str]:
                 log(f"部署前备份 config.json → {bk.name}")
         except Exception as e:
             log(f"部署前备份失败: {e}")
-        for rel in ("models/config.json", "services/maa", "logs/maa_history"):
+        for rel in ("models/config.json", "logs/maa_history"):
             src = root / rel
             if src.exists():
                 bak = tmp_dir / "preserve" / rel
@@ -400,9 +400,23 @@ def download_project() -> tuple[bool, str]:
                 log("已优雅关闭全部模拟器 (MuMuManager)")
         except Exception:
             pass
-        # Replace
+        # Replace — services/maa (MAA binaries, ~500MB) is moved aside, NOT
+        # copied: it's managed by MAAOrch itself (ensure_maa_available /
+        # download_update) and must not be touched by deploys. Move = instant.
         old_dir = None
+        maa_moved = None
         if root.exists():
+            # Move services/maa out of the way (fast rename, no copy)
+            maa_src = root / "services" / "maa"
+            if maa_src.exists():
+                maa_moved = tmp_dir / "maa_moved"
+                try:
+                    if maa_moved.exists():
+                        shutil.rmtree(str(maa_moved), ignore_errors=True)
+                    os.rename(str(maa_src), str(maa_moved))
+                    log("MAA 目录已移出（不参与部署替换）")
+                except Exception:
+                    maa_moved = None
             # Try rename old first (faster, safer), fallback to rmtree
             old_dir = tmp_dir / "old_project"
             try:
@@ -419,14 +433,28 @@ def download_project() -> tuple[bool, str]:
                 if dest.exists():
                     # Leftover from a partial previous replace (e.g. rmtree failed
                     # on a locked file) — merge instead of failing with WinError 183.
-                    shutil.copytree(item, dest, dirs_exist_ok=True)
+                    shutil.copytree(item, dest, dirs_exist_ok=True,
+                                    ignore=shutil.ignore_patterns("maa") if item.name == "services" else None)
                 else:
-                    shutil.copytree(item, dest)
+                    shutil.copytree(item, dest,
+                                    ignore=shutil.ignore_patterns("maa") if item.name == "services" else None)
             else:
                 shutil.copy2(item, dest)
 
+        # Put MAA back (fast move)
+        if maa_moved and maa_moved.exists():
+            maa_dst = root / "services" / "maa"
+            maa_dst.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.rename(str(maa_moved), str(maa_dst))
+                log("MAA 目录已放回")
+            except Exception:
+                shutil.copytree(maa_moved, maa_dst, dirs_exist_ok=True)
+
         # Restore preserved data
         for rel, bak in preserve.items():
+            if rel == "services/maa":
+                continue  # handled by move-aside above
             dest = root / rel
             if bak.is_dir():
                 if dest.exists():
