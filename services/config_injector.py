@@ -420,6 +420,8 @@ class ConfigService:
                 if fight_mode:
                     default = ac.get("fight_default", "1-7")
                     stages = ac.get("stages", []) or []
+                    _diag = ac.get("_stage_override", "")
+                    self.ctx.log(f"[注入] {ac.get('name', '?')} fight_mode={fight_mode!r} default={default!r} override={_diag!r} stages={stages}")
                     if fight_mode == "schedule":
                         weekdays = ["mon","tue","wed","thu","fri","sat","sun"]
                         wd = weekdays[datetime.now().weekday()]

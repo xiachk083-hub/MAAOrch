@@ -54,6 +54,17 @@ class Account:
     dispatch_id: str = ""
     stages: list = field(default_factory=list)
 
+    # Fight strategy (kept as dataclass fields so from_dict/to_dict persist them —
+    # dynamic attributes were silently dropped on reload, resetting configs)
+    fight_mode: str = "schedule"
+    fight_default: str = "1-7"
+    schedule_weekly: dict = field(default_factory=dict)
+    schedule_monthly: dict = field(default_factory=dict)
+    fight_priority: dict = field(default_factory=dict)
+    fight_materials: list = field(default_factory=list)
+    fight_times_per_stage: int = 3
+    fight_series: int = 1
+
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):
         return getattr(self, key)
