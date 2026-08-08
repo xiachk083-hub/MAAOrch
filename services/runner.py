@@ -963,6 +963,24 @@ class AccountRunner:
                             try: p.terminate(); p.wait(3)
                             except: pass
                             return
+                        # Sanity threshold: stop fighting once sanity drops below
+                        # the account's threshold (default 40) — leave it to
+                        # regenerate instead of grinding to 0. Only applies while
+                        # the Fight chain is active (daily tasks keep running).
+                        if ac and not ac.get("_connect_only"):
+                            _min = int(ac.get("fight_sanity_stop", 40) or 40)
+                            _tasks, _sanity, _ = self._parse_log(aid)
+                            _cur = (_sanity or {}).get("current")
+                            _fighting = any(t.get("TaskType", "").lower() == "fight"
+                                            and t.get("status") == "运行中" for t in _tasks)
+                            if _cur is not None and _cur <= _min and _fighting:
+                                self.emit_log(f"⏱ {ac.get('name', aid)} 理智 {_cur} ≤ {_min}，停止刷图（留给自然恢复）")
+                                self._log.info(f"[理智阈值] {ac.get('name', aid)} 停止刷图 (cur={_cur}, min={_min})")
+                                tasks, sanity, drops = self._parse_log(aid)
+                                self._cleanup(aid, 0, tasks, sanity, drops)
+                                try: p.terminate(); p.wait(3)
+                                except: pass
+                                return
                         # Per-account stage downgrade: Fight task failed (nav/unlock)
                         # while a fallback chain exists → record + retry next stage.
                         if ac.get("_stage_fallback") and aid not in self._stopping and "TaskChainCompleted" in new_content:
