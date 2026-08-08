@@ -368,6 +368,28 @@ def download_project() -> tuple[bool, str]:
             log("已清理残留 MAA.exe 进程")
         except Exception:
             pass
+        # Shut down all emulators too — otherwise every deploy leaves N orphan
+        # emulators running (MAA dies, emulator stays). Use MuMuManager (MuMu 12)
+        # or mumu-cli, whichever exists next to adb in the preserved maa dir.
+        try:
+            mm = None
+            adb = None
+            try:
+                import glob as _g
+                adb_cands = _g.glob(str(root / "services" / "maa" / "source" / "**" / "adb.exe"), recursive=True)
+                if adb_cands:
+                    adb = adb_cands[0]
+                    mm_cand = os.path.join(os.path.dirname(adb), "MuMuManager.exe")
+                    if os.path.exists(mm_cand):
+                        mm = mm_cand
+            except Exception:
+                pass
+            if mm:
+                subprocess.run([mm, "shutdown", "-a"], capture_output=True, timeout=30,
+                               creationflags=subprocess.CREATE_NO_WINDOW)
+                log("已关闭全部模拟器 (MuMuManager)")
+        except Exception:
+            pass
         # Replace
         old_dir = None
         if root.exists():

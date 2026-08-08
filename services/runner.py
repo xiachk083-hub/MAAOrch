@@ -1357,15 +1357,16 @@ class AccountRunner:
                     except ValueError: pass
             except Exception:
                 pass
-        if exit_code == 0 and ac:
-            self._log.debug(f"[完成] {name} MAA 退出 (exit=0)")
-            # Close the account's emulator on normal completion — each account
-            # is bound to its own emulator (one-to-one), so leaving it running
-            # accumulates open emulators (40 accounts → 40 emulators). Not for
-            # connect-only (manual use) or auto-restart (exit≠0) paths.
+        # Close the account's emulator on ANY exit (normal / crash / manual
+        # stop / deploy restart) — each account is bound to its own emulator
+        # one-to-one, so leaving it running accumulates orphan emulators
+        # (40 accounts → 40 open emulators). Skip connect-only (manual use)
+        # and auto-restart (re-enqueued immediately — cold boot is fine,
+        # orphans are worse).
+        if ac and not ac.get("_connect_only") and not ac.get("_auto_restart_count"):
             try:
                 emu_idx = ac.get("emu_instance_index", "")
-                if emu_idx and not ac.get("_connect_only"):
+                if emu_idx:
                     cli = find_mumu_cli()
                     if cli is None and ac.get("adb_path"):
                         cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
@@ -1378,6 +1379,8 @@ class AccountRunner:
                                       timeout=10, capture_output=True, creationflags=CF)
             except Exception:
                 pass
+        if exit_code == 0 and ac:
+            self._log.debug(f"[完成] {name} MAA 退出 (exit=0)")
         if ac:
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
