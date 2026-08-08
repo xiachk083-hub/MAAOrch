@@ -122,6 +122,40 @@ class AccountRunner:
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
         from infrastructure.logger import Logger
         self._log = Logger("runner")
+        self._clean_orphan_marks()
+
+    def _clean_orphan_marks(self) -> None:
+        """Startup sweep: clear .pid/.meta whose process no longer exists.
+        Orphan MAA processes (crashed / killed without cleanup) leave stale
+        marks that block instance reuse and show ghost "running" state."""
+        try:
+            _pool = Path(__file__).parent / "maa" / "instances"
+            if not _pool.exists():
+                return
+            for inst_dir in _pool.glob("*"):
+                pf = inst_dir / ".pid"
+                if not pf.exists():
+                    continue
+                try:
+                    pid = int(pf.read_text().strip())
+                except Exception:
+                    pf.unlink(missing_ok=True)
+                    (inst_dir / ".meta").unlink(missing_ok=True)
+                    continue
+                try:
+                    import psutil as _pu
+                    alive = _pu.pid_exists(pid)
+                except ImportError:
+                    r = subprocess.run(["tasklist", "/NH", "/FI", f"PID eq {pid}"],
+                                       capture_output=True, text=True, timeout=3,
+                                       creationflags=subprocess.CREATE_NO_WINDOW)
+                    alive = str(pid) in r.stdout
+                if not alive:
+                    pf.unlink(missing_ok=True)
+                    (inst_dir / ".meta").unlink(missing_ok=True)
+                    self._log.info(f"[孤儿清理] inst {inst_dir.name}: pid {pid} 不存在，清标记")
+        except Exception:
+            pass
 
     # ── Signal replacements (Qt-free callbacks) ──
 
@@ -809,6 +843,11 @@ class AccountRunner:
         if rc == 0 and started and time.time() - started < 60 and not tasks:
             self._log.warning(f"[启动失败] {aid} MAA {int(time.time()-started)}s 退出且无任务，按失败处理")
             rc = -12
+        # PostActions=ExitSelf may exit with a non-zero code even on NORMAL
+        # completion. If tasks were completed, treat it as success regardless.
+        if rc not in (0, None) and any(t.get("status") == "完成" for t in tasks):
+            self._log.info(f"[完成后] {aid} MAA 退出(rc={rc}) 但任务已完成，按正常完成处理")
+            rc = 0
         self._cleanup(aid, rc or 0, tasks, sanity, drops)
 
     # ── Monitoring ──
