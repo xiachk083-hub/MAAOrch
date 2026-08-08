@@ -69,43 +69,45 @@ def _detect_version(source_dir: Path, fallback_tag: str = "") -> str:
 def _get_download_url() -> tuple[str, str] | None:
     """Get latest MAA win-x64 zip download URL from GitHub.
     Returns (url, tag_name) or None on failure.
-    Falls back to HTML page parsing when API is rate-limited or blocked."""
-    # Try API first
-    for url, use_api in [
-        (_RELEASE_API, True),
-        (_RELEASE_PAGE, False),
-    ]:
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-            if use_api:
-                req.add_header("Accept", "application/json")
-            resp = urllib.request.urlopen(req, timeout=15)
-            if use_api:
-                data = json.loads(resp.read().decode())
-                tag = data.get("tag_name", "").lstrip("v")
-                for a in data.get("assets", []):
-                    name = a.get("name", "")
-                    if "win-x64" in name and name.endswith(".zip"):
-                        return (a["browser_download_url"], tag)
-                return None
-            else:
-                # HTML page: version in redirect URL or page title
-                final_url = resp.url
-                m = re.search(r'/tag/v?([\d.]+(?:-[\w.]+)?)', final_url)
-                tag = m.group(1).lstrip("v") if m else ""
-                if not tag:
-                    html = resp.read().decode("utf-8", errors="replace")
-                    m = re.search(r'MAA[\s-]*v?([\d.]+(?:-[\w.]+)?)', html)
+    Falls back to HTML page parsing and GitHub mirrors — direct GitHub API is
+    often blocked/rate-limited on some networks."""
+    # Try direct API, direct HTML page, then mirror-proxied API/page.
+    _MIRROR_PREFIXES = ["", "https://ghfast.top/", "https://ghproxy.net/", "https://gh-proxy.com/"]
+    for prefix in _MIRROR_PREFIXES:
+        for url, use_api in [
+            (prefix + _RELEASE_API, True),
+            (prefix + _RELEASE_PAGE, False),
+        ]:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+                if use_api:
+                    req.add_header("Accept", "application/json")
+                resp = urllib.request.urlopen(req, timeout=15)
+                if use_api:
+                    data = json.loads(resp.read().decode())
+                    tag = data.get("tag_name", "").lstrip("v")
+                    for a in data.get("assets", []):
+                        name = a.get("name", "")
+                        if "win-x64" in name and name.endswith(".zip"):
+                            return (a["browser_download_url"], tag)
+                    continue
+                else:
+                    # HTML page: version in redirect URL or page title
+                    final_url = resp.url
+                    m = re.search(r'/tag/v?([\d.]+(?:-[\w.]+)?)', final_url)
                     tag = m.group(1).lstrip("v") if m else ""
-                # Parse HTML to find win-x64 download link
-                m = re.search(r'href="([^"]*win-x64[^"]*\.zip)"', html)
-                if m:
-                    href = m.group(1)
-                    dl_url = href if href.startswith("http") else f"https://github.com{href}"
-                    return (dl_url, tag)
-                return None
-        except Exception:
-            continue
+                    if not tag:
+                        html = resp.read().decode("utf-8", errors="replace")
+                        m = re.search(r'MAA[\s-]*v?([\d.]+(?:-[\w.]+)?)', html)
+                        tag = m.group(1).lstrip("v") if m else ""
+                    # Parse HTML to find win-x64 download link
+                    m = re.search(r'href="([^"]*win-x64[^"]*\.zip)"', html)
+                    if m:
+                        href = m.group(1)
+                        dl_url = href if href.startswith("http") else f"https://github.com{href}"
+                        return (dl_url, tag)
+            except Exception:
+                continue
     return None
 
 
@@ -309,7 +311,10 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
     _log("[MAA] 检查 GitHub 最新版本...")
     result = _get_download_url()
     if not result:
-        _log("[MAA] 无法获取下载链接（网络问题或 GitHub 限频），请手动下载")
+        _log("[MAA] 无法获取下载链接（网络问题或 GitHub 限频）")
+        _log("[MAA] 手动修复: 1) 浏览器打开 https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases")
+        _log("[MAA]          2) 下载 win-x64.zip 解压到 services/maa/source/（MAA.exe 在根目录）")
+        _log("[MAA]          3) 重启 MAAOrch 完成初始化")
         source_dir.mkdir(parents=True, exist_ok=True)
         return False
     dl_url, tag = result

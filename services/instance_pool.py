@@ -117,12 +117,16 @@ def _init_maa_source(source: Path) -> bool:
         pass
     try:
         proc = subprocess.Popen([str(exe)], creationflags=subprocess.CREATE_NO_WINDOW)
-        for _ in range(30):
+        deadline = _time.time() + 60
+        while _time.time() < deadline:
             if gj.exists():
                 try:
                     data = json.loads(gj.read_text(encoding="utf-8"))
                     tq = data.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
-                    if any("$type" in item for item in tq):
+                    # $type OR any TaskQueue entries — MAA may serialize without
+                    # $type on some versions; a non-empty TaskQueue means the
+                    # config was generated (initialized).
+                    if any("$type" in item for item in tq) or len(tq) > 0:
                         proc.terminate()
                         proc.wait(5)
                         return True
