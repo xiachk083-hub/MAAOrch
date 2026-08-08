@@ -224,6 +224,14 @@ class LogService:
                         stats = data.get("details", {}).get("stats", [])
                         if stats:
                             last_drops = {s["itemName"]: s["quantity"] for s in stats}
+                    elif what == "FightTimes":
+                        # 刷关次数信号: finished=true = 次数刷完(正常收尾, 非失败)
+                        d = data.get("details", {})
+                        if d.get("finished"):
+                            tc = data.get("taskchain", "")
+                            if tc in chain_status:
+                                chain_status[tc]["status"] = "完成"
+                                chain_status[tc]["fight_finished"] = True
                     elif what == "ExceededLimit":
                         tc = data.get("taskchain", "")
                         if tc in chain_status:

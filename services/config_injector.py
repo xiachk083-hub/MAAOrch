@@ -435,8 +435,16 @@ class ConfigService:
                                 day_stage = default
                     elif fight_mode == "priority":
                         priority = ac.get("fight_priority", {}) or {}
-                        usable = [s for s in stages if s in priority]
-                        day_stage = sorted(usable, key=lambda s: priority.get(s, 0), reverse=True)[0] if usable else default
+                        # Ordered by priority desc; only stages with prio > 0 join
+                        ordered = [s for s in stages if priority.get(s, 0) > 0]
+                        ordered.sort(key=lambda s: priority.get(s, 0), reverse=True)
+                        # _stage_override: set by the downgrade loop (retry next stage)
+                        day_stage = ac.get("_stage_override") or (ordered[0] if ordered else default)
+                        # Fallback chain for the per-account downgrade loop
+                        ac["_stage_fallback"] = ordered[1:]
+                        ac["_stage_current"] = day_stage
+                        ac["_stage_times"] = int(ac.get("fight_times_per_stage", 3) or 3)
+                        ac["_stage_series"] = int(ac.get("fight_series", 1) or 1)
                     elif fight_mode == "material":
                         _MS = {"固源岩":"1-7","装置":"S3-4","聚酸酯":"S3-3","酯":"S3-1","异铁":"S3-2","酮凝集":"S3-5","凝胶":"S3-5","龙门币":"CE-6","作战记录":"LS-6"}
                         materials = ac.get("fight_materials", []) or []
@@ -532,6 +540,15 @@ class ConfigService:
                             item["UseMedicine"] = False
                             item["StagePlan"] = [day_stage] if day_stage else []
                             item["IsStageManually"] = bool(day_stage)
+                            # Fixed series (倍率) — AUTO (0) burns sanity fast via
+                            # max multiplier + chained runs. Default 1x.
+                            _series = int(ac.get("fight_series", 1) or 1)
+                            item["Series"] = _series if -1 <= _series <= 10 else 1
+                            # Per-stage times limit (MAA native EnableTimesLimit)
+                            if fight_mode == "priority" and day_stage:
+                                _times = int(ac.get("fight_times_per_stage", 3) or 3)
+                                item["EnableTimesLimit"] = True
+                                item["TimesLimit"] = max(1, _times)
                     # Move Award to the end (reward collecting always last)
                     award_idx = next((i for i, item in enumerate(clean_tq) if item.get("TaskType", "").lower() == "award"), None)
                     if award_idx is not None:

@@ -630,6 +630,21 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                           "mtime": f.stat().st_mtime})
         return {"ok": True, "aid": aid, "files": files}
 
+    @app.get("/api/stage_checks")
+    def handle_stage_checks(aid: str = ""):
+        """Per-account stage availability checks (models/stage_checks.json)."""
+        from services.runner import _STAGE_CHECKS_PATH
+        p = Path(_STAGE_CHECKS_PATH)
+        d = {}
+        if p.exists():
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                d = {}
+        if aid:
+            return {"ok": True, "aid": aid, "checks": d.get(aid, [])}
+        return {"ok": True, "accounts": {k: v for k, v in d.items() if v}}
+
     @app.get("/api/accounts")
     def handle_accounts():
         data = []
@@ -1072,12 +1087,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             "schedule_monthly": a.get("schedule_monthly", {}),
             "fight_priority": a.get("fight_priority", {}),
             "fight_materials": a.get("fight_materials", []),
+            "fight_times_per_stage": a.get("fight_times_per_stage", 3),
+            "fight_series": a.get("fight_series", 1),
         }
 
     @app.post("/api/account/{idx}/fight_config")
     def handle_save_fight_config(idx: int, body: dict):
         a = _account_by_idx(idx)
-        for f in ("fight_mode", "fight_default", "schedule_weekly", "schedule_monthly", "fight_priority", "fight_materials"):
+        for f in ("fight_mode", "fight_default", "schedule_weekly", "schedule_monthly", "fight_priority", "fight_materials", "fight_times_per_stage", "fight_series"):
             if f in body:
                 a[f] = body[f]
         mw.config["accounts"] = mw.accounts

@@ -2703,11 +2703,15 @@ async function showFightConfig(aid) {
         <button class="small" onclick="fcAddMonthly()">＋ 添加月计划</button>
       </div>
       <div id="fc-priority" style="${mode!=='priority'?'display:none':''}">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">关卡优先级（数字越大越优先）</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">关卡优先级（数字越大越优先；不可刷的关卡自动降级到下一个）</div>
         ${(a.stages||[]).map(s =>
           `<div class="form-row"><label style="min-width:60px">${s}</label><input type="number" id="fc-p-${s}" value="${prio[s]||0}" min="0" max="10" style="width:60px"></div>`
         ).join('')}
       </div>
+      <div class="form-row"><label>每关次数</label><input id="fc-times" type="number" value="${a.fight_times_per_stage || 3}" min="1" max="99" style="width:70px"><span style="font-size:9px;color:var(--text3)">次（MAA 次数限制，防体力全耗）</span></div>
+      <div class="form-row"><label>代理倍率</label><input id="fc-series" type="number" value="${a.fight_series || 1}" min="1" max="10" style="width:70px"><span style="font-size:9px;color:var(--text3)">倍（AUTO 会快速耗体力，默认 1）</span></div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:6px">🔍 关卡检测记录</div>
+      <div id="fc-checks" style="font-size:10px;color:var(--text3);margin-bottom:8px">加载中...</div>
       <div id="fc-material" style="${mode!=='material'?'display:none':''}">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px">材料目标</div>
         <div id="fc-mat-list">${mats.map((m,i) =>
@@ -2726,6 +2730,7 @@ async function showFightConfig(aid) {
     </div>
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+  loadStageChecks(aid);
 }
 
 // Fight config helpers (global, used by onchange inline handlers)
@@ -2805,7 +2810,9 @@ async function saveFightConfig(aid, idx) {
     if (v && !monthly[d]) monthly[d] = v;
   }
 
-  const body = { fight_mode: mode, fight_default: defStage, schedule_weekly: weekly, schedule_monthly: monthly, fight_priority: priority, fight_materials: materials };
+  const times = parseInt(document.getElementById('fc-times')?.value) || 3;
+  const series = parseInt(document.getElementById('fc-series')?.value) || 1;
+  const body = { fight_mode: mode, fight_default: defStage, schedule_weekly: weekly, schedule_monthly: monthly, fight_priority: priority, fight_materials: materials, fight_times_per_stage: times, fight_series: series };
   const r = await apiPost(`/account/${idx}/fight_config`, body);
   if (r.ok) {
     toast('刷关策略已保存');
@@ -2813,6 +2820,26 @@ async function saveFightConfig(aid, idx) {
   } else {
     toast(r.error || '保存失败', 'error');
   }
+}
+async function loadStageChecks(aid) {
+  const el = document.getElementById('fc-checks');
+  if (!el) return;
+  const r = await apiGet('/stage_checks?aid=' + aid);
+  const checks = (r.ok && r.checks) || [];
+  if (!checks.length) {
+    el.innerHTML = '<span style="color:var(--text3)">暂无记录 — 刷关失败时会自动记录（关卡/原因/时间）</span>';
+    return;
+  }
+  el.innerHTML = checks.slice(0, 10).map(c => {
+    const d = new Date(c.ts * 1000);
+    const ts = `${d.getMonth()+1}-${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const reason = c.reason === 'sanity' ? '理智不足' : '导航失败(未解锁?)';
+    return `<div style="padding:2px 0;border-bottom:1px solid var(--border);display:flex;gap:4px">
+      <span style="color:var(--danger)">❌ ${c.stage}</span>
+      <span style="color:var(--text3)">${reason}</span>
+      <span style="flex:1"></span>
+      <span style="color:var(--text3)">${ts}</span></div>`;
+  }).join('') + '<div style="padding:2px 0;color:var(--text3)">（记录仅供参考 — 关卡状态动态，每次仍实际尝试）</div>';
 }
 function showCreateAccountForm(preset) {
   const html = `<div class="dialog-overlay" onclick="event.target==this&&this.remove()">

@@ -11,6 +11,8 @@ from infrastructure.task_constants import find_mumu_cli, CF
 from app.service_context import ServiceContext
 from models.stats import RunStats
 
+_STAGE_CHECKS_PATH = Path(__file__).parent.parent / "models" / "stage_checks.json"
+
 
 def _close_mumu_popups():
     """Close MuMu error popup windows (manual API use only)."""
@@ -111,6 +113,7 @@ class AccountRunner:
         self._emu_fail_count: dict[str, int] = {}
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
+        self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
         from infrastructure.logger import Logger
         self._log = Logger("runner")
 
@@ -844,6 +847,12 @@ class AccountRunner:
                             try: p.terminate(); p.wait(3)
                             except: pass
                             return
+                        # Per-account stage downgrade: Fight task failed (nav/unlock)
+                        # while a fallback chain exists → record + retry next stage.
+                        if ac.get("_stage_fallback") and aid not in self._stopping and "TaskChainCompleted" in new_content:
+                            self._maybe_downgrade(aid, p)
+                            if self._downgrading.get(aid):
+                                return
                 except: pass
             # Stuck detection
             ac = self._active.get(aid)
@@ -1000,6 +1009,83 @@ class AccountRunner:
         return self.ctx.logs.parse_log(progs[0])
 
     # ── Completion ──
+
+    def _record_stage_check(self, aid: str, stage: str, reason: str) -> None:
+        """Persist a per-account stage availability check to models/stage_checks.json."""
+        try:
+            import json as _json
+            from infrastructure.utils import atomic_write
+            p = _STAGE_CHECKS_PATH
+            d = {}
+            if p.exists():
+                try:
+                    d = _json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    d = {}
+            entries = d.get(aid, [])
+            entries.insert(0, {"stage": stage, "reason": reason, "ts": time.time()})
+            d[aid] = entries[:20]
+            atomic_write(p, _json.dumps(d, ensure_ascii=False))
+        except Exception:
+            pass
+
+    def _downgrade_stage(self, aid: str, ac: dict, p) -> bool:
+        """Fight failed (unlocked/navigation) → record check, retry next stage.
+        Returns True if a downgrade/restart was issued."""
+        fallback = ac.get("_stage_fallback") or []
+        cur_stage = ac.get("_stage_current", "")
+        if not fallback:
+            return False
+        next_stage = fallback[0]
+        ac["_stage_fallback"] = fallback[1:]
+        if cur_stage:
+            self._record_stage_check(aid, cur_stage, "nav_fail")
+        name = ac.get("name", aid)
+        self.emit_log(f"⬇ {name} 关卡「{cur_stage or '?'}」不可刷，降级到「{next_stage}」")
+        self._log.info(f"[降级] {name}: {cur_stage} → {next_stage}")
+        inst_dir = getattr(p, "_inst_path", None)
+        if not inst_dir:
+            return False
+        try:
+            p.terminate()
+            p.wait(3)
+        except Exception:
+            pass
+        # Re-inject with the next stage, minimal list (StartUp + Fight)
+        ac["_stage_override"] = next_stage
+        try:
+            self.ctx.cfg.inject_smart(["StartUp", "Fight"], ac, str(Path(inst_dir) / "config"))
+            self._spawn_instance(Path(inst_dir) / "MAA.exe", ac, inst_dir)
+            return True
+        except Exception as e:
+            self._log.error(f"[降级] {name} 重注入失败: {e}")
+            return False
+
+    def _maybe_downgrade(self, aid: str, p) -> None:
+        """Check if the Fight chain failed and a fallback stage exists.
+        Low sanity stops the downgrade chain (all stages unplayable)."""
+        if self._downgrading.get(aid):
+            return
+        ac = self._active.get(aid)
+        if not ac or ac.get("_connect_only"):
+            return
+        tasks, sanity, _ = self._parse_log(aid)
+        fight = next((t for t in tasks if t.get("TaskType", "").lower() == "fight"), None)
+        if not fight or fight.get("status") != "失败":
+            return
+        if fight.get("fight_finished"):
+            return  # finished=true = 次数刷完(正常), 非失败
+        # Sanity gate: if sanity is very low, all stages are unplayable → stop
+        cur = (sanity or {}).get("current")
+        if cur is not None and cur < 20:
+            ac["_stage_fallback"] = []
+            self.emit_log(f"⏱ {ac.get('name', aid)} 理智不足({cur})，停止关卡降级")
+            return
+        self._downgrading[aid] = True
+        try:
+            self._downgrade_stage(aid, ac, p)
+        finally:
+            self._downgrading.pop(aid, None)
 
     def _archive_maa_logs(self, aid: str, inst_path: str | None) -> None:
         """Archive MAA asst.log + gui.log after a run ends (any exit path).
