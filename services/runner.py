@@ -1325,6 +1325,25 @@ class AccountRunner:
                 pass
         if exit_code == 0 and ac:
             self._log.debug(f"[完成] {name} MAA 退出 (exit=0)")
+            # Close the account's emulator on normal completion — each account
+            # is bound to its own emulator (one-to-one), so leaving it running
+            # accumulates open emulators (40 accounts → 40 emulators). Not for
+            # connect-only (manual use) or auto-restart (exit≠0) paths.
+            try:
+                emu_idx = ac.get("emu_instance_index", "")
+                if emu_idx and not ac.get("_connect_only"):
+                    cli = find_mumu_cli()
+                    if cli is None and ac.get("adb_path"):
+                        cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                        if cand.exists():
+                            cli = str(cand)
+                    if cli:
+                        idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
+                        self.emit_log(f"[完成] {name} 关闭模拟器 #{emu_idx}")
+                        subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
+                                      timeout=10, capture_output=True, creationflags=CF)
+            except Exception:
+                pass
         if ac:
             plan = ac.get("smart_plan", "")
             plan_log = f" 🧠 {plan}" if plan else ""
