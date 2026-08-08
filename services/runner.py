@@ -235,11 +235,8 @@ class AccountRunner:
 
         self._auto_derive(ac)
 
-        if not ac.get("adb_address"):
-            if ac.get("emu_instance_index"):
-                self.emit_log(f"{ac.get('name', aid)} 模拟器 #{ac['emu_instance_index']} ADB 未就绪，跳过")
-            else:
-                self.emit_log(f"{ac.get('name', aid)} 未配置模拟器索引，跳过")
+        if not ac.get("adb_address") and not ac.get("emu_instance_index"):
+            self.emit_log(f"{ac.get('name', aid)} 未配置模拟器索引和 ADB，跳过")
             return False
         if not ac.get("adb_path") and not ac.get("_connect_only"):
             self.emit_log(f"{ac.get('name', aid)} 未找到 adb.exe，跳过")
@@ -466,6 +463,18 @@ class AccountRunner:
                         subprocess.run([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=CF, timeout=15)
                     except Exception as e:
                         self.emit_log(f"启动模拟器失败: {e}")
+            # Re-detect ADB port AFTER launching — detect_emu_instances only
+            # returns running emulators, so a cold start needs a second pass.
+            # (MuMu 12 single-query --vmindex returns wrong ports; all-query is safe.)
+            if emu_idx and not ac.get("adb_address"):
+                try:
+                    from infrastructure.task_constants import detect_emu_instances
+                    for e in detect_emu_instances():
+                        if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
+                            ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
+                            break
+                except Exception:
+                    pass
             adb = ac.get("adb_path", "") or "adb"
             addr = ac.get("adb_address", "")
             if addr:
