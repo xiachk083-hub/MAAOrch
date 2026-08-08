@@ -345,6 +345,12 @@ class ConfigService:
                 rs = gui.setdefault("RuntimeSettings", {})
                 rs["ClientType"] = client_enum
                 rs["StartGame"] = True
+        # MAAOrch owns the rotation — disable MAA's internal auto-restart on
+        # drop. When enabled, MAA starts a 2nd round after the first completes
+        # (no sanity left → Fight errors "理智作战: 理智作战" and keeps looping
+        # through daily tasks), which defeats the queue's per-account flow.
+        rs = gui.setdefault("RuntimeSettings", {})
+        rs["AutoRestartOnDrop"] = False
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
