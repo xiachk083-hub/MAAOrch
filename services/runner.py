@@ -1143,10 +1143,13 @@ class AccountRunner:
             p.wait(3)
         except Exception:
             pass
-        # Re-inject with the next stage, minimal list (StartUp + Fight)
+        # Re-inject with the next stage — full daily chain (StartUp + Fight +
+        # Infrast/Recruit/Mall/Award), not just Fight. Otherwise a downgrade
+        # skips the daily tasks entirely ("只有理智没有其他").
         ac["_stage_override"] = next_stage
         try:
-            self.ctx.cfg.inject_smart(["StartUp", "Fight"], ac, str(Path(inst_dir) / "config"))
+            _full = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
+            self.ctx.cfg.inject_smart(_full, ac, str(Path(inst_dir) / "config"))
             self._spawn_instance(Path(inst_dir) / "MAA.exe", ac, inst_dir)
             return True
         except Exception as e:
