@@ -9,6 +9,8 @@ Never interrupts a running MAA — only idles wait for their turn.
 from __future__ import annotations
 import heapq
 import time
+import subprocess
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 import threading
@@ -524,6 +526,32 @@ class LaunchQueue:
         for emu_idx, aid in list(self._active_emus.items()):
             ts = self._active_emus_ts.get(emu_idx, 0)
             real = runner._has_real_process(aid)
+            # `real` only checks the MAA process — an emulator that crashed
+            # (VMMHeadless gone) leaves MAA alive but useless (ADB lost).
+            # Also verify the emulator is actually running via MuMuManager.
+            if real:
+                try:
+                    _ac = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
+                    if _ac and _ac.get("emu_instance_index"):
+                        from infrastructure.task_constants import find_mumu_cli
+                        cli = find_mumu_cli()
+                        if cli is None and _ac.get("adb_path"):
+                            _cand = Path(_ac["adb_path"]).parent / "MuMuManager.exe"
+                            if _cand.exists():
+                                cli = str(_cand)
+                        if cli:
+                            _flag = "-v" if "MuMuManager" in cli else "--vmindex"
+                            r = subprocess.run([cli, "info", _flag, str(_ac["emu_instance_index"])],
+                                              capture_output=True, text=True, timeout=5,
+                                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                                              encoding="utf-8", errors="replace")
+                            if r.returncode == 0:
+                                _d = json.loads(r.stdout)
+                                if not (_d.get("is_android_started") or _d.get("is_process_started")):
+                                    real = False
+                                    _QUEUE_LOG.warn(f"模拟器 #{_ac['emu_instance_index']} 已崩溃（{_ac.get('name','?')}）")
+                except Exception:
+                    pass
             _QUEUE_LOG.debug(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
             if ts == 0:
                 _QUEUE_LOG.warn(f"清洁跳过(ts=0): {emu_idx}")
