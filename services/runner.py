@@ -792,7 +792,12 @@ class AccountRunner:
         if not hasattr(p, 'poll'):
             return
         if p.poll() is not None:
-            return  # handled by _wait_exit
+            # Process died — cleanup stale marks immediately (fallback if the
+            # _wait_exit thread is gone). Otherwise a dead MAA blocks relaunch
+            # with a stale "already running" mark indefinitely.
+            self._log.warning(f"[进程] {aid} MAA 进程已退出 (poll={p.poll()})，清理残留")
+            self._on_process_exit(aid, p)
+            return
         self._update_status(aid)
         # Process pair health check
         info = self._proc_info.get(aid, {})
@@ -1249,6 +1254,28 @@ class AccountRunner:
         self.emit_finished((aid, exit_code, tasks))
         if ac:
             ac.pop("_persist_plan", None)
+
+        # Auto-recovery: MAA exited abnormally (externally killed / crash) →
+        # re-enqueue to continue the run. Not for user stops (stop() pops _active
+        # first, so ac is None here), connect-only, or normal completes.
+        if ac and exit_code != 0 and not ac.get("_connect_only"):
+            retries = ac.get("_auto_restart_count", 0) + 1
+            if retries <= 3:
+                ac["_auto_restart_count"] = retries
+                self.emit_log(f"🔄 {name} MAA 异常退出(exit={exit_code})，自动重启 (第{retries}/3 次)")
+                self._log.warning(f"[自动重启] {name} exit={exit_code} 第{retries}次")
+                try:
+                    mw = getattr(self.ctx, "_mw", None)
+                    lq = getattr(mw, "launch_queue", None)
+                    if lq is not None and ac.get("emu_instance_index"):
+                        lq.enqueue(aid, "auto", priority=0, slot=ac.get("_slot", ""))
+                        lq.tick()
+                except Exception as e:
+                    self._log.warning(f"[自动重启] {name} 入队失败: {e}")
+            else:
+                self.emit_log(f"⛔ {name} MAA 异常退出 {retries} 次，停止自动重启")
+        elif ac and exit_code == 0:
+            ac.pop("_auto_restart_count", None)
 
         # Save run stats
         if tasks:
