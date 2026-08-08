@@ -2278,6 +2278,37 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             _log(f"[更新] zip 更新失败: {e}")
             os._exit(0)
 
+    @app.post("/api/orch/hot_reload")
+    def handle_orch_hot_reload():
+        """Hot reload: git pull latest code + restart this process.
+        Manager (or the startup script) relaunches main_web.pyw automatically.
+        No zip download / config replace — seconds instead of minutes."""
+        root = Path(__file__).parent.parent
+        try:
+            st = subprocess.run(["git", "-C", str(root), "pull", "--ff-only"],
+                                capture_output=True, timeout=60, creationflags=_CF,
+                                encoding="utf-8", errors="replace")
+            if st.returncode != 0:
+                return {"ok": False, "error": f"git pull 失败: {st.stderr[:300]}"}
+        except Exception as e:
+            return {"ok": False, "error": f"git pull 异常: {e}"}
+
+        def _restart():
+            runner = getattr(mw, 'runner', None)
+            if runner:
+                for aid in list(runner._active.keys()):
+                    try:
+                        runner.stop(aid)
+                    except Exception:
+                        pass
+            time.sleep(2)
+            subprocess.Popen([sys.executable, str(root / "main_web.pyw")],
+                             creationflags=subprocess.CREATE_NO_WINDOW)
+            time.sleep(1)
+            os._exit(0)
+        threading.Thread(target=_restart, daemon=True).start()
+        return {"ok": True, "message": "已拉取最新代码并重启"}
+
     @app.post("/api/orch/update")
     def handle_orch_update():
         root = Path(__file__).parent.parent
