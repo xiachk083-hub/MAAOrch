@@ -1007,15 +1007,28 @@ class AccountRunner:
             if ac:
                 started = self._start_times.get(aid, 0)
                 is_connect = bool(ac.get("_connect_only"))
-                if started and time.time() - started > 120 and not is_connect:
+                # Cold-start grace: emulator + game can take 3-5min to load
+                # (especially after MuMu restart). Only kill when MAA is
+                # actually idle — asst.log silent for 60s means stuck.
+                _no_task_timeout = 300 if not is_connect else 99999
+                if started and time.time() - started > _no_task_timeout and not is_connect:
                     tasks, _, _ = self._parse_log(aid)
                     if not tasks:
-                        self.emit_log(f"⏱ {ac.get('name', aid)} 启动后无任务 ({int(time.time()-started)}s)，清理实例")
-                        self._log.warning(f"[卡死] {ac.get('name', aid)} 启动 {int(time.time()-started)}s 无任务")
-                        try: p.terminate(); p.wait(3)
-                        except: pass
-                        self._cleanup(aid, -3, [])
-                        return
+                        # MAA still actively probing (asst.log fresh) → wait more
+                        _inst_path = getattr(p, '_inst_path', None)
+                        _fresh = False
+                        if _inst_path:
+                            try:
+                                _fresh = time.time() - (Path(_inst_path) / "debug" / "asst.log").stat().st_mtime < 60
+                            except Exception:
+                                pass
+                        if not _fresh:
+                            self.emit_log(f"⏱ {ac.get('name', aid)} 启动后无任务 ({int(time.time()-started)}s)，清理实例")
+                            self._log.warning(f"[卡死] {ac.get('name', aid)} 启动 {int(time.time()-started)}s 无任务")
+                            try: p.terminate(); p.wait(3)
+                            except: pass
+                            self._cleanup(aid, -3, [])
+                            return
                     # Tasks exist → MAA likely finished and is idling. asst.log keeps
                     # getting written while tasks run; 5min silence = done/hung.
                     _inst_path = getattr(p, '_inst_path', None)
