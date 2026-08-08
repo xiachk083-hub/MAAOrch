@@ -357,6 +357,11 @@ class ConfigService:
         # through daily tasks), which defeats the queue's per-account flow.
         rs = gui.setdefault("RuntimeSettings", {})
         rs["AutoRestartOnDrop"] = False
+        # PostActions=ExitSelf: MAA EXITS its process when all tasks complete.
+        # This makes completion an EVENT (p.wait() fires _on_process_exit)
+        # instead of polling asst.log — no more missed AllTasksCompleted,
+        # no stuck queue, no orphan MAA. Emulator stays up (MAAOrch manages it).
+        gui["PostActions"] = "ExitSelf"
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
