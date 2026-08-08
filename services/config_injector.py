@@ -593,11 +593,11 @@ class ConfigService:
                         item = {"$type": TYPE_MAP.get(task_type, task_type + "Task"),
                                 "Name": "", "IsEnable": enabled, "TaskType": task_type}
                         if task_type == "Fight":
-                            item.update({"UseMedicine": enabled, "MedicineCount": 999,
+                            item.update({"UseMedicine": False, "MedicineCount": 0,
                                          "UseStone": False, "StoneCount": 0,
                                          "EnableTimesLimit": False, "TimesLimit": 2147483647,
-                                         "IsDrGrandet": False, "UseExpiringMedicine": True,
-                                         "MedicineExpireDays": 2, "UseExpireMedicineForActivity": True,
+                                         "IsDrGrandet": False, "UseExpiringMedicine": False,
+                                         "MedicineExpireDays": 2, "UseExpireMedicineForActivity": False,
                                          "HideUnavailableStage": False, "IsStageManually": False,
                                          "UseOptionalStage": False, "UseStoneAllowSave": False,
                                          "HideSeries": False, "UseWeeklySchedule": False,
@@ -668,11 +668,14 @@ class ConfigService:
                                 item["MedicineCount"] = 999
                                 item["UseExpiringMedicine"] = True
                             else:
-                                if "use_medicine" in st:
-                                    item["UseMedicine"] = st["use_medicine"]
-                                    item["MedicineCount"] = 999 if st["use_medicine"] else 0
-                                if "use_expiring_medicine" in st:
-                                    item["UseExpiringMedicine"] = st["use_expiring_medicine"]
+                                # NO medicine on normal farming — sanity medicine
+                                # must never be auto-consumed (user explicitly
+                                # wants sanity runs, not meds). Force off; the
+                                # task_settings use_medicine flag would resurrect
+                                # leftover True from old annihilation configs.
+                                item["UseMedicine"] = False
+                                item["MedicineCount"] = 0
+                                item["UseExpiringMedicine"] = False
                                 if "times" in st: item["TimesLimit"] = st["times"]
                                 if "stage_reset_mode" in st: item["StageResetMode"] = st["stage_reset_mode"]
                                 if "hide_unavailable_stage" in st: item["HideUnavailableStage"] = st["hide_unavailable_stage"]
