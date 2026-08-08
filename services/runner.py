@@ -963,6 +963,24 @@ class AccountRunner:
                             try: p.terminate(); p.wait(3)
                             except: pass
                             return
+                        # Battle FAILURE downgrade: agent battle lost repeatedly
+                        # (FightMissionFailed / PrtsErrorConfirm in asst.log) —
+                        # account can't clear this stage (wrong team/lv). With a
+                        # fallback chain, drop to the next stage instead of
+                        # retrying the unwinnable one forever (b-2 hit 63 retries).
+                        if (ac.get("_stage_fallback") and aid not in self._stopping
+                                and not self._downgrading.get(aid)
+                                and ("FightMissionFailed" in new_content
+                                     or "PrtsErrorConfirm" in new_content)):
+                            _fc = new_content.count("FightMissionFailed") + new_content.count("PrtsErrorConfirm")
+                            if _fc >= 2:  # 2+ failure frames in one read = real loss
+                                self.emit_log(f"⬇ {ac.get('name', aid)} 作战失败，触发降级")
+                                self._downgrading[aid] = True
+                                try:
+                                    self._downgrade_stage(aid, ac, p)
+                                finally:
+                                    self._downgrading.pop(aid, None)
+                                return
                         # Per-account stage downgrade: Fight task failed (nav/unlock)
                         # while a fallback chain exists → record + retry next stage.
                         if ac.get("_stage_fallback") and aid not in self._stopping and "TaskChainCompleted" in new_content:
