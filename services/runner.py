@@ -954,6 +954,17 @@ class AccountRunner:
                         except: pass
                         self._cleanup(aid, 0, tasks)
                         return
+                    # StartUp stuck: game loading hangs (LoadingIcon loop) — asst.log
+                    # keeps being written so the silence check never fires. If StartUp
+                    # is still "运行中" 10min after launch → kill + release instance.
+                    startup = next((t for t in tasks if t.get("TaskType", "").lower() == "startup"), None)
+                    if startup and startup.get("status") == "运行中" and time.time() - started > 600:
+                        self.emit_log(f"⏱ {ac.get('name', aid)} StartUp 卡加载超时 ({int(time.time()-started)}s)，清理实例")
+                        self._log.warning(f"[卡死] {ac.get('name', aid)} StartUp 卡加载 {int(time.time()-started)}s")
+                        try: p.terminate(); p.wait(3)
+                        except: pass
+                        self._cleanup(aid, -3, tasks)
+                        return
             # ADB keepalive — log only, don't kill MAA
             ac = self._active.get(aid)
             if ac:
