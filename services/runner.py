@@ -589,6 +589,10 @@ class AccountRunner:
                     task_list = ["StartUp", "Roguelike"]
                 elif mode == "reclamation":
                     task_list = ["StartUp", "Reclamation"]
+                elif ac.get("skip_daily"):
+                    # Skip farming AND daily tasks — sanity already exhausted,
+                    # just claim awards (Award/Mail/Orundum/Mining/SpecialAccess).
+                    task_list = ["StartUp", "Award"]
                 else:
                     task_list = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
             # Per-account annihilation (overrides dispatch template)
@@ -1256,10 +1260,13 @@ class AccountRunner:
             pass
         # Re-inject with the next stage — full daily chain (StartUp + Fight +
         # Infrast/Recruit/Mall/Award), not just Fight. Otherwise a downgrade
-        # skips the daily tasks entirely ("只有理智没有其他").
+        # skips the daily tasks entirely ("只有理智没有其他"). Honors skip_daily.
         ac["_stage_override"] = next_stage
         try:
-            _full = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
+            if ac.get("skip_daily"):
+                _full = ["StartUp", "Award"]
+            else:
+                _full = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
             self.ctx.cfg.inject_smart(_full, ac, str(Path(inst_dir) / "config"))
             self._spawn_instance(Path(inst_dir) / "MAA.exe", ac, inst_dir)
             return True

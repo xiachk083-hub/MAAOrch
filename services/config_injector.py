@@ -168,6 +168,12 @@ class ConfigService:
                                     if "credit_fight_once_a_day" in st: item["CreditFightOnceADay"]=st["credit_fight_once_a_day"]
                                     if "visit_friends_once_a_day" in st: item["VisitFriendsOnceADay"]=st["visit_friends_once_a_day"]
                                 elif tt=="award":
+                                    item.setdefault("Award", True)
+                                    item.setdefault("Mail", True)
+                                    item.setdefault("FreeGacha", False)
+                                    item.setdefault("Orundum", True)
+                                    item.setdefault("Mining", True)
+                                    item.setdefault("SpecialAccess", True)
                                     if "award" in st: item["Award"]=st["award"]
                                     if "mail" in st: item["Mail"]=st["mail"]
                                     if "free_gacha" in st: item["FreeGacha"]=st["free_gacha"]
@@ -726,6 +732,15 @@ class ConfigService:
                             if "only_buy_discount" in st: item["OnlyBuyDiscount"] = st["only_buy_discount"]
                             if "reserve_max_credit" in st: item["ReserveMaxCredit"] = st["reserve_max_credit"]
                         elif tt == "award":
+                            # Default: claim everything EXCEPT FreeGacha (免费寻访
+                            # 单抽 — user explicitly doesn't want it). task_settings
+                            # can override individual flags.
+                            item.setdefault("Award", True)
+                            item.setdefault("Mail", True)
+                            item.setdefault("FreeGacha", False)
+                            item.setdefault("Orundum", True)
+                            item.setdefault("Mining", True)
+                            item.setdefault("SpecialAccess", True)
                             if "award" in st: item["Award"] = st["award"]
                             if "mail" in st: item["Mail"] = st["mail"]
                             if "free_gacha" in st: item["FreeGacha"] = st["free_gacha"]
