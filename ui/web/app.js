@@ -2709,7 +2709,7 @@ async function showFightConfig(aid) {
         ).join('')}
       </div>
       <div class="form-row"><label>每关次数</label><input id="fc-times" type="number" value="${a.fight_times_per_stage == null ? 3 : a.fight_times_per_stage}" min="0" max="99" style="width:70px"><span style="font-size:9px;color:var(--text3)">次（0 = 不限制，刷到体力耗尽）</span></div>
-      <div class="form-row"><label>代理倍率</label><input id="fc-series" type="number" value="${a.fight_series || 1}" min="1" max="10" style="width:70px"><span style="font-size:9px;color:var(--text3)">倍（AUTO 会快速耗体力，默认 1）</span></div>
+      <div class="form-row"><label>代理倍率</label><input id="fc-series" type="number" value="${a.fight_series == null ? 1 : a.fight_series}" min="0" max="10" style="width:70px"><span style="font-size:9px;color:var(--text3)">倍（0 = AUTO 最高倍率，默认 1）</span></div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:6px">🔍 关卡检测记录</div>
       <div id="fc-checks" style="font-size:10px;color:var(--text3);margin-bottom:8px">加载中...</div>
       <div id="fc-material" style="${mode!=='material'?'display:none':''}">
@@ -2812,7 +2812,8 @@ async function saveFightConfig(aid, idx) {
 
   const timesEl = document.getElementById('fc-times');
   const times = timesEl && timesEl.value !== '' ? parseInt(timesEl.value) || 0 : 3;
-  const series = parseInt(document.getElementById('fc-series')?.value) || 1;
+  const seriesEl = document.getElementById('fc-series');
+  const series = seriesEl && seriesEl.value !== '' ? parseInt(seriesEl.value) || 0 : 1;
   const body = { fight_mode: mode, fight_default: defStage, schedule_weekly: weekly, schedule_monthly: monthly, fight_priority: priority, fight_materials: materials, fight_times_per_stage: times, fight_series: series };
   const r = await apiPost(`/account/${idx}/fight_config`, body);
   if (r.ok) {

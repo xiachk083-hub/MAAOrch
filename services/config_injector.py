@@ -446,8 +446,8 @@ class ConfigService:
                         # Fallback chain for the per-account downgrade loop
                         ac["_stage_fallback"] = ordered[1:]
                         ac["_stage_current"] = day_stage
-                        ac["_stage_times"] = int(ac.get("fight_times_per_stage", 3) or 3)
-                        ac["_stage_series"] = int(ac.get("fight_series", 1) or 1)
+                        ac["_stage_times"] = int(ac.get("fight_times_per_stage", 3)) if ac.get("fight_times_per_stage") not in (None, "", 0) else 0
+                        ac["_stage_series"] = int(ac.get("fight_series", 1)) if ac.get("fight_series") not in (None, "") else 1
                     elif fight_mode == "material":
                         _MS = {"固源岩":"1-7","装置":"S3-4","聚酸酯":"S3-3","酯":"S3-1","异铁":"S3-2","酮凝集":"S3-5","凝胶":"S3-5","龙门币":"CE-6","作战记录":"LS-6"}
                         materials = ac.get("fight_materials", []) or []
@@ -545,14 +545,16 @@ class ConfigService:
                             item["IsStageManually"] = bool(day_stage)
                             # Fixed series (倍率) — AUTO (0) burns sanity fast via
                             # max multiplier + chained runs. Default 1x.
-                            _series = int(ac.get("fight_series", 1) or 1)
+                            _raw_series = ac.get("fight_series", 1)
+                            _series = int(_raw_series) if _raw_series not in (None, "") else 1
                             item["Series"] = _series if -1 <= _series <= 10 else 1
                             # Per-stage times limit (MAA native EnableTimesLimit)
                             # — Series (倍率) only controls speed, NOT count.
                             # times<=0 (frontend "每关次数"=0) = no limit: run until
                             # sanity runs out. Apply to ALL fight modes so the
                             # frontend "每关次数" field is always honored.
-                            _times = int(ac.get("fight_times_per_stage", 3) or 3)
+                            _raw_times = ac.get("fight_times_per_stage", 3)
+                            _times = int(_raw_times) if _raw_times not in (None, "", 0) else 0
                             if day_stage and _times > 0:
                                 item["EnableTimesLimit"] = True
                                 item["TimesLimit"] = max(1, _times)
