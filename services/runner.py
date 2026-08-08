@@ -510,6 +510,23 @@ class AccountRunner:
         exe = Path(inst_dir) / "MAA.exe"
         config_dir = Path(inst_dir) / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
+        # Kill any stale MAA still holding this instance dir BEFORE injecting —
+        # a running MAA overwrites the injected config (StagePlan etc.) with its
+        # own in-memory values on save, so the new launch reads stale data.
+        try:
+            pf = Path(inst_dir) / ".pid"
+            if pf.exists():
+                _pid = int(pf.read_text().strip())
+                _r = subprocess.run(["tasklist", "/NH", "/FI", f"PID eq {_pid}"],
+                                    capture_output=True, text=True, timeout=3,
+                                    creationflags=CF)
+                if str(_pid) in _r.stdout:
+                    self._log.warning(f"[注入] {ac.get('name', aid)} 清理实例残留 MAA PID={_pid}")
+                    subprocess.run(["taskkill", "/F", "/PID", str(_pid)],
+                                   capture_output=True, timeout=5, creationflags=CF)
+                    time.sleep(2)
+        except Exception:
+            pass
         try:
             # Unified dispatch path: use slot-based dispatch_id
             from services.dispatch_pool import get_template
