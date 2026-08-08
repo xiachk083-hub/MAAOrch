@@ -992,6 +992,29 @@ class AccountRunner:
                             if self._downgrading.get(aid):
                                 return
                 except: pass
+            # Tail-scan completion check: the incremental read above misses
+            # AllTasksCompleted when asst.log stops growing right after it is
+            # written (current_size == last_pos → never re-read). Scan the file
+            # tail every tick as a reliable fallback.
+            if ac and not ac.get("_connect_only"):
+                try:
+                    lp = Path(p._inst_path) / "debug" / "asst.log"
+                    if lp.exists():
+                        _sz = lp.stat().st_size
+                        if _sz > 0:
+                            with lp.open("r", encoding="utf-8", errors="replace") as _f:
+                                _f.seek(max(0, _sz - 20000))
+                                _tail = _f.read()
+                            if "AllTasksCompleted" in _tail:
+                                self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成（尾部检测）")
+                                self._log.info(f"[完成后] {ac.get('name', aid)} 尾部检测到完成")
+                                tasks, sanity, drops = self._parse_log(aid)
+                                self._cleanup(aid, 0, tasks, sanity, drops)
+                                try: p.terminate(); p.wait(3)
+                                except: pass
+                                return
+                except Exception:
+                    pass
             # Stuck detection
             ac = self._active.get(aid)
             if ac:
