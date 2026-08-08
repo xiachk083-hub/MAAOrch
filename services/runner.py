@@ -963,19 +963,23 @@ class AccountRunner:
                             try: p.terminate(); p.wait(3)
                             except: pass
                             return
-                        # Sanity threshold: stop fighting once sanity drops below
-                        # the account's threshold (default 40) — leave it to
-                        # regenerate instead of grinding to 0. Only applies while
-                        # the Fight chain is active (daily tasks keep running).
+                        # Sanity threshold: stop fighting once the remaining
+                        # sanity is enough to FULLY regenerate within the
+                        # account's window (default 12h). Regeneration is
+                        # 1pt/6min = 10pt/h, so stop at max - hours*10.
+                        # E.g. cap 210, 12h → stop at 90 (grinding to 7 wastes
+                        # 20h of regen). Only applies while Fight chain runs.
                         if ac and not ac.get("_connect_only"):
-                            _min = int(ac.get("fight_sanity_stop", 40) or 40)
+                            _hours = float(ac.get("fight_sanity_hours", 12) or 12)
                             _tasks, _sanity, _ = self._parse_log(aid)
                             _cur = (_sanity or {}).get("current")
+                            _max = (_sanity or {}).get("max") or 210
+                            _stop_at = max(0, int(_max - _hours * 10))
                             _fighting = any(t.get("TaskType", "").lower() == "fight"
                                             and t.get("status") == "运行中" for t in _tasks)
-                            if _cur is not None and _cur <= _min and _fighting:
-                                self.emit_log(f"⏱ {ac.get('name', aid)} 理智 {_cur} ≤ {_min}，停止刷图（留给自然恢复）")
-                                self._log.info(f"[理智阈值] {ac.get('name', aid)} 停止刷图 (cur={_cur}, min={_min})")
+                            if _cur is not None and _cur <= _stop_at and _fighting:
+                                self.emit_log(f"⏱ {ac.get('name', aid)} 理智 {_cur} ≤ {_stop_at}（{_hours:.0f}h 回满），停止刷图")
+                                self._log.info(f"[理智阈值] {ac.get('name', aid)} 停止刷图 (cur={_cur}, stop_at={_stop_at})")
                                 tasks, sanity, drops = self._parse_log(aid)
                                 self._cleanup(aid, 0, tasks, sanity, drops)
                                 try: p.terminate(); p.wait(3)
