@@ -1097,6 +1097,13 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         for f in ("fight_mode", "fight_default", "schedule_weekly", "schedule_monthly", "fight_priority", "fight_materials", "fight_times_per_stage", "fight_series"):
             if f in body:
                 a[f] = body[f]
+        # priority 模式的关卡来自账号 stages — 保存优先级时同步合并（去重）
+        prio = a.get("fight_priority", {}) or {}
+        stages = list(a.get("stages", []) or [])
+        for s in prio.keys():
+            if s and s not in stages:
+                stages.append(s)
+        a["stages"] = stages
         mw.config["accounts"] = mw.accounts
         from models.config_manager import save_config
         save_config(mw.config)
