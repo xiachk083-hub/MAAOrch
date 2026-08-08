@@ -435,6 +435,7 @@ class ConfigService:
                                 day_stage = monthly[day]
                             else:
                                 day_stage = default
+                        self.ctx.log(f"[注入] schedule: wd={wd} weekly={weekly} monthly={ac.get('schedule_monthly', {})} day_stage={day_stage!r}")
                     elif fight_mode == "priority":
                         priority = ac.get("fight_priority", {}) or {}
                         # Ordered by priority desc; only stages with prio > 0 join
