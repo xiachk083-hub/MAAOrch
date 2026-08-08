@@ -973,6 +973,32 @@ class AccountRunner:
             # Stuck detection
             ac = self._active.get(aid)
             if ac:
+                # PRTS (agent battle) stall: MAA clicks "开始行动", game enters
+                # agent-battle mode (Fight@PRTS1) but the battle NEVER settles —
+                # sanity stays flat (no real cost) while asst.log keeps writing
+                # (screencap noise) so the silence-based check can't catch it.
+                # Mark first sighting, kill after `prts_stall_min` (default 10).
+                _prts_min = int(ac.get("prts_stall_min", 10) or 10)
+                try:
+                    _p = Path(getattr(p, '_inst_path', "")) / "debug" / "asst.log"
+                    if _p.exists():
+                        with _p.open("r", encoding="utf-8", errors="replace") as _f:
+                            _tail = _f.read()[-200000:]
+                        if "Fight@PRTS1" in _tail and not ac.get("_connect_only"):
+                            _st = ac.setdefault("_prts_stall_since", time.time())
+                            if time.time() - _st > _prts_min * 60:
+                                self.emit_log(f"⚠ {ac.get('name', aid)} 代理作战卡死（PRTS1 超 {_prts_min} 分钟），终止")
+                                self._log.warning(f"[代理卡死] {ac.get('name', aid)} PRTS1 卡死")
+                                ac.pop("_prts_stall_since", None)
+                                try: p.terminate(); p.wait(5)
+                                except: pass
+                                tasks, sanity, drops = self._parse_log(aid)
+                                self._cleanup(aid, -9, tasks, sanity, drops)
+                                return
+                        else:
+                            ac.pop("_prts_stall_since", None)
+                except Exception:
+                    pass
                 timeout = ac.get("stuck_timeout_min", 0)
                 if timeout > 0 and aid in self._task_start_times:
                     elapsed = time.time() - self._task_start_times[aid]
