@@ -841,9 +841,12 @@ class AccountRunner:
         self.emit_started(aid)
 
     def _on_process_exit(self, aid: str, p: subprocess.Popen) -> None:
-        # Re-entrancy guard: _wait_exit thread AND _check_one poll-detection can
-        # both fire on the same exit — only the first one cleans up.
-        if aid not in self._procs:
+        # Re-entrancy guard: only the CURRENT process object may clean up.
+        # A stale exit callback from a superseded process (downgrade restart
+        # killed the old MAA and spawned a new one) must NOT clean up — it
+        # would wipe the new process's state mid-run (orphan MAA + queue
+        # mark released while the new process is still farming).
+        if self._procs.get(aid) is not p:
             return
         rc = p.poll()
         tasks, sanity, drops = self._parse_log(aid) if aid in self._active else ([], None, None)
@@ -1317,6 +1320,14 @@ class AccountRunner:
         if not inst_dir:
             return False
         try:
+            # Supersede the old process FIRST: while we close it, its _wait_exit
+            # thread wakes up and calls _on_process_exit. If _procs[aid] still
+            # points at the old Popen, that callback cleans up (pops _active and
+            # the queue mark) while the NEW process is about to start — leaving
+            # an orphan MAA and a lost queue slot. Replacing the entry with a
+            # string placeholder makes `_procs.get(aid) is not p` true, so the
+            # stale callback returns early.
+            self._procs[aid] = inst_dir
             # Graceful close (WM_CLOSE → MAA releases ADB/minitouch) — hard
             # terminate leaves minitouch residue that crashes the emulator
             # (MuMu "运行异常" popup). Fall back to terminate only if it hangs.
