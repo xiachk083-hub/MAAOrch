@@ -554,7 +554,23 @@ class LaunchQueue:
                     pass
             _QUEUE_LOG.debug(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
             if ts == 0:
-                _QUEUE_LOG.warn(f"清洁跳过(ts=0): {emu_idx}")
+                # Timestamp missing (legacy residue or abnormal write path).
+                # If the process is dead, release now — otherwise permanently
+                # skipping here blocks the emulator key forever.
+                if not real:
+                    _QUEUE_LOG.warn(f"释放无时间戳残留 _active_emus[{emu_idx}]={aid[:8]} (进程已死)")
+                    with self._lock:
+                        self._active_emus.pop(emu_idx, None)
+                        self._active_emus_ts.pop(emu_idx, None)
+                    from services.dispatch_pool import remove_dispatch
+                    for a in self.ctx.accounts:
+                        if a["id"] == aid:
+                            remove_dispatch(a.get("dispatch_id", ""))
+                            a["dispatch_id"] = ""
+                            a["smart_plan"] = ""
+                            break
+                else:
+                    self._active_emus_ts[emu_idx] = now  # 补时间戳，交给 150s 超时逻辑
                 continue
             if now - ts > 150 and not real:
                 _QUEUE_LOG.warn(f"释放残留 _active_emus[{emu_idx}]={aid[:8]} (挂起 {int(now-ts)}s)")

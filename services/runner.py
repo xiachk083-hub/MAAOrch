@@ -269,8 +269,16 @@ class AccountRunner:
     def _launch_account(self, ac: dict) -> bool:
         aid = ac["id"]
         if aid in self._active:
-            self.emit_log(f"{ac.get('name', aid)} 已在运行中")
-            return False
+            # Stale mark: MAA process may have died without _cleanup (crash/kill
+            # raced the exit handler). If the process is really gone, clear the
+            # mark and proceed — otherwise every launch returns "已在运行中"
+            # and the queue loops forever (launch → fail → requeue).
+            if not self._has_real_process(aid):
+                self._log.warning(f"[残留清理] {ac.get('name', aid)} _active 标记但进程已死，清理后重试")
+                self._cleanup(aid, -1, [])
+            else:
+                self.emit_log(f"{ac.get('name', aid)} 已在运行中")
+                return False
 
         self._auto_derive(ac)
 
