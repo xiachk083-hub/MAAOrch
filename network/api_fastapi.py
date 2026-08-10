@@ -843,6 +843,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             out["runner"] = {
                 "active": {_m(k): v.get("name", "?") for k, v in list(runner._active.items())[:20]},
                 "task_running": {_m(k): runner.is_task_running(k) for k in list(runner._active.keys())[:20]},
+                "maa_scan": runner.scan_maa_instances()[:20],
                 "procs": {_m(k): (getattr(p, "pid", None) if not isinstance(p, str) else "占位")
                           for k, p in list(runner._procs.items())[:20]},
                 "inst_reserved": {_m(k): v for k, v in list(runner._inst_reserved.items())[:20]},

@@ -1620,8 +1620,13 @@ class AccountRunner:
         inst = getattr(p, "_inst_path", None)
         if not inst:
             return False
+        return self._infer_task_running(inst)
+
+    @staticmethod
+    def _infer_task_running(inst_path: str) -> bool:
+        """从实例目录推断任务是否运行中（is_task_running 与手动 MAA 扫描共用）。"""
         try:
-            al = Path(inst) / "debug" / "asst.log"
+            al = Path(inst_path) / "debug" / "asst.log"
             if not al.exists():
                 return False
             tail = al.read_text(encoding="utf-8", errors="replace").splitlines()[-300:]
@@ -1635,6 +1640,61 @@ class AccountRunner:
             return last_start > last_end
         except Exception:
             return False
+
+    def scan_maa_instances(self) -> list[dict]:
+        """扫描所有运行中的 MAA.exe（含手动启动的）— 检测每个是否正在执行
+        任务（2026-08-11 用户: 手动启动的 MAA 也要能检测运行状态）。
+        系统管理的走 _procs；手动开的通过进程路径找实例目录 → asst.log 推断。"""
+        results = []
+        managed_pids = set()
+        # 1) 系统管理的
+        for aid, p in list(self._procs.items()):
+            if isinstance(p, subprocess.Popen) and p.poll() is None:
+                managed_pids.add(str(p.pid))
+                inst = getattr(p, "_inst_path", None) or ""
+                results.append({
+                    "pid": p.pid, "aid": aid[:8], "managed": True,
+                    "running": self._infer_task_running(inst),
+                    "task": (self._active.get(aid) or {}).get("_last_task", ""),
+                })
+        # 2) 手动开的（tasklist 找 MAA.exe，不在系统管理的）
+        try:
+            r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq MAA.exe", "/FO", "CSV"],
+                               capture_output=True, text=True, timeout=10,
+                               creationflags=CF, errors="replace")
+            pids = []
+            for ln in r.stdout.splitlines()[1:]:
+                parts = ln.split('","')
+                if len(parts) > 1:
+                    pid = parts[1].strip('"')
+                    if pid.isdigit():
+                        pids.append(pid)
+            for pid in pids:
+                if pid in managed_pids:
+                    continue
+                inst = self._find_inst_by_pid(pid)
+                results.append({
+                    "pid": pid, "aid": f"手动:{pid}", "managed": False,
+                    "running": self._infer_task_running(inst) if inst else False,
+                    "task": "",
+                })
+        except Exception:
+            pass
+        return results
+
+    def _find_inst_by_pid(self, pid: str) -> str:
+        """按进程 PID 找 MAA 实例目录（进程路径 → instances/N）。"""
+        try:
+            r = subprocess.run(["powershell", "-NoProfile", "-Command",
+                                f"(Get-Process -Id {pid} -ErrorAction SilentlyContinue).Path"],
+                               capture_output=True, text=True, timeout=10,
+                               creationflags=CF, errors="replace")
+            path = (r.stdout or "").strip()
+            if path and "instances" in path:
+                return str(Path(path).parent)
+        except Exception:
+            pass
+        return ""
 
     def _parse_log(self, aid: str) -> tuple[list[dict], dict | None, dict | None]:
         """Parse asst.log for task results, sanity, drops."""
