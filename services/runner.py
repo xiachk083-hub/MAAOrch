@@ -1609,6 +1609,33 @@ class AccountRunner:
                             return
             except: pass
 
+    def is_task_running(self, aid: str) -> bool:
+        """MAA 当前是否有任务在运行 — asst.log 生命周期推断（2026-08-11 用户:
+        进程活着 ≠ 任务在跑；MAA 完成/点停止后停留界面，按钮状态才是真值。
+        日志推断：最后一个 TaskStart 之后有无闭合的 TaskChainCompleted/
+        AllTasksCompleted — 有未闭合 = 任务运行中。零依赖，比 UI Automation 可靠）。"""
+        p = self._procs.get(aid)
+        if not isinstance(p, subprocess.Popen) or p.poll() is not None:
+            return False
+        inst = getattr(p, "_inst_path", None)
+        if not inst:
+            return False
+        try:
+            al = Path(inst) / "debug" / "asst.log"
+            if not al.exists():
+                return False
+            tail = al.read_text(encoding="utf-8", errors="replace").splitlines()[-300:]
+            last_start = -1
+            last_end = -1
+            for i, ln in enumerate(tail):
+                if "TaskStart" in ln:
+                    last_start = i
+                elif "TaskChainCompleted" in ln or "AllTasksCompleted" in ln:
+                    last_end = i
+            return last_start > last_end
+        except Exception:
+            return False
+
     def _parse_log(self, aid: str) -> tuple[list[dict], dict | None, dict | None]:
         """Parse asst.log for task results, sanity, drops."""
         ac = self._active.get(aid)
