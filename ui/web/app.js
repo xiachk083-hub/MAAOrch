@@ -1,11 +1,16 @@
 // ── API ──
 const API = '/api';
+function getApiToken() { return localStorage.getItem('maorch_api_token') || ''; }
 async function api(path, opts = {}) {
   try {
+    const token = getApiToken();
     const res = await fetch(API + path, {
-      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'x-agent-token': token } : {}), ...opts.headers },
       ...opts
     });
+    if (res.status === 401) {
+      toast('未授权：请在设置页填写 API Token', 'error');
+    }
     return res.json();
   } catch(e) {
     return { ok: false, error: e.message || '网络错误' };
@@ -532,6 +537,8 @@ async function renderSettings(container) {
       <div class="form-row"><label>API 端口</label><input type="number" id="input-port" value="${cfg.api_port||19999}"></div>
       <div class="form-row"><label>绑定地址</label><input type="text" id="input-bind" value="${cfg.bind_address||'0.0.0.0'}" placeholder="0.0.0.0" style="font-size:10px">
         <span style="color:var(--text3);font-size:9px">0.0.0.0 允许远程访问</span></div>
+      <div class="form-row"><label>API Token</label><input type="password" id="input-api-token" value="${cfg.api_token||''}" placeholder="留空=不鉴权" style="font-size:10px">
+        <span style="color:var(--text3);font-size:9px">填写后所有 API 需带 token 访问（远程访问必填）</span></div>
       <div class="form-row"><label>Webhook</label><input type="text" id="input-webhook" value="${cfg.webhook_url||''}" placeholder="https://example.com/webhook" style="font-size:10px">
         <span style="color:var(--text3);font-size:9px">任务完成时推送</span></div>
       <div class="btn-row"><button class="primary" onclick="saveGeneral()">保存</button></div>
@@ -2342,13 +2349,15 @@ async function refreshLogFeed() {
     const filter = document.getElementById('log-filter')?.value || 'all';
     const showOnlyError = filter === 'error';
     let lines = [];
+    const _tok = getApiToken();
+    const _hdrs = _tok ? { 'x-agent-token': _tok } : {};
     if (_logSource === 'app') {
-      const resp = await fetch(API + '/logs?lines=200');
+      const resp = await fetch(API + '/logs?lines=200', { headers: _hdrs });
       const data = await resp.json();
       lines = data.lines || [];
     } else {
       const aid = _logSource.replace('maa_', '');
-      const resp = await fetch(API + `/maa/log?aid=${aid}&lines=200`);
+      const resp = await fetch(API + `/maa/log?aid=${aid}&lines=200`, { headers: _hdrs });
       const data = await resp.json();
       lines = data.lines || [];
     }
@@ -3137,7 +3146,10 @@ async function saveGeneral() {
     daily_batch_time: document.getElementById('input-batch-time')?.value || '08:00',
     webhook_url: document.getElementById('input-webhook')?.value?.trim() || '',
     bind_address: document.getElementById('input-bind')?.value?.trim() || '127.0.0.1',
+    api_token: document.getElementById('input-api-token')?.value?.trim() || '',
   });
+  // 同步 token 到本地（后续请求自动带头）
+  localStorage.setItem('maorch_api_token', document.getElementById('input-api-token')?.value?.trim() || '');
   if (r.ok) toast('已保存'); else toast(r.error || '保存失败', 'error');
 }
 function onAIProviderChange() {

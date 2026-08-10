@@ -195,13 +195,15 @@ def create_app(mw: Any) -> FastAPI:
         # rate limiter; all other APIs keep the limit.
         if not path.endswith("/screenshot") and not _check_rate(ip):
             return JSONResponse({"error": "rate_limited"}, 429)
-        # Static files and SSE don't need auth
+        # Static files and SSE don't need auth. api_token 配置后强制校验：
+        # 不带 token 或带错 token 一律 401（弱鉴权"仅拦错误 token"会放行
+        # 所有无 token 请求 — 2026-08-10 安全加固）。留空=不鉴权（兼容本地）。
         if path.startswith("/api/") and path != "/api/sse" and token:
             h = request.headers.get("x-agent-token", "")
-            if h and not hmac.compare_digest(h, token):
-                # 安全审计：错误 token 来源留痕（IP + 路径 + token 前缀）
+            if not h or not hmac.compare_digest(h, token):
+                # 安全审计：未授权访问来源留痕（IP + 路径 + token 前缀）
                 try:
-                    mw._log(f"⚠️ 未授权访问 {path} from {ip} (token={h[:8]}...)")
+                    mw._log(f"⚠️ 未授权访问 {path} from {ip} (token={h[:8]!r}...)")
                 except Exception:
                     pass
                 return JSONResponse({"error": "unauthorized"}, 401)
