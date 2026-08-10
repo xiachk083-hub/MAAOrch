@@ -199,6 +199,11 @@ def create_app(mw: Any) -> FastAPI:
         if path.startswith("/api/") and path != "/api/sse" and token:
             h = request.headers.get("x-agent-token", "")
             if h and not hmac.compare_digest(h, token):
+                # 安全审计：错误 token 来源留痕（IP + 路径 + token 前缀）
+                try:
+                    mw._log(f"⚠️ 未授权访问 {path} from {ip} (token={h[:8]}...)")
+                except Exception:
+                    pass
                 return JSONResponse({"error": "unauthorized"}, 401)
         return await call_next(request)
 
@@ -1323,12 +1328,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     def handle_queue_pause():
         lq = _lq()
         lq.pause()
+        _log_op("队列暂停", "")
+        mw._log("⏸ 队列已暂停")
         return {"ok": True, "paused": True}
 
     @app.post("/api/queue/resume")
     def handle_queue_resume():
         lq = _lq()
         lq.resume()
+        _log_op("队列恢复", "")
+        mw._log("▶️ 队列已恢复")
         return {"ok": True, "paused": False}
 
     @app.post("/api/account")
@@ -1546,12 +1555,30 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                                    capture_output=True, text=True, timeout=5,
                                    creationflags=_CF, encoding="utf-8", errors="replace")
                 if r.returncode == 0:
-                    d = json.loads(r.stdout)
+                    d = json.loads(r.stdout.lstrip("\ufeff").strip())
                     if not d.get("is_process_started") and not d.get("is_android_started"):
                         return True
             except Exception:
                 pass
             time.sleep(1)
+        return False
+
+    def _wait_emu_started(cli: str, idx: str, timeout: int = 40) -> bool:
+        """轮询 MuMuManager 等模拟器 Android 就绪 — 启动结果留痕（起不来要有日志）。"""
+        from infrastructure.task_constants import cli_flag
+        dl = time.time() + timeout
+        while time.time() < dl:
+            try:
+                r = subprocess.run([cli, "info", cli_flag(cli), str(idx)],
+                                   capture_output=True, text=True, timeout=5,
+                                   creationflags=_CF, encoding="utf-8", errors="replace")
+                if r.returncode == 0:
+                    d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                    if d.get("is_android_started") and d.get("is_process_started"):
+                        return True
+            except Exception:
+                pass
+            time.sleep(5)
         return False
 
     @app.post("/api/emulator/batch/{action}")
@@ -1589,6 +1616,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 if action == "start":
                     mw._log(f"⏯ 批量启动模拟器 #{idx}")
                     subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                    if not _wait_emu_started(cli, idx, 20):
+                        mw._log(f"⚠️ 模拟器 #{idx} 批量启动 20s 未就绪")
                     try:
                         mw.manual_emu_started[idx] = time.time()
                     except Exception:
@@ -1604,6 +1633,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     if action == "restart":
                         time.sleep(2)
                         subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                        if not _wait_emu_started(cli, idx, 20):
+                            mw._log(f"⚠️ 模拟器 #{idx} 批量重启 20s 未就绪")
                 done += 1
             except Exception as ex:
                 mw._log(f"[批量{action}] #{idx} 失败: {ex}")
@@ -1621,6 +1652,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if action == "start":
                 mw._log(f"⏯ 启动模拟器 #{idx}")
                 subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                # 启动结果留痕（起不来要有日志可查）
+                if _wait_emu_started(cli, idx, 40):
+                    mw._log(f"✅ 模拟器 #{idx} Android 就绪")
+                else:
+                    mw._log(f"⚠️ 模拟器 #{idx} 启动超时（40s 未就绪）")
                 # 手动启动保护期 — 回收不立刻关（用户手动操作中）
                 try:
                     mw.manual_emu_started[idx] = time.time()
@@ -1646,6 +1682,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 graceful_emu_shutdown(cli, idx, *_emu_adb(idx))  # 内置等待完全退出
                 time.sleep(2)
                 subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                if _wait_emu_started(cli, idx, 40):
+                    mw._log(f"✅ 模拟器 #{idx} 重启后 Android 就绪")
+                else:
+                    mw._log(f"⚠️ 模拟器 #{idx} 重启后 40s 未就绪")
                 _log_op("重启模拟器", f"#{idx}")
                 return {"ok": True, "action": "restarted"}
         except Exception as ex:

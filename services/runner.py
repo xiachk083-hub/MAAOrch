@@ -924,7 +924,43 @@ class AccountRunner:
             # Direct cleanup — QTimer.singleShot from daemon threads may not fire
             self._on_process_exit(aid, p)
         _th.Thread(target=_wait_exit, daemon=True).start()
+        # 启动后窗口检查（独立线程，不阻塞）— MAA 配置崩溃时 asst.log 为空，
+        # 窗口标题（{{ ErrorCongratulations }} / JsonReaderException）是唯一
+        # 诊断线索（2026-08-10 配置崩溃事故：日志全空只有窗口能看出来）。
+        _th.Thread(target=self._check_startup_window,
+                   args=(aid, ac.get("name", aid)), daemon=True).start()
         self.emit_started(aid)
+
+    def _check_startup_window(self, aid: str, name: str) -> None:
+        """MAA 启动 5s 后枚举窗口标题，找异常窗口（错误/异常/崩溃）并记录。"""
+        try:
+            import time as _tt
+            _tt.sleep(5)
+            import ctypes
+            user32 = ctypes.windll.user32
+            found = []
+
+            def _cb(hwnd, _):
+                try:
+                    ln = user32.GetWindowTextLengthW(hwnd)
+                    if ln and ln < 300:
+                        buf = ctypes.create_unicode_buffer(ln + 1)
+                        user32.GetWindowTextW(hwnd, buf, ln + 1)
+                        t = buf.value
+                        if t and any(k in t for k in ("Error", "Exception", "错误", "异常", "崩溃")):
+                            found.append(t)
+                except Exception:
+                    pass
+                return True
+
+            PROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+            user32.EnumWindows(PROC(_cb), 0)
+            for t in found:
+                self._log.warn(f"[MAA窗口] {name} 启动后异常窗口: {t[:100]}")
+            if found:
+                self._log.warn(f"[MAA窗口] {name} 共 {len(found)} 个异常窗口 — 启动/配置异常，asst.log 可能为空")
+        except Exception:
+            pass
 
     def _on_process_exit(self, aid: str, p: subprocess.Popen) -> None:
         # Re-entrancy guard: only the CURRENT process object may clean up.
