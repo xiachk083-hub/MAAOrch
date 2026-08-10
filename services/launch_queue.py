@@ -109,6 +109,7 @@ class LaunchQueue:
         self._active_emus_ts.clear()
         self._last_launch_time = 0
         self._tick_lock = threading.Lock()
+        self._last_save_ts: float = 0.0  # 队列落盘节流
         # Guard against duplicate _bg_tick threads
         if self._bg_tick_started:
             return
@@ -563,6 +564,13 @@ class LaunchQueue:
                     continue
             _th.Timer(max(0.1, idx * 20.0), lambda e=entry: self._do_launch(e)).start()
         _QUEUE_LOG.info(f"_tick: launch_now={len(launch_now)} pending={len(self._pending)} active_emus={len(self._active_emus)}")
+        # 队列状态节流落盘（30s 一次，含 active — 崩溃/重启恢复用）
+        try:
+            if time.time() - self._last_save_ts > 30:
+                self._last_save_ts = time.time()
+                self._save_queue()
+        except Exception:
+            pass
         self._clean_stale_emus()
 
     def _do_launch(self, entry) -> None:
@@ -1071,12 +1079,19 @@ class LaunchQueue:
         return False
 
     def _save_queue(self) -> None:
-        """Persist queue to queue.json (separate from config.json for performance)."""
+        """Persist queue to queue.json (separate from config.json for performance).
+        包含 active 账号（运行中）— 崩溃/重启后 _restore 重新入队重跑，
+        否则 active 账号丢失（2026-08-11 实测重启后反复手动补队列）。"""
         data = []
         for e in self._pending:
             data.append({"account_id": e.account_id, "source": e.source,
                          "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S"),
-                         "persist_plan": e.persist_plan})
+                         "persist_plan": e.persist_plan, "active": False})
+        for emu_idx, aid in list(self._active_emus.items()):
+            ts = self._active_emus_ts.get(emu_idx, 0)
+            nb = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)) if ts else time.strftime("%Y-%m-%d %H:%M:%S")
+            data.append({"account_id": aid, "source": "active", "priority": 0,
+                         "not_before": nb, "persist_plan": False, "active": True})
         try:
             import json
             from infrastructure.utils import atomic_write
@@ -1112,5 +1127,9 @@ class LaunchQueue:
             heapq.heappush(self._pending, entry)
         self.ctx.config["queue"] = []
         self.ctx.log(f"[队列] 从历史恢复 {len(data)} 个等待项")
+        try:
+            self._save_queue()
+        except Exception:
+            pass
         if data:
             self._tick()
