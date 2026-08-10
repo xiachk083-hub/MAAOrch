@@ -96,7 +96,7 @@ def analyze_failure(
     )
 
     try:
-        resp = urllib.request.urlopen(req, timeout=30)
+        resp = safe_urlopen(req, timeout=30)
         data = json.loads(resp.read().decode("utf-8"))
         content = data["choices"][0]["message"]["content"].strip()
         if content.startswith("```"):

@@ -136,6 +136,21 @@ def save_config(data: dict) -> None:
     if h == _last_save_hash:
         return
     _last_save_hash = h
+    # 审计: 记录每次保存的挂起账号（定位 suspended 被覆盖的源 — 2026-08-10
+    # 官-2/官-25/官-41 挂起反复丢失，保存对象不含挂起状态）
+    try:
+        import traceback as _tb
+        _sus = [(a.get("name", "?")[:12], a.get("suspended")) for a in out.get("accounts", []) if a.get("suspended")]
+        _caller = ""
+        try:
+            _st = _tb.extract_stack()
+            _caller = f"{_st[-3].filename.split(chr(92))[-1]}:{_st[-3].lineno} {_st[-3].name}" if len(_st) >= 3 else "?"
+        except Exception:
+            pass
+        with (Path(__file__).parent.parent / "debug.log").open("a", encoding="utf-8") as _af:
+            _af.write(f"[SAVE-AUDIT] suspended={_sus} accounts={len(out.get('accounts', []))} caller={_caller}\n")
+    except Exception:
+        pass
     # Atomic write: write to temp file in same directory then rename
     tmp = CONFIG_FILE.with_name("config.json.tmp")
     try:

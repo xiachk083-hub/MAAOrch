@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Any
 from PySide6.QtWidgets import QMessageBox, QFileDialog, QComboBox, QLineEdit
-from infrastructure.task_constants import (CF,EMU_PRESETS,MUMU_INSTANCE_DIRS,find_mumu_cli,detect_emu_instances)
+from infrastructure.task_constants import (CF,EMU_PRESETS,MUMU_INSTANCE_DIRS,find_mumu_cli,detect_emu_instances,cli_flag)
 from infrastructure.background_thread import BackgroundTask
 from app.service_context import ServiceContext
 
@@ -131,7 +131,7 @@ class EmuService:
                 except: pass
                 self._stop_bg(self._stopemu_t)
             def _fn():
-                try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"shutdown"],creationflags=CF,timeout=15); return "ok"
+                try: subprocess.run([cli,"control",cli_flag(cli),str(emu_idx),"shutdown"],creationflags=CF,timeout=15); return "ok"
                 except Exception as e: return str(e)
             def _on(r):
                 s=str(r)
@@ -156,9 +156,10 @@ class EmuService:
                         if port and port != "0":
                             return f"127.0.0.1:{port}"
                     except: pass
-            # Formula fallback
+            # Direct detection fallback — formula ports drift (16384+idx*32), never use
             try:
-                return f"127.0.0.1:{16384 + int(idx) * 32}"
+                from infrastructure.task_constants import detect_emu_adb
+                return detect_emu_adb(idx)
             except: pass
         # LDPlayer: formula
         if "雷电" in emu:
@@ -194,7 +195,7 @@ class EmuService:
         import time as _time
         def _fn():
             try:
-                subprocess.run([cli,"control","--vmindex",str(emu_idx),"launch"],creationflags=CF,timeout=15)
+                subprocess.run([cli,"control",cli_flag(cli),str(emu_idx),"launch"],creationflags=CF,timeout=15)
             except Exception as e:
                 return f"__err__启动失败: {e}"
             _time.sleep(5)
@@ -217,7 +218,8 @@ class EmuService:
                             target_port=ins["adb_port"]; break
                 except: pass
             if not target_port:
-                target_port = str(16384 + emu_idx_int * 32)
+                from infrastructure.task_constants import detect_emu_adb
+                target_port = detect_emu_adb(emu_idx).split(":")[-1]
             addr=f"127.0.0.1:{target_port}"
             try: subprocess.run([adb,"connect",addr],capture_output=True,timeout=3,creationflags=CF)
             except: pass

@@ -11,6 +11,8 @@ import heapq
 import time
 import subprocess
 import json
+import re
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 import threading
@@ -23,6 +25,74 @@ from models.queue_entry import QueueEntry
 from infrastructure.logger import Logger
 
 _QUEUE_LOG = Logger("queue")
+
+
+def _mumu_manager_cli(accounts: list | None = None) -> str | None:
+    """MuMu 12 专用: 只返回 MuMuManager.exe 路径。
+
+    绝不返回 mumu-cli.exe（MuMu 6 兼容层）— 在 MuMu 12 上它的
+    `--vmindex` 单查索引错位，返回的是别的模拟器的状态/端口：
+    - _clean_stale_emus 用它验证模拟器 → 错位结果 is_android_started=False
+      → 误判"模拟器崩溃"→ 批量杀 MAA + 关模拟器（2026-08-10 事故）
+    - _reclaim_idle_emus 枚举/关闭模拟器同样错位 → 误回收
+    找不到 MuMuManager → 返回 None（调用方保守跳过，不判崩溃/不回收）。
+    """
+    cands = [
+        r"E:\MuMu Player 12\nx_main\MuMuManager.exe",
+        str(Path(os.environ.get("LOCALAPPDATA", "")) / "MuMuPlayer-12.0" / "nx_main" / "MuMuManager.exe"),
+    ]
+    for c in cands:
+        if Path(c).exists():
+            return c
+    if accounts:
+        for a in accounts:
+            adb = a.get("adb_path", "")
+            if adb:
+                cand = str(Path(adb).parent / "MuMuManager.exe")
+                if Path(cand).exists():
+                    return cand
+    return None
+
+
+def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
+                          wait: int = 30) -> bool:
+    """统一模拟器关闭（唯一正常退出方式）— 2026-08-10 用户指出:
+    直接 MuMuManager shutdown 是"错误退出"→ VMM 残留进程（进程在但无实例，
+    占内存 — 曾见 17 个残留 VMMHeadless、CPU 3455%）。正常方式:
+      1. adb shell reboot -p（Android 内优雅关机 → 模拟器自然退出，不留残留）
+      2. 轮询 MuMuManager 等待完全退出（最多 wait 秒）
+      3. MuMuManager shutdown 兜底（仅当 2 超时）
+    所有关闭模拟器的调用点必须走这里（回收/完成/recover/重启），统一退出。
+    """
+    flag = "-v" if "MuMuManager" in cli else "--vmindex"
+    if addr and adb_path:
+        try:
+            subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
+                           capture_output=True, timeout=10,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except Exception:
+            pass
+    dl = time.time() + wait
+    while time.time() < dl:
+        try:
+            r = subprocess.run([cli, "info", flag, str(emu_idx)],
+                               capture_output=True, text=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                               encoding="utf-8", errors="replace")
+            if r.returncode == 0:
+                d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                if not (d.get("is_android_started") or d.get("is_process_started")):
+                    return True
+        except Exception:
+            pass
+        time.sleep(2)
+    try:
+        subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
+                       capture_output=True, timeout=15,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except Exception:
+        pass
+    return True
 
 
 class LaunchQueue:
@@ -38,8 +108,21 @@ class LaunchQueue:
         self._pending: list[QueueEntry] = []
         self._active_emus: dict[str, str] = {}  # emu_idx → account_id
         self._active_emus_ts: dict[str, float] = {}  # emu_idx → when added
+        self._recover_count: dict[str, int] = {}  # aid → 30min 窗口内 recover 次数
+        self._recover_ts: dict[str, float] = {}  # aid → 上次 recover 时间
         self._paused = True  # queue starts paused; user must explicitly start
         self._last_launch_time: float = 0  # timestamp of last successful launch (60s interval)
+        # 运行超时（任务级卡死防护）: 单次运行超过该秒数 → 判定卡死 → 重置。
+        # 可配置 max_run_minutes（默认 180 分钟 — 正常一轮日常+剿灭远小于此）。
+        self._max_run_sec: int = int(self.ctx.config.get("max_run_minutes", 180) or 180) * 60
+        # 日志停滞检测: asst.log 超过该秒数无更新 → 判定卡死（比超时敏感）。
+        # 默认 10 分钟 — 正常运行时 MAA 每 1-5s 写日志。
+        self._log_stall_sec: int = int(self.ctx.config.get("log_stall_minutes", 10) or 10) * 60
+        # 重试卡死: 同一任务 cur_retry 超过该值（日志活跃但无进展）→ 判定卡死。
+        # 默认 60 次（约 60s+ 无进展）。
+        self._retry_stall: int = int(self.ctx.config.get("retry_stall", 60) or 60)
+        # 连续兜底释放计数（防无限重试循环）: 账号连续兜底释放 N 次 → 挂起。
+        self._stale_release_count: dict[str, int] = {}
         self._bg_tick_started = False
         self._import_heapq()
 
@@ -102,29 +185,20 @@ class LaunchQueue:
                 capture_output=True, timeout=15, creationflags=_sp.CREATE_NO_WINDOW)
         _sp.run(["taskkill","/F","/IM","MAA.exe","/T"],
                 capture_output=True, timeout=10, creationflags=_sp.CREATE_NO_WINDOW)
-        # Close emulators via mumu-cli
-        _sp.run([r"E:\MuMu Player 12\nx_main\mumu-cli.exe", "control", "--vmindex", "all", "shutdown"],
-                capture_output=True, timeout=30, creationflags=_sp.CREATE_NO_WINDOW)
-        try:
-            # Fallback: iterate accounts individually
-            for a in self.ctx.accounts:
-                emu = a.get("emu_instance_index", "")
-                if emu:
-                    _sp.run([r"E:\MuMu Player 12\nx_main\mumu-cli.exe", "control", "--vmindex", str(emu), "shutdown"],
-                           capture_output=True, timeout=10, creationflags=_sp.CREATE_NO_WINDOW)
-        except: pass
-        # Close popups
-        # Close emulators via mumu-cli
-        from infrastructure.task_constants import find_mumu_cli
-        cli = find_mumu_cli()
+        # Close emulators — 统一优雅关闭（adb reboot -p → 等退出 → 兜底），
+        # 直接 shutdown 会留 VMM 残留（用户 2026-08-10: 必须解决错误关闭）
+        cli = _mumu_manager_cli(self.ctx.accounts)
         if cli:
-            for a in self.ctx.accounts:
-                emu = a.get("emu_instance_index", "")
-                if emu:
-                    try:
-                        _sp.run([cli, "control", "--vmindex", str(emu), "shutdown"],
-                               capture_output=True, timeout=10, creationflags=_sp.CREATE_NO_WINDOW)
-                    except: pass
+            try:
+                for a in self.ctx.accounts:
+                    emu = a.get("emu_instance_index", "")
+                    if emu:
+                        graceful_emu_shutdown(cli, emu, a.get("adb_path", ""), a.get("adb_address", ""))
+            except Exception:
+                try:
+                    _sp.run([cli, "control", "-v", "all", "shutdown"],
+                            capture_output=True, timeout=30, creationflags=_sp.CREATE_NO_WINDOW)
+                except: pass
         # Close popups
         try:
             from services.runner import _close_mumu_popups
@@ -217,6 +291,8 @@ class LaunchQueue:
     def on_account_finished(self, data: tuple) -> None:
         """An account just finished — release emulator, enqueue based on deficit."""
         account_id, exit_code, tasks = data
+        if exit_code == 0:
+            self._stale_release_count.pop(account_id, None)
         emu_idx = self._get_emu_key(account_id)
         with self._lock:
             old = self._active_emus.pop(emu_idx, None)
@@ -243,12 +319,16 @@ class LaunchQueue:
         if exit_code == -8:
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
-                from infrastructure.task_constants import find_mumu_cli
-                cli = find_mumu_cli()
+                cli = _mumu_manager_cli(self.ctx.accounts)
                 if cli:
                     self.ctx.log(f"[ADB] {ac.get('name', account_id)} 重启模拟器 #{emu_idx}")
                     import subprocess as _sp
-                    _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "launch"],
+                    # 统一优雅关闭再重启（直接 shutdown 会留 VMM 残留）
+                    _ac4 = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
+                    _adb4 = _ac4.get("adb_path", "") if _ac4 else ""
+                    _addr4 = _ac4.get("adb_address", "") if _ac4 else ""
+                    graceful_emu_shutdown(cli, emu_idx, _adb4, _addr4)
+                    _sp.Popen([cli, "control", "-v", str(emu_idx), "launch"],
                              creationflags=_sp.CREATE_NO_WINDOW)
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
@@ -265,13 +345,15 @@ class LaunchQueue:
             if failures >= 3:
                 emu_idx = ac.get("emu_instance_index", "")
                 if emu_idx:
-                    from infrastructure.task_constants import find_mumu_cli
-                    cli = find_mumu_cli()
+                    cli = _mumu_manager_cli(self.ctx.accounts)
                     if cli:
                         import subprocess as _sp
                         self.ctx.log(f"[重启] {ac.get('name', account_id)} 连续失败 {failures} 次，重启模拟器 #{emu_idx}")
-                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "shutdown"], creationflags=_sp.CREATE_NO_WINDOW)
-                        _sp.Popen([cli, "control", "--vmindex", str(emu_idx), "launch"], creationflags=_sp.CREATE_NO_WINDOW)
+                        _ac5 = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
+                        _adb5 = _ac5.get("adb_path", "") if _ac5 else ""
+                        _addr5 = _ac5.get("adb_address", "") if _ac5 else ""
+                        graceful_emu_shutdown(cli, emu_idx, _adb5, _addr5)
+                        _sp.Popen([cli, "control", "-v", str(emu_idx), "launch"], creationflags=_sp.CREATE_NO_WINDOW)
             delay = min(300, 5 * (2 ** (failures - 1))) if failures > 0 else 5
             from datetime import datetime, timedelta
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
@@ -362,6 +444,17 @@ class LaunchQueue:
                     self.emit_skipped(entry.account_id, "已在运行")
                     continue
 
+                # ①.5 Suspended accounts never launch — consume the entry
+                # (removed from queue; re-enqueue manually after unsuspending).
+                # Without this, a suspended account's force entry stays in the
+                # queue forever and gets launched on every tick (2026-08-10:
+                # 官-2/官-41 模拟器起不来 — 挂起后条目还在 pending)。
+                _susp_ac = next((a for a in self.ctx.accounts if a.get("id") == entry.account_id), None)
+                if _susp_ac and _susp_ac.get("suspended"):
+                    _QUEUE_LOG.warn(f"移除挂起账号 {entry.account_id[:8]} 的队列条目")
+                    self.emit_skipped(entry.account_id, "账号挂起")
+                    continue
+
                 # ② Not yet time? Push back, stop checking this priority level
                 if now < entry.not_before:
                     _QUEUE_LOG.debug(f"延迟 {entry.account_id}: 未到时间 ({entry.not_before})")
@@ -394,25 +487,32 @@ class LaunchQueue:
                             self.emit_skipped(entry.account_id, "理智不足")
                             continue
 
-                # ④b Enough-sanity skip (all sources): if the account's sanity is
-                # already high enough to fully regen within `fight_sanity_hours`
-                # (default 12h, 10pt/h), it doesn't need a farming run today.
-                # Entry gate only — once launched, farming runs to exhaustion.
+                # ④b Enough-sanity skip (sanity-driven only): if the account's
+                # sanity is already high enough to fully regen within
+                # `fight_sanity_hours` (default 12h, 10pt/h), it doesn't need an
+                # automatic recovery run today. Entry gate only — once launched,
+                # farming runs to exhaustion.
                 # Sanity is read from the latest archived asst.log (RunStats is
                 # unreliable — save_run never fired when MAA hung in round 2).
-                try:
-                    _ac = next((a for a in self.ctx.accounts if a.get("id") == entry.account_id), None)
-                    if _ac and not _ac.get("_connect_only"):
-                        _cur, _max = self._last_archived_sanity(entry.account_id)
-                        if _cur is not None and _max:
-                            _hours = float(_ac.get("fight_sanity_hours", 12) or 12)
-                            _enough = int(_max - _hours * 10)
-                            if _cur >= _enough:
-                                _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 理智充足 ({_cur}/{_max} ≥ {_enough})")
-                                self.emit_skipped(entry.account_id, f"理智充足 {_cur}/{_max}")
-                                continue
-                except Exception:
-                    pass
+                # NOTE: only gates source="sanity" — force/manual/auto entries
+                # ALWAYS run. A full-sanity skip on a force/auto entry would
+                # deadlock: skipped → no run → archive never updates → skipped
+                # forever (sanity only updates on the last run's result).
+                # Annihilation accounts must burn sanity even when full.
+                if entry.source == "sanity":
+                    try:
+                        _ac = next((a for a in self.ctx.accounts if a.get("id") == entry.account_id), None)
+                        if _ac and not _ac.get("_connect_only"):
+                            _cur, _max = self._last_archived_sanity(entry.account_id)
+                            if _cur is not None and _max:
+                                _hours = float(_ac.get("fight_sanity_hours", 12) or 12)
+                                _enough = int(_max - _hours * 10)
+                                if _cur >= _enough:
+                                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 理智充足 ({_cur}/{_max} ≥ {_enough})")
+                                    self.emit_skipped(entry.account_id, f"理智充足 {_cur}/{_max}")
+                                    continue
+                    except Exception:
+                        pass
 
                 to_launch.append(entry)
 
@@ -533,26 +633,81 @@ class LaunchQueue:
                 try:
                     _ac = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
                     if _ac and _ac.get("emu_instance_index"):
-                        from infrastructure.task_constants import find_mumu_cli
-                        cli = find_mumu_cli()
-                        if cli is None and _ac.get("adb_path"):
-                            _cand = Path(_ac["adb_path"]).parent / "MuMuManager.exe"
-                            if _cand.exists():
-                                cli = str(_cand)
+                        # 只用 MuMuManager.exe — find_mumu_cli 可能返回 mumu-cli
+                        # （MuMu 6 兼容层）→ --vmindex 索引错位 → 误判"模拟器崩溃"
+                        # → 批量杀 MAA（2026-08-10 事故根因）。
+                        cli = _mumu_manager_cli(self.ctx.accounts)
                         if cli:
-                            _flag = "-v" if "MuMuManager" in cli else "--vmindex"
-                            r = subprocess.run([cli, "info", _flag, str(_ac["emu_instance_index"])],
+                            r = subprocess.run([cli, "info", "-v", str(_ac["emu_instance_index"])],
                                               capture_output=True, text=True, timeout=5,
                                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                                               encoding="utf-8", errors="replace")
                             if r.returncode == 0:
-                                _d = json.loads(r.stdout)
-                                if not (_d.get("is_android_started") or _d.get("is_process_started")):
+                                try:
+                                    _d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                                except Exception:
+                                    # 查询结果无法解析 — 无法确认模拟器状态，
+                                    # 保守跳过（宁可漏判也不误杀）。
+                                    _d = None
+                                if _d is not None and not (_d.get("is_android_started") or _d.get("is_process_started")):
+                                    # 启动宽限: recover 刚 launch 过（60s 内）→
+                                    # 模拟器正在启动（VMM 进程 10-30s 才起来）→
+                                    # 不判崩溃。否则每次 launch 后立即被判"崩溃"
+                                    # → shutdown 打断启动 → 永远起不来 → 反复
+                                    # shutdown/launch → MuMu 崩溃报告刷屏
+                                    # （2026-08-10 用户: "崩溃日志都干出来了"）。
+                                    if time.time() - self._recover_ts.get(aid, 0) < 60:
+                                        continue
                                     real = False
                                     _QUEUE_LOG.warn(f"模拟器 #{_ac['emu_instance_index']} 已崩溃（{_ac.get('name','?')}）")
+                                    self._recover_account(aid, emu_idx, cli, _flag,
+                                                          f"模拟器崩溃（{_ac.get('name','?')}）")
                 except Exception:
                     pass
             _QUEUE_LOG.debug(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
+            # ── 运行超时: MAA 活着但单次运行超时 ──
+            # 任务级死循环（如 PRTS 误匹配卡死）检测不到进程/模拟器异常 —
+            # 进程活着、模拟器正常、ADB 通，但任务永远不推进。超时即判定
+            # 卡死 → 完整处理链（杀 MAA + 关模拟器 + 重启）→ 自动恢复。
+            if real and ts > 0 and now - ts > self._max_run_sec:
+                _QUEUE_LOG.warn(f"运行超时: {aid[:8]} 已运行 {int((now-ts)//60)} 分钟（判定卡死，重置）")
+                self._recover_account(aid, emu_idx, self._recover_cli(),
+                                      self._recover_flag(), "运行超时（任务级卡死）")
+                continue
+            # ── 日志停滞检测: asst.log 长时间无更新 = 卡死 ──
+            # 比运行超时敏感得多: 正常运行时 MAA 每 1-5s 写日志（截图/识别），
+            # 卡死（连接挂起/任务死循环）日志就停更。10 分钟无更新即判定
+            # 卡死 → 立即恢复（不等 180 分钟超时）。
+            if real and ts > 0:
+                try:
+                    _inst2 = getattr(runner, "_procs", {}).get(aid)
+                    _ip2 = getattr(_inst2, "_inst_path", None)
+                    if isinstance(_inst2, str):
+                        _ip2 = _inst2
+                    if _ip2:
+                        _al = Path(_ip2) / "debug" / "asst.log"
+                        if _al.exists():
+                            _age = now - _al.stat().st_mtime
+                            if _age > self._log_stall_sec:
+                                _QUEUE_LOG.warn(f"日志停滞: {aid[:8]} asst.log {int(_age//60)} 分钟无更新（判定卡死，重置）")
+                                self._recover_account(aid, emu_idx, self._recover_cli(),
+                                                      self._recover_flag(), "日志停滞（卡死）")
+                                continue
+                            # ── 重试卡死检测: 日志活跃但同一任务无限重试 ──
+                            # 如 StartUpBegin 重试 37 次（游戏没启动）、PRTS1 循环。
+                            # asst.log 尾部 "cur_retry":N 持续增长 = 无进展卡死。
+                            try:
+                                _tail = _al.read_text(encoding="utf-8", errors="replace")[-4000:]
+                                _mm = re.search(r'"cur_retry":\s*(\d+)', _tail)
+                                if _mm and int(_mm.group(1)) > self._retry_stall:
+                                    _QUEUE_LOG.warn(f"重试卡死: {aid[:8]} 同一任务重试 {_mm.group(1)} 次无进展（判定卡死，重置）")
+                                    self._recover_account(aid, emu_idx, self._recover_cli(),
+                                                          self._recover_flag(), "重试卡死（任务无进展）")
+                                    continue
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
             if ts == 0:
                 # Timestamp missing (legacy residue or abnormal write path).
                 # If the process is dead, release now — otherwise permanently
@@ -569,6 +724,7 @@ class LaunchQueue:
                             a["dispatch_id"] = ""
                             a["smart_plan"] = ""
                             break
+                    self._requeue_if_valid(aid, emu_idx)
                 else:
                     self._active_emus_ts[emu_idx] = now  # 补时间戳，交给 150s 超时逻辑
                 continue
@@ -584,6 +740,204 @@ class LaunchQueue:
                         a["dispatch_id"] = ""
                         a["smart_plan"] = ""
                         break
+                self._requeue_if_valid(aid, emu_idx)
+
+        # ── 空闲模拟器回收 ──
+        # Emulators are the biggest resource hog (RAM/CPU each). An account
+        # that is neither running nor queued doesn't need its emulator up —
+        # runner._launch_job_body re-launches it on demand (with a global
+        # launch lock for MuMu 12 concurrency). This keeps a big account farm
+        # from pinning N emulators while only a few accounts are active.
+        self._reclaim_idle_emus()
+
+    def _reclaim_idle_emus(self) -> None:
+        """Shutdown emulators whose accounts are neither running nor queued."""
+        try:
+            import json as _json
+            # 只用 MuMuManager.exe（mumu-cli 在 MuMu 12 上 --vmindex 索引错位，
+            # 枚举/关闭都会作用到错误的模拟器 — 见 _mumu_manager_cli 注释）
+            cli = _mumu_manager_cli(self.ctx.accounts)
+            if not cli:
+                return
+            idx_flag = "-v"
+            # Only accounts actually running keep their emulator. Queued ones
+            # don't — runner._launch_job_body relaunches the emulator on demand
+            # (with a global launch lock). Keeping queued emulators up used to
+            # pin N emulators while the queue was long, and after a project
+            # restart every previously-running emulator stayed up forever.
+            active_ids = set(self._active_emus.values())
+            emu2aid: dict[str, str] = {}
+            for a in self.ctx.accounts:
+                ei = a.get("emu_instance_index", "")
+                if ei:
+                    emu2aid[str(ei)] = a["id"]
+            r = subprocess.run([cli, "info", idx_flag, "all"],
+                               capture_output=True, text=True, timeout=8,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                               encoding="utf-8", errors="replace")
+            data = _json.loads(r.stdout.lstrip("\ufeff").strip())
+            for idx, info in data.items():
+                if not info.get("is_process_started"):
+                    continue
+                aid = emu2aid.get(str(idx))
+                if aid and aid in active_ids:
+                    continue  # 在跑/排队/启动中 — 保留
+                # 排队中的账号也保留模拟器 — 降级回队列/失败重试的账号马上要
+                # 重新启动，回收模拟器会导致反复开关（2026-08-10 用户: 降级后
+                # 模拟器被关 → 又要重新拉起）
+                if aid and any(e.account_id == aid for e in self._pending):
+                    continue
+                # MAA 进程还活着（降级优雅关闭中/账号过渡期）→ 保留模拟器 —
+                # 否则关掉模拟器后 MAA 失联卡住，且进程活着不触发自动重启
+                # （用户: "MAA 还开着，模拟器自己关掉了，之后也没有重启"）。
+                if aid:
+                    try:
+                        _runner = getattr(getattr(self.ctx, '_mw', None), 'runner', None)
+                        if _runner and _runner._has_real_process(aid):
+                            continue
+                    except Exception:
+                        pass
+                _QUEUE_LOG.info(f"回收空闲模拟器 #{idx} (无运行任务)")
+                # 统一优雅关闭（adb reboot -p → 等退出 → shutdown 兜底）—
+                # 直接 shutdown 会留 VMM 残留（用户 2026-08-10: 必须解决错误关闭）
+                _adb_path = ""
+                _addr = ""
+                if aid:
+                    _ac2 = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
+                    if _ac2:
+                        _adb_path = _ac2.get("adb_path", "")
+                        _addr = _ac2.get("adb_address", "")
+                graceful_emu_shutdown(cli, idx, _adb_path, _addr)
+        except Exception as ex:
+            _QUEUE_LOG.debug(f"空闲模拟器回收跳过: {ex}")
+
+    def _recover_cli(self) -> str:
+        """Find emulator CLI — MuMuManager.exe ONLY (mumu-cli misindexes on MuMu 12)."""
+        return _mumu_manager_cli(self.ctx.accounts) or ""
+
+    def _recover_flag(self) -> str:
+        return "-v"
+
+    def _recover_account(self, aid: str, emu_idx: str, cli: str, flag: str, reason: str) -> None:
+        """完整恢复链（原地处理，账号保持"运行中"占位）:
+          1. 杀空转 MAA（Popen pid 或 .pid 文件）
+          2. shutdown 模拟器（彻底重置）
+          3. 立即重新 launch 模拟器（原地恢复 — 不等队列）
+          之后 runner._wait_exit 检测 MAA 死 → cleanup → on_account_finished
+          释放标记 → 自动重启（priority 0 立即启动）→ 复用已就绪的模拟器 → 无缝恢复。
+        """
+        # 恢复次数上限: 模拟器物理起不来（Android 损坏/游戏崩）时 recover 会
+        # 无限循环（每 tick 判定崩溃 → 杀/重启 → 又判崩溃）。同一账号在
+        # 30 分钟内 recover 超过阈值 → 挂起 + 告警，停止空转（2026-08-10
+        # 官-41/emu56、官-19/emu33 同类 — 需人工处理模拟器）。
+        try:
+            _ac = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
+            _now = time.time()
+            if _now - self._recover_ts.get(aid, 0) > 1800:
+                self._recover_count[aid] = 0  # 时间窗口重置（防长期累积误挂）
+            self._recover_ts[aid] = _now
+            n = self._recover_count.get(aid, 0) + 1
+            self._recover_count[aid] = n
+            _max = int(self.ctx.config.get("max_recover_attempts", 5) or 5)
+            if n >= _max:
+                if _ac:
+                    _ac["suspended"] = True
+                    try:
+                        from models.config_manager import save_config
+                        save_config(self.ctx.config)
+                    except Exception:
+                        pass
+                _QUEUE_LOG.warn(f"账号 {aid[:8]} 恢复失败 {n} 次，自动挂起（模拟器/游戏起不来，需人工处理）")
+                return
+        except Exception:
+            pass
+        runner = getattr(getattr(self.ctx, '_mw', None), 'runner', None)
+        # 1. 杀 MAA
+        try:
+            _inst = getattr(runner, "_procs", {}).get(aid)
+            _pid = getattr(_inst, "pid", None)
+            if not _pid and isinstance(_inst, str):
+                # 字符串占位 = 实例路径（_downgrade_stage 替换后）→ 读 .pid 文件
+                try:
+                    _pid = int((Path(_inst) / ".pid").read_text().strip())
+                except Exception:
+                    _pid = None
+            if _pid:
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(_pid)],
+                               capture_output=True, timeout=8,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                _QUEUE_LOG.warn(f"已杀 MAA pid={_pid}（{reason}）")
+        except Exception:
+            pass
+        # 2. shutdown 模拟器 — 统一优雅关闭（adb reboot -p → 等退出 → 兜底）
+        # 直接 shutdown 会留 VMM 残留（用户 2026-08-10: 必须解决错误关闭）
+        if cli and emu_idx:
+            try:
+                _ac3 = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
+                _adb3 = _ac3.get("adb_path", "") if _ac3 else ""
+                _addr3 = _ac3.get("adb_address", "") if _ac3 else ""
+                graceful_emu_shutdown(cli, emu_idx, _adb3, _addr3)
+            except Exception:
+                try:
+                    subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
+                                   capture_output=True, timeout=15,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                except Exception:
+                    pass
+                _QUEUE_LOG.warn(f"已关闭模拟器 #{emu_idx}（{reason}）")
+            except Exception:
+                pass
+        # 3. 原地重启模拟器（保持运行标记 — 无缝恢复）
+        if cli and emu_idx:
+            try:
+                subprocess.run([cli, "control", flag, str(emu_idx), "launch"],
+                               capture_output=True, timeout=15,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                _QUEUE_LOG.warn(f"已原地重启模拟器 #{emu_idx}（{reason} — 等待自动恢复）")
+            except Exception:
+                pass
+        # 注意: 不释放 _active_emus 标记 —— 账号保持"运行中"占位。
+        # cleanup 的 on_account_finished 会在 MAA 死后自然释放，
+        # 自动重启链立即接管（priority 0）。
+        # 记录到 AccountState（卡死/异常处理可见）
+        try:
+            from models.account_state import AccountState
+            AccountState(aid).on_stuck(reason)
+        except Exception:
+            pass
+
+    def _requeue_if_valid(self, aid: str, emu_idx: str) -> None:
+        """重新入队被兜底释放的账号（不能丢 — 自动恢复）。
+
+        150s 超时/无时间戳释放标记后，账号既不 running 也不 queued 就消失了
+        （恢复链断裂）。这里把它放回队列（auto 优先级），下个 tick 立即重启。
+        挂起账号 / 无模拟器账号不重新入队。
+
+        防无限循环: 连续兜底释放超过阈值（默认 5 次）→ 挂起账号 + 告警 —
+        反复启动即死的账号（如模拟器起不来）不能无限重试占资源。
+        """
+        try:
+            _ac = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
+            if not _ac or not _ac.get("emu_instance_index") or _ac.get("suspended"):
+                return
+            if self.is_queued(aid) or self.is_running(aid):
+                return
+            n = self._stale_release_count.get(aid, 0) + 1
+            self._stale_release_count[aid] = n
+            _max = int(self.ctx.config.get("max_stale_releases", 5) or 5)
+            if n >= _max:
+                _ac["suspended"] = True
+                try:
+                    from models.config_manager import save_config
+                    save_config(self.ctx.config)
+                except Exception:
+                    pass
+                _QUEUE_LOG.warn(f"⛔ {_ac.get('name', aid)} 连续兜底释放 {n} 次（模拟器/账号反复启动即死），已挂起 — 请检查")
+                return
+            self.enqueue(aid, "auto", priority=0)
+            _QUEUE_LOG.warn(f"重新入队 {aid[:8]}（兜底释放后恢复，第{n}次）")
+        except Exception as ex:
+            _QUEUE_LOG.debug(f"重新入队失败 {aid[:8]}: {ex}")
 
     def emit_log_msg(self, msg: str) -> None:
         for cb in self._log_msg_callbacks: cb(msg)

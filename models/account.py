@@ -54,6 +54,13 @@ class Account:
     dispatch_id: str = ""
     stages: list = field(default_factory=list)
 
+    # 运营字段 — 曾因不在 dataclass 字段中被 from_dict 过滤（重启后丢失 →
+    # 后续保存覆盖文件）：挂起状态 / UID / 关卡能力判定（2026-08-10
+    # 官-2/官-25/官-41 挂起反复丢失根因）
+    uid: str = ""
+    suspended: bool = False
+    stage_ability: dict = field(default_factory=dict)
+
     # Fight strategy (kept as dataclass fields so from_dict/to_dict persist them —
     # dynamic attributes were silently dropped on reload, resetting configs)
     fight_mode: str = "schedule"

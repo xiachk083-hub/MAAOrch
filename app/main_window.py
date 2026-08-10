@@ -11,7 +11,7 @@ from infrastructure.utils import (is_admin,run_as_admin,make_id,parse_maa_versio
 from models.config_manager import (CONFIG_FILE,STARTUP_DIR,DEFAULT_CONFIG,migrate_v4_to_v5,load_config,save_config,set_auto_start)
 from app.themes import DARK_STYLE, LIGHT_STYLE, NOTEPAPER_STYLE, BTN_DELETE
 from services.update_service import UpdateCheckThread,DownloadThread,MaacliInstallThread,MaacliInstallDialog,UpdateDialog
-from infrastructure.task_constants import (TASK_NAMES,TASK_DEFAULTS,EMU_PRESETS,MUMU_INSTANCE_DIRS,MUMU_CLI_CANDIDATES,CLIENT_TYPES,CF,find_mumu_cli,detect_emu_instances,EmuMonitor)
+from infrastructure.task_constants import (TASK_NAMES,TASK_DEFAULTS,EMU_PRESETS,MUMU_INSTANCE_DIRS,MUMU_CLI_CANDIDATES,CLIENT_TYPES,CF,find_mumu_cli,detect_emu_instances,EmuMonitor,cli_flag)
 from services.emu_service import EmuService
 from services.config_injector import ConfigService
 from services.log_parser import LogService
@@ -712,7 +712,7 @@ class MainWindow(QMainWindow):
             if i>=len(to_launch): _start_thread(); return
             cli,emu_idx,name,wait=to_launch[i]
             self._log(f"启动模拟器 #{emu_idx} ({name})")
-            try: subprocess.run([cli,"control","--vmindex",str(emu_idx),"launch"],creationflags=CF,timeout=15)
+            try: subprocess.run([cli,"control",cli_flag(cli),str(emu_idx),"launch"],creationflags=CF,timeout=15)
             except Exception as e: self._log(f"启动失败: {e}")
             self.sl.setText(f"模拟器 {i+1}/{len(to_launch)}")
             QTimer.singleShot(max(500,int(wait*1000//len(to_launch))),lambda i=i: _launch_next(i+1))

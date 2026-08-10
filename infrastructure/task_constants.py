@@ -69,27 +69,34 @@ if (ev:=os.environ.get("MUMU_CLI_HOME","")):
 
 @functools.lru_cache(maxsize=1)
 def find_mumu_cli() -> str | None:
-    # Check known paths + USERPROFILE
+    # MuMu 12 优先: MuMuManager.exe（-v <idx> 语法）。
+    # 绝不用 mumu-cli.exe 当首选 — 它是 MuMu 6 兼容层，在 MuMu 12 上
+    # `--vmindex` 单查索引错位，返回的是别的模拟器的状态/端口 →
+    # 误判"模拟器崩溃"批量杀 MAA / 误回收 / 覆盖正确端口
+    # （2026-08-10 批量杀 MAA 事故根因）。
+    _MM = [
+        r"E:\MuMu Player 12\nx_main\MuMuManager.exe",
+        str(Path(os.environ.get("LOCALAPPDATA", "")) / "MuMuPlayer-12.0" / "nx_main" / "MuMuManager.exe"),
+        str(Path(os.environ.get("USERPROFILE", ".")) / "MuMuPlayer-12.0" / "nx_main" / "MuMuManager.exe"),
+    ]
+    for c in _MM:
+        if Path(c).exists():
+            return c
+    # 旧版 MuMu 6 / 兼容层 fallback: mumu-cli（仅当 MuMuManager 不存在）
     extra=[str(Path(os.environ.get("USERPROFILE","."))/"MuMuPlayer"/"nx_main"/"mumu-cli.exe")]
     for c in extra + MUMU_CLI_CANDIDATES + [str(Path(os.environ.get("LOCALAPPDATA",""))/"MuMuPlayer-12.0"/"shell"/"mumu-cli.exe")]:
         if Path(c).exists(): return c
-    # MuMu 12 has NO mumu-cli — use MuMuManager.exe (nx_main). Its CLI syntax
-    # differs (-v <idx> instead of --vmindex <idx>); callers must branch on it.
-    _MM = [str(Path(os.environ.get("LOCALAPPDATA",""))/"MuMuPlayer-12.0"/"nx_main"/"MuMuManager.exe")]
-    for c in _MM:
-        if Path(c).exists(): return c
-    # Search drives for MuMuPlayer
+    # Search drives for MuMuPlayer — MuMuManager first, then mumu-cli
     for drv in "CDEFGH":
         base=Path(f"{drv}:\\")
         if not base.exists(): continue
         try:
             for d in base.iterdir():
                 if d.is_dir() and "mumu" in d.name.lower():
-                    for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe","nx_device\\12.0\\shell\\mumu-cli.exe"]:
+                    for sub in ["nx_main\\MuMuManager.exe"]:
                         p=d/sub
                         if p.exists(): return str(p)
-                    # MuMu 12 fallback: MuMuManager.exe next to mumu-cli locations
-                    for sub in ["nx_main\\MuMuManager.exe"]:
+                    for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe","nx_device\\12.0\\shell\\mumu-cli.exe"]:
                         p=d/sub
                         if p.exists(): return str(p)
                 # Also check subdirectories (e.g. D:\Xiach\MuMuPlayer)
@@ -97,10 +104,10 @@ def find_mumu_cli() -> str | None:
                     try:
                         for sd in d.iterdir():
                             if sd.is_dir() and "mumu" in sd.name.lower():
-                                for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe"]:
+                                for sub in ["nx_main\\MuMuManager.exe"]:
                                     p=sd/sub
                                     if p.exists(): return str(p)
-                                for sub in ["nx_main\\MuMuManager.exe"]:
+                                for sub in ["nx_main\\mumu-cli.exe","shell\\mumu-cli.exe"]:
                                     p=sd/sub
                                     if p.exists(): return str(p)
                     except PermissionError: pass
@@ -110,6 +117,11 @@ def find_mumu_cli() -> str | None:
 
 def clear_mumu_cli_cache() -> None:
     find_mumu_cli.cache_clear()
+
+def cli_flag(cli: str) -> str:
+    """CLI 标志分支: MuMuManager.exe 用 -v <idx>，mumu-cli 用 --vmindex <idx>。
+    所有模拟器查询/控制调用必须用它，禁止硬编码（MuMu 12 上两者互不兼容）。"""
+    return "-v" if "MuMuManager" in cli else "--vmindex"
 
 def find_adb() -> str | None:
     """Find adb.exe near mumu-cli or by scanning drives."""
@@ -147,13 +159,65 @@ def find_adb() -> str | None:
         except: pass
     return None
 
+def detect_emu_adb(emu_idx) -> str:
+    """直接检测模拟器 ADB 端口（MuMuManager 单查实际值 — 不用公式）。
+
+    公式端口（16384 + idx*32）在模拟器重启后会漂移，一律禁止用于连接。
+    MuMu 12 的官方 CLI 是 MuMuManager.exe（-v <idx>），返回实际端口；
+    mumu-cli 在 MuMu 12 上索引错位（返回别的模拟器端口），不可用。
+    返回 "127.0.0.1:<port>" 或 ""（检测失败）。
+    """
+    try:
+        import subprocess as _sp
+        mm = None
+        cand = Path(os.environ.get("LOCALAPPDATA", "")) / "MuMuPlayerGlobal-12.0" / "shell" / "MuMuManager.exe"
+        for base in ("E:/MuMu Player 12/nx_main",
+                     "D:/MuMu Player 12/nx_main",
+                     "E:/Program Files/MuMu Player 12/nx_main",
+                     "D:/Program Files/MuMu Player 12/nx_main"):
+            p = Path(base) / "MuMuManager.exe"
+            if p.exists():
+                mm = p
+                break
+        if mm is None:
+            r = _sp.run(["where", "MuMuManager.exe"], capture_output=True, text=True, timeout=5)
+            if r.returncode == 0 and r.stdout.strip():
+                mm = Path(r.stdout.strip().splitlines()[0])
+        if mm is None:
+            return ""
+        r = _sp.run([str(mm), "info", "-v", str(emu_idx)],
+                    capture_output=True, text=True, timeout=8,
+                    creationflags=CF, encoding="utf-8", errors="replace")
+        if r.returncode == 0:
+            d = json.loads(r.stdout.lstrip(chr(0xFEFF)).strip())
+            port = d.get("adb_port")
+            if port:
+                return "127.0.0.1:" + str(port)
+    except Exception:
+        pass
+    return ""
+
+
+# 他人业务模拟器名前缀 — 从 MAAOrch 管理范围隔离（如 fz-maa 的 l-1/l-3-青吟巷滑翔花椒 等），
+# 防止批量关模拟器/关卡检测/连接列表误操作到对方正在使用的实例。
+EMU_EXCLUDE_NAME_PREFIXES = ("l-",)
+
+
+def _strip_excluded_emus(instances: list) -> list:
+    """Remove emulators whose name starts with EMU_EXCLUDE_NAME_PREFIXES."""
+    if not EMU_EXCLUDE_NAME_PREFIXES:
+        return instances
+    return [e for e in instances
+            if not str(e.get("name", "")).startswith(EMU_EXCLUDE_NAME_PREFIXES)]
+
+
 def detect_emu_instances() -> list[dict]:
     """Detect all emulator instances via mumu-cli or directory scan"""
     instances=[]
     cli=find_mumu_cli()
     if cli:
         try:
-            r=subprocess.run([cli,"info","--vmindex","all"],capture_output=True,text=True,timeout=10,creationflags=CF,encoding="utf-8",errors="replace")
+            r=subprocess.run([cli, "info", cli_flag(cli), "all"],capture_output=True,text=True,timeout=10,creationflags=CF,encoding="utf-8",errors="replace")
             if r.stdout.strip():
                 data=json.loads(r.stdout)
                 for idx,info in data.items():
@@ -163,7 +227,7 @@ def detect_emu_instances() -> list[dict]:
                             "index":idx,"adb_port":str(info.get("adb_port","")),
                             "running":info.get("is_process_started",False) or info.get("is_android_started",False)
                         })
-                return instances
+                return _strip_excluded_emus(instances)
         except: pass
     # Fallback: directory scan
     for vms_dir in MUMU_INSTANCE_DIRS:
@@ -194,7 +258,7 @@ def detect_emu_instances() -> list[dict]:
                     port=detect_ldplayer_adb_port(vm, idx)
                     instances.append({"emu":"雷电 9","name":vm.name,"index":idx,"adb_port":port,"path":str(vm)})
             if instances: break
-    return instances
+    return _strip_excluded_emus(instances)
 def detect_ldplayer_adb_port(vm_dir: Path, idx: str) -> str:
     """Detect LDPlayer ADB port by formula or config scan."""
     try:
@@ -234,7 +298,7 @@ class EmuMonitor(QThread):
             cli=find_mumu_cli()
             if cli:
                 try:
-                    r=subprocess.run([cli,"info","--vmindex","all"],capture_output=True,text=True,timeout=8,creationflags=CF,encoding="utf-8",errors="replace")
+                    r=subprocess.run([cli, "info", cli_flag(cli), "all"],capture_output=True,text=True,timeout=8,creationflags=CF,encoding="utf-8",errors="replace")
                     if r.stdout.strip():
                         data=json.loads(r.stdout)
                         results=[]
@@ -270,7 +334,7 @@ def get_emu_state(emu_idx: str) -> int:
     if not cli:
         return EMU_STATE_STOPPED
     try:
-        r = subprocess.run([cli, "info", "--vmindex", str(emu_idx)],
+        r = subprocess.run([cli, "info", cli_flag(cli), str(emu_idx)],
                            capture_output=True, text=True, timeout=5,
                            creationflags=subprocess.CREATE_NO_WINDOW,
                            encoding="utf-8", errors="replace")

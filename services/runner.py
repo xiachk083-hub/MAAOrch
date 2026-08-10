@@ -67,6 +67,29 @@ def _close_mumu_popups():
                     is_error = True
             elif '异常' in title and _is_popup(hwnd):
                 is_error = True
+            elif 'CrashReporter' in title or '崩溃' in title:
+                # MuMu 崩溃报告弹窗（关闭模拟器时可能出现）— 直接关闭
+                if hwnd not in closed:
+                    _close_hwnd(hwnd, "close")
+                    closed.add(hwnd)
+                return True
+            elif '运行任务' in title or '确定要退出' in title:
+                # MAA 确认退出弹窗（ConfirmExit: "MAA 正在运行任务 确定要退出吗?"）
+                # — 我们的优雅关闭（WM_CLOSE）触发它，模态卡住 MAA 直到用户确认。
+                # 自动点"是"（Yes）→ 优雅关闭完成 → MAA 正常退出（不留弹窗、不强杀）。
+                if hwnd not in closed:
+                    clicked = False
+                    for text in ("是(Y)", "是(&Y)", "是", "Yes", "&Yes", "确定"):
+                        child = user32.FindWindowExW(hwnd, None, "Button", text)
+                        if child:
+                            user32.PostMessageW(child, 0x00F5, 0, 0)  # BM_CLICK
+                            clicked = True
+                            _tt.sleep(0.2)
+                            break
+                    if not clicked:
+                        _close_hwnd(hwnd, "close")
+                    closed.add(hwnd)
+                return True
             if is_error:
                 if hwnd not in closed and not _find_and_click_ignore(hwnd):
                     _close_hwnd(hwnd, "close")
@@ -104,6 +127,7 @@ class AccountRunner:
         self._active: dict[str, dict] = {}
         self._progs: dict[str, list[dict]] = {}
         self._procs: dict[str, Any] = {}
+        self._inst_reserved: dict[str, str] = {}  # aid -> inst_path（分配即预留，防并发同实例）
         self._start_times: dict[str, float] = {}
         self._task_start_times: dict[str, float] = {}
         self._stopping: set = set()
@@ -182,24 +206,26 @@ class AccountRunner:
     def active_ids(self) -> list[str]:
         return list(self._active.keys())
 
+    def _detect_emu_address(self, emu_idx) -> str:
+        """Get the current ADB address for an emulator — direct detection.
+
+        The emulator is the source of truth for its port: MuMuManager
+        single-query returns the real value. Formula ports (16384+idx*32)
+        drift after emulator restarts, and mumu-cli index-mismatches on
+        MuMu 12 — both are banned here.
+        """
+        from infrastructure.task_constants import detect_emu_adb
+        return detect_emu_adb(emu_idx)
+
     def _auto_derive(self, ac: dict) -> None:
-        """Auto-fill runtime fields — with mumu-cli ADB port detection."""
-        # ADB port via mumu-cli info first — only when no address is set yet.
-        # Re-detection overwrote the correct port from detect_emu_instances
-        # (MuMu 12 mumu-cli single-query index mismatch returns wrong ports).
+        """Auto-fill runtime fields — with emulator ADB port detection."""
+        # ADB port via MuMuManager (--vmindex all). Single-query mumu-cli
+        # index mismatch returns wrong ports (16992 vs 16708), so we always
+        # use the all-instances query here.
         if ac.get("emu_instance_index") and not ac.get("adb_address"):
-            try:
-                cli = find_mumu_cli()
-                if cli:
-                    r = subprocess.run([cli, "info", "--vmindex", str(ac["emu_instance_index"])],
-                                      capture_output=True, text=True, timeout=5, creationflags=CF,
-                                      encoding="utf-8", errors="replace")
-                    if r.returncode == 0:
-                        data = json.loads(r.stdout)
-                        _adb_port = data.get("adb_port")
-                        if _adb_port:
-                            ac["adb_address"] = f"127.0.0.1:{_adb_port}"
-            except: pass
+            addr = self._detect_emu_address(ac["emu_instance_index"])
+            if addr:
+                ac["adb_address"] = addr
         if not ac.get("adb_path"):
             cli = find_mumu_cli()
             if cli:
@@ -218,7 +244,7 @@ class AccountRunner:
         ac.setdefault("touch_mode", "MiniTouch")
         ac.setdefault("post_action", "ExitEmulator,ExitSelf")
 
-    def _get_free_instance(self) -> tuple[int, str] | None:
+    def _get_free_instance(self, aid: str) -> tuple[int, str] | None:
         """Get a free MAA instance directory."""
         try:
             import psutil as _psutil
@@ -249,6 +275,12 @@ class AccountRunner:
             )
             if already_used:
                 continue
+            # 并发预留: _procs[aid] 要到 _spawn_instance（MAA 启动后）才写入，
+            # 中间有 30-60s（模拟器启动）窗口 — 两个并发启动会拿到同一实例，
+            # 后启动的 _launch_for_instance 会把先启动的 MAA taskkill（5s 退出，
+            # 2026-08-10 反复"启动失败 MAA 5s 退出"）。分配即预留。
+            if inst_path in self._inst_reserved.values():
+                continue
             pid_file = inst_dir / ".pid"
             running = False
             try:
@@ -257,6 +289,17 @@ class AccountRunner:
             except Exception:
                 pid_file.unlink(missing_ok=True)
             if not running:
+                # 僵尸残留防线: .pid 缺失/进程已死，但实例目录仍有活动（旧 MAA
+                # 被杀未死透 / 刚启动）→ 视为占用。否则新账号分配该实例 →
+                # MAA 启动撞 "Existing instance" → 2s 退出 → asst.log 停滞 →
+                # "日志停滞"判定 → 误关模拟器（2026-08-10 连锁根因）。
+                try:
+                    _al = inst_dir / "debug" / "asst.log"
+                    if _al.exists() and time.time() - _al.stat().st_mtime < 120:
+                        continue
+                except Exception:
+                    pass
+                self._inst_reserved[aid] = inst_path
                 return (i, str(inst_dir))
         return None
 
@@ -274,7 +317,7 @@ class AccountRunner:
             # mark and proceed — otherwise every launch returns "已在运行中"
             # and the queue loops forever (launch → fail → requeue).
             if not self._has_real_process(aid):
-                self._log.warning(f"[残留清理] {ac.get('name', aid)} _active 标记但进程已死，清理后重试")
+                self._log.warn(f"[残留清理] {ac.get('name', aid)} _active 标记但进程已死，清理后重试")
                 self._cleanup(aid, -1, [])
             else:
                 self.emit_log(f"{ac.get('name', aid)} 已在运行中")
@@ -288,7 +331,7 @@ class AccountRunner:
         if not ac.get("adb_path") and not ac.get("_connect_only"):
             self.emit_log(f"{ac.get('name', aid)} 未找到 adb.exe，跳过")
             return False
-        inst = self._get_free_instance()
+        inst = self._get_free_instance(aid)
         if not inst:
             from services.maa_download import _is_source_ready
             _src = Path(__file__).parent / "maa" / "source"
@@ -341,6 +384,11 @@ class AccountRunner:
             self.emit_log(f"已停止 Core 直连任务")
         p = self._procs.pop(account_id, None)
         if p and hasattr(p, 'pid'):
+            try:
+                from models.account_state import AccountState
+                AccountState(account_id).on_stopped("手动停止")
+            except Exception:
+                pass
             self._graceful_close(p)
             try:
                 p.wait(5)  # MAA usually exits <1s after WM_CLOSE
@@ -386,6 +434,12 @@ class AccountRunner:
             import ctypes
             from ctypes import wintypes
             user32 = ctypes.windll.user32
+            # 64 位 HWND 必须显式声明参数类型 — 否则 ctypes 按 32 位 int 截断
+            # HWND → OverflowError → EnumWindows 回调中断 → 找不到窗口 →
+            # WM_CLOSE 发不出去 → MAA 无法优雅关闭（2026-08-10 发现）。
+            user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+            user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+            user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             found = []
 
             @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -473,19 +527,14 @@ class AccountRunner:
         inst_id, inst_dir = inst
         self._adb_restart_count.pop(aid, None)
 
-        # Re-detect ADB port from mumu-cli before each launch — only if empty.
-        # Overwriting an existing address breaks MuMu 12 (single-query index
-        # mismatch returns a wrong port, e.g. 16992 instead of 16708).
-        # Use detect_emu_instances (--vmindex all) which returns correct ports.
-        if emu_idx and not ac.get("adb_address"):
-            try:
-                from infrastructure.task_constants import detect_emu_instances
-                for e in detect_emu_instances():
-                    if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
-                        ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
-                        break
-            except Exception:
-                pass
+        # Re-detect ADB port before EVERY launch. Emulator restarts shift the
+        # ADB port (MuMu 12, e.g. 16416 -> 16417), so a cached adb_address can
+        # be stale and `adb connect` fails forever. Always refresh from
+        # MuMuManager — the emulator is the source of truth for its port.
+        if emu_idx:
+            addr = self._detect_emu_address(emu_idx)
+            if addr:
+                ac["adb_address"] = addr
 
         # Launch emulator
         if emu_idx:
@@ -529,10 +578,16 @@ class AccountRunner:
             # Retry loop: right after `launch` the Android guest isn't up yet
             # and port detection returns empty/wrong ports (e.g. 16708 vs real
             # 16768). Keep probing until a valid port appears or timeout.
-            if emu_idx and not ac.get("adb_address"):
+            # UNCONDITIONAL: even if ac["adb_address"] is cached, the emulator
+            # may have been restarted since (port +1 drift on MuMu 12) — the
+            # cached value is stale and MAA would connect to the wrong port
+            # (2026-08-10: b-2/b-3 injected 16416/16448 while real ports were
+            # 16417/16449 → MAA connect fail).
+            if emu_idx:
                 from infrastructure.task_constants import detect_emu_instances
                 wait = int(ac.get("emu_wait", 60))
                 deadline = time.time() + wait
+                _prev = ac.get("adb_address", "")
                 while time.time() < deadline:
                     try:
                         for e in detect_emu_instances():
@@ -540,7 +595,8 @@ class AccountRunner:
                                 ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
                                 break
                         if ac.get("adb_address"):
-                            self.emit_log(f"模拟器 #{emu_idx} ADB 端口 {ac['adb_address']}")
+                            _changed = "" if ac["adb_address"] == _prev else f"（{_prev} → {ac['adb_address']}）"
+                            self.emit_log(f"模拟器 #{emu_idx} ADB 端口 {ac['adb_address']}{_changed}")
                             break
                     except Exception:
                         pass
@@ -563,6 +619,17 @@ class AccountRunner:
                     time.sleep(2)
                 else:
                     self.emit_log(f"警告: 模拟器 #{emu_idx} ADB 连接超时")
+                    # Port drift fix: MuMu 12 emulator restarts can shift the
+                    # ADB port (e.g. 16416 -> 16417). The cached adb_address is
+                    # then stale and `adb connect` fails forever. Clear it and
+                    # re-detect from MuMuManager (--vmindex all gives correct ports).
+                    if emu_idx:
+                        ac.pop("adb_address", None)
+                        new_addr = self._detect_emu_address(emu_idx)
+                        if new_addr:
+                            ac["adb_address"] = new_addr
+                            self.emit_log(f"端口漂移修复: 模拟器 #{emu_idx} → {new_addr}")
+                        addr = ac.get("adb_address", "")
                 self.emit_log(f"等待 Android 开机完成...")
                 while time.time() < deadline:
                     try:
@@ -613,7 +680,7 @@ class AccountRunner:
                                     capture_output=True, text=True, timeout=3,
                                     creationflags=CF)
                 if str(_pid) in _r.stdout:
-                    self._log.warning(f"[注入] {ac.get('name', aid)} 清理实例残留 MAA PID={_pid}")
+                    self._log.warn(f"[注入] {ac.get('name', aid)} 清理实例残留 MAA PID={_pid}")
                     subprocess.run(["taskkill", "/F", "/PID", str(_pid)],
                                    capture_output=True, timeout=5, creationflags=CF)
                     time.sleep(2)
@@ -650,6 +717,11 @@ class AccountRunner:
             self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
             self.emit_log(f"注入配置: {config_dir}/")
             self._spawn_instance(exe, ac, inst_dir)
+            try:
+                from models.account_state import AccountState
+                AccountState(aid).on_login()
+            except Exception:
+                pass
             self._active[aid] = ac
         except Exception as e:
             self._log.error(f"[启动] {ac.get('name', aid)} 启动失败: {e}")
@@ -799,7 +871,8 @@ class AccountRunner:
                     except Exception:
                         pass
                 self._core_instances.pop(aid, None)
-                self._cleanup(aid, 0, [])
+                tasks = list(self._core_tasks.get(aid) or [])
+                self._cleanup(aid, 0, tasks)
         except Exception as e:
             self._log.error(f"[Core回调] {name} 处理异常: {e}")
 
@@ -815,9 +888,22 @@ class AccountRunner:
     def _spawn_instance(self, exe: Path, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
         pid_file = Path(inst_dir) / ".pid"
-        try: (Path(inst_dir) / "debug" / "asst.log").write_text("")
-        except: pass
-        self._log_positions[aid] = 0
+        # asst.log 清空（MAA 句柄占用可能失败 → 失败则记录当前位置，只解析
+        # 本次启动后的新日志 — 否则读到上个账号的残留 → 误判降级/完成）
+        _al = Path(inst_dir) / "debug" / "asst.log"
+        try:
+            _al.write_text("")
+            self._log_positions[aid] = 0
+        except Exception:
+            self._log_positions[aid] = _al.stat().st_size if _al.exists() else 0
+        # gui.log 不清空（累积）— 记录当前位置，增量读取只看到本次启动的
+        # 新内容。"关卡无效"判定（1052-1065）读 gui.log 增量，位置为 0 会
+        # 读到上个账号的旧日志（含"添加任务失败"）→ 1 秒误判降级。
+        try:
+            _gl = Path(inst_dir) / "debug" / "gui.log"
+            self._gui_log_positions[aid] = _gl.stat().st_size if _gl.exists() else 0
+        except Exception:
+            self._gui_log_positions[aid] = 0
         # MAA resolves .\config\gui.json relative to the process working dir.
         # We MUST run with cwd=instance dir or MAA misses the injected config
         # (RunDirectly=False → never auto-starts). Use resolved real path —
@@ -856,8 +942,15 @@ class AccountRunner:
         # emulator gets shut down while the queue moves on.
         started = self._start_times.get(aid, 0)
         if rc == 0 and started and time.time() - started < 60 and not tasks:
-            self._log.warning(f"[启动失败] {aid} MAA {int(time.time()-started)}s 退出且无任务，按失败处理")
+            self._log.warn(f"[启动失败] {aid} MAA {int(time.time()-started)}s 退出且无任务，按失败处理")
             rc = -12
+        # MAA 自行退出但任务链未完成（自动更新重启/资源更新/外部中断）:
+        # rc=0 + 有任务还在"运行中" → 不是正常完成 → 按异常处理（自动重启
+        # 重试任务）。否则被当作"刷完" → 关模拟器 → 任务丢失（2026-08-10
+        # 用户指出: 队伍健康时 MAA 退出应该重试而不是结束）。
+        if rc == 0 and any(t.get("status") == "运行中" for t in tasks):
+            self._log.warn(f"[未完成退出] {aid} MAA 退出但任务未完成（更新/中断），按异常重试")
+            rc = -13
         # PostActions=ExitSelf may exit with a non-zero code even on NORMAL
         # completion. If tasks were completed, treat it as success regardless.
         if rc not in (0, None) and any(t.get("status") == "完成" for t in tasks):
@@ -870,6 +963,10 @@ class AccountRunner:
     def check_processes(self) -> None:
         """Monitor all running processes. Called by queue tick every 5s."""
         self._check_resources()
+        # 不再做全局弹窗扫描 — 2026-08-10 用户指出：窗口只要动一下（位置/尺寸
+        # 变化）就可能被识别为弹窗处理，误伤正常窗口。弹窗只应在我们自己的
+        # 主动关闭流程内处理（_downgrade_stage 的 WM_CLOSE 闭环、stop_all、
+        # /api/system/close_popups 手动端点），不做无人值守的全窗口扫描。
         for aid in list(self._procs.keys()):
             self._check_one(aid)
 
@@ -928,7 +1025,7 @@ class AccountRunner:
             # Process died — cleanup stale marks immediately (fallback if the
             # _wait_exit thread is gone). Otherwise a dead MAA blocks relaunch
             # with a stale "already running" mark indefinitely.
-            self._log.warning(f"[进程] {aid} MAA 进程已退出 (poll={p.poll()})，清理残留")
+            self._log.warn(f"[进程] {aid} MAA 进程已退出 (poll={p.poll()})，清理残留")
             self._on_process_exit(aid, p)
             return
         self._update_status(aid)
@@ -937,6 +1034,42 @@ class AccountRunner:
         emu = info.get("emu", {})
         emu_pid = emu.get("pid")
         ac = self._active.get(aid)
+        # MuMuManager 真实验证模拟器进程在跑 — _find_emu_pid 按 ADB 端口查
+        # 监听进程，模拟器死后残留的 ADB 端口会误判"模拟器还在" → MAA 在
+        # 假画面空转、无人处理（2026-08-10 官-33: MAA 活着 + 模拟器4进程没了
+        # + asst.log 活跃（残留端口截图）→ 卡死到永远）。
+        if ac and aid not in self._stopping:
+            emu_idx = ac.get("emu_instance_index", "")
+            if emu_idx:
+                cli = find_mumu_cli()
+                if cli is None and ac.get("adb_path"):
+                    try:
+                        cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                        if cand.exists():
+                            cli = str(cand)
+                    except Exception:
+                        pass
+                if cli:
+                    idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
+                    try:
+                        r = subprocess.run([cli, "info", idx_flag, str(emu_idx)],
+                                           capture_output=True, text=True, timeout=5,
+                                           creationflags=CF, encoding="utf-8", errors="replace")
+                        if r.returncode == 0:
+                            d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                            if not (d.get("is_android_started") or d.get("is_process_started")):
+                                name = ac.get("name", aid)
+                                self._log.warn(f"[模拟器失联] {name} 模拟器#{emu_idx} 进程不在（MAA 空转），杀 MAA 恢复")
+                                try:
+                                    p.terminate()
+                                    p.wait(3)
+                                except Exception:
+                                    pass
+                                tasks, sanity, drops = self._parse_log(aid)
+                                self._cleanup(aid, -8, tasks, sanity, drops)
+                                return
+                    except Exception:
+                        pass
         if ac and emu_pid and aid not in self._stopping:
             name = ac.get("name", aid)
             try:
@@ -947,7 +1080,7 @@ class AccountRunner:
             except Exception:
                 fail = self._emu_fail_count.get(aid, 0) + 1
                 self._emu_fail_count[aid] = fail
-                self._log.warning(f"[进程组] {name} 模拟器进程消失 (PID={emu_pid}) 第{fail}次")
+                self._log.warn(f"[进程组] {name} 模拟器进程消失 (PID={emu_pid}) 第{fail}次")
                 p = self._procs.get(aid)
                 if fail >= 3 or (p and hasattr(p, 'poll') and p.poll() is not None):
                     self._emu_fail_count.pop(aid, None)
@@ -969,8 +1102,13 @@ class AccountRunner:
                 if cli and emu_idx:
                     idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
                     self.emit_log(f"[进程组] {name} 重启模拟器 #{emu_idx}")
-                    subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
-                                  timeout=10, capture_output=True, creationflags=CF)
+                    # 统一优雅关闭再重启（直接 shutdown 留 VMM 残留）
+                    try:
+                        from services.launch_queue import graceful_emu_shutdown
+                        graceful_emu_shutdown(cli, emu_idx, ac.get("adb_path", ""), ac.get("adb_address", ""))
+                    except Exception:
+                        subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
+                                      timeout=10, capture_output=True, creationflags=CF)
                     subprocess.run([cli, "control", idx_flag, str(emu_idx), "launch"],
                                   timeout=10, capture_output=True, creationflags=CF)
                 return
@@ -1017,9 +1155,31 @@ class AccountRunner:
                         if "AllTasksCompleted" in new_content:
                             self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
                             tasks, sanity, drops = self._parse_log(aid)
+                            # 完成判定 + 自动续跑: MAA 做完一轮（AllTasksCompleted）
+                            # 但体力还没清空（>30%）→ 自动重新入队继续清；体力清空
+                            # → 结束。用户 2026-08-10: "失败了就不在队伍里" — 完成
+                            # 也应自动续（直到体力清完）。
+                            _cur = (sanity or {}).get("current")
+                            _mx = (sanity or {}).get("max") or 1
+                            _stop_threshold = int(ac.get("stop_sanity_pct", 30) or 30)
+                            _done_pct = (_cur / _mx * 100) if _cur is not None else 0
+                            _final = _done_pct <= _stop_threshold
+                            try:
+                                p.terminate()
+                                p.wait(3)
+                            except Exception:
+                                pass
                             self._cleanup(aid, 0, tasks, sanity, drops)
-                            try: p.terminate(); p.wait(3)
-                            except: pass
+                            if not _final and not ac.get("_connect_only"):
+                                try:
+                                    mw = getattr(self.ctx, "_mw", None)
+                                    lq = getattr(mw, "launch_queue", None)
+                                    if lq is not None and ac.get("emu_instance_index"):
+                                        self.emit_log(f"↻ {ac.get('name', aid)} 一轮完成（体力 {_done_pct:.0f}%），自动续跑")
+                                        lq.enqueue(aid, "auto", priority=0, slot=ac.get("_slot", ""))
+                                        lq.tick()
+                                except Exception:
+                                    pass
                             return
                         # Battle FAILURE downgrade: agent battle lost repeatedly
                         # (FightMissionFailed / PrtsErrorConfirm in asst.log) —
@@ -1029,7 +1189,12 @@ class AccountRunner:
                         if (ac.get("_stage_fallback") and aid not in self._stopping
                                 and not self._downgrading.get(aid)
                                 and ("FightMissionFailed" in new_content
-                                     or "PrtsErrorConfirm" in new_content)):
+                                     or "PrtsErrorConfirm" in new_content)
+                                and "FightBegin" in new_content):
+                            # FightBegin 确认真的在 Fight 阶段 — PrtsErrorConfirm 在
+                            # StartUp 阶段也识别（StartUp@PrtsErrorConfirm），游戏未
+                            # 启动/加载界面误匹配会导致"关卡刷不了"误降级（连关卡都
+                            # 没进）→ WM_CLOSE → "确认退出"弹窗。只在 Fight 阶段降级。
                             _fc = new_content.count("FightMissionFailed") + new_content.count("PrtsErrorConfirm")
                             if _fc >= 2:  # 2+ failure frames in one read = real loss
                                 self.emit_log(f"⬇ {ac.get('name', aid)} 作战失败，触发降级")
@@ -1087,7 +1252,7 @@ class AccountRunner:
                             _st = ac.setdefault("_prts_stall_since", time.time())
                             if time.time() - _st > _prts_min * 60:
                                 self.emit_log(f"⚠ {ac.get('name', aid)} 代理作战卡死（PRTS1 超 {_prts_min} 分钟），终止")
-                                self._log.warning(f"[代理卡死] {ac.get('name', aid)} PRTS1 卡死")
+                                self._log.warn(f"[代理卡死] {ac.get('name', aid)} PRTS1 卡死")
                                 ac.pop("_prts_stall_since", None)
                                 try: p.terminate(); p.wait(5)
                                 except: pass
@@ -1134,8 +1299,13 @@ class AccountRunner:
                                 pass
                         if cli:
                             idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
-                            subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
-                                          timeout=10, capture_output=True, creationflags=CF)
+                            # 统一优雅关闭（直接 shutdown 留 VMM 残留）
+                            try:
+                                from services.launch_queue import graceful_emu_shutdown
+                                graceful_emu_shutdown(cli, emu_idx, ac.get("adb_path", ""), ac.get("adb_address", ""))
+                            except Exception:
+                                subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
+                                              timeout=10, capture_output=True, creationflags=CF)
                     try: p.terminate(); p.wait(3)
                     except: pass
                     self._cleanup(aid, -8, [])
@@ -1165,7 +1335,7 @@ class AccountRunner:
                                 pass
                         if not _fresh:
                             self.emit_log(f"⏱ {ac.get('name', aid)} 启动后无任务 ({int(time.time()-started)}s)，清理实例")
-                            self._log.warning(f"[卡死] {ac.get('name', aid)} 启动 {int(time.time()-started)}s 无任务")
+                            self._log.warn(f"[卡死] {ac.get('name', aid)} 启动 {int(time.time()-started)}s 无任务")
                             try: p.terminate(); p.wait(3)
                             except: pass
                             self._cleanup(aid, -3, [])
@@ -1191,7 +1361,7 @@ class AccountRunner:
                     startup = next((t for t in tasks if t.get("TaskType", "").lower() == "startup"), None)
                     if startup and startup.get("status") == "运行中" and time.time() - started > 600:
                         self.emit_log(f"⏱ {ac.get('name', aid)} StartUp 卡加载超时 ({int(time.time()-started)}s)，清理实例")
-                        self._log.warning(f"[卡死] {ac.get('name', aid)} StartUp 卡加载 {int(time.time()-started)}s")
+                        self._log.warn(f"[卡死] {ac.get('name', aid)} StartUp 卡加载 {int(time.time()-started)}s")
                         try: p.terminate(); p.wait(3)
                         except: pass
                         self._cleanup(aid, -3, tasks)
@@ -1316,6 +1486,28 @@ class AccountRunner:
         name = ac.get("name", aid)
         self.emit_log(f"⬇ {name} 关卡「{cur_stage or '?'}」不可刷，降级到「{next_stage}」")
         self._log.info(f"[降级] {name}: {cur_stage} → {next_stage}")
+        # 记录到 AccountState（降级原因可见）
+        try:
+            from models.account_state import AccountState
+            AccountState(aid).on_use(f"降级: {cur_stage or '?'} → {next_stage}")
+        except Exception:
+            pass
+        # 治本: 把刷不了的关卡从 stages 移除并持久化 —
+        # 否则每次重启注入又重新包含它，每次都触发降级（每次降级
+        # 优雅关闭 MAA → WM_CLOSE → "确认退出"弹窗卡死循环）。
+        try:
+            _stages = ac.get("stages") or []
+            if cur_stage and cur_stage in _stages:
+                _stages.remove(cur_stage)
+                ac["stages"] = _stages
+                try:
+                    from models.config_manager import save_config
+                    save_config(self.ctx.config)
+                except Exception:
+                    pass
+                self._log.info(f"[降级] {name} 已从 stages 移除 {cur_stage}（防循环）")
+        except Exception:
+            pass
         inst_dir = getattr(p, "_inst_path", None)
         if not inst_dir:
             return False
@@ -1332,6 +1524,15 @@ class AccountRunner:
             # terminate leaves minitouch residue that crashes the emulator
             # (MuMu "运行异常" popup). Fall back to terminate only if it hangs.
             self._graceful_close(p)
+            # 优雅关闭触发 MAA "确认退出"弹窗（任务在跑）— 自动点"是"让它退出
+            for _ in range(4):
+                try:
+                    _close_mumu_popups()
+                except Exception:
+                    pass
+                if p.poll() is not None:
+                    break
+                time.sleep(1.5)
             p.wait(5)
             if p.poll() is None:
                 p.terminate()
@@ -1343,20 +1544,29 @@ class AccountRunner:
                                capture_output=True, timeout=5, creationflags=CF)
         except Exception:
             pass
-        # Re-inject with the next stage — full daily chain (StartUp + Fight +
-        # Infrast/Recruit/Mall/Award), not just Fight. Otherwise a downgrade
-        # skips the daily tasks entirely ("只有理智没有其他"). Honors skip_daily.
+        # Re-inject with the next stage — but NOT in-place spawn. The old MAA's
+        # Shutdown sequence takes 5-7s (confirm dialog → release ADB/minitouch);
+        # spawning the new MAA on the SAME instance while the old one is still
+        # exiting triggers MAA's single-instance guard ("Existing instance
+        # window activated by a secondary launch") → new MAA exits rc=0 in 5s
+        # (→ -12 → previously ADB-shutdown the emulator, mass emulator closes,
+        # 2026-08-10). Release the slot and re-enqueue — the queue's full
+        # startup path (instance check + stale cleanup + 20s interval) avoids
+        # the race entirely.
         ac["_stage_override"] = next_stage
         try:
-            if ac.get("skip_daily"):
-                _full = ["StartUp", "Award"]
-            else:
-                _full = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
-            self.ctx.cfg.inject_smart(_full, ac, str(Path(inst_dir) / "config"))
-            self._spawn_instance(Path(inst_dir) / "MAA.exe", ac, inst_dir)
+            self._procs.pop(aid, None)
+            self._active.pop(aid, None)
+            self._release_emu_mark(aid)
+            mw = getattr(self.ctx, "_mw", None)
+            lq = getattr(mw, "launch_queue", None)
+            if lq is not None:
+                lq.enqueue(aid, "auto", priority=0, slot=ac.get("_slot", ""))
+                lq.tick()
+            self.emit_log(f"↩ {name} 降级「{next_stage}」完成，回队列重排")
             return True
         except Exception as e:
-            self._log.error(f"[降级] {name} 重注入失败: {e}")
+            self._log.error(f"[降级] {name} 重排失败: {e}")
             return False
 
     def _maybe_downgrade(self, aid: str, p) -> None:
@@ -1368,6 +1578,14 @@ class AccountRunner:
         if not ac or ac.get("_connect_only"):
             return
         tasks, sanity, _ = self._parse_log(aid)
+        # 登录守卫: StartUp 未完成（游戏都没进）→ 任务"失败"是环境问题
+        # （登录卡住/断连/被杀），不是关卡问题 — 连关卡都没进怎么可能知道
+        # 它刷不了？只有登录成功（StartUp 完成）才能判定关卡能否刷。
+        # （2026-08-10 用户指出: 没登录就降级是误判 — 与昨晚 PrtsErrorConfirm
+        # 在 StartUp 阶段误匹配同一类问题）
+        startup = next((t for t in tasks if t.get("TaskType", "").lower() == "startup"), None)
+        if not startup or startup.get("status") != "完成":
+            return
         fight = next((t for t in tasks if t.get("TaskType", "").lower() == "fight"), None)
         if fight:
             if fight.get("status") != "失败":
@@ -1429,13 +1647,30 @@ class AccountRunner:
                     pass
                 runs = runs[1:]
         except Exception as e:
-            self._log.warning(f"[归档] {aid} 日志归档失败: {e}")
+            self._log.warn(f"[归档] {aid} 日志归档失败: {e}")
 
     def _cleanup(self, aid: str, exit_code: int, tasks: list[dict], sanity: dict | None = None, drops: dict | None = None) -> None:
+        self._inst_reserved.pop(aid, None)
         ac = self._active.pop(aid, None)
         old_procs = self._procs.pop(aid, None)
         if old_procs and not isinstance(old_procs, str):
             self._archive_maa_logs(aid, getattr(old_procs, '_inst_path', None))
+            # 确保 MAA 进程真的死了才删 .pid/.meta — 否则僵尸 MAA 占着实例
+            # （无 .pid 但进程活着）→ 后续账号分配到该实例 → MAA 启动撞
+            # "Existing instance window activated by a secondary launch" →
+            # 2 秒退出 → 被"日志停滞"判定关模拟器 → "一出来就被关掉"
+            # （2026-08-10 实例 6 连续 12 次 secondary 根因）。
+            try:
+                if hasattr(old_procs, 'poll') and old_procs.poll() is None:
+                    old_procs.terminate()
+                    try: old_procs.wait(3)
+                    except: pass
+                if hasattr(old_procs, 'poll') and old_procs.poll() is None:
+                    subprocess.run(["taskkill", "/F", "/PID", str(old_procs.pid)],
+                                   capture_output=True, timeout=5, creationflags=CF)
+                    time.sleep(1)
+            except Exception:
+                pass
             # Process is gone — remove .pid/.meta so the instance is cleanly
             # reusable (stale pid risks PID-reuse false positive in
             # _get_free_instance / _launch_for_instance, stale .meta mislabels
@@ -1491,8 +1726,14 @@ class AccountRunner:
                     if cli:
                         idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
                         self.emit_log(f"[完成] {name} 关闭模拟器 #{emu_idx}")
-                        subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
-                                      timeout=10, capture_output=True, creationflags=CF)
+                        # 统一优雅关闭（adb reboot -p → 等退出 → 兜底）—
+                        # 直接 shutdown 留 VMM 残留（用户 2026-08-10）
+                        try:
+                            from services.launch_queue import graceful_emu_shutdown
+                            graceful_emu_shutdown(cli, emu_idx, ac.get("adb_path", ""), ac.get("adb_address", ""))
+                        except Exception:
+                            subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
+                                          timeout=10, capture_output=True, creationflags=CF)
             except Exception:
                 pass
         if exit_code == 0 and ac:
@@ -1522,9 +1763,16 @@ class AccountRunner:
             if failed and not completed:
                 names = [t["name"] for t in failed]
                 exit_code = -11
-                self._log.warning(f"[任务失败] {name} 失败: {names}")
+                self._log.warn(f"[任务失败] {name} 失败: {names}")
                 self.emit_log(f"[❌] {name} 任务失败: {','.join(names)}")
-        is_real_error = exit_code != 0 and exit_code not in (-9, -8) and aid not in self._stopping
+        # -12 = startup failure (MAA exited <60s with no tasks — e.g. a
+        # SECONDARY launch of the same instance dir: MAA's single-instance
+        # guard makes the 2nd process exit rc=0). The emulator may belong to
+        # the OTHER account's still-running MAA — shutting it down here would
+        # kill the wrong account (2026-08-10: mass emulator closes).
+        # -13 = unfinished exit (MAA self-update/interrupt with tasks running) —
+        # emulator is fine, retry reuses it.
+        is_real_error = exit_code != 0 and exit_code not in (-9, -8, -12, -13) and aid not in self._stopping
         if tasks and any(t.get("status") == "完成" for t in tasks):
             is_real_error = False
         # Connect-only mode: MAA exits on its own (no tasks, GUI idle) — that's
@@ -1571,7 +1819,7 @@ class AccountRunner:
             if retries <= 3:
                 ac["_auto_restart_count"] = retries
                 self.emit_log(f"🔄 {name} MAA 异常退出(exit={exit_code})，自动重启 (第{retries}/3 次)")
-                self._log.warning(f"[自动重启] {name} exit={exit_code} 第{retries}次")
+                self._log.warn(f"[自动重启] {name} exit={exit_code} 第{retries}次")
                 try:
                     mw = getattr(self.ctx, "_mw", None)
                     lq = getattr(mw, "launch_queue", None)
@@ -1579,19 +1827,42 @@ class AccountRunner:
                         lq.enqueue(aid, "auto", priority=0, slot=ac.get("_slot", ""))
                         lq.tick()
                 except Exception as e:
-                    self._log.warning(f"[自动重启] {name} 入队失败: {e}")
+                    self._log.warn(f"[自动重启] {name} 入队失败: {e}")
             else:
                 self.emit_log(f"⛔ {name} MAA 异常退出 {retries} 次，停止自动重启")
+                # 反复启动失败（模拟器/游戏起不来）→ 挂起账号，停止队列空转
+                # 循环（force 条目失败 → requeue → 又启动 → 又失败，无限循环，
+                # 2026-08-10 官-2/emu14 模拟器起不来）。挂起可逆（手动处理
+                # 模拟器后解除）。
+                try:
+                    ac["suspended"] = True
+                    from models.config_manager import save_config
+                    save_config(self.ctx.config)
+                    self.emit_log(f"🚫 {name} 反复启动失败 {retries} 次，已挂起（需人工检查模拟器）")
+                except Exception:
+                    pass
         elif ac and exit_code == 0:
             ac.pop("_auto_restart_count", None)
 
-        # Save run stats
-        if tasks:
-            try:
-                st = RunStats(aid)
-                st.save_run(tasks, sanity, drops)
-            except Exception:
-                pass
+        # Save run stats — record EVERY run (success, failure, timeout, startup
+        # failure) so daily/weekly/monthly/yearly stats are complete. tasks may
+        # be [] on early exits; status comes from exit_code.
+        try:
+            st = RunStats(aid)
+            st.save_run(tasks, sanity, drops,
+                        exit_code=exit_code,
+                        elapsed=duration,
+                        status=("完成" if exit_code == 0 else "失败"))
+        except Exception as e:
+            self._log.warn(f"[统计] {name} save_run 失败: {e}")
+        # Account state — reliable usage/login/completion/sanity record
+        try:
+            from models.account_state import AccountState
+            _st = AccountState(aid)
+            _st.on_complete(exit_code, ("完成" if exit_code == 0 else "失败"),
+                            sanity, drops)
+        except Exception as e:
+            self._log.warn(f"[状态] {name} AccountState 失败: {e}")
 
     def _track_stats(self, ac: dict) -> None:
         today = datetime.now().strftime("%Y-%m-%d")

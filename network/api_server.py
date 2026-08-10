@@ -96,6 +96,12 @@ class ApiServer(QThread):
                 if p.startswith("/api/screenshots/") and "/export/" in p: return s._handle_screenshot_export(p)
                 if p=="/api/stats/dashboard": return s._handle_stats_dashboard()
                 if p=="/api/stats": return s._handle_all_stats()
+                if p=="/api/stats/daily": return s._handle_stats_period("day", s.path)
+                if p=="/api/stats/weekly": return s._handle_stats_period("week", s.path)
+                if p=="/api/stats/monthly": return s._handle_stats_period("month", s.path)
+                if p=="/api/stats/yearly": return s._handle_stats_period("year", s.path)
+                if p=="/api/stats/all": return s._handle_stats_period("all", s.path)
+                if p=="/api/stats/periods": return s._handle_stats_periods()
                 if p=="/api/queue": return s._handle_queue_status()
                 if p=="/api/logs": return s._handle_logs(s.path)
                 if p=="/api/maa/log": return s._handle_maa_log(s.path)
@@ -460,11 +466,11 @@ class ApiServer(QThread):
                     a=mw.accounts[idx]; addr=a.get("adb_address",""); adb=a.get("adb_path","")
                     # Auto-derive ADB address from emu_instance_index if not set
                     if not addr and a.get("emu_instance_index"):
-                        try: port = 16384 + int(a["emu_instance_index"]) * 32; addr = f"127.0.0.1:{port}"
-                        except: pass
+                        from infrastructure.task_constants import detect_emu_adb
+                        addr = detect_emu_adb(a["emu_instance_index"])
                     if not addr: return s._json({"error":"no adb address"},400)
                     if not adb:
-                        from infrastructure.task_constants import find_mumu_cli
+                        from infrastructure.task_constants import find_mumu_cli, cli_flag
                         cli = find_mumu_cli()
                         if cli:
                             cand = str(Path(cli).parent / "adb.exe")
@@ -611,6 +617,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     running=pid in mw._proc_status
                     result.append({"index":i,"account_name":a.get("name",""),"running":running,"total_runs":st.total_runs,"stats":st._data})
                 s._json({"accounts":result})
+            def _handle_stats_period(s, period, path):
+                from services.stats_aggregator import aggregate
+                from urllib.parse import urlparse, parse_qs
+                qs = parse_qs(urlparse(path).query)
+                ref = qs.get("date", [""])[0]
+                s._json(aggregate(period, ref, mw.accounts))
+            def _handle_stats_periods(s):
+                from services.stats_aggregator import available_periods
+                s._json(available_periods(mw.accounts))
             def _handle_stats_dashboard(s):
                 from models.stats import RunStats
                 from datetime import datetime as _dt, timedelta as _td
@@ -828,7 +843,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             def _handle_emulator_control(s, p, body):
                 try:
                     import subprocess as _sp
-                    from infrastructure.task_constants import find_mumu_cli
+                    from infrastructure.task_constants import find_mumu_cli, cli_flag
                     parts = p.split("/")
                     idx = parts[3]
                     action = parts[4] if len(parts) > 4 else "status"
@@ -836,15 +851,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     if not cli: return s._json({"error":"mumu-cli not found"},500)
                     CF = _sp.CREATE_NO_WINDOW if hasattr(_sp,'CREATE_NO_WINDOW') else 0
                     if action == "start":
-                        _sp.run([cli,"control","--vmindex",idx,"launch"],timeout=30,creationflags=CF)
+                        _sp.run([cli,"control",cli_flag(cli),idx,"launch"],timeout=30,creationflags=CF)
                         s._json({"ok":True,"action":"started"})
                     elif action == "stop":
-                        _sp.run([cli,"control","--vmindex",idx,"shutdown"],timeout=15,creationflags=CF)
+                        _sp.run([cli,"control",cli_flag(cli),idx,"shutdown"],timeout=15,creationflags=CF)
                         s._json({"ok":True,"action":"stopped"})
                     elif action == "restart":
-                        _sp.run([cli,"control","--vmindex",idx,"shutdown"],timeout=15,creationflags=CF)
+                        _sp.run([cli,"control",cli_flag(cli),idx,"shutdown"],timeout=15,creationflags=CF)
                         import time; time.sleep(3)
-                        _sp.run([cli,"control","--vmindex",idx,"launch"],timeout=30,creationflags=CF)
+                        _sp.run([cli,"control",cli_flag(cli),idx,"launch"],timeout=30,creationflags=CF)
                         s._json({"ok":True,"action":"restarted"})
                     else:
                         s._json({"error":"bad action"},400)
@@ -1122,7 +1137,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 except Exception as e: s._json({"error":str(e)},500)
             def _handle_maa_check_update(s):
                 try:
-                    import urllib.request, json, re
+                    import urllib.request
+                    from infrastructure.utils import safe_urlopen, json, re
                     cur = mw.config.get("maa_version", "未知")
                     # Try GitHub releases page (works when api.github.com is blocked)
                     urls = [
@@ -1136,7 +1152,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                             if "api.github.com" in url:
                                 headers["Accept"] = "application/json"
                             req = urllib.request.Request(url, headers=headers)
-                            resp = urllib.request.urlopen(req, timeout=10)
+                            resp = safe_urlopen(req, timeout=10)
                             if "api.github.com" in url:
                                 data = json.loads(resp.read())
                                 tag = data.get("tag_name", "").lstrip("v")
@@ -1167,7 +1183,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         try:
                             req = urllib.request.Request("https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/releases/latest",
                                 headers={"User-Agent":"MAAOrch"})
-                            with urllib.request.urlopen(req, timeout=15) as r:
+                            with safe_urlopen(req, timeout=15) as r:
                                 data = json.loads(r.read().decode())
                             tag = data.get("tag_name", "")
                             asset_url = ""
@@ -1180,7 +1196,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                                 return
                             _log.info(f"下载 {tag}...")
                             dl_req = urllib.request.Request(asset_url, headers={"User-Agent":"MAAOrch"})
-                            with urllib.request.urlopen(dl_req, timeout=120) as r:
+                            with safe_urlopen(dl_req, timeout=120) as r:
                                 data = r.read()
                             runner = getattr(mw, 'runner', None)
                             if runner:
@@ -1208,7 +1224,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 try:
                     import urllib.request, json
                     req=urllib.request.Request("https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest",headers={"User-Agent":"MAAOrch-Updater"})
-                    with urllib.request.urlopen(req,timeout=10) as r: data=json.loads(r.read().decode())
+                    with safe_urlopen(req,timeout=10) as r: data=json.loads(r.read().decode())
                     tag=data.get("tag_name",""); html_url=data.get("html_url","")
                     s._json({"ok":True,"latest":tag,"html_url":html_url})
                 except Exception as e: s._json({"error":str(e)},500)

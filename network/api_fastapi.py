@@ -15,12 +15,31 @@ import uvicorn
 # ── Shared state ──
 
 _OPLOG: list[dict] = []
+_OPLOG_FILE = Path(__file__).parent.parent / "oplog.json"
+
+def _load_oplog() -> list[dict]:
+    try:
+        if _OPLOG_FILE.exists():
+            return json.loads(_OPLOG_FILE.read_text(encoding="utf-8"))[-200:]
+    except Exception:
+        pass
+    return []
+
+def _save_oplog() -> None:
+    try:
+        from infrastructure.utils import atomic_write
+        atomic_write(_OPLOG_FILE, json.dumps(_OPLOG[-200:], ensure_ascii=False))
+    except Exception:
+        pass
+
+_OPLOG = _load_oplog()
 
 def _log_op(action: str, detail: str = "") -> None:
     global _OPLOG
-    _OPLOG.append({"ts": time.strftime("%H:%M:%S"), "action": action, "detail": detail})
-    if len(_OPLOG) > 100:
-        _OPLOG = _OPLOG[-100:]
+    _OPLOG.append({"ts": time.strftime("%Y-%m-%d %H:%M:%S"), "action": action, "detail": detail})
+    if len(_OPLOG) > 200:
+        _OPLOG = _OPLOG[-200:]
+    _save_oplog()
 
 
 def _restart_hot(root: Path, mw: Any = None) -> None:
@@ -197,6 +216,13 @@ def create_app(mw: Any) -> FastAPI:
 
     def _is_running(pid):
         return pid in mw._proc_status
+
+    def _account_state(aid):
+        try:
+            from models.account_state import AccountState
+            return AccountState(aid).data
+        except Exception:
+            return {}
 
     def _account_by_idx(idx):
         if idx < 0 or idx >= len(mw.accounts):
@@ -449,15 +475,13 @@ def create_app(mw: Any) -> FastAPI:
         addr = a.get("adb_address", "")
         adb = a.get("adb_path", "")
         if not addr and a.get("emu_instance_index"):
-            try:
-                port = 16384 + int(a["emu_instance_index"]) * 32
-                addr = f"127.0.0.1:{port}"
-            except:
-                pass
+            # 直接检测实际端口 — 公式端口会漂移，禁止使用
+            from infrastructure.task_constants import detect_emu_adb
+            addr = detect_emu_adb(a["emu_instance_index"])
         if not addr:
             raise HTTPException(400, "no adb address")
         if not adb:
-            from infrastructure.task_constants import find_mumu_cli
+            from infrastructure.task_constants import find_mumu_cli, cli_flag
             cli = find_mumu_cli()
             if cli:
                 cand = str(Path(cli).parent / "adb.exe")
@@ -612,25 +636,227 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                            "running": running, "total_runs": st.total_runs, "stats": st._data})
         return {"accounts": result}
 
+    @app.get("/api/stats/daily")
+    def handle_stats_daily(date: str = ""):
+        from services.stats_aggregator import aggregate
+        return aggregate("day", date, mw.accounts)
+
+    @app.get("/api/stats/weekly")
+    def handle_stats_weekly(date: str = ""):
+        from services.stats_aggregator import aggregate
+        return aggregate("week", date, mw.accounts)
+
+    @app.get("/api/stats/monthly")
+    def handle_stats_monthly(date: str = ""):
+        from services.stats_aggregator import aggregate
+        return aggregate("month", date, mw.accounts)
+
+    @app.get("/api/stats/yearly")
+    def handle_stats_yearly(date: str = ""):
+        from services.stats_aggregator import aggregate
+        return aggregate("year", date, mw.accounts)
+
+    @app.get("/api/stats/all")
+    def handle_stats_all_period():
+        from services.stats_aggregator import aggregate
+        return aggregate("all", "", mw.accounts)
+
+    @app.get("/api/stats/periods")
+    def handle_stats_periods():
+        from services.stats_aggregator import available_periods
+        return available_periods(mw.accounts)
+
+    # ── Stage probe（关卡检测 — docs/STAGE_PROBE.md）──
+    _probe_results: dict = {}
+    _probe_lock = threading.Lock()
+
+    @app.post("/api/probe/stage")
+    def handle_probe_stage(body: dict):
+        """Probe an account's ability on a stage (async).
+        Body: {account_id, stage} — result lands in _probe_results + account.stage_ability."""
+        from services.stage_probe import StageProbe
+        aid = body.get("account_id", "")
+        stage = body.get("stage", "")
+        if not aid or not stage:
+            raise HTTPException(400, "account_id and stage required")
+        ac = next((a for a in mw.accounts if a.get("id") == aid), None)
+        if not ac:
+            raise HTTPException(404, "account not found")
+        emu = ac.get("emu_instance_index", "")
+        if not emu:
+            raise HTTPException(400, "account has no emulator")
+        client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
+            ac.get("game_client", ""), "Official")
+
+        def _run():
+            try:
+                probe = StageProbe(emu, client_type=client)
+                result = probe.probe(stage)
+                result["logs"] = probe.logs[-30:]
+                with _probe_lock:
+                    _probe_results[aid] = result
+                # 持久化到账号 stage_ability
+                ability = dict(ac.get("stage_ability") or {})
+                ability[stage] = result["verdict"]
+                ac["stage_ability"] = ability
+                try:
+                    from models.config_manager import save_config
+                    save_config(mw.config)
+                except Exception:
+                    pass
+                mw._log(f"[检测] {ac.get('name','')} {stage}: {result['verdict']}")
+            except Exception as e:
+                with _probe_lock:
+                    _probe_results[aid] = {"verdict": "ERROR", "score": 0.0,
+                                           "detail": str(e)[:300]}
+
+        threading.Thread(target=_run, daemon=True).start()
+        return {"ok": True, "account_id": aid, "stage": stage, "status": "running"}
+
+    @app.get("/api/probe/results")
+    def handle_probe_results():
+        with _probe_lock:
+            return {"ok": True, "results": dict(_probe_results)}
+
+    @app.post("/api/probe/apply_plan")
+    def handle_probe_apply_plan():
+        """产线自动规划: stage_ability → smart_annihilation 自动映射。
+        市中心能刷 → LungmenDowntown; 仅外环能刷 → LungmenOutskirts;
+        都不能/DONE → 清空剿灭配置。"""
+        changes = []
+        for a in mw.accounts:
+            ability = a.get("stage_ability") or {}
+            if not ability:
+                continue
+            downtown = ability.get("LungmenDowntown@Annihilation")
+            outskirts = ability.get("LungmenOutskirts@Annihilation")
+            new_anni = ""
+            if downtown == "CAN_FARM":
+                new_anni = "LungmenDowntown@Annihilation"
+            elif outskirts == "CAN_FARM":
+                new_anni = "LungmenOutskirts@Annihilation"
+            old = a.get("smart_annihilation", "")
+            if new_anni != old:
+                a["smart_annihilation"] = new_anni
+                changes.append({"name": a.get("name", ""),
+                                "from": old or "—", "to": new_anni or "—"})
+        try:
+            from models.config_manager import save_config
+            save_config(mw.config)
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+        mw._log(f"[产线规划] 更新 {len(changes)} 个账号的剿灭配置")
+        return {"ok": True, "updated": len(changes), "changes": changes}
+
+    @app.get("/api/probe/status")
+    def handle_probe_status():
+        with _probe_lock:
+            latest = {}
+            for aid, r in _probe_results.items():
+                latest[aid] = {k: r.get(k) for k in ("verdict", "score", "detail")}
+            return {"ok": True, "results": latest}
+
+    @app.get("/api/account_status")
+    def handle_account_status():
+        """账号状态总览：体力排行 + 今日运行 + 完成情况（图表/排行榜数据源）。"""
+        from models.account_state import AccountState
+        lq = getattr(mw, 'launch_queue', None)
+        rows = []
+        for i, a in enumerate(mw.accounts):
+            if a.get("_connect_only"):
+                continue
+            st = AccountState(a["id"]).data
+            san = st.get("sanity") or {}
+            cur = san.get("current")
+            mx = san.get("max")
+            # 体力记录的时间戳（判断"刷完"是否今天）— report_time 可能为空
+            # （旧数据/写入缺时间戳）→ 退化用 last_complete
+            san_ts = san.get("report_time", "") or ""
+            done_ts = san_ts or st.get("last_complete", "")
+            running = lq.is_running(a["id"]) if lq else False
+            queued = lq.is_queued(a["id"]) if lq else False
+            rows.append({
+                "index": i, "id": a["id"],
+                "name": a.get("name", "").replace("明日方舟-", ""),
+                "sanity_current": cur, "sanity_max": mx,
+                "sanity_pct": round(cur / mx * 100, 1) if (cur is not None and mx) else None,
+                "sanity_time": san_ts,
+                "done_ts": done_ts,
+                "last_complete": st.get("last_complete", ""),
+                "today_runs": int(st.get("today_runs", 0)),
+                "last_status": st.get("last_status", ""),
+                "last_login": st.get("last_login", ""),
+                "running": running, "queued": queued,
+            })
+        # 排序: 有体力数据的在前（体力低=刷完），无数据的按今日次数
+        rows.sort(key=lambda r: (r["sanity_pct"] is None, -(r["sanity_pct"] if r["sanity_pct"] is not None else 99),
+                                 -r["today_runs"], r["name"]))
+        # "刷完"判定必须含"今天"条件 — 体力记录是上次刷取结果，
+        # 旧数据（凌晨残留）不算今天刷完（2026-08-10 用户质疑）。
+        _today = datetime.now().strftime("%Y-%m-%d")
+        done = sum(1 for r in rows
+                   if r["sanity_pct"] is not None and r["sanity_pct"] <= 20
+                   and r["done_ts"].startswith(_today))
+        low = sum(1 for r in rows if r["sanity_pct"] is not None and 20 < r["sanity_pct"] <= 60)
+        full = sum(1 for r in rows if r["sanity_pct"] is not None and r["sanity_pct"] > 60)
+        unknown = sum(1 for r in rows if r["sanity_pct"] is None)
+        return {"ok": True, "accounts": rows,
+                "stats": {"total": len(rows), "done": done, "low": low, "full": full,
+                          "unknown": unknown, "running": sum(1 for r in rows if r["running"])}}
+
+    @app.get("/api/health")
+    def handle_health():
+        """Runtime health: zombie MAA / stale emulators / port drift / queue stuck."""
+        from services.runtime_health import check_health
+        return check_health(mw)
+
     @app.get("/api/queue")
     def handle_queue_status():
         lq = _lq()
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
+        # ── 预排队: 排队位置 + 预期启动时间（ETA）──
+        # 槽位 = 并行上限; 每槽平均运行时长来自历史 stats（默认 25 分钟）。
+        # ETA = now + 前方槽位数 × 平均时长。位置是"预排顺序"——账号按序
+        # 进入空闲槽位，不会挤着同时启动（另有 20s 启动间隔兜底）。
+        from models.stats import RunStats
+        from datetime import timedelta
+        parallel = max(1, int(mw.config.get("parallel_max", 3) or 3))
+        # 平均运行时长（今天）
+        avg_sec = 25 * 60
+        try:
+            elaps = []
+            for a in mw.accounts:
+                st = RunStats(a["id"])
+                for r in st.runs[-10:]:
+                    if r.get("elapsed"):
+                        elaps.append(r["elapsed"])
+            if len(elaps) >= 3:
+                avg_sec = int(sum(elaps) / len(elaps))
+        except Exception:
+            pass
+        now = datetime.now()
+        entries = sorted(lq._pending, key=lambda x: x.sort_key)
         pending = []
-        for e in sorted(lq._pending, key=lambda x: x.sort_key):
+        for pos, e in enumerate(entries, start=1):
             a = next((x for x in mw.accounts if x["id"] == e.account_id), None)
+            # 前方还有多少个"满槽批次"
+            ahead_slots = (pos - 1) // parallel
+            eta_dt = now + timedelta(seconds=ahead_slots * avg_sec)
             pending.append({
                 "account_id": e.account_id,
                 "account_name": a.get("name", "") if a else "",
                 "source": src_map.get(e.source, e.source),
                 "priority": e.sort_key[0],
                 "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S"),
+                "position": pos,
+                "eta": eta_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                "eta_min": ahead_slots * avg_sec // 60,
                 "suspended": a.get("suspended", False) if a else False,
             })
         active = list(lq._active_emus.values())
         return {"pending": pending, "active": active,
                 "pending_count": len(pending), "active_count": len(active),
-                "paused": lq._paused}
+                "paused": lq._paused, "avg_duration_min": avg_sec // 60}
 
     @app.get("/api/logs")
     def handle_logs(lines: int = 50):
@@ -744,6 +970,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "schedule_monthly": a.get("schedule_monthly", {}),
                 "fight_priority": a.get("fight_priority", {}),
                 "fight_materials": a.get("fight_materials", []),
+                "stage_ability": a.get("stage_ability", {}),
+                "state": _account_state(aid),
             })
         return {"ok": True, "accounts": data}
 
@@ -843,15 +1071,19 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 aid = uuid.uuid4().hex[:12]
             existing = next((a for a in mw.accounts if a["id"] == aid), None)
             if existing:
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "adb_address"):
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "adb_address", "fight_default", "stage_ability"):
                     if f in ac:
+                        # 挂起变更审计 — suspended 被全量保存覆盖过（2026-08-10
+                        # 官-2/官-25/官-41 挂起丢失），记录谁改的以便定位
+                        if f == "suspended" and existing.get("suspended") != ac[f]:
+                            mw._log(f"[挂起] {existing.get('name','?')}: {existing.get('suspended')} → {ac[f]}")
                         existing[f] = ac[f]
                 if "stages" in ac:
                     existing["stages"] = ac["stages"] if isinstance(ac["stages"], list) else []
                 updated += 1
             else:
                 new_ac = {"id": aid, "consecutive_failures": 0}
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages", "adb_address"):
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages", "adb_address", "fight_default", "stage_ability"):
                     if f in ac:
                         new_ac[f] = ac[f]
                 mw.accounts.append(new_ac)
@@ -1292,10 +1524,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 runner.stop(aid)
 
     def _wait_emu_stopped(cli: str, idx: str, timeout: int = 30) -> bool:
-        """Poll mumu-cli info until the emulator fully exits (both process and android off)."""
+        """Poll MuMuManager info until the emulator fully exits (both process and android off)."""
+        from infrastructure.task_constants import cli_flag
         for _ in range(timeout):
             try:
-                r = subprocess.run([cli, "info", "--vmindex", str(idx)],
+                r = subprocess.run([cli, "info", cli_flag(cli), str(idx)],
                                    capture_output=True, text=True, timeout=5,
                                    creationflags=_CF, encoding="utf-8", errors="replace")
                 if r.returncode == 0:
@@ -1314,7 +1547,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         Serial with small gaps to avoid concurrent mumu-cli conflicts.
         NOTE: registered BEFORE /api/emulator/{idx}/{action} — otherwise
         'batch' would match as an emulator index."""
-        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli
+        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli, cli_flag
         if action not in ("start", "stop", "restart"):
             raise HTTPException(400, "bad action")
         cli = find_mumu_cli()
@@ -1340,15 +1573,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         for idx in targets:
             try:
                 if action == "start":
-                    subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+                    subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
                 else:
                     _stop_maa_for_emu(idx)
                     time.sleep(2)
-                    subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
+                    subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"], timeout=15, creationflags=_CF)
                     if action == "restart":
                         _wait_emu_stopped(cli, idx)
                         time.sleep(2)
-                        subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+                        subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
                 done += 1
                 mw._log(f"⏯ 批量{action}模拟器 #{idx}")
             except Exception as ex:
@@ -1359,25 +1592,25 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.post("/api/emulator/{idx}/{action}")
     def handle_emulator_control(idx: str, action: str):
-        from infrastructure.task_constants import find_mumu_cli
+        from infrastructure.task_constants import find_mumu_cli, cli_flag
         cli = find_mumu_cli()
         if not cli:
             raise HTTPException(500, "mumu-cli not found")
         if action == "start":
-            subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+            subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
             return {"ok": True, "action": "started"}
         elif action == "stop":
             _stop_maa_for_emu(idx)
             time.sleep(2)  # let MAA exit and release ADB before shutting down
-            subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
+            subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"], timeout=15, creationflags=_CF)
             return {"ok": True, "action": "stopped"}
         elif action == "restart":
             _stop_maa_for_emu(idx)
             time.sleep(2)
-            subprocess.run([cli, "control", "--vmindex", idx, "shutdown"], timeout=15, creationflags=_CF)
+            subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"], timeout=15, creationflags=_CF)
             _wait_emu_stopped(cli, idx)  # wait for full exit instead of fixed 3s
             time.sleep(2)
-            subprocess.run([cli, "control", "--vmindex", idx, "launch"], timeout=30, creationflags=_CF)
+            subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
             return {"ok": True, "action": "restarted"}
         raise HTTPException(400, "bad action")
 
@@ -1807,7 +2040,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     def handle_connect_batch_emu_stop(body: dict = {}):
         """Shut down selected running emulators (all if no indexes).
         Stops connected MAA first, then shuts down one by one."""
-        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli
+        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli, cli_flag
         idxs = [str(x) for x in (body.get("indexes") or [])]
         cli = find_mumu_cli()
         if not cli:
@@ -1823,7 +2056,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 pass
             time.sleep(1.5)  # let MAA exit and release ADB before shutdown
             try:
-                subprocess.run([cli, "control", "--vmindex", idx, "shutdown"],
+                subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"],
                                timeout=15, creationflags=_CF)
                 stopped += 1
                 mw._log(f"⏹ 批量关闭模拟器 #{idx}")
@@ -1862,11 +2095,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             raise HTTPException(404, "connection not found")
         addr = ac.get("adb_address", "")
         if not addr and ac.get("emu_instance_index"):
-            try:
-                port = 16384 + int(ac["emu_instance_index"]) * 32
-                addr = f"127.0.0.1:{port}"
-            except Exception:
-                pass
+            # 直接检测实际端口 — 公式端口会漂移，禁止使用
+            from infrastructure.task_constants import detect_emu_adb
+            addr = detect_emu_adb(ac["emu_instance_index"])
         if not addr:
             raise HTTPException(400, "no adb address")
         # 2.5s per-emulator cache — the connect wall polls every 3-5s, so
@@ -2012,11 +2243,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         tag = ""
         for url in urls:
             try:
+                url = validate_http_url(url)
                 headers = {"User-Agent": "MAAOrch"}
                 if "api.github.com" in url:
                     headers["Accept"] = "application/json"
                 req = urllib.request.Request(url, headers=headers)
-                resp = urllib.request.urlopen(req, timeout=10)
+                resp = safe_urlopen(req, timeout=10)
                 if "api.github.com" in url:
                     data = json.loads(resp.read())
                     tag = data.get("tag_name", "").lstrip("v")
@@ -2255,9 +2487,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         # Fallback: GitHub release check
         try:
             req = urllib.request.Request(
-                "https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest",
+                validate_http_url("https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest"),
                 headers={"User-Agent": "MAAOrch-Updater"})
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with safe_urlopen(req, timeout=10) as r:
                 data = json.loads(r.read().decode())
             tag = data.get("tag_name", "")
             html_url = data.get("html_url", "")
@@ -2292,8 +2524,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             tmp_dir = Path(tempfile.mkdtemp(prefix="maorch_upd_"))
             tmp_zip = tmp_dir / "main.zip"
             _log(f"[更新] 下载 {zip_url.split('/')[-1]}")
-            req = urllib.request.Request(zip_url, headers={"User-Agent": "MAAOrch-Updater"})
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            req = urllib.request.Request(validate_http_url(zip_url), headers={"User-Agent": "MAAOrch-Updater"})
+            with safe_urlopen(req, timeout=120) as resp:
                 with open(tmp_zip, "wb") as f:
                     while True:
                         chunk = resp.read(65536)
@@ -2339,7 +2571,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 f'rmdir /S /Q "{root}\\_update"\r\n'
                 f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
                 'del "%~f0"\r\n', encoding="utf-8")
-            subprocess.Popen([str(bat)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.Popen(["cmd", "/c", str(bat)], creationflags=subprocess.CREATE_NO_WINDOW)
             time.sleep(1)
             os._exit(0)
         except Exception as e:
@@ -2415,7 +2647,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         except Exception:
                             pass
                 time.sleep(2)
-                subprocess.Popen([str(bat)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                subprocess.Popen(["cmd", "/c", str(bat)], creationflags=subprocess.CREATE_NO_WINDOW)
                 time.sleep(1)
                 os._exit(0)
             threading.Thread(target=_do_git, daemon=True).start()

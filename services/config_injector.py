@@ -357,11 +357,12 @@ class ConfigService:
         # through daily tasks), which defeats the queue's per-account flow.
         rs = gui.setdefault("RuntimeSettings", {})
         rs["AutoRestartOnDrop"] = False
-        # PostActions=ExitSelf: MAA EXITS its process when all tasks complete.
-        # This makes completion an EVENT (p.wait() fires _on_process_exit)
-        # instead of polling asst.log — no more missed AllTasksCompleted,
-        # no stuck queue, no orphan MAA. Emulator stays up (MAAOrch manages it).
-        gui["PostActions"] = "ExitSelf"
+        # PostActions=None: MAA 任务做完不退出（GUI 挂着）— 我们检测
+        # asst.log 的 AllTasksCompleted（完成判定明确、无退出时序竞争）→
+        # 主动杀 MAA → 判定完成。之前用 ExitSelf（完成=退出事件）在 MAA
+        # 退出过快时 asst.log 可能未 flush → 完成丢失 → 误判重试（用户
+        # 2026-08-10: 先保证可控 — None + 主动检测更可控）。
+        gui["PostActions"] = "None"
 
     def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
         """Inject smart-generated task list into MAA config directory."""
@@ -381,6 +382,16 @@ class ConfigService:
             c = d["Configurations"]["Default"]
             d.setdefault("Global", {})
             d.setdefault("Resource", {})["AutoUpdate"] = False
+            # MAA 自动更新禁用: 顶层 Update（6.16 实际读取 — 源模板顶层键）。
+            # CheckOnStartup=true + AutoDownloadUpdatePackage=true → 启动即
+            # 联网检查并下载更新 → 更新后自行重启退出 → 被判定"完成" → 关
+            # 模拟器（2026-08-10 大量"模拟器被关掉"根因）。
+            # ⚠️ 绝不写 Gui.Resource — MAA 源模板的 Gui 无此键，ConfigurationHelper
+            # SetKvOrMigrate 遇到未知键（对象）→ JsonReaderException → MAA 启动
+            # 崩溃（2026-08-10 用户贴出的崩溃栈，窗口标题 {{ ErrorCongratulations }}）。
+            up = d.setdefault("Update", {})
+            up["CheckOnStartup"] = False
+            up["AutoDownloadUpdatePackage"] = False
             # Clean up v5 flat keys that may linger from old inject_smart runs
             if use_v6:
                 for k in list(c.keys()):
@@ -529,6 +540,8 @@ class ConfigService:
                                 item["UseCustomAnnihilation"] = False
                                 item["AnnihilationStage"] = ""
                                 item["UseMedicine"] = False
+                                item["UseExpiringMedicine"] = True
+                                item["MedicineExpireDays"] = 2
                                 if day_stage:
                                     item["StagePlan"] = [day_stage]
                                     item["IsStageManually"] = True
@@ -545,8 +558,6 @@ class ConfigService:
                                 anni_item["MedicineCount"] = 999
                                 clean_tq.insert(clean_tq.index(item), anni_item)
                                 anni_appended = True
-                                item["UseMedicine"] = True
-                                item["MedicineCount"] = 999
                             elif not anni_appended:
                                 item["IsEnable"] = True
                                 item["UseCustomAnnihilation"] = True
@@ -607,7 +618,7 @@ class ConfigService:
                             item.update({"UseMedicine": False, "MedicineCount": 0,
                                          "UseStone": False, "StoneCount": 0,
                                          "EnableTimesLimit": False, "TimesLimit": 2147483647,
-                                         "IsDrGrandet": False, "UseExpiringMedicine": False,
+                                         "IsDrGrandet": False, "UseExpiringMedicine": True,
                                          "MedicineExpireDays": 2, "UseExpireMedicineForActivity": False,
                                          "HideUnavailableStage": False, "IsStageManually": False,
                                          "UseOptionalStage": False, "UseStoneAllowSave": False,
@@ -686,7 +697,7 @@ class ConfigService:
                                 # leftover True from old annihilation configs.
                                 item["UseMedicine"] = False
                                 item["MedicineCount"] = 0
-                                item["UseExpiringMedicine"] = False
+                                item["UseExpiringMedicine"] = True
                                 if "times" in st: item["TimesLimit"] = st["times"]
                                 if "stage_reset_mode" in st: item["StageResetMode"] = st["stage_reset_mode"]
                                 if "hide_unavailable_stage" in st: item["HideUnavailableStage"] = st["hide_unavailable_stage"]

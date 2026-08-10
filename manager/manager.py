@@ -21,6 +21,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+from infrastructure.utils import validate_http_url, safe_urlopen
 import uuid
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -194,6 +195,42 @@ def stop_project() -> tuple[bool, str]:
         subprocess.run(["taskkill", "/F", "/IM", img],
                        capture_output=True, timeout=5,
                        creationflags=subprocess.CREATE_NO_WINDOW)
+    # Close all emulators — the project is stopping; leaving emulators up
+    # leaks RAM/CPU and the account↔emulator binding is lost anyway.
+    # They get relaunched on demand by runner when the queue resumes.
+    # Graceful close: adb reboot -p first (in-emulator shutdown — games exit
+    # cleanly, no crash-report popup), then MuMuManager shutdown as fallback.
+    # A bare MuMuManager shutdown while the game is mid-run triggers
+    # MuMuNxCrashReporter popups on the desktop.
+    try:
+        adb = Path(r"E:\MuMu Player 12\nx_main\adb.exe")
+        mm = Path(r"E:\MuMu Player 12\nx_main\MuMuManager.exe")
+        if adb.exists() and mm.exists():
+            # 1) 枚举运行中模拟器 → adb 优雅关机
+            try:
+                r = subprocess.run([str(mm), "info", "-v", "all"], capture_output=True, text=True,
+                                   timeout=10, encoding="utf-8", errors="replace",
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+                data = json.loads(r.stdout.lstrip("\ufeff").strip())
+                for idx, info in data.items():
+                    if info.get("is_android_started") and info.get("adb_port"):
+                        addr = "127.0.0.1:" + str(info["adb_port"])
+                        try:
+                            subprocess.run([str(adb), "-s", addr, "shell", "reboot", "-p"],
+                                           capture_output=True, timeout=8,
+                                           creationflags=subprocess.CREATE_NO_WINDOW)
+                        except Exception:
+                            pass
+            except Exception as e:
+                log(f"模拟器 ADB 关机失败: {e}")
+            time.sleep(3)
+            # 2) MuMuManager shutdown 兜底
+            subprocess.run([str(mm), "control", "-v", "all", "shutdown"],
+                           capture_output=True, timeout=30,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+            log("已关闭所有模拟器（先 ADB 优雅关机）")
+    except Exception as e:
+        log(f"关闭模拟器失败: {e}")
     try:
         if PID_FILE.exists():
             PID_FILE.unlink()
@@ -213,8 +250,8 @@ def download_zip(url: str, dest: Path) -> bool:
         for attempt in range(1, 4):
             try:
                 log(f"下载开始 (第{attempt}次): {url}")
-                req = urllib.request.Request(url, headers={"User-Agent": "MAAOrch-Manager"})
-                resp = urllib.request.urlopen(req, timeout=30)
+                req = urllib.request.Request(validate_http_url(url), headers={"User-Agent": "MAAOrch-Manager"})
+                resp = safe_urlopen(req, timeout=30)
                 total = int(resp.headers.get("Content-Length", 0))
                 downloaded = 0
                 last_log = 0
@@ -557,8 +594,8 @@ def update_manager() -> tuple[bool, str]:
             url = base + "manager/manager.py"
             log(f"管理器更新尝试: {url[:60]}...")
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "MAAOrch-Manager"})
-                with urllib.request.urlopen(req, timeout=60) as r:
+                req = urllib.request.Request(validate_http_url(url), headers={"User-Agent": "MAAOrch-Manager"})
+                with safe_urlopen(req, timeout=60) as r:
                     content = r.read().decode("utf-8", errors="replace")
                 if "MAAOrch-Manager" not in content or len(content) < 5000:
                     log("内容校验失败，试下一个镜像")

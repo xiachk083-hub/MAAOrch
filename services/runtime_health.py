@@ -1,0 +1,196 @@
+"""Runtime health check — one endpoint that surfaces operational issues.
+
+Turns the manual diagnostics from production incidents (zombie MAA processes,
+stale emulators, stuck queue, ADB port drift, connect failures) into an
+automatic check: GET /api/health → issues list + counts.
+
+Each issue: {severity: error|warn, category, detail}
+"""
+from __future__ import annotations
+import json
+import subprocess
+from pathlib import Path
+
+PROJ = Path(__file__).parent.parent
+INSTANCES = PROJ / "services" / "maa" / "instances"
+EVENTS_LOG = PROJ / "events.log"
+MM = r"E:\MuMu Player 12\nx_main\MuMuManager.exe"
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        import psutil
+        return psutil.pid_exists(pid)
+    except ImportError:
+        try:
+            r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                               capture_output=True, text=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            return str(pid) in r.stdout
+        except Exception:
+            return False
+
+
+def _running_emulators() -> dict[str, dict]:
+    """{index: info} for emulators with process started."""
+    out = {}
+    try:
+        r = subprocess.run([MM, "info", "-v", "all"], capture_output=True, text=True,
+                           timeout=10, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                           encoding="utf-8", errors="replace")
+        d = json.loads(r.stdout.lstrip("\ufeff").strip())
+        for idx, info in d.items():
+            if info.get("is_process_started"):
+                out[str(idx)] = info
+    except Exception:
+        pass
+    return out
+
+
+def check_health(mw) -> dict:
+    """mw: WebContext with .accounts / .runner / .launch_queue."""
+    issues: list[dict] = []
+    counts: dict = {"maa": 0, "emulators": 0, "running": 0, "queued": 0,
+                    "zombie_maa": 0, "stale_emulators": 0, "port_drift": 0,
+                    "queue_stuck": 0, "connect_fail": 0}
+
+    accounts = getattr(mw, "accounts", []) or []
+    lq = getattr(mw, "launch_queue", None)
+
+    # ── running / queued ──
+    active_ids = set(getattr(lq, "_active_emus", {}).values()) if lq else set()
+    queued_ids = {e.account_id for e in getattr(lq, "_pending", [])} if lq else set()
+    counts["running"] = len(active_ids)
+    counts["queued"] = len(queued_ids)
+
+    # ── 1. zombie MAA: .pid alive but account not running ──
+    for inst_dir in sorted(INSTANCES.iterdir(), key=lambda p: int(p.name) if p.name.isdigit() else 0):
+        if not inst_dir.is_dir() or not inst_dir.name.isdigit():
+            continue
+        pid_file = inst_dir / ".pid"
+        if not pid_file.exists():
+            continue
+        try:
+            pid = int(pid_file.read_text().strip())
+        except Exception:
+            continue
+        if not _pid_alive(pid):
+            continue
+        counts["maa"] += 1
+        meta_file = inst_dir / ".meta"
+        aid = ""
+        if meta_file.exists():
+            try:
+                aid = meta_file.read_text(encoding="utf-8").split("|")[0]
+            except Exception:
+                pass
+        if aid and aid not in active_ids:
+            counts["zombie_maa"] += 1
+            name = next((a.get("name", aid) for a in accounts if a.get("id") == aid), aid)
+            issues.append({"severity": "error", "category": "zombie_maa",
+                           "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
+
+    # ── 2. stale emulators: emulator up but account not running ──
+    emu2aid = {}
+    for a in accounts:
+        ei = a.get("emu_instance_index", "")
+        if ei:
+            emu2aid[str(ei)] = a["id"]
+    emus = _running_emulators()
+    counts["emulators"] = len(emus)
+    for idx in sorted(emus, key=int):
+        aid = emu2aid.get(str(idx))
+        if aid and aid in active_ids:
+            continue
+        counts["stale_emulators"] += 1
+        name = "未绑定"
+        if aid:
+            name = next((a.get("name", "?") for a in accounts if a.get("id") == aid), "?")
+        issues.append({"severity": "warn", "category": "stale_emulator",
+                       "detail": f"闲置模拟器 #{idx} ({name}) — 空闲回收应在 60s 内关闭"})
+
+    # ── 3. port drift: cached adb_address vs emulator's real port ──
+    for idx, info in emus.items():
+        real_port = str(info.get("adb_port", ""))
+        if not real_port:
+            continue
+        for a in accounts:
+            if str(a.get("emu_instance_index", "")) == idx:
+                addr = a.get("adb_address", "")
+                cached = addr.split(":")[-1] if addr else ""
+                if cached and cached != real_port:
+                    counts["port_drift"] += 1
+                    issues.append({"severity": "error", "category": "port_drift",
+                                   "detail": f"端口漂移: {a.get('name', '?')} 缓存 {cached} → 实际 {real_port}"})
+                break
+
+    # ── 4. instance config address drift: gui.new.json ConnectSettings vs real ──
+    # MAA 6.16 reads connection settings from gui.new.json
+    # (Configurations.Default.Gui.ConnectSettings.Address — ConfigFactory);
+    # gui.json flat Connect.Address is legacy and no longer read. If injection
+    # failed, a stale/wrong address persists and MAA connects to the WRONG
+    # emulator (symptom: stuck at PRTS1 / wrong account's screen).
+    try:
+        for inst_dir in sorted(INSTANCES.iterdir(), key=lambda p: int(p.name) if p.name.isdigit() else 0):
+            if not inst_dir.is_dir() or not inst_dir.name.isdigit():
+                continue
+            meta_file = inst_dir / ".meta"
+            if not meta_file.exists():
+                continue
+            try:
+                aid = meta_file.read_text(encoding="utf-8").split("|")[0]
+            except Exception:
+                continue
+            ac = next((a for a in accounts if a.get("id") == aid), None)
+            if not ac:
+                continue
+            emu = str(ac.get("emu_instance_index", ""))
+            real_port = emus.get(emu, {}).get("adb_port")
+            if not real_port:
+                continue
+            gj = inst_dir / "config" / "gui.new.json"
+            if not gj.exists():
+                continue
+            try:
+                d = json.loads(gj.read_text(encoding="utf-8"))
+                cs = d.get("Configurations", {}).get("Default", {}).get("Gui", {}).get("ConnectSettings", {})
+                cfg_addr = cs.get("Address", "")
+                # 校验 InstanceIndex 是否对应该账号的模拟器 — 比地址更能反映
+                # 注入残留（地址可能碰巧是别的账号的端口）
+                ex = cs.get("Extras", {}) or {}
+                cfg_idx = (ex.get("MuMuEmulator12", {}) or {}).get("InstanceIndex", "")
+            except Exception:
+                continue
+            if cfg_addr and not cfg_addr.endswith(":" + str(real_port)):
+                counts["port_drift"] += 1
+                issues.append({"severity": "error", "category": "inst_addr_drift",
+                               "detail": f"实例 {inst_dir.name} 配置地址 {cfg_addr} ≠ {ac.get('name','?')} 实际端口 {real_port}（注入失败/残留 — MAA 会连错模拟器）"})
+            elif str(cfg_idx) and str(cfg_idx) != emu:
+                counts["port_drift"] += 1
+                issues.append({"severity": "error", "category": "inst_addr_drift",
+                               "detail": f"实例 {inst_dir.name} 配置模拟器索引 {cfg_idx} ≠ {ac.get('name','?')} 实际模拟器 {emu}（注入残留 — MAA 会连错模拟器）"})
+    except Exception:
+        pass
+
+    # ── 5. queue stuck: accounts with high failure counts ──
+    for a in accounts:
+        f = a.get("failures", 0) or 0
+        if f >= 3:
+            counts["queue_stuck"] += 1
+            issues.append({"severity": "warn", "category": "queue_stuck",
+                           "detail": f"{a.get('name', '?')} 连续失败 {f} 次（可能卡死循环）"})
+
+    # ── 5. connect failures in recent events.log ──
+    try:
+        if EVENTS_LOG.exists():
+            tail = EVENTS_LOG.read_text(encoding="utf-8", errors="replace").splitlines()[-300:]
+            recent = [ln for ln in tail if "连接失败" in ln or "ADB 连接超时" in ln]
+            counts["connect_fail"] = len(recent)
+            if recent:
+                issues.append({"severity": "warn", "category": "connect_fail",
+                               "detail": f"最近有 {len(recent)} 次连接失败（含 ADB 超时）"})
+    except Exception:
+        pass
+
+    return {"ok": True, "healthy": not any(i["severity"] == "error" for i in issues),
+            "counts": counts, "issues": issues}

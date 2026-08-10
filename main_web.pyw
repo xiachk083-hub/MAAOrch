@@ -1,5 +1,5 @@
 """Web UI entry point — browser + system tray (no pywebview)."""
-import sys, os, threading
+import sys, os, threading, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -121,6 +121,19 @@ pause
     launch_queue = LaunchQueue(ctx)
     runner._log_msg_callbacks.append(lambda m: _LOG.info(f"[MAA] {m}"))
     runner._finished_callbacks.append(launch_queue.on_account_finished)
+    # 编年史: runner 生命周期 → gantt 时间线（start/stop 事件）
+    def _gantt_add(name: str, event: str) -> None:
+        try:
+            _gantt_events.append({"ts": time.time(), "name": name, "event": event})
+            if len(_gantt_events) > 500:
+                del _gantt_events[:-500]
+            _save_gantt()
+        except Exception:
+            pass
+    runner._started_callbacks.append(lambda aid: _gantt_add(
+        next((a.get("name", aid) for a in ctx.accounts if a["id"] == aid), aid), "start"))
+    runner._finished_callbacks.append(lambda data: _gantt_add(
+        next((a.get("name", data[0]) for a in ctx.accounts if a["id"] == data[0]), data[0]), "stop"))
     # Gantt history
     from pathlib import Path as _P
     _gantt_file = _P(__file__).parent / "screenshots" / "gantt_history.json"

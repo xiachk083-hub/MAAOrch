@@ -82,7 +82,7 @@ def _get_download_url() -> tuple[str, str] | None:
                 req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
                 if use_api:
                     req.add_header("Accept", "application/json")
-                resp = urllib.request.urlopen(req, timeout=15)
+                resp = safe_urlopen(req, timeout=15)
                 if use_api:
                     data = json.loads(resp.read().decode())
                     tag = data.get("tag_name", "").lstrip("v")
@@ -135,7 +135,7 @@ def _download_zip(url: str, dest: Path, log, version: str = "") -> bool:
                     if idx > 0:
                         log(f"  尝试镜像: {cand.split('/')[2]}")
                     req = urllib.request.Request(cand, headers={"User-Agent": _USER_AGENT})
-                    resp = urllib.request.urlopen(req, timeout=60)
+                    resp = safe_urlopen(req, timeout=60)
                     total = int(resp.headers.get("Content-Length", 0))
                     downloaded = 0
                     last_log = 0

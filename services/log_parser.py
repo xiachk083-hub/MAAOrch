@@ -220,6 +220,13 @@ class LogService:
                         if d.get("current_sanity") is not None:
                             last_sanity = {"current": d["current_sanity"], "max": d.get("max_sanity", 0),
                                            "report_time": d.get("report_time", "")}
+                    elif what == "SanityAfterStage":
+                        # 战斗后体力（MAA 6.16 FightTimesTask 报告）— 体力空账号
+                        # 没进关卡（无 SanityBeforeStage），用战斗后的理智值补全。
+                        d = data.get("details", {})
+                        if d.get("current_sanity") is not None:
+                            last_sanity = {"current": d["current_sanity"], "max": d.get("max_sanity", 0),
+                                           "report_time": d.get("report_time", "")}
                     elif what == "StageDrops":
                         stats = data.get("details", {}).get("stats", [])
                         if stats:
@@ -304,6 +311,16 @@ class LogService:
                         t["status"] = "完成"
                         break
 
+        # Fallback: FightTimesTaskPlugin OCR 行 "Current Sanity: 164, Max Sanity: 205"
+        # （不经过 SubTaskExtraInfo 时也能拿到体力）
+        if last_sanity is None:
+            try:
+                _m = re.search(r'Current Sanity: (\d+)\s*,\s*Max Sanity: (\d+)', raw)
+                if _m:
+                    last_sanity = {"current": int(_m.group(1)), "max": int(_m.group(2)),
+                                   "report_time": ""}
+            except Exception:
+                pass
         return tasks, last_sanity, last_drops
 
     def show_stats(self, w: dict) -> None:

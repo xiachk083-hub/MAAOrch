@@ -45,6 +45,71 @@ def get_platform_key() -> str:
 def _version_tuple(v: str) -> tuple[int, ...]:
     try: return tuple(int(x) for x in v.lstrip('v').split('.'))
     except: return (0,)
+
+
+def validate_http_url(url: str) -> str:
+    """校验服务端请求 URL（SSRF 纵深防御 — 2026-08-10 Mimosa 约束）:
+    仅 http/https；拒绝 localhost、环回、私有和保留地址。
+    合法公共 URL 原样返回，非法抛 ValueError。
+    """
+    from urllib.parse import urlparse
+    import ipaddress
+    p = urlparse(url)
+    if p.scheme not in ("http", "https"):
+        raise ValueError(f"非法 scheme: {p.scheme}")
+    host = (p.hostname or "").lower()
+    if not host:
+        raise ValueError("URL 缺少 host")
+    if host in ("localhost", "127.0.0.1", "::1", "[::1]"):
+        raise ValueError(f"拒绝环回地址: {host}")
+    try:
+        ip = ipaddress.ip_address(host)
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            raise ValueError(f"拒绝私有/保留地址: {host}")
+    except ValueError as e:
+        if str(e).startswith("拒绝"):
+            raise
+        # 非 IP（域名）— 允许（公共域名）
+        pass
+    return url
+
+
+def safe_urlopen(req_or_url, timeout=15, data=None):
+    """SSRF 防护统一请求入口 — 所有服务端请求必须走这里:
+      1. 协议/主机校验（validate_http_url: 仅 http/https，拒绝内网字面量）
+      2. DNS 解析目标 IP 并阻断私网/环回/链路本地（防 DNS rebinding）
+      3. 自定义重定向处理器 — 重定向目标同样校验（防跳转内网）
+    接受 Request 对象或 URL 字符串。返回 response 对象。
+    """
+    import urllib.request, socket, ipaddress
+    from urllib.parse import urlparse
+    if isinstance(req_or_url, urllib.request.Request):
+        url = req_or_url.full_url
+        req = req_or_url
+    else:
+        url = req_or_url
+        req = urllib.request.Request(validate_http_url(url))
+    validate_http_url(url)
+    _host = urlparse(url).hostname or ""
+    try:
+        for _ai in socket.getaddrinfo(_host, None):
+            _ip = ipaddress.ip_address(_ai[4][0])
+            if (_ip.is_private or _ip.is_loopback or _ip.is_link_local
+                    or _ip.is_reserved or _ip.is_multicast or _ip.is_unspecified):
+                raise ValueError(f"拒绝内网解析: {_host} -> {_ip}")
+    except ValueError as e:
+        if str(e).startswith("拒绝"):
+            raise
+        pass
+    class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req_, fp_, code_, msg_, headers_, newurl):
+            validate_http_url(newurl)
+            return super().redirect_request(req_, fp_, code_, msg_, headers_, newurl)
+    _opener = urllib.request.build_opener(_SafeRedirect)
+    return _opener.open(req, timeout=timeout)
+
+
 def _rmtree_force(path: str | Path) -> None:
     def on_error(func,p,exc_info):
         try: os.chmod(p,0o777); func(p)

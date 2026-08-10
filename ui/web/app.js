@@ -131,6 +131,48 @@ function renderPage() {
                 emus: renderEmus, connect: renderConnect };
   if (fns[state.page]) fns[state.page](c);
 }
+async function loadAccountStatusOverview() {
+  try {
+    const r = await apiGet('/account_status');
+    const el = document.getElementById('status-overview');
+    if (!el || !r.ok) return;
+    const st = r.stats || {};
+    // 摘要条
+    let head = `<div style="display:flex;align-items:center;gap:8px;font-size:10px;margin-bottom:4px;flex-wrap:wrap">
+      <span style="font-weight:bold;color:var(--text2)">体力总览</span>
+      <span style="color:#4caf50">● 已刷完 ${st.done||0}</span>
+      <span style="color:var(--warn)">● 偏低 ${st.low||0}</span>
+      <span style="color:var(--accent)">● 充足 ${st.full||0}</span>
+      <span style="color:var(--text3)">● 未知 ${st.unknown||0}</span>
+      <span style="color:var(--danger)">● 运行中 ${st.running||0}</span>
+      <button class="small" style="font-size:9px;padding:1px 6px" onclick="refreshAccountStatus()">刷新</button>
+    </div>`;
+    // 体力排行条（前 12 + 滚动）
+    const top = r.accounts.slice(0, 12);
+    let bars = '';
+    for (const a of top) {
+      const pct = a.sanity_pct;
+      let color = 'var(--bg3)', label = '?';
+      if (pct === null) { color = 'var(--bg3)'; label = '?'; }
+      else if (pct <= 20) { color = '#4caf50'; label = pct.toFixed(0) + '%'; }
+      else if (pct <= 60) { color = 'var(--warn)'; label = pct.toFixed(0) + '%'; }
+      else { color = 'var(--accent)'; label = pct.toFixed(0) + '%'; }
+      const runMark = a.running ? '<span style="color:var(--danger)">▶</span>' : '';
+      const stat = a.last_status === '完成' ? '✓' : a.last_status === '失败' ? '✗' : a.last_status === '卡死' ? '⚠' : '';
+      bars += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:9px" title="${a.name} 今日${a.today_runs}次 ${a.last_status||''}">
+        <span style="width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${runMark}${a.name}</span>
+        <div style="flex:1;background:var(--bg3);border-radius:3px;height:10px">
+          <div style="width:${pct === null ? 0 : pct}%;height:10px;border-radius:3px;background:${color}"></div>
+        </div>
+        <span style="width:28px;text-align:right">${label}</span>
+        <span style="width:12px">${stat}</span>
+        <span style="width:26px;color:var(--text3)">${a.today_runs}次</span>
+      </div>`;
+    }
+    el.innerHTML = head + bars;
+  } catch(e) {}
+}
+function refreshAccountStatus() { loadAccountStatusOverview(); }
 async function renderAccounts(container) {
   try {
     const r = await apiGet('/accounts');
@@ -139,6 +181,8 @@ async function renderAccounts(container) {
     // Load stage library for display
     (async () => { const sr = await apiGet('/stages'); if (sr.ok) window._stageLib = sr.stages || []; })();
 
+    // 状态总览（体力排行）— 异步加载显示在卡片列表上方
+    loadAccountStatusOverview();
     let searchText = (document.getElementById('search-input')?.value || '').toLowerCase();
     let serverFilter = document.getElementById('server-filter')?.value || 'all';
     let statusFilter = document.getElementById('status-filter')?.value || 'all';
@@ -164,7 +208,8 @@ async function renderAccounts(container) {
     const countBili = r.accounts.filter(a => a.game_client === 'Bilibili').length;
     const countYoStar = r.accounts.filter(a => ['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(a.game_client)).length;
 
-    let html = `<div style="display:flex;gap:4px;margin-bottom:6px">
+    let html = `<div id="status-overview" style="margin-bottom:8px"></div>
+    <div style="display:flex;gap:4px;margin-bottom:6px">
       <input type="text" id="search-input" placeholder="搜索名称或备注..."
         oninput="searchAccounts(this.value)"
         style="flex:1;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);font-size:11px">
@@ -215,6 +260,18 @@ async function renderAccounts(container) {
     </div>
     <div style="font-size:9px;color:var(--text3);margin-top:1px">VM ${a.emu_instance_index||'?'}${a.note ? ' · '+a.note : ''}</div>
     ${(function(){if(!a.stages||!a.stages.length)return '';var snames=a.stages.map(function(s){var lib=window._stageLib||[];var found=lib.find(function(l){return l.id===s});return found?found.name:s});return '<div style="font-size:8px;color:var(--accent);margin-top:1px">🎯 '+snames.slice(0,3).join(', ')+(snames.length>3?' +'+(snames.length-3):'')+'</div>'})()}
+    ${(function(){
+      const ability = a.stage_ability || {};
+      const ents = Object.entries(ability);
+      if (!ents.length) return '';
+      const short = {'LungmenDowntown':'市中心','LungmenOutskirts':'外环','Chernobog':'切尔'};
+      return '<div style="font-size:8px;margin-top:1px">' + ents.map(([st, v]) => {
+        const sname = short[st.split('@')[0]] || st.split('@')[0];
+        const color = v === 'CAN_FARM' ? '#4caf50' : v === 'CANNOT' ? '#e74c3c' : '#888';
+        const icon = v === 'CAN_FARM' ? '✓' : v === 'CANNOT' ? '✗' : '⚪';
+        return `<span style="color:${color};border:1px solid ${color};padding:0 4px;border-radius:2px;margin-right:3px">${sname} ${icon}</span>`;
+      }).join('') + '</div>';
+    })()}
   </div>
   <div style="display:flex;align-items:center;gap:3px">
     <button class="small" onclick="event.stopPropagation();launchAccount('${a.id}')" style="font-size:9px;padding:1px 5px" title="启动">▶</button>
@@ -415,10 +472,17 @@ async function renderQueue(container) {
       pendingHtml = `<div style="color:var(--warn);font-size:11px;font-weight:bold;padding:4px 0;margin-top:4px">── 排队中 ──</div>`;
       pendingHtml += q.pending.map(e => {
         const srcMap = {manual:'手动', schedule:'定时', sanity:'理智', force:'强制', retry:'重试'};
+        const pos = e.position ? `#${e.position}` : '';
+        let etaHtml = '等待中';
+        if (e.eta) {
+          const eta = new Date(e.eta);
+          const mins = e.eta_min || 0;
+          etaHtml = `<span title="预计 ${mins} 分钟后">${eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} 启动</span>`;
+        }
         return `<div class="queue-item">
           <span class="name">⏳ ${e.account_name || e.account_id?.slice(0,8) || '?'}</span>
           <span class="source">${srcMap[e.source]||e.source}</span>
-          <span class="eta">${e.not_before ? new Date(e.not_before).toLocaleTimeString() : '等待中'}</span>
+          <span class="eta">${pos} ${etaHtml}</span>
         </div>`;
       }).join('');
     }
@@ -774,15 +838,25 @@ async function loadOplog() {
   } catch(e) {}
 }
 
-// ── Stats dashboard (heatmap + charts) ──
+// ── Stats dashboard (daily/weekly/monthly/yearly/all) ──
+window._stats = {period: 'day', ref: ''};
 async function renderStats(container) {
   container.innerHTML = `<div class="stats-page">
     <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="color:var(--text2);font-size:12px;font-weight:bold">统计</span>
+      <select id="stats-period" class="small" style="height:24px" onchange="statsSetPeriod(this.value)">
+        <option value="day">日统计</option>
+        <option value="week">周统计</option>
+        <option value="month">月统计</option>
+        <option value="year">年统计</option>
+        <option value="all">全部</option>
+      </select>
+      <input type="date" id="stats-ref" style="height:22px;font-size:11px" onchange="statsSetRef(this.value)">
       <button class="small" onclick="refreshStats()">刷新</button>
     </div>
     <div id="stats-content"></div>
   </div>`;
+  document.getElementById('stats-period').value = window._stats.period;
   await refreshStats();
   if (logTimer) clearInterval(logTimer);
   logTimer = setInterval(() => {
@@ -790,151 +864,165 @@ async function renderStats(container) {
     refreshStats();
   }, 15000);
 }
+function statsSetPeriod(v) {
+  window._stats.period = v;
+  window._stats.ref = '';
+  const refEl = document.getElementById('stats-ref');
+  if (refEl) refEl.value = '';
+  refreshStats();
+}
+function statsSetRef(v) {
+  window._stats.ref = v || '';
+  refreshStats();
+}
 async function refreshStats() {
   try {
-    const r = await apiGet('/stats/dashboard');
+    const st = window._stats;
+    const path = st.period === 'all' ? '/stats/all' : '/stats/' + st.period + (st.ref ? '?date=' + st.ref : '');
+    const r = await apiGet(path);
     const el = document.getElementById('stats-content');
     if (!el) return;
     const s = r.summary || {};
+    const range = r.range || {};
     let html = '';
+    html += `<div style="font-size:10px;color:var(--text3);margin-bottom:8px">${range.start || ''} ~ ${range.end || ''}</div>`;
     // Summary cards
-    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px">`;
-    html += _sc(s.total_runs||0, '累计运行', 'var(--accent)');
-    html += _sc(s.today_runs||0, '今日运行', '#4caf50');
-    html += _sc(s.total_drops||0, '累计掉落', 'var(--warn)');
-    html += _sc(s.accounts||0, '账号数', 'var(--text)');
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px">`;
+    html += _sc(s.runs||0, '运行次数', 'var(--accent)');
+    html += _sc(s.accounts||0, '覆盖账号', 'var(--text)');
+    html += _sc(Math.round((s.success_rate||0)*100)+'%', '成功率', '#4caf50');
+    html += _sc(s.total_drops||0, '掉落总数', 'var(--warn)');
+    html += _sc(s.sanity_consumed||0, '体力消耗', '#e91e63');
+    html += _sc(s.annihilation_runs||0, '剿灭次数', '#9c27b0');
     html += `</div>`;
-    // Heatmap
-    html += `<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">运行时热力图</div>`;
-    html += _renderHeatmap(r.heatmap||[], r.weekdays||[]);
-    html += `</div>`;
-    // Material chart
-    const topMats = r.top_materials || [];
-    if (topMats.length) {
-      html += `<div class="dash-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">`;
-      html += `<div class="card" style="padding:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">材料增长</div>`;
-      html += _renderMatChart(r.daily_drops||{}, topMats);
+    // Trend chart
+    if ((r.trend||[]).length) {
+      html += `<div class="card" style="padding:12px;margin-bottom:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">周期趋势</div>`;
+      html += _statsTrendChart(r.trend);
       html += `</div>`;
-      html += `<div class="card" style="padding:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">每日趋势</div>`;
-      html += _renderDailyTrend(r.daily_runs||{});
-      html += `</div>`;
-      html += `</div>`;
-    } else {
-      html += `<div style="color:var(--text3);text-align:center;padding:20px;font-size:12px">暂无数据，运行后自动生成</div>`;
     }
+    // Accounts table + drops + tasks
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">`;
+    html += `<div class="card" style="padding:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">账号明细</div>`;
+    html += _statsAccountsTable(r.accounts||[], st.period);
+    html += `</div>`;
+    html += `<div style="display:flex;flex-direction:column;gap:8px">`;
+    html += `<div class="card" style="padding:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">掉落 TOP</div>`;
+    html += _statsDropsTop(r.drops_top||[]);
+    html += `</div>`;
+    html += `<div class="card" style="padding:12px"><div style="font-size:12px;font-weight:bold;margin-bottom:8px;color:var(--text2)">任务统计</div>`;
+    html += _statsTaskBars(r.task_stats||[]);
+    html += `</div>`;
+    html += `</div></div>`;
     el.innerHTML = html;
   } catch(e) { /* silent */ }
 }
-function _sc(val, label, color) {
-  return `<div class="card" style="padding:10px;text-align:center"><div style="font-size:20px;font-weight:bold;color:${color}">${val}</div><div style="font-size:10px;color:var(--text3)">${label}</div></div>`;
-}
-// ── Heatmap 7×24 ──
-function _renderHeatmap(hm, weekdays) {
-  const allZero = hm.every(row => row.every(v => v === 0));
-  if (!hm.length || allZero) return '<div style="color:var(--text3);font-size:10px;text-align:center;padding:10px">暂无运行数据</div>';
-  const maxVal = Math.max(1, ...hm.flat());
-  const getColor = v => {
-    if (v === 0) return 'var(--bg3)';
-    const i = Math.min(v / maxVal, 1);
-    const r = Math.round(10 + 200 * i);
-    const g = Math.round(140 - 100 * i);
-    const b = Math.round(60 - 40 * i);
-    return `rgb(${r},${g},${b})`;
-  };
-  let html = `<div style="display:flex;gap:2px;font-size:9px;line-height:1">`;
-  // hour labels
-  html += `<div style="width:28px"></div>`;
-  for (let h = 0; h < 24; h++) {
-    html += `<div style="flex:1;text-align:center;color:var(--text3)">${h}</div>`;
+function _statsTrendChart(trend) {
+  if (!trend.length) return '<div style="color:var(--text3);font-size:10px">暂无数据</div>';
+  const maxR = Math.max(1, ...trend.map(t => t.runs||0));
+  const maxD = Math.max(1, ...trend.map(t => t.drops||0));
+  const W = 500, H = 170, pad = {t:10,r:10,b:24,l:30};
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const xs = iw / Math.max(trend.length - 1, 1);
+  let runs = '', drops = '';
+  trend.forEach((t, i) => {
+    const x = pad.l + i * xs;
+    const y1 = pad.t + ih * (1 - (t.runs||0) / maxR);
+    const y2 = pad.t + ih * (1 - (t.drops||0) / maxD);
+    runs += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y1.toFixed(1);
+    drops += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y2.toFixed(1);
+  });
+  let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:190px;background:transparent">`;
+  for (let y = 0; y <= 3; y++) {
+    const yy = pad.t + ih * (1 - y/3);
+    svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="var(--border)" stroke-width="0.5"/>`;
   }
-  html += `</div>`;
-  for (let d = 0; d < 7; d++) {
-    html += `<div style="display:flex;gap:2px;align-items:center;height:16px;margin-top:2px">`;
-    html += `<div style="width:28px;font-size:9px;color:var(--text3)">${weekdays[d]}</div>`;
-    for (let h = 0; h < 24; h++) {
-      const v = hm[d][h] || 0;
-      const color = getColor(v);
-      html += `<div title="${weekdays[d]} ${h}:00 — ${v}次" style="flex:1;height:14px;border-radius:2px;background:${color};cursor:pointer"></div>`;
+  svg += `<path d="${runs}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  svg += `<path d="${drops}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  trend.forEach((t, i) => {
+    if (trend.length <= 14 || i % Math.ceil(trend.length / 14) === 0) {
+      const x = pad.l + i * xs;
+      svg += `<text x="${x.toFixed(0)}" y="${H-6}" fill="var(--text3)" font-size="8" text-anchor="middle">${t.key}</text>`;
     }
-    html += `</div>`;
+  });
+  svg += `</svg>`;
+  svg += `<div style="font-size:9px;color:var(--text3);margin-top:4px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--accent);margin-right:3px;vertical-align:middle"></span>运行次数<span style="margin-left:12px;display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--warn);margin-right:3px;vertical-align:middle"></span>掉落</div>`;
+  return svg;
+}
+function _statsAccountsTable(accounts, period) {
+  if (!accounts.length) return '<div style="color:var(--text3);font-size:10px">本期无运行记录</div>';
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:10px">
+    <tr style="color:var(--text3);text-align:left">
+      <th style="padding:3px">账号</th><th>运行</th><th>成功</th><th>成功率</th>
+      <th>掉落</th><th>体力</th><th>剿灭</th><th></th>
+    </tr>`;
+  for (const a of accounts) {
+    html += `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:3px">${a.name}</td>
+      <td>${a.runs}</td><td style="color:#4caf50">${a.success}</td>
+      <td>${Math.round((a.success_rate||0)*100)}%</td>
+      <td>${Object.values(a.drops||{}).reduce((x,y)=>x+y,0)}</td>
+      <td>${a.sanity}</td><td>${a.anni_runs}</td>
+      <td><button class="small" style="font-size:9px;padding:1px 6px" onclick="statsAccountHistory('${a.id}','${a.name}')">历史</button></td>
+    </tr>`;
+  }
+  html += `</table>`;
+  return html;
+}
+async function statsAccountHistory(aid, name) {
+  try {
+    const acc = await apiGet('/accounts');
+    const list = acc.accounts || [];
+    const idx = list.findIndex(x => x.id === aid);
+    if (idx < 0) return;
+    const st = await apiGet('/account/' + idx + '/stats');
+    const runs = (st.stats && st.stats.runs) || [];
+    let rows = '';
+    for (const r of runs.slice().reverse().slice(0, 50)) {
+      const tasks = Object.entries(r.tasks||{}).map(([k,v]) => `${k}:${v}`).join(' ');
+      const drops = Object.entries(r.drops||{}).map(([k,v]) => `${k}x${v}`).join(' ');
+      rows += `<div style="border-bottom:1px solid var(--border);padding:4px 0">
+        <span style="color:var(--text2)">${r.ts || ''}</span>
+        <span style="margin-left:8px;color:${r.exit_code === 0 ? '#4caf50' : '#e74c3c'}">${r.status||''}</span>
+        <span style="margin-left:8px;color:var(--text3)">${r.elapsed||0}s</span>
+        <div style="color:var(--text3);font-size:9px;margin-top:2px">${tasks}</div>
+        ${drops ? `<div style="color:var(--warn);font-size:9px">${drops}</div>` : ''}
+      </div>`;
+    }
+    showDialog(`<div style="font-size:12px;font-weight:bold;margin-bottom:8px">历史记录 — ${name}（共 ${runs.length} 次）</div><div style="max-height:70vh;overflow:auto">${rows || '<div style="color:var(--text3)">暂无记录</div>'}</div>`);
+  } catch(e) {}
+}
+function _statsDropsTop(list) {
+  if (!list.length) return '<div style="color:var(--text3);font-size:10px">暂无掉落</div>';
+  const maxV = Math.max(1, ...list.map(d => d.count));
+  let html = '';
+  for (const d of list) {
+    const pct = Math.round(d.count / maxV * 100);
+    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px">
+      <span style="width:80px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.item}</span>
+      <div style="flex:1;background:var(--bg3);border-radius:3px;height:12px"><div style="width:${pct}%;height:12px;border-radius:3px;background:var(--warn)"></div></div>
+      <span style="width:40px;text-align:right;color:var(--text)">${d.count}</span>
+    </div>`;
   }
   return html;
 }
-// ── Material growth line chart (SVG) ──
-function _renderMatChart(dailyDrops, topMats) {
-  const dates = Object.keys(dailyDrops).sort();
-  if (!dates.length || !topMats.length) return '<div style="color:var(--text3);font-size:10px">暂无数据</div>';
-  const colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#7f8c8d','#c0392b'];
-  // Compute cumulative per material
-  const cum = {};
-  for (const mat of topMats) cum[mat] = [];
-  let running = {};
-  for (const mat of topMats) running[mat] = 0;
-  for (const d of dates) {
-    for (const mat of topMats) {
-      running[mat] += (dailyDrops[d][mat] || 0);
-      cum[mat].push(running[mat]);
-    }
+function _statsTaskBars(list) {
+  if (!list.length) return '<div style="color:var(--text3);font-size:10px">暂无任务记录</div>';
+  const maxV = Math.max(1, ...list.map(t => t.done + t.fail));
+  let html = '';
+  for (const t of list) {
+    const total = t.done + t.fail;
+    const pct = Math.round(total / maxV * 100);
+    const okPct = total ? Math.round(t.done / total * 100) : 0;
+    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px">
+      <span style="width:70px;color:var(--text2)">${t.task}</span>
+      <div style="flex:1;background:var(--bg3);border-radius:3px;height:12px">
+        <div style="width:${pct}%;height:12px;border-radius:3px;background:linear-gradient(90deg,#4caf50 ${okPct}%,#e74c3c ${okPct}%)"></div>
+      </div>
+      <span style="width:70px;text-align:right;color:var(--text3)">${t.done}/${total}</span>
+    </div>`;
   }
-  const maxY = Math.max(1, ...topMats.map(m => running[m]));
-  const W = 500, H = 180, pad = {t:10,r:10,b:30,l:40};
-  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
-  const xs = iw / Math.max(dates.length - 1, 1);
-  let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:200px;background:transparent">`;
-  // grid lines
-  for (let y = 0; y <= 4; y++) {
-    const yy = pad.t + ih * (1 - y/4);
-    svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="var(--border)" stroke-width="0.5"/>`;
-    svg += `<text x="${pad.l-4}" y="${yy+3}" fill="var(--text3)" font-size="8" text-anchor="end">${Math.round(maxY * y / 4)}</text>`;
-  }
-  // lines
-  for (let mi = 0; mi < Math.min(topMats.length, 6); mi++) {
-    const mat = topMats[mi];
-    const pts = cum[mat];
-    let path = '';
-    for (let i = 0; i < pts.length; i++) {
-      const x = pad.l + i * xs;
-      const y = pad.t + ih * (1 - pts[i] / maxY);
-      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
-    }
-    svg += `<path d="${path}" fill="none" stroke="${colors[mi]}" stroke-width="1.5" stroke-linejoin="round"/>`;
-  }
-  svg += `</svg>`;
-  // Legend
-  for (let mi = 0; mi < Math.min(topMats.length, 6); mi++) {
-    svg += `<span style="font-size:9px;color:var(--text3);margin-right:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${colors[mi]};margin-right:2px;vertical-align:middle"></span>${topMats[mi]}</span>`;
-  }
-  return svg;
-}
-// ── Daily trend ──
-function _renderDailyTrend(dailyRuns) {
-  const dates = Object.keys(dailyRuns).sort().slice(-30);
-  if (!dates.length) return '<div style="color:var(--text3);font-size:10px">暂无数据</div>';
-  const vals = dates.map(d => dailyRuns[d]);
-  const maxV = Math.max(1, ...vals);
-  const W = 500, H = 180, pad = {t:10,r:10,b:20,l:30};
-  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
-  const xs = iw / Math.max(vals.length - 1, 1);
-  const fill = 'var(--accent)';
-  let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:200px;background:transparent">`;
-  // grid
-  for (let y = 0; y <= 4; y++) {
-    const yy = pad.t + ih * (1 - y/4);
-    svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="var(--border)" stroke-width="0.5"/>`;
-    svg += `<text x="${pad.l-4}" y="${yy+3}" fill="var(--text3)" font-size="8" text-anchor="end">${Math.round(maxV * y / 4)}</text>`;
-  }
-  // area fill
-  let area = '';
-  for (let i = 0; i < vals.length; i++) {
-    const x = pad.l + i * xs;
-    const y = pad.t + ih * (1 - vals[i] / maxV);
-    area += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
-  }
-  const lastX = pad.l + (vals.length-1) * xs;
-  area += ` L${lastX.toFixed(1)},${pad.t+ih} L${pad.l},${pad.t+ih} Z`;
-  svg += `<path d="${area}" fill="${fill}" fill-opacity="0.1" stroke="${fill}" stroke-width="1.5" stroke-linejoin="round"/>`;
-  svg += `</svg>`;
-  return svg;
+  return html;
 }
 
 // ── Dashboard (调度台) ──
@@ -943,6 +1031,7 @@ async function renderDashboard(container) {
     <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
       <span style="color:var(--text2);font-size:12px;font-weight:bold">调度台</span>
       <span style="font-size:9px;color:var(--text3);flex:1" id="dash-subtitle"></span>
+      <span id="health-bar" style="font-size:10px;margin-right:8px"></span>
       <button class="small" onclick="loadDashboard()">刷新</button>
     </div>
     <div id="dash-content"></div>
@@ -956,7 +1045,22 @@ async function renderDashboard(container) {
   }, 5000);
 }
 let _dashCache = '';
+async function loadHealth() {
+  try {
+    const h = await apiGet('/health');
+    const el = document.getElementById('health-bar');
+    if (!el) return;
+    if (h.healthy) {
+      el.innerHTML = '<span style="color:#4caf50">● 健康</span>';
+    } else {
+      const cats = (h.issues || []).map(i =>
+        `<span title="${i.detail}" style="color:${i.severity === 'error' ? '#e74c3c' : 'var(--warn)'};cursor:pointer;margin-right:6px">● ${i.category}</span>`).join('');
+      el.innerHTML = cats;
+    }
+  } catch(e) {}
+}
 async function loadDashboard() {
+  loadHealth();
   try {
     const r = await apiGet('/node/dashboard');
     const el = document.getElementById('dash-content');

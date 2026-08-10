@@ -111,7 +111,7 @@ def _init_maa_source(source: Path) -> bool:
         # Disable MAA self-update: MAAOrch manages MAA versions itself. If left on,
         # MAA.exe starts downloading OTA components and gets killed mid-update by
         # our $type wait loop → source files end up missing.
-        d.setdefault("Resource", {})["AutoUpdate"] = "False"
+        d.setdefault("Resource", {})["AutoUpdate"] = False
         gj.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
@@ -413,7 +413,7 @@ class MaintService:
             try:
                 data = json.dumps({"msg": msg, "type": "error" if is_error else "info", "time": datetime.now().isoformat()}).encode()
                 req = urllib.request.Request(wh, data=data, headers={"Content-Type": "application/json"}, method="POST")
-                urllib.request.urlopen(req, timeout=5)
+                safe_urlopen(req, timeout=5)
             except Exception as e:
                 try:
                     self.ctx.log(f"Webhook 失败: {e}")
@@ -652,7 +652,7 @@ class MaintService:
                 tmpf = Path(tmp) / "update.zip"
                 self.ctx.log(f"下载中: {dl_url[:60]}...")
                 req = urllib.request.Request(dl_url, headers={"User-Agent": "MAAOrch-Updater"})
-                with urllib.request.urlopen(req, timeout=120) as resp:
+                with safe_urlopen(req, timeout=120) as resp:
                     total = int(resp.headers.get("Content-Length", 0))
                     data = bytearray()
                     while True:

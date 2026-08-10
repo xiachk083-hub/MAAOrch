@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json,io,os,shutil,time,zipfile,tempfile
 import urllib.request
+from infrastructure.utils import validate_http_url, safe_urlopen
 from pathlib import Path
 from typing import Any
 from PySide6.QtCore import Qt,QThread,Signal
@@ -13,8 +14,8 @@ class UpdateCheckThread(QThread):
 
     def run(self) -> None:
         try:
-            req=urllib.request.Request("https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/releases/latest",headers={"User-Agent":"MAA-Launcher"})
-            with urllib.request.urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
+            req=urllib.request.Request(validate_http_url("https://api.github.com/repos/MaaAssistantArknights/MaaAssistantArknights/releases/latest"),headers={"User-Agent":"MAA-Launcher"})
+            with safe_urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
             tag=data.get("tag_name",""); assets={}
             for a in data.get("assets",[]):
                 n=a.get("name","")
@@ -34,7 +35,7 @@ class OrchUpdateCheckThread(QThread):
                 "https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest",
                 headers={"User-Agent": "MAAOrch-Updater"}
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with safe_urlopen(req, timeout=10) as r:
                 data = json.loads(r.read().decode())
             tag = data.get("tag_name", "")
             html_url = data.get("html_url", "")
@@ -57,8 +58,8 @@ class DownloadThread(QThread):
         tmp=None; tmpf=None
         try:
             self.status.emit("下载中...")
-            req=urllib.request.Request(self.u,headers={"User-Agent":"MAA-Launcher"})
-            with urllib.request.urlopen(req,timeout=600) as r:
+            req=urllib.request.Request(validate_http_url(self.u),headers={"User-Agent":"MAA-Launcher"})
+            with safe_urlopen(req,timeout=600) as r:
                 total=r.length or 0; dl=0
                 tmpf=tempfile.NamedTemporaryFile(delete=False,suffix=".zip",prefix="maa_")
                 while True:
@@ -110,8 +111,8 @@ class MaacliInstallThread(QThread):
     def run(self) -> None:
         try:
             self.progress.emit("获取版本...")
-            req=urllib.request.Request("https://api.github.com/repos/MaaAssistantArknights/maa-cli/releases/latest",headers={"User-Agent":"MAA-Launcher"})
-            with urllib.request.urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
+            req=urllib.request.Request(validate_http_url("https://api.github.com/repos/MaaAssistantArknights/maa-cli/releases/latest"),headers={"User-Agent":"MAA-Launcher"})
+            with safe_urlopen(req,timeout=15) as r: data=json.loads(r.read().decode())
             url=None
             for a in data.get("assets",[]):
                 if "windows" in a.get("name","").lower() and "x86_64" in a.get("name","") and a.get("name","").endswith(".zip"):
@@ -119,7 +120,7 @@ class MaacliInstallThread(QThread):
             if not url: self.finished.emit(False,"未找到下载包"); return
             self.progress.emit("下载...")
             req2=urllib.request.Request(url,headers={"User-Agent":"MAA-Launcher"})
-            with urllib.request.urlopen(req2,timeout=120) as r: buf=r.read()
+            with safe_urlopen(req2,timeout=120) as r: buf=r.read()
             tmp=tempfile.mkdtemp(prefix="cli_")
             with zipfile.ZipFile(io.BytesIO(buf)) as zf:
                 for m in zf.infolist():

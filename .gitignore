@@ -15,6 +15,28 @@ models/config.json
 models/accounts/
 models/backups/
 
+# 根目录账号/运行数据（2026-08-10 补充 — 敏感，绝不提交）
+accounts*.json
+acc_state.json
+inst_cfg.json
+oplog.json
+snap.json
+queue.json
+services/queue.json
+services/dispatch_pool.json
+logs/
+project_stderr.log
+project_stderr.txt
+screenshots/
+probe_shots/
+batch_result_*.txt
+.mimosa/
+
+# 根目录测试/调试截图（2026-08-10 补充 — 非项目资源）
+/*.png
+/*.jpg
+/*.jpeg
+
 # MAA binaries
 services/maa/
 
@@ -47,3 +69,4 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+queue_snapshot*.md
