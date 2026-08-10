@@ -12,6 +12,7 @@ __pycache__/
 
 # User data (config, stats, backups)
 models/config.json
+models/manual_emu_started.json
 models/accounts/
 models/backups/
 

@@ -1546,6 +1546,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             pass
         return adb, ""
 
+    def _save_manual_started() -> None:
+        """手动启动保护标记落盘（重启不丢 — 否则重启后手动开的模拟器被回收）。"""
+        try:
+            import json as _j2
+            _p = Path(__file__).parent.parent / "models" / "manual_emu_started.json"
+            _p.parent.mkdir(parents=True, exist_ok=True)
+            _p.write_text(_j2.dumps(mw.manual_emu_started), encoding="utf-8")
+        except Exception:
+            pass
+
     def _wait_emu_stopped(cli: str, idx: str, timeout: int = 30) -> bool:
         """Poll MuMuManager info until the emulator fully exits (both process and android off)."""
         from infrastructure.task_constants import cli_flag
@@ -1620,6 +1630,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                         mw._log(f"⚠️ 模拟器 #{idx} 批量启动 20s 未就绪")
                     try:
                         mw.manual_emu_started[idx] = time.time()
+                        _save_manual_started()
                     except Exception:
                         pass
                 else:
@@ -1660,6 +1671,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 # 手动启动保护期 — 回收不立刻关（用户手动操作中）
                 try:
                     mw.manual_emu_started[idx] = time.time()
+                    _save_manual_started()
                 except Exception:
                     pass
                 _log_op("启动模拟器", f"#{idx}")

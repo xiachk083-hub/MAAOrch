@@ -160,6 +160,15 @@ pause
         _log=lambda msg: _LOG.info(msg),
     )
     launch_queue._restore()
+    # 恢复手动启动保护标记（重启不丢 — 否则重启后手动开的模拟器被回收）
+    try:
+        _msf = Path(__file__).parent / "models" / "manual_emu_started.json"
+        if _msf.exists():
+            _msd = _j.loads(_msf.read_text(encoding="utf-8"))
+            if isinstance(_msd, dict):
+                ctx._mw.manual_emu_started.update({k: float(v) for k, v in _msd.items()})
+    except Exception:
+        pass
     launch_queue.start()
     launch_queue.resume()  # Queue starts paused; resume for Web UI
 
