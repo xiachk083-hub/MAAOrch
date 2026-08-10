@@ -151,11 +151,14 @@ class AccountRunner:
     def _clean_orphan_marks(self) -> None:
         """Startup sweep: clear .pid/.meta whose process no longer exists.
         Orphan MAA processes (crashed / killed without cleanup) leave stale
-        marks that block instance reuse and show ghost "running" state."""
+        marks that block instance reuse and show ghost "running" state.
+        Also dedup: the same live PID copied across multiple instances
+        (instance pool copy pollution, 2026-08-10) must keep only one mark."""
         try:
             _pool = Path(__file__).parent / "maa" / "instances"
             if not _pool.exists():
                 return
+            pid_instances: dict[int, list] = {}
             for inst_dir in _pool.glob("*"):
                 pf = inst_dir / ".pid"
                 if not pf.exists():
@@ -178,6 +181,14 @@ class AccountRunner:
                     pf.unlink(missing_ok=True)
                     (inst_dir / ".meta").unlink(missing_ok=True)
                     self._log.info(f"[孤儿清理] inst {inst_dir.name}: pid {pid} 不存在，清标记")
+                    continue
+                # 活 PID 去重：同一 PID 只允许一个实例持有（其余是复制污染）
+                pid_instances.setdefault(pid, []).append(inst_dir)
+            for pid, dirs in pid_instances.items():
+                for extra in dirs[1:]:
+                    (extra / ".pid").unlink(missing_ok=True)
+                    (extra / ".meta").unlink(missing_ok=True)
+                    self._log.warn(f"[孤儿清理] inst {extra.name}: pid {pid} 重复标记（复制污染），清理")
         except Exception:
             pass
 

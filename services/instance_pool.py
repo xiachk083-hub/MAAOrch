@@ -33,6 +33,11 @@ def _create_instance(inst: Path, source: Path) -> bool:
     try:
         for item in source.iterdir():
             if item.is_file():
+                # 运行时标记不复制 — 实例 1 可能正在被使用（.pid/.meta 是活的
+                # MAA 的），复制会把一个 PID 污染到所有实例 → "无空闲 MAA 实例"
+                # （2026-08-10 实例池 9 个 .pid 全 = 21900 事故根因）
+                if item.name in (".pid", ".meta"):
+                    continue
                 shutil.copy2(str(item), str(inst / item.name))
         for sub in ("resource", "externals", "Python"):
             src_sub = source / sub
