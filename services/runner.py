@@ -141,6 +141,7 @@ class AccountRunner:
         self._adb_fail_count: dict[str, int] = {}
         self._adb_restart_count: dict[str, int] = {}
         self._adb_check_ts: float = 0.0
+        self._done_flags: dict[str, bool] = {}  # 完成检测标记（归 0 竞态防护）
         self._emu_fail_count: dict[str, int] = {}
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
@@ -1052,7 +1053,11 @@ class AccountRunner:
             rc = -13
         # PostActions=ExitSelf may exit with a non-zero code even on NORMAL
         # completion. If tasks were completed, treat it as success regardless.
-        if rc not in (0, None) and any(t.get("status") == "完成" for t in tasks):
+        # _done_flags: 完成检测（AllTasksCompleted 增量）terminate 的 MAA 会被
+        # _wait_exit 抢先走这里（rc=1），增量检测的 cleanup(0) 因 _procs 已清
+        # 落空 → 完成变 exit=1 → 模拟器不按"完成"关闭（2026-08-11 b-2/b-9）。
+        if (self._done_flags.pop(aid, False)
+                or (rc not in (0, None) and any(t.get("status") == "完成" for t in tasks))):
             self._log.info(f"[完成后] {aid} MAA 退出(rc={rc}) 但任务已完成，按正常完成处理")
             rc = 0
         self._cleanup(aid, rc or 0, tasks, sanity, drops)
@@ -1257,6 +1262,12 @@ class AccountRunner:
                         self._log_positions[aid] = current_size
                         if "AllTasksCompleted" in new_content:
                             self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+                            # 完成标记：terminate 后 _wait_exit 可能抢先 cleanup
+                            # （rc=1 未归 0）→ 完成变异常退出（2026-08-11 b-2/b-9）
+                            try:
+                                self._done_flags[aid] = True
+                            except Exception:
+                                pass
                             tasks, sanity, drops = self._parse_log(aid)
                             # 完成判定 + 自动续跑: MAA 做完一轮（AllTasksCompleted）
                             # 但体力还没清空（>30%）→ 自动重新入队继续清；体力清空
