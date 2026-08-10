@@ -448,12 +448,16 @@ class LaunchQueue:
 
     def _tick(self) -> None:
         """Check queue and launch all eligible accounts (parallel across different emus)."""
-        if self._paused:
-            return
+        # 暂停只停止"启动新任务"— 运行中账号的监控/完成收尾必须继续。
+        # 暂停直接 return 会导致 check_processes 停摆：MAA 刷完（AllTasksCompleted）
+        # 检测不到 → 不退出不释放实例/模拟器（2026-08-10 实测：队列暂停后
+        # 21:16/21:19 两个账号完成但 MAA 一直挂着）。
         try:
             r = getattr(self.ctx, '_mw', None)
             if r: r.runner.check_processes()
         except: pass
+        if self._paused:
+            return
         _QUEUE_LOG.info(f"_tick: start pending={len(self._pending)} paused={self._paused} overloaded={getattr(getattr(getattr(self.ctx,'_mw',None),'runner',None),'_overloaded',None)}")
         with self._lock:
             now = datetime.now()
