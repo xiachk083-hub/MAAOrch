@@ -245,6 +245,7 @@ class LaunchQueue:
         self._active_emus.clear()
         self._active_emus_ts.clear()
         self._last_launch_time = 0
+        self._tick_lock = threading.Lock()
         # Guard against duplicate _bg_tick threads
         if self._bg_tick_started:
             return
@@ -256,7 +257,7 @@ class LaunchQueue:
                 _t.sleep(interval_sec)
                 try:
                     self._clean_stale_emus()
-                    self._tick()
+                    self.tick()  # 走 tick() 统一防重入锁
                 except Exception as ex:
                     _QUEUE_LOG.error(f"_bg_tick 异常: {ex}")
         _th.Thread(target=_bg_tick, daemon=True, name="queue_bg_tick").start()
@@ -526,8 +527,16 @@ class LaunchQueue:
     # ── Internal ──
 
     def tick(self) -> None:
-        """Public alias for _tick."""
-        self._tick()
+        """Public alias for _tick — 防双 tick 竞争（2026-08-11: enqueue 手动
+        tick 与 _bg_tick 并发 → 一个启动的条目被另一个判定"模拟器占用"推回
+        pending → 队列原地踏步：launch_now=1 → 1s 后 launch_now=0 pending 复原）。
+        非阻塞锁：已有 tick 在跑则本次跳过（bg_tick 5s 后自然再跑）。"""
+        if not self._tick_lock.acquire(blocking=False):
+            return
+        try:
+            self._tick()
+        finally:
+            self._tick_lock.release()
 
     def _tick(self) -> None:
         """Check queue and launch all eligible accounts (parallel across different emus)."""
