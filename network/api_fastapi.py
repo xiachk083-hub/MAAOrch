@@ -835,7 +835,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "active_emus": {k: _m(v) for k, v in list(lq._active_emus.items())[:20]},
                 "active_emus_ts": {k: round(v, 0) for k, v in list(lq._active_emus_ts.items())[:20]},
                 "system_started": {k: time.strftime("%H:%M:%S", time.localtime(v))
-                                   for k, v in list(lq._system_started.items())[:20]},
+                                   for k, v in list(__import__("services.emu_service", fromlist=["_system_started"])._system_started.items())[:20]},
             }
         except Exception as e:
             out["queue"] = f"err {e}"
@@ -852,11 +852,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         except Exception as e:
             out["runner"] = f"err {e}"
         try:
-            from services.launch_queue import _recently_closed, _graceful_locks
+            from services.emu_service import _recently_closed, _locks
             out["closing"] = {
                 "recently_closed": {k: time.strftime("%H:%M:%S", time.localtime(v))
                                     for k, v in list(_recently_closed.items())[:20]},
-                "graceful_locked": [k for k, v in list(_graceful_locks.items()) if v.locked()][:10],
+                "graceful_locked": [k for k, v in list(_locks.items()) if v.locked()][:10],
             }
         except Exception as e:
             out["closing"] = f"err {e}"

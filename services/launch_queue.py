@@ -55,176 +55,17 @@ def _mumu_manager_cli(accounts: list | None = None) -> str | None:
     return None
 
 
-_graceful_glock = threading.Lock()
-_graceful_locks: dict = {}
-_recently_closed: dict = {}  # emu_idx -> 关闭时间（回收冷却，防二次关闭）
+# ── 模拟器关闭 — 统一入口转发到 emu_service（2026-08-11 P1 收敛）──
+# 锁/冷却/优雅关闭实现已迁移到 services/emu_service.py（单点），
+# 此处保留 graceful_emu_shutdown 名称兼容其他文件 import。
 
 
 def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
-                          wait: int = 90) -> bool:
-    """统一模拟器关闭（唯一正常退出方式）— 2026-08-10 用户指出:
-    直接 MuMuManager shutdown 是"错误退出"→ VMM 残留进程（进程在但无实例，
-    占内存 — 曾见 17 个残留 VMMHeadless、CPU 3455%）。正常方式:
-      1. adb shell reboot -p（Android 内优雅关机 → 模拟器自然退出，不留残留）
-      2. 轮询 MuMuManager 等待完全退出（最多 wait 秒；Android 关机在 50 台
-         多开负载下可能 60s+，30s 超时必然触发兜底 — 2026-08-10 用户指出）
-      3. 等待中重发 reboot（关机信号可能因系统忙丢失）
-      4. shutdown 兜底（仅当进程真的还在 — 兜底=强关会弹"运行异常"，
-         是最后手段不是正常路径）
-    所有关闭模拟器的调用点必须走这里（回收/完成/recover/重启），统一退出。
-
-    防并发重入：API 手动关闭与队列回收 tick 可能同时关同一台模拟器
-    （2026-08-10 实测双 graceful）→ 按模拟器非阻塞锁，已有关闭进行中则跳过。
-    """
-    flag = "-v" if "MuMuManager" in cli else "--vmindex"
-    with _graceful_glock:
-        _lk = _graceful_locks.setdefault(str(emu_idx), threading.Lock())
-    if not _lk.acquire(blocking=False):
-        _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 已有关闭进行中，跳过")
-        return True
-    try:
-        _graceful_body(cli, emu_idx, adb_path, addr, wait, flag)
-    finally:
-        # 关闭冷却记录（回收跳过，防二次关闭）
-        with _graceful_glock:
-            _recently_closed[str(emu_idx)] = time.time()
-        _lk.release()
-    return True
-
-
-def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str) -> None:
-    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'}, wait={wait}s)")
-    # adb 端口实时获取：缓存 adb_address 在模拟器重启后会漂移（MuMu 12
-    # 端口+1），reboot 发到旧端口=没送达 → 30s 超时 → shutdown 兜底强关
-    # → MuMu 弹"运行异常"（2026-08-10 实测回收关闭连环弹窗）。
-    # MuMuManager info 返回的 adb_port 是实时真值，优先用它。
-    if adb_path:
-        try:
-            r = subprocess.run([cli, "info", flag, str(emu_idx)],
-                               capture_output=True, text=True, timeout=5,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                               encoding="utf-8", errors="replace")
-            if r.returncode == 0:
-                d = json.loads(r.stdout.lstrip("\ufeff").strip())
-                port = d.get("adb_port")
-                if port:
-                    addr = f"127.0.0.1:{port}"
-                    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 实时 ADB 端口 {addr}")
-        except Exception:
-            pass
-    if addr and adb_path:
-        try:
-            # 先 adb connect：模拟器可能不在 adb server 设备列表（闲置/刚
-            # 重启），-s 直连会 device not found（reboot 未送达 → 90s 超时
-            # → 兜底强关弹窗 — 2026-08-10 实测）。
-            subprocess.run([adb_path, "connect", addr],
-                           capture_output=True, timeout=10,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            time.sleep(1)
-            r = subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                               capture_output=True, timeout=10,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            if r.returncode != 0:
-                _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} reboot 返回 {r.returncode}: {r.stderr[:80]}")
-            _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} adb reboot -p 已发送")
-        except Exception as ex:
-            _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} adb reboot 失败: {ex}")
-    _t0 = time.time()
-    dl = time.time() + wait
-    _last_reboot = _t0
-    _reboot_count = 1
-    while time.time() < dl:
-        # 等待中重发 reboot（最多 3 次）— Android 关机信号可能因系统忙
-        # 丢失/延迟，干等到超时会触发兜底强关（弹窗）。每 wait//3 重发。
-        if time.time() - _last_reboot > wait // 3 and _reboot_count < 3:
-            _reboot_count += 1
-            _last_reboot = time.time()
-            if addr and adb_path:
-                try:
-                    subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                                   capture_output=True, timeout=10,
-                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 重发 reboot ({_reboot_count}/3)")
-                except Exception:
-                    pass
-        try:
-            r = subprocess.run([cli, "info", flag, str(emu_idx)],
-                               capture_output=True, text=True, timeout=5,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                               encoding="utf-8", errors="replace")
-            if r.returncode == 0:
-                d = json.loads(r.stdout.lstrip("\ufeff").strip())
-                # bool 防御：MuMuManager 错误返回（errcode≠0）无 is_* 字段
-                # → None → 误判"已退出"提前收尾（模拟器没关就返回）—
-                # 2026-08-10 与崩溃误判同源。
-                _pa = d.get("is_android_started"); _pp = d.get("is_process_started")
-                if isinstance(_pa, bool) and isinstance(_pp, bool) and not (_pa or _pp):
-                    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
-                    return True
-        except Exception:
-            pass
-        time.sleep(2)
-    # 超时后的最后确认：Android 已关（关机成功）但进程还在收尾 → 再等
-    # 30s（进程会自己退出），此时强关会弹"运行异常" — 只在进程真的还在
-    # 且 Android 还开着（关机失败）时才走 shutdown 兜底。
-    try:
-        r = subprocess.run([cli, "info", flag, str(emu_idx)],
-                           capture_output=True, text=True, timeout=5,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                           encoding="utf-8", errors="replace")
-        if r.returncode == 0:
-            d = json.loads(r.stdout.lstrip("\ufeff").strip())
-            # bool 防御同前：错误返回（key 缺失）不能触发"Android 已关"分支
-            # （否则误走兜底强关）— 无法确认时按"Android 仍在"保守兜底日志处理。
-            _pa = d.get("is_android_started"); _pp = d.get("is_process_started")
-            if isinstance(_pa, bool) and isinstance(_pp, bool) and not _pa and _pp:
-                _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} Android 已关机，等进程收尾 (最多 30s)")
-                _dl2 = time.time() + 30
-                while time.time() < _dl2:
-                    time.sleep(2)
-                    try:
-                        r2 = subprocess.run([cli, "info", flag, str(emu_idx)],
-                                            capture_output=True, text=True, timeout=5,
-                                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                                            encoding="utf-8", errors="replace")
-                        if r2.returncode == 0:
-                            d2 = json.loads(r2.stdout.lstrip("\ufeff").strip())
-                            if isinstance(d2.get("is_process_started"), bool) and not d2.get("is_process_started"):
-                                _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 进程已退出 ({int(time.time()-_t0)}s)")
-                                return True
-                    except Exception:
-                        pass
-                _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} 进程 30s 未收尾，shutdown 兜底")
-            else:
-                _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} 等待超时({wait}s) 且 Android 仍在，shutdown 兜底")
-    except Exception:
-        pass
-    try:
-        subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
-                       capture_output=True, timeout=15,
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底完成")
-        # 兜底后等进程真正退出（最多 60s）— shutdown 命令发出即返回，进程
-        # 退出需时间；不等的话回收 tick 看到 is_process_started=True →
-        # 二次关闭（2026-08-11 用户观察: 正常关闭后一段时间又关一次）。
-        _dl3 = time.time() + 60
-        while time.time() < _dl3:
-            try:
-                r3 = subprocess.run([cli, "info", flag, str(emu_idx)],
-                                    capture_output=True, text=True, timeout=5,
-                                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                                    encoding="utf-8", errors="replace")
-                if r3.returncode == 0:
-                    d3 = json.loads(r3.stdout.lstrip("\ufeff").strip())
-                    if isinstance(d3.get("is_process_started"), bool) and not d3.get("is_process_started"):
-                        _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 兜底后进程已退出 ({int(time.time()-_t0)}s)")
-                        break
-            except Exception:
-                pass
-            time.sleep(3)
-    except Exception as ex:
-        _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底失败: {ex}")
-    return True
+                          wait: int = 90, log=None) -> bool:
+    """转发到 emu_service.graceful_shutdown（统一实现，防并发二次关闭）。"""
+    from services.emu_service import graceful_shutdown
+    return graceful_shutdown(cli, emu_idx, adb_path, addr, wait,
+                             log=log or (lambda m: _QUEUE_LOG.info(m)))
 
 
 class LaunchQueue:
@@ -268,7 +109,6 @@ class LaunchQueue:
         self._active_emus_ts.clear()
         self._last_launch_time = 0
         self._tick_lock = threading.Lock()
-        self._system_started: dict = {}  # emu_idx → ts（MAAOrch 拉起的模拟器；回收只关这些）
         # Guard against duplicate _bg_tick threads
         if self._bg_tick_started:
             return
@@ -967,9 +807,8 @@ class LaunchQueue:
                 # 关闭冷却（5 分钟）— 刚被优雅关闭/回收关闭过的模拟器进程可能
                 # 还在退出，再次关闭=二次关闭（2026-08-11 用户观察: 正常关闭
                 # 后一段时间又关一次）。
-                with _graceful_glock:
-                    _rc = _recently_closed.get(str(idx), 0)
-                if _rc and time.time() - _rc < 300:
+                from services.emu_service import recently_closed as _rc_fn
+                if _rc_fn(idx):
                     _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (关闭冷却期内)")
                     continue
                 # 手动/API 启动保护期（10 分钟）— 用户手动开的模拟器（模拟器
@@ -984,9 +823,8 @@ class LaunchQueue:
                 # 优雅关闭进行中 → 跳过（回收的直接 shutdown 绕过 graceful 锁，
                 # 会与进行中的优雅关闭并发 → 二次关闭。2026-08-11 实测:
                 # 02:41:20 回收 shutdown 打断 02:40:53 的优雅关闭）。
-                with _graceful_glock:
-                    _glk = _graceful_locks.get(str(idx))
-                if _glk is not None and _glk.locked():
+                from services.emu_service import lock_busy as _lb_fn
+                if _lb_fn(idx):
                     _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (优雅关闭进行中)")
                     continue
                 # 排队中的账号保留模拟器（限时）— 降级回队列/失败重试的账号
@@ -1009,7 +847,8 @@ class LaunchQueue:
                 # 非系统启动的模拟器 = 用户在 MuMu 管理器手动开的 → 永不回收
                 # （系统只回收自己拉起的。2026-08-11 用户: 手动启动的模拟器
                 # 也被关掉 — 回收把用户手动开的当闲置关了）。
-                if str(idx) not in self._system_started:
+                from services.emu_service import is_system_started as _iss_fn
+                if not _iss_fn(idx):
                     _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (非系统启动，用户手动开的)")
                     continue
                 # MAA 进程还活着（降级优雅关闭中/账号过渡期）→ 保留模拟器 —
@@ -1030,13 +869,8 @@ class LaunchQueue:
                 # （adb -s 无 connect 直接失败，未检查返回值）→ 90s 超时 →
                 # shutdown 兜底强关 → 反而弹"运行异常"（2026-08-10 实测
                 # #13/#21/#28 100% 失败）。闲置场景直接关，不绕道。
-                try:
-                    subprocess.run([cli, "control", idx_flag, str(idx), "shutdown"],
-                                   capture_output=True, timeout=15,
-                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                    _QUEUE_LOG.info(f"[回收关闭] 模拟器#{idx} shutdown 完成（闲置无游戏，直接关）")
-                except Exception as ex:
-                    _QUEUE_LOG.warn(f"[回收关闭] 模拟器#{idx} shutdown 失败: {ex}")
+                from services.emu_service import direct_shutdown as _ds_fn
+                _ds_fn(cli, idx, idx_flag, log=lambda m: _QUEUE_LOG.info(m))
         except Exception as ex:
             _QUEUE_LOG.debug(f"空闲模拟器回收跳过: {ex}")
 

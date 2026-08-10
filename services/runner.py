@@ -587,9 +587,8 @@ class AccountRunner:
                     # （MuMu 管理器）不在记录 → 永不回收 — 2026-08-11 用户:
                     # 手动启动的模拟器也被关掉）
                     try:
-                        _lq2 = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
-                        if _lq2 is not None:
-                            _lq2._system_started[str(emu_idx)] = time.time()
+                        from services.emu_service import mark_system_started
+                        mark_system_started(emu_idx)
                     except Exception:
                         pass
                     try:
