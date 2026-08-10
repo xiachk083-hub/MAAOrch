@@ -980,6 +980,14 @@ class LaunchQueue:
                     if _t and time.time() - _t < 600:
                         _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (手动启动保护期内)")
                         continue
+                # 优雅关闭进行中 → 跳过（回收的直接 shutdown 绕过 graceful 锁，
+                # 会与进行中的优雅关闭并发 → 二次关闭。2026-08-11 实测:
+                # 02:41:20 回收 shutdown 打断 02:40:53 的优雅关闭）。
+                with _graceful_glock:
+                    _glk = _graceful_locks.get(str(idx))
+                if _glk is not None and _glk.locked():
+                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (优雅关闭进行中)")
+                    continue
                 # 排队中的账号保留模拟器（限时）— 降级回队列/失败重试的账号
                 # 马上要重新启动，回收会导致反复开关（2026-08-10 用户: 降级后
                 # 模拟器被关 → 又要重新拉起）。但长队列下"无条件保留"会让
