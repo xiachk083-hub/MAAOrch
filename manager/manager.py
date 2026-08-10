@@ -178,7 +178,7 @@ def start_project() -> tuple[bool, str]:
         return False, str(e)
 
 
-def stop_project() -> tuple[bool, str]:
+def stop_project(close_emulators: bool = False) -> tuple[bool, str]:
     running, pid = is_project_running()
     if running and pid:
         graceful_close(pid)
@@ -195,6 +195,19 @@ def stop_project() -> tuple[bool, str]:
         subprocess.run(["taskkill", "/F", "/IM", img],
                        capture_output=True, timeout=5,
                        creationflags=subprocess.CREATE_NO_WINDOW)
+    # 2026-08-10: 默认不再关闭模拟器 — 模拟器是独立资源（账号↔模拟器绑定
+    # 在 config 里不变），stop/start 项目是常规操作（部署/重启），关掉全部
+    # 模拟器 → start 后队列恢复立即启动账号 → MAA 连正在关机的模拟器 →
+    # ADB 失联风暴 + MuMu 崩溃报告弹窗（"运行异常"/"异常关闭"）。
+    # 确需全关时显式传 close_emulators=True（如整机维护）。
+    if not close_emulators:
+        log("保留模拟器运行（stop 默认不关模拟器）")
+        try:
+            if PID_FILE.exists():
+                PID_FILE.unlink()
+        except Exception:
+            pass
+        return True, "stopped (emulators kept)"
     # Close all emulators — the project is stopping; leaving emulators up
     # leaks RAM/CPU and the account↔emulator binding is lost anyway.
     # They get relaunched on demand by runner when the queue resumes.
@@ -739,7 +752,9 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = start_project()
             self._json(200 if ok else 500, {"ok": ok, "message": msg})
         elif path == "/api/stop":
-            ok, msg = stop_project()
+            # close_emulators: true 才关模拟器（默认保留 — 2026-08-10 修复
+            # 重启关模拟器导致 ADB 失联风暴 + MuMu 崩溃弹窗）
+            ok, msg = stop_project(bool(body.get("close_emulators", False)))
             self._json(200 if ok else 500, {"ok": ok, "message": msg})
         elif path == "/api/delete":
             ok, msg = delete_project(body.get("confirm", False))
