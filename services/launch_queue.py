@@ -939,15 +939,19 @@ class LaunchQueue:
                 # 马上要重新启动，回收会导致反复开关（2026-08-10 用户: 降级后
                 # 模拟器被关 → 又要重新拉起）。但长队列下"无条件保留"会让
                 # 闲置模拟器全开着（每台 2-4GB，卡机 — 2026-08-10 用户: 开
-                # 这么多多余的模拟器有点卡）→ 入队超过 5 分钟（排后面还早）
-                # 回收，轮到启动时 _launch_job_body 自动拉起。
+                # 这么多多余的模拟器有点卡）→ 入队超过 30 分钟（一轮任务+
+                # 重试周期内不回收；超 30 分钟 = 队列长期不动的遗留）才回收，
+                # 轮到启动时 _launch_job_body 自动拉起。
+                # ⚠️ 曾用 5 分钟 — 实测启动失败重试的账号（20s 间隔重试）
+                # 模拟器被回收 → 每次重试都冷启动 → 启动风暴 → 失联/挂起
+                # （2026-08-11 B 服轮: #22 被回收后 b-12/b-4 连环失败）。
                 if aid and any(e.account_id == aid for e in self._pending):
                     _recent = any(
-                        (datetime.now() - e.not_before).total_seconds() < 300
+                        (datetime.now() - e.not_before).total_seconds() < 1800
                         for e in self._pending if e.account_id == aid)
                     if _recent:
                         continue
-                    _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 5 分钟，回收省资源)")
+                    _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 30 分钟，回收省资源)")
                 # MAA 进程还活着（降级优雅关闭中/账号过渡期）→ 保留模拟器 —
                 # 否则关掉模拟器后 MAA 失联卡住，且进程活着不触发自动重启
                 # （用户: "MAA 还开着，模拟器自己关掉了，之后也没有重启"）。
