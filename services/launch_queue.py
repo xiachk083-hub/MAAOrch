@@ -841,11 +841,19 @@ class LaunchQueue:
                     if _t and time.time() - _t < 600:
                         _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (手动启动保护期内)")
                         continue
-                # 排队中的账号也保留模拟器 — 降级回队列/失败重试的账号马上要
-                # 重新启动，回收模拟器会导致反复开关（2026-08-10 用户: 降级后
-                # 模拟器被关 → 又要重新拉起）
+                # 排队中的账号保留模拟器（限时）— 降级回队列/失败重试的账号
+                # 马上要重新启动，回收会导致反复开关（2026-08-10 用户: 降级后
+                # 模拟器被关 → 又要重新拉起）。但长队列下"无条件保留"会让
+                # 闲置模拟器全开着（每台 2-4GB，卡机 — 2026-08-10 用户: 开
+                # 这么多多余的模拟器有点卡）→ 入队超过 5 分钟（排后面还早）
+                # 回收，轮到启动时 _launch_job_body 自动拉起。
                 if aid and any(e.account_id == aid for e in self._pending):
-                    continue
+                    _recent = any(
+                        (datetime.now() - e.not_before).total_seconds() < 300
+                        for e in self._pending if e.account_id == aid)
+                    if _recent:
+                        continue
+                    _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 5 分钟，回收省资源)")
                 # MAA 进程还活着（降级优雅关闭中/账号过渡期）→ 保留模拟器 —
                 # 否则关掉模拟器后 MAA 失联卡住，且进程活着不触发自动重启
                 # （用户: "MAA 还开着，模拟器自己关掉了，之后也没有重启"）。
