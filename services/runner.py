@@ -727,6 +727,19 @@ class AccountRunner:
             self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list}")
             self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
             self.emit_log(f"注入配置: {config_dir}/")
+            # 防孤儿 MAA: 启动等待期间（模拟器冷启动/ADB 探测）队列可能已释放
+            # 本账号标记（_clean_stale_emus/超时清理）— 此刻再 spawn 就是孤儿
+            # （进程活着但无人跟踪 → 占实例不释放 → 无空闲 MAA 实例连环）。
+            # 实测 2026-08-10: 9 个 MAA 活着但队列 active 只有 4。
+            try:
+                _lq = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
+                if _lq is not None and ac.get("emu_instance_index"):
+                    _occ = _lq._active_emus.get(str(ac.get("emu_instance_index")))
+                    if _occ != aid:
+                        self.emit_log(f"↩ {ac.get('name', aid)} 启动被队列取消（标记已释放），放弃 spawn")
+                        return
+            except Exception:
+                pass
             self._spawn_instance(exe, ac, inst_dir)
             try:
                 from models.account_state import AccountState
