@@ -71,6 +71,56 @@ DEFAULT_CONFIG = {
 }
 _lock = threading.Lock()
 _progress = {"state": "idle", "pct": 0, "message": ""}
+# ── 看门狗状态（进程级自愈）──
+_watchdog_expect = False  # start 置 True / stop 置 False（仅期望运行时拉起）
+_watchdog_hang = 0        # 端口不通连续次数（进程在但卡死判定）
+
+
+def _probe_project() -> bool:
+    """TCP 探测项目端口 19999（不依赖 API 鉴权 — 健康检查需要 token）。"""
+    import socket as _sock
+    try:
+        s = _sock.create_connection(("127.0.0.1", 19999), timeout=5)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+def _watchdog_loop() -> None:
+    """每 30s 探测项目：进程不在 → 拉起；进程在但端口持续不通 → 杀+重启。
+    2026-08-11: 项目进程崩溃/卡死（OOM/段错误）manager 无感知 → 系统静默
+    死亡。看门狗与开机自启闭环：期望运行时自动恢复。"""
+    global _watchdog_hang
+    while True:
+        time.sleep(30)
+        try:
+            if not _watchdog_expect:
+                _watchdog_hang = 0
+                continue
+            if _probe_project():
+                _watchdog_hang = 0
+                continue
+            running, pid = is_project_running()
+            _watchdog_hang += 1
+            if not running:
+                log(f"[看门狗] 项目未运行，自动拉起")
+                ok, msg = start_project()
+                log(f"[看门狗] 拉起结果: {msg}")
+            elif _watchdog_hang >= 3:
+                log(f"[看门狗] 项目进程 {pid} 存在但端口连续 {_watchdog_hang} 次不通（卡死），杀进程重启")
+                try:
+                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                                   capture_output=True, timeout=5,
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+                except Exception:
+                    pass
+                time.sleep(3)
+                ok, msg = start_project()
+                log(f"[看门狗] 重启结果: {msg}")
+                _watchdog_hang = 0
+        except Exception as e:
+            log(f"[看门狗] 异常: {e}")
 
 
 def log(msg: str) -> None:
@@ -192,6 +242,8 @@ def start_project() -> tuple[bool, str]:
         except Exception:
             pass
         log(f"已启动 MAAOrch: {main_py} (PID {proc.pid})")
+        global _watchdog_expect
+        _watchdog_expect = True
         return True, f"started (PID {proc.pid})"
     except Exception as e:
         log(f"启动失败: {e}")
@@ -227,6 +279,8 @@ def stop_project(close_emulators: bool = False) -> tuple[bool, str]:
                 PID_FILE.unlink()
         except Exception:
             pass
+        global _watchdog_expect
+        _watchdog_expect = False  # 手动停止 → 看门狗不拉起
         return True, "stopped (emulators kept)"
     # Close all emulators — the project is stopping; leaving emulators up
     # leaks RAM/CPU and the account↔emulator binding is lost anyway.
@@ -833,6 +887,8 @@ def main() -> None:
             log(f"自动启动项目: {msg}")
     except Exception as e:
         log(f"自动启动项目失败: {e}")
+    # 看门狗：进程级自愈（期望运行时自动拉起/重启卡死进程）
+    threading.Thread(target=_watchdog_loop, daemon=True, name="manager_watchdog").start()
     try:
         server = ThreadingHTTPServer((host, port), Handler)
         log(f"监听 {host}:{port}")
