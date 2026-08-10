@@ -816,7 +816,17 @@ class LaunchQueue:
                 if not info.get("is_process_started"):
                     continue
                 aid = emu2aid.get(str(idx))
-                if aid and aid in active_ids:
+                if aid is None:
+                    # 无账号映射 = 用户手动开的 / 别人的工作区（l- 系列）—
+                    # 一律不回收。此前无条件回收导致: 手动开的模拟器 30 秒后
+                    # 被关（2026-08-10 实测）、l- 系列（fz-maa）被误关（隔离
+                    # 只在 detect_emu_instances 过滤，回收用 info all 不过滤）。
+                    nm = str(info.get("name", ""))
+                    if any(nm.startswith(p) for p in ("l-", "碧蓝航线")):
+                        continue
+                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (无账号映射，保留)")
+                    continue
+                if aid in active_ids:
                     continue  # 在跑/排队/启动中 — 保留
                 # 排队中的账号也保留模拟器 — 降级回队列/失败重试的账号马上要
                 # 重新启动，回收模拟器会导致反复开关（2026-08-10 用户: 降级后
