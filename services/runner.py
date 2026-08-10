@@ -740,6 +740,13 @@ class AccountRunner:
                         return
             except Exception:
                 pass
+            # 防僵尸 MAA: cleanup 会移除 _procs 占位（_do_launch 写入的实例
+            # 目录字符串）— 若占位已不在（期间被清理过），再 spawn 就是无主
+            # 进程（cleanup 对字符串占位不杀进程 → MAA 活着没人管 →
+            # zombie_maa 累积占满实例 — 2026-08-10 实测 5 个僵尸）。
+            if self._procs.get(aid) is not inst_dir:
+                self.emit_log(f"↩ {ac.get('name', aid)} 启动已被清理（占位移除），放弃 spawn")
+                return
             self._spawn_instance(exe, ac, inst_dir)
             try:
                 from models.account_state import AccountState
