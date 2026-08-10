@@ -87,6 +87,24 @@ def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
 
 def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str) -> None:
     _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'}, wait={wait}s)")
+    # adb 端口实时获取：缓存 adb_address 在模拟器重启后会漂移（MuMu 12
+    # 端口+1），reboot 发到旧端口=没送达 → 30s 超时 → shutdown 兜底强关
+    # → MuMu 弹"运行异常"（2026-08-10 实测回收关闭连环弹窗）。
+    # MuMuManager info 返回的 adb_port 是实时真值，优先用它。
+    if adb_path:
+        try:
+            r = subprocess.run([cli, "info", flag, str(emu_idx)],
+                               capture_output=True, text=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                               encoding="utf-8", errors="replace")
+            if r.returncode == 0:
+                d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                port = d.get("adb_port")
+                if port:
+                    addr = f"127.0.0.1:{port}"
+                    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 实时 ADB 端口 {addr}")
+        except Exception:
+            pass
     if addr and adb_path:
         try:
             subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
