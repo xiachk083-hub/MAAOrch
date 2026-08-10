@@ -1642,7 +1642,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                     # 统一优雅关闭（adb reboot -p → 等退出 → 兜底）— 直接
                     # shutdown 留 VMM 残留 + 弹"运行异常"（2026-08-10）
                     from services.launch_queue import graceful_emu_shutdown
-                    graceful_emu_shutdown(cli, idx, *_emu_adb(idx), wait=20)
+                    graceful_emu_shutdown(cli, idx, *_emu_adb(idx), wait=60)
                     if action == "restart":
                         time.sleep(2)
                         subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)

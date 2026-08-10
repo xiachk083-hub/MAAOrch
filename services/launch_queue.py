@@ -60,13 +60,16 @@ _graceful_locks: dict = {}
 
 
 def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
-                          wait: int = 30) -> bool:
+                          wait: int = 90) -> bool:
     """统一模拟器关闭（唯一正常退出方式）— 2026-08-10 用户指出:
     直接 MuMuManager shutdown 是"错误退出"→ VMM 残留进程（进程在但无实例，
     占内存 — 曾见 17 个残留 VMMHeadless、CPU 3455%）。正常方式:
       1. adb shell reboot -p（Android 内优雅关机 → 模拟器自然退出，不留残留）
-      2. 轮询 MuMuManager 等待完全退出（最多 wait 秒）
-      3. MuMuManager shutdown 兜底（仅当 2 超时）
+      2. 轮询 MuMuManager 等待完全退出（最多 wait 秒；Android 关机在 50 台
+         多开负载下可能 60s+，30s 超时必然触发兜底 — 2026-08-10 用户指出）
+      3. 等待中重发 reboot（关机信号可能因系统忙丢失）
+      4. shutdown 兜底（仅当进程真的还在 — 兜底=强关会弹"运行异常"，
+         是最后手段不是正常路径）
     所有关闭模拟器的调用点必须走这里（回收/完成/recover/重启），统一退出。
 
     防并发重入：API 手动关闭与队列回收 tick 可能同时关同一台模拟器
@@ -115,7 +118,22 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
             _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} adb reboot 失败: {ex}")
     _t0 = time.time()
     dl = time.time() + wait
+    _last_reboot = _t0
+    _reboot_count = 1
     while time.time() < dl:
+        # 等待中重发 reboot（最多 3 次）— Android 关机信号可能因系统忙
+        # 丢失/延迟，干等到超时会触发兜底强关（弹窗）。每 wait//3 重发。
+        if time.time() - _last_reboot > wait // 3 and _reboot_count < 3:
+            _reboot_count += 1
+            _last_reboot = time.time()
+            if addr and adb_path:
+                try:
+                    subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
+                                   capture_output=True, timeout=10,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 重发 reboot ({_reboot_count}/3)")
+                except Exception:
+                    pass
         try:
             r = subprocess.run([cli, "info", flag, str(emu_idx)],
                                capture_output=True, text=True, timeout=5,
@@ -129,7 +147,38 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
         except Exception:
             pass
         time.sleep(2)
-    _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} 等待超时({wait}s)，shutdown 兜底")
+    # 超时后的最后确认：Android 已关（关机成功）但进程还在收尾 → 再等
+    # 30s（进程会自己退出），此时强关会弹"运行异常" — 只在进程真的还在
+    # 且 Android 还开着（关机失败）时才走 shutdown 兜底。
+    try:
+        r = subprocess.run([cli, "info", flag, str(emu_idx)],
+                           capture_output=True, text=True, timeout=5,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                           encoding="utf-8", errors="replace")
+        if r.returncode == 0:
+            d = json.loads(r.stdout.lstrip("\ufeff").strip())
+            if not d.get("is_android_started") and d.get("is_process_started"):
+                _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} Android 已关机，等进程收尾 (最多 30s)")
+                _dl2 = time.time() + 30
+                while time.time() < _dl2:
+                    time.sleep(2)
+                    try:
+                        r2 = subprocess.run([cli, "info", flag, str(emu_idx)],
+                                            capture_output=True, text=True, timeout=5,
+                                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                                            encoding="utf-8", errors="replace")
+                        if r2.returncode == 0:
+                            d2 = json.loads(r2.stdout.lstrip("\ufeff").strip())
+                            if not d2.get("is_process_started"):
+                                _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 进程已退出 ({int(time.time()-_t0)}s)")
+                                return True
+                    except Exception:
+                        pass
+                _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} 进程 30s 未收尾，shutdown 兜底")
+            else:
+                _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} 等待超时({wait}s) 且 Android 仍在，shutdown 兜底")
+    except Exception:
+        pass
     try:
         subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
                        capture_output=True, timeout=15,
