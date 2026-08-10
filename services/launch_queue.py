@@ -65,13 +65,16 @@ def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
     所有关闭模拟器的调用点必须走这里（回收/完成/recover/重启），统一退出。
     """
     flag = "-v" if "MuMuManager" in cli else "--vmindex"
+    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'}, wait={wait}s)")
     if addr and adb_path:
         try:
             subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
                            capture_output=True, timeout=10,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        except Exception:
-            pass
+            _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} adb reboot -p 已发送")
+        except Exception as ex:
+            _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} adb reboot 失败: {ex}")
+    _t0 = time.time()
     dl = time.time() + wait
     while time.time() < dl:
         try:
@@ -82,16 +85,19 @@ def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
             if r.returncode == 0:
                 d = json.loads(r.stdout.lstrip("\ufeff").strip())
                 if not (d.get("is_android_started") or d.get("is_process_started")):
+                    _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
                     return True
         except Exception:
             pass
         time.sleep(2)
+    _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} 等待超时({wait}s)，shutdown 兜底")
     try:
         subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
                        capture_output=True, timeout=15,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    except Exception:
-        pass
+        _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底完成")
+    except Exception as ex:
+        _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底失败: {ex}")
     return True
 
 

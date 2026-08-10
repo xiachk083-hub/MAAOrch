@@ -1523,6 +1523,20 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if str(ac.get("emu_instance_index", "")) == str(emu_idx):
                 runner.stop(aid)
 
+    def _emu_adb(emu_idx) -> tuple:
+        """该模拟器的 (adb_path, adb_address) — 优先正式账号配置，其次连接模式临时账号。"""
+        from infrastructure.task_constants import find_adb
+        for ac in (getattr(mw, "accounts", []) or []) + (getattr(mw, "connect_accounts", []) or []):
+            if str(ac.get("emu_instance_index", "")) == str(emu_idx):
+                if ac.get("adb_path") and ac.get("adb_address"):
+                    return ac["adb_path"], ac["adb_address"]
+        adb = ""
+        try:
+            adb = find_adb()
+        except Exception:
+            pass
+        return adb, ""
+
     def _wait_emu_stopped(cli: str, idx: str, timeout: int = 30) -> bool:
         """Poll MuMuManager info until the emulator fully exits (both process and android off)."""
         from infrastructure.task_constants import cli_flag
@@ -1573,17 +1587,20 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         for idx in targets:
             try:
                 if action == "start":
+                    mw._log(f"⏯ 批量启动模拟器 #{idx}")
                     subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
                 else:
+                    mw._log(f"⏹ 批量{action}模拟器 #{idx}")
                     _stop_maa_for_emu(idx)
                     time.sleep(2)
-                    subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"], timeout=15, creationflags=_CF)
+                    # 统一优雅关闭（adb reboot -p → 等退出 → 兜底）— 直接
+                    # shutdown 留 VMM 残留 + 弹"运行异常"（2026-08-10）
+                    from services.launch_queue import graceful_emu_shutdown
+                    graceful_emu_shutdown(cli, idx, *_emu_adb(idx), wait=20)
                     if action == "restart":
-                        _wait_emu_stopped(cli, idx)
                         time.sleep(2)
                         subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
                 done += 1
-                mw._log(f"⏯ 批量{action}模拟器 #{idx}")
             except Exception as ex:
                 mw._log(f"[批量{action}] #{idx} 失败: {ex}")
             time.sleep(1.5)
@@ -1596,22 +1613,36 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         cli = find_mumu_cli()
         if not cli:
             raise HTTPException(500, "mumu-cli not found")
-        if action == "start":
-            subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
-            return {"ok": True, "action": "started"}
-        elif action == "stop":
-            _stop_maa_for_emu(idx)
-            time.sleep(2)  # let MAA exit and release ADB before shutting down
-            subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"], timeout=15, creationflags=_CF)
-            return {"ok": True, "action": "stopped"}
-        elif action == "restart":
-            _stop_maa_for_emu(idx)
-            time.sleep(2)
-            subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"], timeout=15, creationflags=_CF)
-            _wait_emu_stopped(cli, idx)  # wait for full exit instead of fixed 3s
-            time.sleep(2)
-            subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
-            return {"ok": True, "action": "restarted"}
+        try:
+            if action == "start":
+                mw._log(f"⏯ 启动模拟器 #{idx}")
+                subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                _log_op("启动模拟器", f"#{idx}")
+                return {"ok": True, "action": "started"}
+            elif action == "stop":
+                mw._log(f"⏹ 关闭模拟器 #{idx}")
+                _stop_maa_for_emu(idx)
+                time.sleep(2)  # let MAA exit and release ADB before shutting down
+                # 统一优雅关闭（adb reboot -p → 等退出 → shutdown 兜底）—
+                # 直接 shutdown 留 VMM 残留 + 弹"运行异常"（2026-08-10）
+                from services.launch_queue import graceful_emu_shutdown
+                graceful_emu_shutdown(cli, idx, *_emu_adb(idx))
+                _log_op("关闭模拟器", f"#{idx}")
+                return {"ok": True, "action": "stopped"}
+            elif action == "restart":
+                mw._log(f"🔄 重启模拟器 #{idx}")
+                _stop_maa_for_emu(idx)
+                time.sleep(2)
+                from services.launch_queue import graceful_emu_shutdown
+                graceful_emu_shutdown(cli, idx, *_emu_adb(idx))  # 内置等待完全退出
+                time.sleep(2)
+                subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                _log_op("重启模拟器", f"#{idx}")
+                return {"ok": True, "action": "restarted"}
+        except Exception as ex:
+            mw._log(f"[模拟器{action}] #{idx} 失败: {ex}")
+            _log_op(f"模拟器{action}失败", f"#{idx}: {ex}")
+            raise HTTPException(500, str(ex))
         raise HTTPException(400, "bad action")
 
     @app.post("/api/system/close_popups")
