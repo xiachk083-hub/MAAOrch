@@ -155,9 +155,10 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
     dl = time.time() + wait
     _last_reboot = _t0
     _reboot_count = 1
+    _last_state_change = _t0  # 模拟器状态最后一次变化（Android 开始关机也算动静）
     while time.time() < dl:
-        # 等待中重发 reboot（最多 3 次）— 关机信号可能因系统忙丢失
-        if time.time() - _last_reboot > wait // 3 and _reboot_count < 3:
+        # 重发 reboot（20s 无动静时再发一次，最多 2 次）
+        if time.time() - _last_reboot > 20 and _reboot_count < 2:
             _reboot_count += 1
             _last_reboot = time.time()
             if addr and adb_path:
@@ -165,7 +166,7 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
                     subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
                                    capture_output=True, timeout=10, creationflags=_CF)
                     if log:
-                        log(f"[优雅关闭] 模拟器#{emu_idx} 重发 reboot ({_reboot_count}/3)")
+                        log(f"[优雅关闭] 模拟器#{emu_idx} 重发 reboot (2/2)")
                 except Exception:
                     pass
         try:
@@ -179,6 +180,15 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
                     if log:
                         log(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
                     return True
+                elif st is True:
+                    # reboot 后 40s 状态无变化（Android 无响应/关机卡死）→
+                    # 直接降级 MuMuManager shutdown（正常关闭方式，不依赖
+                    # Android 响应）。此前干等 90s 才兜底 — 2026-08-11 用户:
+                    # 正常关闭就是连 ADB 后指令关掉，reboot 无效不该干等。
+                    if time.time() - _last_state_change > 40:
+                        if log:
+                            log(f"[优雅关闭] 模拟器#{emu_idx} reboot 后 40s 状态无变化（Android 无响应），降级 shutdown")
+                        break
         except Exception:
             pass
         time.sleep(2)
