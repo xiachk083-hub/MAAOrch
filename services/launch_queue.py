@@ -13,6 +13,7 @@ import subprocess
 import json
 import re
 import os
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 import threading
@@ -54,6 +55,10 @@ def _mumu_manager_cli(accounts: list | None = None) -> str | None:
     return None
 
 
+_graceful_glock = threading.Lock()
+_graceful_locks: dict = {}
+
+
 def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
                           wait: int = 30) -> bool:
     """统一模拟器关闭（唯一正常退出方式）— 2026-08-10 用户指出:
@@ -63,8 +68,24 @@ def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
       2. 轮询 MuMuManager 等待完全退出（最多 wait 秒）
       3. MuMuManager shutdown 兜底（仅当 2 超时）
     所有关闭模拟器的调用点必须走这里（回收/完成/recover/重启），统一退出。
+
+    防并发重入：API 手动关闭与队列回收 tick 可能同时关同一台模拟器
+    （2026-08-10 实测双 graceful）→ 按模拟器非阻塞锁，已有关闭进行中则跳过。
     """
     flag = "-v" if "MuMuManager" in cli else "--vmindex"
+    with _graceful_glock:
+        _lk = _graceful_locks.setdefault(str(emu_idx), threading.Lock())
+    if not _lk.acquire(blocking=False):
+        _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 已有关闭进行中，跳过")
+        return True
+    try:
+        _graceful_body(cli, emu_idx, adb_path, addr, wait, flag)
+    finally:
+        _lk.release()
+    return True
+
+
+def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str) -> None:
     _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'}, wait={wait}s)")
     if addr and adb_path:
         try:
