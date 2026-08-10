@@ -110,9 +110,18 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
             pass
     if addr and adb_path:
         try:
-            subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
+            # 先 adb connect：模拟器可能不在 adb server 设备列表（闲置/刚
+            # 重启），-s 直连会 device not found（reboot 未送达 → 90s 超时
+            # → 兜底强关弹窗 — 2026-08-10 实测）。
+            subprocess.run([adb_path, "connect", addr],
                            capture_output=True, timeout=10,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            time.sleep(1)
+            r = subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
+                               capture_output=True, timeout=10,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if r.returncode != 0:
+                _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} reboot 返回 {r.returncode}: {r.stderr[:80]}")
             _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} adb reboot -p 已发送")
         except Exception as ex:
             _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} adb reboot 失败: {ex}")
@@ -950,16 +959,20 @@ class LaunchQueue:
                     except Exception:
                         pass
                 _QUEUE_LOG.info(f"回收空闲模拟器 #{idx} (无运行任务)")
-                # 统一优雅关闭（adb reboot -p → 等退出 → shutdown 兜底）—
-                # 直接 shutdown 会留 VMM 残留（用户 2026-08-10: 必须解决错误关闭）
-                _adb_path = ""
-                _addr = ""
-                if aid:
-                    _ac2 = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
-                    if _ac2:
-                        _adb_path = _ac2.get("adb_path", "")
-                        _addr = _ac2.get("adb_address", "")
-                graceful_emu_shutdown(cli, idx, _adb_path, _addr)
+                # 闲置模拟器 = 无 MAA/无任务 = 无游戏在跑 → 直接 MuMuManager
+                # shutdown 是正常关闭（用户手动关闭模拟器就是它），不会弹
+                # MuMu 崩溃报告（崩溃报告只在"游戏运行中被关"时出现）。
+                # 此前用 adb reboot 流程：闲置模拟器不在 adb server 设备列表
+                # （adb -s 无 connect 直接失败，未检查返回值）→ 90s 超时 →
+                # shutdown 兜底强关 → 反而弹"运行异常"（2026-08-10 实测
+                # #13/#21/#28 100% 失败）。闲置场景直接关，不绕道。
+                try:
+                    subprocess.run([cli, "control", flag, str(idx), "shutdown"],
+                                   capture_output=True, timeout=15,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    _QUEUE_LOG.info(f"[回收关闭] 模拟器#{idx} shutdown 完成（闲置无游戏，直接关）")
+                except Exception as ex:
+                    _QUEUE_LOG.warn(f"[回收关闭] 模拟器#{idx} shutdown 失败: {ex}")
         except Exception as ex:
             _QUEUE_LOG.debug(f"空闲模拟器回收跳过: {ex}")
 
