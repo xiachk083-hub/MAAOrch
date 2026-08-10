@@ -142,6 +142,7 @@ class AccountRunner:
         self._adb_restart_count: dict[str, int] = {}
         self._adb_check_ts: float = 0.0
         self._done_flags: dict[str, bool] = {}  # 完成检测标记（归 0 竞态防护）
+        self._watchers: dict = {}  # aid → LogWatcher（日志事件流）
         self._emu_fail_count: dict[str, int] = {}
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
@@ -997,6 +998,14 @@ class AccountRunner:
             # Direct cleanup — QTimer.singleShot from daemon threads may not fire
             self._on_process_exit(aid, p)
         _th.Thread(target=_wait_exit, daemon=True).start()
+        # 日志监控线程（事件驱动完成/失败检测 — 2026-08-11 P1 替代 5s 轮询）
+        try:
+            from services.log_watcher import LogWatcher
+            _w = LogWatcher(inst_dir, aid, self._on_log_event, name=ac.get("name", aid))
+            _w.start()
+            self._watchers[aid] = _w
+        except Exception:
+            pass
         # 启动后窗口检查（独立线程，不阻塞）— MAA 配置崩溃时 asst.log 为空，
         # 窗口标题（{{ ErrorCongratulations }} / JsonReaderException）是唯一
         # 诊断线索（2026-08-10 配置崩溃事故：日志全空只有窗口能看出来）。
@@ -1034,6 +1043,62 @@ class AccountRunner:
                 self._log.warn(f"[MAA窗口] {name} 共 {len(found)} 个异常窗口 — 启动/配置异常，asst.log 可能为空")
         except Exception:
             pass
+
+    def _finish_completed(self, aid: str, ac: dict, p) -> None:
+        """完成收尾（AllTasksCompleted）— 轮询检测与 LogWatcher 事件共用。
+        完成标记 _done_flags 防 _wait_exit 抢先 cleanup 的竞态（2026-08-11）。
+        """
+        try:
+            self._done_flags[aid] = True
+        except Exception:
+            pass
+        self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+        tasks, sanity, drops = self._parse_log(aid)
+        _cur = (sanity or {}).get("current")
+        _mx = (sanity or {}).get("max") or 1
+        _stop_threshold = int(ac.get("stop_sanity_pct", 30) or 30)
+        _done_pct = (_cur / _mx * 100) if _cur is not None else 0
+        _final = _done_pct <= _stop_threshold
+        try:
+            p.terminate()
+            p.wait(3)
+        except Exception:
+            pass
+        self._cleanup(aid, 0, tasks, sanity, drops)
+        if not _final and not ac.get("_connect_only"):
+            try:
+                mw = getattr(self.ctx, "_mw", None)
+                lq = getattr(mw, "launch_queue", None)
+                if lq is not None and ac.get("emu_instance_index"):
+                    self.emit_log(f"↻ {ac.get('name', aid)} 一轮完成（体力 {_done_pct:.0f}%），自动续跑")
+                    lq.enqueue(aid, "auto", priority=0, slot=ac.get("_slot", ""))
+                    lq.tick()
+            except Exception:
+                pass
+
+    def _on_log_event(self, event: str, aid: str, line: str) -> None:
+        """LogWatcher 事件回调（事件驱动，<0.2s 响应 — 2026-08-11 P1）。"""
+        if event == "completed":
+            ac = self._active.get(aid)
+            p = self._procs.get(aid)
+            if not ac or not isinstance(p, subprocess.Popen) or p.poll() is not None:
+                return  # 已清理/已结束 — 防重复触发
+            self._finish_completed(aid, ac, p)
+        elif event == "battle_failed":
+            # 作战失败降级触发（FightMissionFailed）— 与 _check_one 的判定
+            # 共用防重（_downgrading 标志）
+            ac = self._active.get(aid)
+            p = self._procs.get(aid)
+            if not ac or not isinstance(p, subprocess.Popen):
+                return
+            if (ac.get("_stage_fallback") and aid not in self._stopping
+                    and not self._downgrading.get(aid)):
+                try:
+                    self._downgrading[aid] = True
+                    self._downgrade_stage(aid, ac, p)
+                finally:
+                    self._downgrading.pop(aid, None)
+        # exceeded: 重试耗尽 — 由 _check_one 的 ExceededLimit 判定处理（暂不迁移）
 
     def _on_process_exit(self, aid: str, p: subprocess.Popen) -> None:
         # Re-entrancy guard: only the CURRENT process object may clean up.
@@ -1270,39 +1335,7 @@ class AccountRunner:
                             new_content = _f.read(current_size - last_pos)
                         self._log_positions[aid] = current_size
                         if "AllTasksCompleted" in new_content:
-                            self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
-                            # 完成标记：terminate 后 _wait_exit 可能抢先 cleanup
-                            # （rc=1 未归 0）→ 完成变异常退出（2026-08-11 b-2/b-9）
-                            try:
-                                self._done_flags[aid] = True
-                            except Exception:
-                                pass
-                            tasks, sanity, drops = self._parse_log(aid)
-                            # 完成判定 + 自动续跑: MAA 做完一轮（AllTasksCompleted）
-                            # 但体力还没清空（>30%）→ 自动重新入队继续清；体力清空
-                            # → 结束。用户 2026-08-10: "失败了就不在队伍里" — 完成
-                            # 也应自动续（直到体力清完）。
-                            _cur = (sanity or {}).get("current")
-                            _mx = (sanity or {}).get("max") or 1
-                            _stop_threshold = int(ac.get("stop_sanity_pct", 30) or 30)
-                            _done_pct = (_cur / _mx * 100) if _cur is not None else 0
-                            _final = _done_pct <= _stop_threshold
-                            try:
-                                p.terminate()
-                                p.wait(3)
-                            except Exception:
-                                pass
-                            self._cleanup(aid, 0, tasks, sanity, drops)
-                            if not _final and not ac.get("_connect_only"):
-                                try:
-                                    mw = getattr(self.ctx, "_mw", None)
-                                    lq = getattr(mw, "launch_queue", None)
-                                    if lq is not None and ac.get("emu_instance_index"):
-                                        self.emit_log(f"↻ {ac.get('name', aid)} 一轮完成（体力 {_done_pct:.0f}%），自动续跑")
-                                        lq.enqueue(aid, "auto", priority=0, slot=ac.get("_slot", ""))
-                                        lq.tick()
-                                except Exception:
-                                    pass
+                            self._finish_completed(aid, ac, p)
                             return
                         # Battle FAILURE downgrade: agent battle lost repeatedly
                         # (FightMissionFailed / PrtsErrorConfirm in asst.log) —
@@ -1792,6 +1825,13 @@ class AccountRunner:
 
     def _cleanup(self, aid: str, exit_code: int, tasks: list[dict], sanity: dict | None = None, drops: dict | None = None) -> None:
         self._inst_reserved.pop(aid, None)
+        # 停止日志监控线程
+        try:
+            _w = self._watchers.pop(aid, None)
+            if _w:
+                _w.stop()
+        except Exception:
+            pass
         ac = self._active.pop(aid, None)
         old_procs = self._procs.pop(aid, None)
         if old_procs and not isinstance(old_procs, str):
