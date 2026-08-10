@@ -1811,6 +1811,25 @@ class AccountRunner:
                         pass
             if saved:
                 self._log.info(f"[归档] {aid} MAA 日志 → logs/maa_history/{aid}/{ts}_*.log")
+            # 运行级样本（2026-08-11 用户）: 归档同时生成结构化摘要 —
+            # 该次运行的关键事件/结果，供训练与"日志模式→动作"规则提炼。
+            try:
+                import json as _j2
+                _sdir = Path(__file__).parent.parent / "logs" / "log_samples"
+                _sdir.mkdir(parents=True, exist_ok=True)
+                _summary = {"ts": ts, "aid": aid[:8], "events": []}
+                _al = dbg / "asst.log"
+                if _al.exists():
+                    for _ln in _al.read_text(encoding="utf-8", errors="replace").splitlines():
+                        _t = _ln.strip()
+                        if any(k in _t for k in ("AllTasksCompleted", "TaskChainCompleted",
+                                                 "FightMissionFailed", "PrtsErrorConfirm",
+                                                 "ExceededLimit", "FightBegin", "SanityBeforeStage")):
+                            _summary["events"].append(_t[:300])
+                with open(_sdir / f"{aid[:8]}.jsonl", "a", encoding="utf-8") as _f:
+                    _f.write(_j2.dumps(_summary, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
             # Retention: keep newest 30 runs per account, drop the oldest
             runs = sorted(hist.glob("*.log"))
             while len(runs) > 60:  # 30 runs × 2 files

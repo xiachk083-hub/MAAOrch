@@ -8,11 +8,35 @@ _check_one 的 5s 增量轮询；消除增量位置跨线程共享的竞态）�
 - completed    AllTasksCompleted（任务链全部完成）
 - battle_failed FightMissionFailed / PrtsErrorConfirm（作战失败 → 降级）
 - exceeded     ExceededLimit（重试耗尽）
+
+日志样本收集（2026-08-11 用户）：
+每次事件触发时把「事件 + 原始行 + 上下文」追加到 logs/log_samples/*.jsonl
+— 现场真实日志样本，供后续训练/日志模式→动作映射规则提炼。
 """
 from __future__ import annotations
+import json
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
+
+_SAMPLES_DIR = Path(__file__).parent.parent / "logs" / "log_samples"
+
+
+def _record_event(aid: str, event_type: str, line: str) -> None:
+    """事件样本落盘（jsonl 追加，供训练/规则提炼）。"""
+    try:
+        _SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "aid": aid[:8],
+            "event": event_type,
+            "line": line.strip()[:400],
+        }
+        with open(_SAMPLES_DIR / f"{aid[:8]}.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
 
 class LogWatcher(threading.Thread):
@@ -71,10 +95,13 @@ class LogWatcher(threading.Thread):
     def _dispatch(self, line: str) -> None:
         try:
             if "AllTasksCompleted" in line:
+                _record_event(self._aid, "completed", line)
                 self._on_event("completed", self._aid, line)
             elif "FightMissionFailed" in line or "PrtsErrorConfirm" in line:
+                _record_event(self._aid, "battle_failed", line)
                 self._on_event("battle_failed", self._aid, line)
             elif "ExceededLimit" in line:
+                _record_event(self._aid, "exceeded", line)
                 self._on_event("exceeded", self._aid, line)
         except Exception:
             pass
