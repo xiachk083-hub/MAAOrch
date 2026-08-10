@@ -817,6 +817,51 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         from services.runtime_health import check_health
         return check_health(mw)
 
+    @app.get("/api/debug/state")
+    def handle_debug_state():
+        """内部状态快照（排障用）— 全部运行状态一眼可见，aid 脱敏前缀。
+        2026-08-11: 问题定位从 grep 日志猜状态 → 直接看状态。"""
+        def _m(aid):
+            return aid[:8] if isinstance(aid, str) else aid
+        out = {}
+        try:
+            lq = _lq()
+            runner = _runner()
+            out["queue"] = {
+                "paused": lq._paused,
+                "pending": [{"aid": _m(e.account_id), "prio": e.sort_key[0], "at": str(e.not_before)[11:19]}
+                            for e in list(lq._pending)[:20]],
+                "pending_count": len(lq._pending),
+                "active_emus": {k: _m(v) for k, v in list(lq._active_emus.items())[:20]},
+                "active_emus_ts": {k: round(v, 0) for k, v in list(lq._active_emus_ts.items())[:20]},
+                "system_started": {k: time.strftime("%H:%M:%S", time.localtime(v))
+                                   for k, v in list(lq._system_started.items())[:20]},
+            }
+        except Exception as e:
+            out["queue"] = f"err {e}"
+        try:
+            out["runner"] = {
+                "active": {_m(k): v.get("name", "?") for k, v in list(runner._active.items())[:20]},
+                "procs": {_m(k): (getattr(p, "pid", None) if not isinstance(p, str) else "占位")
+                          for k, p in list(runner._procs.items())[:20]},
+                "inst_reserved": {_m(k): v for k, v in list(runner._inst_reserved.items())[:20]},
+                "done_flags": {_m(k): v for k, v in list(runner._done_flags.items())[:10]},
+                "adb_fail": {_m(k): v for k, v in list(runner._adb_fail_count.items())[:10]},
+                "stopping": [_m(x) for x in list(runner._stopping)[:10]],
+            }
+        except Exception as e:
+            out["runner"] = f"err {e}"
+        try:
+            from services.launch_queue import _recently_closed, _graceful_locks
+            out["closing"] = {
+                "recently_closed": {k: time.strftime("%H:%M:%S", time.localtime(v))
+                                    for k, v in list(_recently_closed.items())[:20]},
+                "graceful_locked": [k for k, v in list(_graceful_locks.items()) if v.locked()][:10],
+            }
+        except Exception as e:
+            out["closing"] = f"err {e}"
+        return out
+
     @app.get("/api/queue")
     def handle_queue_status():
         lq = _lq()
