@@ -155,20 +155,9 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
     dl = time.time() + wait
     _last_reboot = _t0
     _reboot_count = 1
-    _last_state_change = _t0  # 模拟器状态最后一次变化（Android 开始关机也算动静）
+    _prev_st = None        # 上一次状态（检测"动静"=状态变化）
+    _last_state_change = _t0  # 状态最后一次变化时间
     while time.time() < dl:
-        # 重发 reboot（20s 无动静时再发一次，最多 2 次）
-        if time.time() - _last_reboot > 20 and _reboot_count < 2:
-            _reboot_count += 1
-            _last_reboot = time.time()
-            if addr and adb_path:
-                try:
-                    subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                                   capture_output=True, timeout=10, creationflags=_CF)
-                    if log:
-                        log(f"[优雅关闭] 模拟器#{emu_idx} 重发 reboot (2/2)")
-                except Exception:
-                    pass
         try:
             r = subprocess.run([cli, "info", flag, str(emu_idx)],
                                capture_output=True, text=True, timeout=5,
@@ -176,19 +165,35 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
             if r.returncode == 0:
                 d = json.loads(r.stdout.lstrip("\ufeff").strip())
                 st = is_alive(d)
-                if st is False:
-                    if log:
-                        log(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
-                    return True
-                elif st is True:
-                    # reboot 后 40s 状态无变化（Android 无响应/关机卡死）→
-                    # 直接降级 MuMuManager shutdown（正常关闭方式，不依赖
-                    # Android 响应）。此前干等 90s 才兜底 — 2026-08-11 用户:
-                    # 正常关闭就是连 ADB 后指令关掉，reboot 无效不该干等。
-                    if time.time() - _last_state_change > 40:
+                if st is not None:
+                    if st != _prev_st:
+                        # 状态变化 = 有动静（Android 开始关机/进程开始退出）
+                        _prev_st = st
+                        _last_state_change = time.time()
                         if log:
-                            log(f"[优雅关闭] 模拟器#{emu_idx} reboot 后 40s 状态无变化（Android 无响应），降级 shutdown")
-                        break
+                            log(f"[优雅关闭] 模拟器#{emu_idx} 状态变化 → {st}")
+                        if st is False:
+                            if log:
+                                log(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
+                            return True
+                    elif st is True:
+                        # 重发：20s 无动静（状态一直没变）→ 再发一次 reboot
+                        if time.time() - _last_state_change > 20 and _reboot_count < 2:
+                            _reboot_count += 1
+                            _last_reboot = time.time()
+                            if addr and adb_path:
+                                try:
+                                    subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
+                                                   capture_output=True, timeout=10, creationflags=_CF)
+                                    if log:
+                                        log(f"[优雅关闭] 模拟器#{emu_idx} 20s 无动静，重发 reboot (2/2)")
+                                except Exception:
+                                    pass
+                        # 降级：40s 无动静（重发后仍无响应）→ MuMuManager shutdown
+                        if time.time() - _last_state_change > 40:
+                            if log:
+                                log(f"[优雅关闭] 模拟器#{emu_idx} 40s 状态无变化（Android 无响应），降级 shutdown")
+                            break
         except Exception:
             pass
         time.sleep(2)
