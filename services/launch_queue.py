@@ -771,6 +771,15 @@ class LaunchQueue:
                 ei = a.get("emu_instance_index", "")
                 if ei:
                     emu2aid[str(ei)] = a["id"]
+            # 连接模式临时账号（内存 mw.connect_accounts，不在 ctx.accounts）—
+            # 不补进来则 aid=None → 跳过下方全部保护 → 连接页手动操作的模拟器
+            # 被回收误关（MAA 还活着但映射不到 aid — 用户: "MAA 还开着，
+            # 模拟器自己关掉了"）。正式账号优先（setdefault 不覆盖）。
+            _conn = getattr(getattr(self.ctx, "_mw", None), "connect_accounts", None) or []
+            for a in _conn:
+                ei = a.get("emu_instance_index", "")
+                if ei:
+                    emu2aid.setdefault(str(ei), a["id"])
             r = subprocess.run([cli, "info", idx_flag, "all"],
                                capture_output=True, text=True, timeout=8,
                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
