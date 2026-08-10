@@ -642,18 +642,31 @@ class AccountRunner:
                             self.emit_log(f"端口漂移修复: 模拟器 #{emu_idx} → {new_addr}")
                         addr = ac.get("adb_address", "")
                 self.emit_log(f"等待 Android 开机完成...")
-                while time.time() < deadline:
+                # boot_completed 独立等待（不 share 端口探测的 deadline）—
+                # 模拟器冷启动在 50 台多开负载下 boot 可能 60-120s。MAA 必须
+                # 在 Android 完全启动后 spawn，否则连半启动系统 → 连接失败/
+                # 失联/假画面空转（2026-08-11 用户指出: MAA 应在模拟器完全
+                # 启动后再启动）。
+                _boot_dl = time.time() + int(ac.get("boot_wait", 90))
+                _booted = False
+                while time.time() < _boot_dl:
                     try:
                         r = subprocess.run([adb, "-s", addr, "shell", "getprop", "sys.boot_completed"],
                                           capture_output=True, timeout=5, creationflags=CF,
                                           encoding="utf-8", errors="replace")
                         if r.returncode == 0 and r.stdout.strip() == "1":
                             self.emit_log(f"Android 开机完成")
+                            _booted = True
                             break
-                    except: pass
+                    except Exception:
+                        pass
                     time.sleep(2)
-                else:
-                    self.emit_log(f"警告: Android 开机超时")
+                if not _booted:
+                    # boot 未完成 → 放弃本次启动（同超时路径: 清理标记 →
+                    # 队列重试）。绝不带半启动系统 spawn MAA。
+                    self.emit_log(f"⚠️ Android 开机超时（{int(ac.get('boot_wait', 90))}s），放弃本次启动")
+                    self._cleanup(aid, -2, [])
+                    return
 
         if _check_deadline("ADB连接"):
             return
