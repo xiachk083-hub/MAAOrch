@@ -140,6 +140,7 @@ class AccountRunner:
         self._log_handles: dict[str, Any] = {}
         self._adb_fail_count: dict[str, int] = {}
         self._adb_restart_count: dict[str, int] = {}
+        self._adb_check_ts: float = 0.0
         self._emu_fail_count: dict[str, int] = {}
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
@@ -1452,24 +1453,42 @@ class AccountRunner:
                         except: pass
                         self._cleanup(aid, -3, tasks)
                         return
-            # ADB keepalive — log only, don't kill MAA
+            # ADB keepalive — log only, don't kill MAA。
+            # ⚠️ 原实现每 5s 逐账号 `adb -s <addr> shell echo ping` — adb server
+            # 是串行的，10 台并发 ping + MAA 自身操作 → server 排队超时（3s）
+            # → 误报"ADB 失联" + connect 重连干扰 MAA 连接 → MAA 连接抖动
+            # 退出（2026-08-11 B 服轮: 10 台同时失联误报 + 多个 ADB 关机）。
+            # 改: 每 30s 一次 `adb devices` 批量检查（1 次调用查全部设备），
+            # 不在设备列表才计数/重连。
             ac = self._active.get(aid)
-            if ac:
-                addr = ac.get("adb_address", "")
-                adb_path = ac.get("adb_path", "") or "adb"
-                if addr:
-                    try:
-                        r = subprocess.run([adb_path, "-s", addr, "shell", "echo", "ping"],
-                                          capture_output=True, timeout=3, creationflags=CF)
-                        if r.returncode == 0:
-                            self._adb_fail_count.pop(aid, None)
-                        else:
-                            fail = self._adb_fail_count.get(aid, 0) + 1
-                            self._adb_fail_count[aid] = fail
-                            subprocess.run([adb_path, "connect", addr], capture_output=True, timeout=3, creationflags=CF)
-                            if fail >= 3 and fail % 3 == 0:
-                                self.emit_log(f"[ADB] {ac.get('name', aid)} ADB 失联第 {fail} 次")
-                    except: pass
+            if ac and time.time() - self._adb_check_ts > 30:
+                self._adb_check_ts = time.time()
+                try:
+                    from infrastructure.task_constants import find_adb
+                    adb_path = find_adb() or "adb"
+                except Exception:
+                    adb_path = "adb"
+                try:
+                    r = subprocess.run([adb_path, "devices"], capture_output=True,
+                                       timeout=5, creationflags=CF, encoding="utf-8", errors="replace")
+                    known = {l.split()[0] for l in r.stdout.splitlines()[1:]
+                             if l.strip() and "device" in l and "offline" not in l}
+                except Exception:
+                    known = set()
+                for _aid in list(self._active.keys()):
+                    _ac = self._active.get(_aid)
+                    _addr = (_ac or {}).get("adb_address", "")
+                    if not _addr:
+                        continue
+                    if _addr in known:
+                        self._adb_fail_count.pop(_aid, None)
+                    else:
+                        fail = self._adb_fail_count.get(_aid, 0) + 1
+                        self._adb_fail_count[_aid] = fail
+                        subprocess.run([adb_path, "connect", _addr], capture_output=True,
+                                       timeout=3, creationflags=CF)
+                        if fail >= 3 and fail % 3 == 0:
+                            self.emit_log(f"[ADB] {(_ac or {}).get('name', _aid)} ADB 失联第 {fail} 次")
 
     def _update_status(self, aid: str) -> None:
         """Read asst.log tail for current task name."""
