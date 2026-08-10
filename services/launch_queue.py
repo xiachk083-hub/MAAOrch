@@ -748,6 +748,12 @@ class LaunchQueue:
         now = time.time()
         for emu_idx, aid in list(self._active_emus.items()):
             ts = self._active_emus_ts.get(emu_idx, 0)
+            # 启动宽限：MAA 在 Android boot 完成后才 spawn（boot_wait 90s）—
+            # 宽限期内 real=False（MAA 未 spawn）是正常等待，不是死标记。
+            # 此前无宽限 → 每 5s 释放启动标记 → 队列循环（pending 永远不动，
+            # 2026-08-11 实测：launch 后 1s 标记被释放，原地踏步）。
+            if ts and time.time() - ts < 100:
+                continue
             real = runner._has_real_process(aid)
             # `real` only checks the MAA process — an emulator that crashed
             # (VMMHeadless gone) leaves MAA alive but useless (ADB lost).
