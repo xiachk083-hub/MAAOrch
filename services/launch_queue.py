@@ -57,6 +57,7 @@ def _mumu_manager_cli(accounts: list | None = None) -> str | None:
 
 _graceful_glock = threading.Lock()
 _graceful_locks: dict = {}
+_recently_closed: dict = {}  # emu_idx -> 关闭时间（回收冷却，防二次关闭）
 
 
 def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
@@ -84,6 +85,9 @@ def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
     try:
         _graceful_body(cli, emu_idx, adb_path, addr, wait, flag)
     finally:
+        # 关闭冷却记录（回收跳过，防二次关闭）
+        with _graceful_glock:
+            _recently_closed[str(emu_idx)] = time.time()
         _lk.release()
     return True
 
@@ -200,6 +204,24 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
                        capture_output=True, timeout=15,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底完成")
+        # 兜底后等进程真正退出（最多 60s）— shutdown 命令发出即返回，进程
+        # 退出需时间；不等的话回收 tick 看到 is_process_started=True →
+        # 二次关闭（2026-08-11 用户观察: 正常关闭后一段时间又关一次）。
+        _dl3 = time.time() + 60
+        while time.time() < _dl3:
+            try:
+                r3 = subprocess.run([cli, "info", flag, str(emu_idx)],
+                                    capture_output=True, text=True, timeout=5,
+                                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                                    encoding="utf-8", errors="replace")
+                if r3.returncode == 0:
+                    d3 = json.loads(r3.stdout.lstrip("\ufeff").strip())
+                    if isinstance(d3.get("is_process_started"), bool) and not d3.get("is_process_started"):
+                        _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 兜底后进程已退出 ({int(time.time()-_t0)}s)")
+                        break
+            except Exception:
+                pass
+            time.sleep(3)
     except Exception as ex:
         _QUEUE_LOG.warn(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底失败: {ex}")
     return True
@@ -941,6 +963,14 @@ class LaunchQueue:
                     continue
                 if aid in active_ids:
                     continue  # 在跑/排队/启动中 — 保留
+                # 关闭冷却（5 分钟）— 刚被优雅关闭/回收关闭过的模拟器进程可能
+                # 还在退出，再次关闭=二次关闭（2026-08-11 用户观察: 正常关闭
+                # 后一段时间又关一次）。
+                with _graceful_glock:
+                    _rc = _recently_closed.get(str(idx), 0)
+                if _rc and time.time() - _rc < 300:
+                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (关闭冷却期内)")
+                    continue
                 # 手动/API 启动保护期（10 分钟）— 用户手动开的模拟器（模拟器
                 # 管理页/批量启动）不立刻回收，否则手动操作被反复打断
                 # （2026-08-10 实测: API 启动后 30s 被回收）。
