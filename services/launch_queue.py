@@ -268,6 +268,7 @@ class LaunchQueue:
         self._active_emus_ts.clear()
         self._last_launch_time = 0
         self._tick_lock = threading.Lock()
+        self._system_started: dict = {}  # emu_idx → ts（MAAOrch 拉起的模拟器；回收只关这些）
         # Guard against duplicate _bg_tick threads
         if self._bg_tick_started:
             return
@@ -1005,6 +1006,12 @@ class LaunchQueue:
                     if _recent:
                         continue
                     _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 30 分钟，回收省资源)")
+                # 非系统启动的模拟器 = 用户在 MuMu 管理器手动开的 → 永不回收
+                # （系统只回收自己拉起的。2026-08-11 用户: 手动启动的模拟器
+                # 也被关掉 — 回收把用户手动开的当闲置关了）。
+                if str(idx) not in self._system_started:
+                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (非系统启动，用户手动开的)")
+                    continue
                 # MAA 进程还活着（降级优雅关闭中/账号过渡期）→ 保留模拟器 —
                 # 否则关掉模拟器后 MAA 失联卡住，且进程活着不触发自动重启
                 # （用户: "MAA 还开着，模拟器自己关掉了，之后也没有重启"）。
