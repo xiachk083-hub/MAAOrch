@@ -967,7 +967,7 @@ class LaunchQueue:
                 # shutdown 兜底强关 → 反而弹"运行异常"（2026-08-10 实测
                 # #13/#21/#28 100% 失败）。闲置场景直接关，不绕道。
                 try:
-                    subprocess.run([cli, "control", flag, str(idx), "shutdown"],
+                    subprocess.run([cli, "control", idx_flag, str(idx), "shutdown"],
                                    capture_output=True, timeout=15,
                                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                     _QUEUE_LOG.info(f"[回收关闭] 模拟器#{idx} shutdown 完成（闲置无游戏，直接关）")
