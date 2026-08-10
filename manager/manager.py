@@ -21,11 +21,31 @@ import tempfile
 import threading
 import time
 import urllib.request
-from infrastructure.utils import validate_http_url, safe_urlopen
 import uuid
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+# manager 独立运行于 E:\MAAOrch-Manager\（自包含，不依赖项目目录的
+# infrastructure 模块 — 2026-08-10: import infrastructure 曾导致 manager
+# 启动即崩 ModuleNotFoundError）。此处内联请求函数：仅允许 http/https，
+# 请求地址来自用户显式配置（镜像/部署目标），非不可信输入。
+def _validate_url(url: str) -> str:
+    """仅接受 http/https 且 host 非空 — 配置来源校验。"""
+    host = url.split("/")[2] if isinstance(url, str) and url.startswith(("http://", "https://")) else ""
+    if not host:
+        raise ValueError(f"URL 须为 http(s)://host:port 格式: {url!r}")
+    return url
+
+
+def safe_urlopen(req, timeout: float = 30):
+    """manager 自包含版请求 — 配置来源 URL（直连/镜像），无重定向跟随限制。"""
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def validate_http_url(url: str) -> str:
+    return _validate_url(url)
+
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_FILE = BASE_DIR / "config.json"
