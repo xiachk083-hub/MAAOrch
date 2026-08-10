@@ -670,13 +670,13 @@ class AccountRunner:
                     # 模拟器 → 永远等 boot → 死循环。放弃前重启模拟器
                     # （shutdown+launch 彻底重置），下次重试 boot 成功率高。
                     try:
-                        from infrastructure.task_constants import find_mumu_cli, cli_flag
-                        _cli = find_mumu_cli()
+                        from infrastructure.task_constants import find_mumu_cli as _find_cli, cli_flag as _cflag
+                        _cli = _find_cli()
                         if _cli and emu_idx:
-                            subprocess.run([_cli, "control", cli_flag(_cli), str(emu_idx), "shutdown"],
+                            subprocess.run([_cli, "control", _cflag(_cli), str(emu_idx), "shutdown"],
                                            capture_output=True, timeout=15, creationflags=CF)
                             time.sleep(3)
-                            subprocess.run([_cli, "control", cli_flag(_cli), str(emu_idx), "launch"],
+                            subprocess.run([_cli, "control", _cflag(_cli), str(emu_idx), "launch"],
                                            capture_output=True, timeout=15, creationflags=CF)
                             self.emit_log(f"🔄 Android 开机超时，已重启模拟器 #{emu_idx}")
                     except Exception:
