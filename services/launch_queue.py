@@ -141,7 +141,11 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
                                encoding="utf-8", errors="replace")
             if r.returncode == 0:
                 d = json.loads(r.stdout.lstrip("\ufeff").strip())
-                if not (d.get("is_android_started") or d.get("is_process_started")):
+                # bool 防御：MuMuManager 错误返回（errcode≠0）无 is_* 字段
+                # → None → 误判"已退出"提前收尾（模拟器没关就返回）—
+                # 2026-08-10 与崩溃误判同源。
+                _pa = d.get("is_android_started"); _pp = d.get("is_process_started")
+                if isinstance(_pa, bool) and isinstance(_pp, bool) and not (_pa or _pp):
                     _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
                     return True
         except Exception:
@@ -157,7 +161,10 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
                            encoding="utf-8", errors="replace")
         if r.returncode == 0:
             d = json.loads(r.stdout.lstrip("\ufeff").strip())
-            if not d.get("is_android_started") and d.get("is_process_started"):
+            # bool 防御同前：错误返回（key 缺失）不能触发"Android 已关"分支
+            # （否则误走兜底强关）— 无法确认时按"Android 仍在"保守兜底日志处理。
+            _pa = d.get("is_android_started"); _pp = d.get("is_process_started")
+            if isinstance(_pa, bool) and isinstance(_pp, bool) and not _pa and _pp:
                 _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} Android 已关机，等进程收尾 (最多 30s)")
                 _dl2 = time.time() + 30
                 while time.time() < _dl2:
@@ -169,7 +176,7 @@ def _graceful_body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag:
                                             encoding="utf-8", errors="replace")
                         if r2.returncode == 0:
                             d2 = json.loads(r2.stdout.lstrip("\ufeff").strip())
-                            if not d2.get("is_process_started"):
+                            if isinstance(d2.get("is_process_started"), bool) and not d2.get("is_process_started"):
                                 _QUEUE_LOG.info(f"[优雅关闭] 模拟器#{emu_idx} 进程已退出 ({int(time.time()-_t0)}s)")
                                 return True
                     except Exception:
@@ -747,7 +754,18 @@ class LaunchQueue:
                                     # 查询结果无法解析 — 无法确认模拟器状态，
                                     # 保守跳过（宁可漏判也不误杀）。
                                     _d = None
-                                if _d is not None and not (_d.get("is_android_started") or _d.get("is_process_started")):
+                                if _d is not None:
+                                    # 防御 MuMuManager 错误返回（errcode≠0 时
+                                    # JSON 无 is_*_started 字段 → None → 误判
+                                    # "崩溃" → 批量杀 MAA/关模拟器 — 2026-08-10
+                                    # 实测 3 台同时"崩溃"实为查询故障）。key 必须
+                                    # 是 bool 才可信，无法确认 → 保守跳过。
+                                    _pa = _d.get("is_android_started")
+                                    _pp = _d.get("is_process_started")
+                                    if not (isinstance(_pa, bool) and isinstance(_pp, bool)):
+                                        continue
+                                    if _pa or _pp:
+                                        continue
                                     # 启动宽限: recover 刚 launch 过（60s 内）→
                                     # 模拟器正在启动（VMM 进程 10-30s 才起来）→
                                     # 不判崩溃。否则每次 launch 后立即被判"崩溃"

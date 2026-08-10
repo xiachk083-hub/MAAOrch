@@ -1124,7 +1124,11 @@ class AccountRunner:
                                            creationflags=CF, encoding="utf-8", errors="replace")
                         if r.returncode == 0:
                             d = json.loads(r.stdout.lstrip("\ufeff").strip())
-                            if not (d.get("is_android_started") or d.get("is_process_started")):
+                            # bool 防御：MuMuManager 错误返回（errcode≠0）无
+                            # is_* 字段 → None → 误判"失联"→ 杀 MAA + 关模拟器
+                            # （2026-08-10 实测 3 台同时误判）。无法确认 → 跳过。
+                            _pa = d.get("is_android_started"); _pp = d.get("is_process_started")
+                            if isinstance(_pa, bool) and isinstance(_pp, bool) and not (_pa or _pp):
                                 name = ac.get("name", aid)
                                 self._log.warn(f"[模拟器失联] {name} 模拟器#{emu_idx} 进程不在（MAA 空转），杀 MAA 恢复")
                                 try:
