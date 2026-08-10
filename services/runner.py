@@ -665,6 +665,22 @@ class AccountRunner:
                 if not _booted:
                     # boot 未完成 → 放弃本次启动（同超时路径: 清理标记 →
                     # 队列重试）。绝不带半启动系统 spawn MAA。
+                    # ⚠️ 2026-08-11: 仅放弃不够 — 模拟器进程活着但 Android
+                    # 卡死（崩溃重启后状态损坏）时，重试发现进程在 → 不重启
+                    # 模拟器 → 永远等 boot → 死循环。放弃前重启模拟器
+                    # （shutdown+launch 彻底重置），下次重试 boot 成功率高。
+                    try:
+                        from infrastructure.task_constants import find_mumu_cli, cli_flag
+                        _cli = find_mumu_cli()
+                        if _cli and emu_idx:
+                            subprocess.run([_cli, "control", cli_flag(_cli), str(emu_idx), "shutdown"],
+                                           capture_output=True, timeout=15, creationflags=CF)
+                            time.sleep(3)
+                            subprocess.run([_cli, "control", cli_flag(_cli), str(emu_idx), "launch"],
+                                           capture_output=True, timeout=15, creationflags=CF)
+                            self.emit_log(f"🔄 Android 开机超时，已重启模拟器 #{emu_idx}")
+                    except Exception:
+                        pass
                     self.emit_log(f"⚠️ Android 开机超时（{int(ac.get('boot_wait', 90))}s），放弃本次启动")
                     self._cleanup(aid, -2, [])
                     return
