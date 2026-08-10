@@ -828,6 +828,15 @@ class LaunchQueue:
                     continue
                 if aid in active_ids:
                     continue  # 在跑/排队/启动中 — 保留
+                # 手动/API 启动保护期（10 分钟）— 用户手动开的模拟器（模拟器
+                # 管理页/批量启动）不立刻回收，否则手动操作被反复打断
+                # （2026-08-10 实测: API 启动后 30s 被回收）。
+                _mts = getattr(getattr(self.ctx, "_mw", None), "manual_emu_started", None)
+                if _mts:
+                    _t = _mts.get(str(idx))
+                    if _t and time.time() - _t < 600:
+                        _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (手动启动保护期内)")
+                        continue
                 # 排队中的账号也保留模拟器 — 降级回队列/失败重试的账号马上要
                 # 重新启动，回收模拟器会导致反复开关（2026-08-10 用户: 降级后
                 # 模拟器被关 → 又要重新拉起）

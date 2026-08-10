@@ -31,3 +31,5 @@ class WebContext:
     _save_gantt: Callable[[], None] = lambda: None
     _log: Callable[[str], None] = lambda msg: None
     connect_accounts: list = field(default_factory=list)
+    # 手动/API 启动模拟器的时间戳（回收保护期）— {emu_idx: ts}
+    manual_emu_started: dict = field(default_factory=dict)

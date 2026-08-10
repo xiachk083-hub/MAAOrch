@@ -1589,6 +1589,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 if action == "start":
                     mw._log(f"⏯ 批量启动模拟器 #{idx}")
                     subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                    try:
+                        mw.manual_emu_started[idx] = time.time()
+                    except Exception:
+                        pass
                 else:
                     mw._log(f"⏹ 批量{action}模拟器 #{idx}")
                     _stop_maa_for_emu(idx)
@@ -1617,6 +1621,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             if action == "start":
                 mw._log(f"⏯ 启动模拟器 #{idx}")
                 subprocess.run([cli, "control", cli_flag(cli), idx, "launch"], timeout=30, creationflags=_CF)
+                # 手动启动保护期 — 回收不立刻关（用户手动操作中）
+                try:
+                    mw.manual_emu_started[idx] = time.time()
+                except Exception:
+                    pass
                 _log_op("启动模拟器", f"#{idx}")
                 return {"ok": True, "action": "started"}
             elif action == "stop":
