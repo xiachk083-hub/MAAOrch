@@ -52,6 +52,25 @@ def _headless_alive(emu_idx) -> bool:
     return False
 
 
+def _running_headless_idx() -> list[str]:
+    """当前运行的 VMMHeadless 实例索引列表（psutil，按 --comment 匹配）。"""
+    out = []
+    try:
+        import psutil as _ps
+        import re as _re
+        for p in _ps.process_iter(["name", "cmdline"]):
+            try:
+                if p.info["name"] == "MuMuVMMHeadless.exe":
+                    m = _re.search(r"MuMuPlayer-12\.0-(\d+)", " ".join(p.info["cmdline"] or []))
+                    if m:
+                        out.append(m.group(1))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return out
+
+
 def get_adb_port(cli: str, emu_idx, flag: str = "-v") -> str:
     """实时 ADB 端口（MuMuManager info 真值，缓存 adb_address 重启后会漂移）。"""
     try:

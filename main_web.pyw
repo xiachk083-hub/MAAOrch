@@ -160,6 +160,22 @@ pause
         _log=lambda msg: _LOG.info(msg),
     )
     launch_queue._restore()
+    # 恢复系统启动标记（重启不丢 — 否则重启前队列拉起的模拟器被当
+    # "用户手动开的" → 永不回收 → 模拟器堆积（2026-08-11: 部署后 17 台残留））
+    try:
+        from services.emu_service import mark_system_started as _mss, _running_headless_idx
+        _emu2aid = {}
+        for _a in ctx.config.get("accounts", []) or []:
+            _ei = _a.get("emu_instance_index", "")
+            if _ei:
+                _emu2aid[str(_ei)] = _a["id"]
+        _qids = {e.account_id for e in launch_queue._pending}
+        _qids |= set(launch_queue._active_emus.values())
+        for _idx in _running_headless_idx():
+            if _emu2aid.get(str(_idx)) in _qids:
+                _mss(_idx)
+    except Exception:
+        pass
     # 恢复手动启动保护标记（重启不丢 — 否则重启后手动开的模拟器被回收）
     try:
         _msf = Path(__file__).parent / "models" / "manual_emu_started.json"
