@@ -20,7 +20,14 @@ MM = r"E:\MuMu Player 12\nx_main\MuMuManager.exe"
 def _pid_alive(pid: int) -> bool:
     try:
         import psutil
-        return psutil.pid_exists(pid)
+        if not psutil.pid_exists(pid):
+            return False
+        try:
+            # 验证是 MAA 进程（防 PID 复用误杀 — 僵尸 .pid 的 PID 可能被
+            # 其他进程复用，2026-08-11）
+            return "MAA" in (psutil.Process(pid).name() or "").upper()
+        except Exception:
+            return True  # 进程在但读不到名字（权限）— 保守视为 MAA 活着
     except ImportError:
         try:
             r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
@@ -87,8 +94,20 @@ def check_health(mw) -> dict:
         if aid and aid not in active_ids:
             counts["zombie_maa"] += 1
             name = next((a.get("name", aid) for a in accounts if a.get("id") == aid), aid)
-            issues.append({"severity": "error", "category": "zombie_maa",
-                           "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
+            # 自动清理（2026-08-11: 僵尸不再手动清 — 检测到即 taskkill + 清标记。
+            # 根因已修: _cleanup 占位符路径跳过杀逻辑；此清理为历史遗留兜底）
+            try:
+                subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                               capture_output=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                pid_file.unlink(missing_ok=True)
+                meta_file.unlink(missing_ok=True)
+                counts["zombie_killed"] = counts.get("zombie_killed", 0) + 1
+                issues.append({"severity": "error", "category": "zombie_maa",
+                               "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行，已自动清理"})
+            except Exception:
+                issues.append({"severity": "error", "category": "zombie_maa",
+                               "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
 
     # ── 2. stale emulators: emulator up but account not running ──
     emu2aid = {}

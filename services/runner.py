@@ -1066,7 +1066,15 @@ class AccountRunner:
         _final = _done_pct <= _stop_threshold
         try:
             p.terminate()
-            p.wait(3)
+            try:
+                p.wait(2)
+            except Exception:
+                pass
+            if p.poll() is None:
+                # 立即强杀（terminate 后 MAA 未死会残留僵尸 — 2026-08-11
+                # 实测完成轮产生 7 个僵尸 MAA 占实例）
+                subprocess.run(["taskkill", "/F", "/PID", str(p.pid)],
+                               capture_output=True, timeout=5, creationflags=CF)
         except Exception:
             pass
         self._cleanup(aid, 0, tasks, sanity, drops)
@@ -1996,34 +2004,60 @@ class AccountRunner:
             pass
         ac = self._active.pop(aid, None)
         old_procs = self._procs.pop(aid, None)
-        if old_procs and not isinstance(old_procs, str):
-            self._archive_maa_logs(aid, getattr(old_procs, '_inst_path', None))
+        # inst_dir: Popen 的 _inst_path，或占位符路径本身（_do_launch/降级
+        # 把 _procs[aid] 设为 inst_dir 字符串防竞态 — 2026-08-11 僵尸根因：
+        # 字符串路径下杀逻辑被 isinstance 检查跳过 → MAA 残留占实例）。
+        inst_dir = old_procs if isinstance(old_procs, str) else getattr(old_procs, '_inst_path', None)
+        if old_procs:
+            self._archive_maa_logs(aid, inst_dir)
             # 确保 MAA 进程真的死了才删 .pid/.meta — 否则僵尸 MAA 占着实例
             # （无 .pid 但进程活着）→ 后续账号分配到该实例 → MAA 启动撞
             # "Existing instance window activated by a secondary launch" →
             # 2 秒退出 → 被"日志停滞"判定关模拟器 → "一出来就被关掉"
             # （2026-08-10 实例 6 连续 12 次 secondary 根因）。
-            try:
-                if hasattr(old_procs, 'poll') and old_procs.poll() is None:
-                    old_procs.terminate()
-                    try: old_procs.wait(3)
-                    except: pass
-                if hasattr(old_procs, 'poll') and old_procs.poll() is None:
-                    subprocess.run(["taskkill", "/F", "/PID", str(old_procs.pid)],
-                                   capture_output=True, timeout=5, creationflags=CF)
-                    time.sleep(1)
-            except Exception:
-                pass
+            if isinstance(old_procs, subprocess.Popen):
+                try:
+                    if old_procs.poll() is None:
+                        old_procs.terminate()
+                        try: old_procs.wait(3)
+                        except: pass
+                    if old_procs.poll() is None:
+                        subprocess.run(["taskkill", "/F", "/PID", str(old_procs.pid)],
+                                       capture_output=True, timeout=5, creationflags=CF)
+                        time.sleep(1)
+                except Exception:
+                    pass
+            elif inst_dir:
+                # 占位符路径：实例 .pid 里可能有真 MAA 进程（启动后异常 /
+                # 降级中断，_procs 未更新为 Popen）— 按 .pid 强杀。
+                try:
+                    _pf = Path(inst_dir) / ".pid"
+                    if _pf.exists():
+                        _zpid = int(_pf.read_text(encoding="utf-8").strip().split()[0])
+                        _zalive = False
+                        try:
+                            import psutil as _ps
+                            _zpr = _ps.Process(_zpid)
+                            _zalive = _zpr.is_running() and ("MAA" in (_zpr.name() or "").upper())
+                        except Exception:
+                            pass
+                        if _zalive:
+                            subprocess.run(["taskkill", "/F", "/PID", str(_zpid)],
+                                           capture_output=True, timeout=5, creationflags=CF)
+                            time.sleep(1)
+                except Exception:
+                    pass
             # Process is gone — remove .pid/.meta so the instance is cleanly
             # reusable (stale pid risks PID-reuse false positive in
             # _get_free_instance / _launch_for_instance, stale .meta mislabels
             # the instance in dashboard fallbacks).
-            try:
-                _ip = Path(getattr(old_procs, '_inst_path'))
-                (_ip / ".pid").unlink(missing_ok=True)
-                (_ip / ".meta").unlink(missing_ok=True)
-            except Exception:
-                pass
+            if inst_dir:
+                try:
+                    _ip = Path(inst_dir)
+                    (_ip / ".pid").unlink(missing_ok=True)
+                    (_ip / ".meta").unlink(missing_ok=True)
+                except Exception:
+                    pass
         old_progs = self._progs.pop(aid, None)
         fh = self._log_handles.pop(aid, None)
         if fh and not fh.closed:
