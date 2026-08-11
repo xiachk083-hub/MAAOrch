@@ -90,6 +90,12 @@ def direct_shutdown(cli: str, emu_idx, flag: str = "-v", log=None) -> None:
         return
     try:
         try:
+            # 关机前停止游戏（MAA 完成后的残留前台游戏 → 强关会出错）
+            try:
+                force_stop_games(_DIRECT_ADB.get(str(emu_idx), ("", ""))[0],
+                                 _DIRECT_ADB.get(str(emu_idx), ("", ""))[1], log)
+            except Exception:
+                pass
             subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
                            capture_output=True, timeout=15, creationflags=_CF)
             if log:
@@ -144,6 +150,8 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
             subprocess.run([adb_path, "connect", addr],
                            capture_output=True, timeout=10, creationflags=_CF)
             time.sleep(1)
+            # 关机前停止游戏（游戏前台被强关 → 崩溃报告/出错）
+            force_stop_games(adb_path, addr, log)
             r = subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
                                capture_output=True, timeout=10, creationflags=_CF)
             if r.returncode != 0 and log:
@@ -426,3 +434,44 @@ def start_health_monitor(cli_finder) -> HealthMonitor:
     m = HealthMonitor(cli_finder)
     m.start()
     return m
+
+
+# 明日方舟各服包名（关机前 force-stop — 游戏进程正常终止，
+# 避免"游戏前台被强关"触发 MuMu 崩溃报告/模拟器出错）
+_GAME_PKGS = [
+    "com.hypergryph.arknights",              # 官服
+    "com.hypergryph.arknights.bilibili",     # B 服
+    "com.hypergryph.arknights.jp",           # 日服
+    "com.hypergryph.arknights.en",           # 国际服
+    "com.hypergryph.arknights.kr",           # 韩服
+    "com.hypergryph.arknights.txwy",         # 繁中
+]
+
+
+def force_stop_games(adb_path: str, addr: str, log=None) -> None:
+    """关机前停止游戏进程（best effort — 包不存在则无操作，失败无害）。
+    MAA 完成任务后游戏仍在前台 → 直接关机=游戏前台强关 → MuMu 崩溃报告/
+    模拟器出错（2026-08-11 用户）。force-stop 是标准应用停止，不触发。"""
+    if not adb_path or not addr:
+        return
+    for pkg in _GAME_PKGS:
+        try:
+            subprocess.run([adb_path, "-s", addr, "shell", "am", "force-stop", pkg],
+                           capture_output=True, timeout=8, creationflags=_CF)
+        except Exception:
+            pass
+    if log:
+        log(f"[关闭] 已停止游戏进程（{len(_GAME_PKGS)} 个候选包）")
+
+
+
+# direct_shutdown 的 ADB 参数（回收调用时注册 — 供关机前 force-stop 游戏）
+_DIRECT_ADB: dict = {}
+
+
+def set_direct_adb(emu_idx, adb_path: str, addr: str) -> None:
+    """回收关闭前注册该模拟器的 ADB 参数（force-stop 游戏用）。"""
+    try:
+        _DIRECT_ADB[str(emu_idx)] = (adb_path, addr)
+    except Exception:
+        pass

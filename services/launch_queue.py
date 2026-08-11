@@ -877,7 +877,14 @@ class LaunchQueue:
                 # （adb -s 无 connect 直接失败，未检查返回值）→ 90s 超时 →
                 # shutdown 兜底强关 → 反而弹"运行异常"（2026-08-10 实测
                 # #13/#21/#28 100% 失败）。闲置场景直接关，不绕道。
-                from services.emu_service import direct_shutdown as _ds_fn
+                from services.emu_service import direct_shutdown as _ds_fn, set_direct_adb
+                # 注册 ADB（force-stop 游戏用 — MAA 完成后的前台游戏强关会出错）
+                try:
+                    _ac3 = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
+                    if _ac3:
+                        set_direct_adb(idx, _ac3.get("adb_path", ""), _ac3.get("adb_address", ""))
+                except Exception:
+                    pass
                 _ds_fn(cli, idx, idx_flag, log=lambda m: _QUEUE_LOG.info(m))
         except Exception as ex:
             _QUEUE_LOG.debug(f"空闲模拟器回收跳过: {ex}")
