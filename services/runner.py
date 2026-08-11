@@ -1192,6 +1192,14 @@ class AccountRunner:
                         self._cleanup(aid, -9, tasks, sanity, drops)
             except Exception:
                 pass
+        elif event == "maa_stopped":
+            # MAA 自己停止（按钮状态=停止 — 任务结束/停止）→ 重置空转/错误
+            # 计数（避免后续误判 — 2026-08-12 用户: 检测 MAA 自身运行状态）
+            try:
+                self._stall_skip.pop(aid, None)
+                self._err_windows.pop(aid, None)
+            except Exception:
+                pass
         elif event == "stall_loop":
             # 空转检测（DoNothing 循环 ~3-5 分钟 — 2026-08-11 官-41 PRTS1
             # 空转不触发卡死检测的盲区: 日志持续写 + 无 SubTaskError）。
