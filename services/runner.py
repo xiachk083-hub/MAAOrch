@@ -2196,7 +2196,10 @@ class AccountRunner:
         # Auto-recovery: MAA exited abnormally (externally killed / crash) →
         # re-enqueue to continue the run. Not for user stops (stop() pops _active
         # first, so ac is None here), connect-only, or normal completes.
-        if ac and exit_code != 0 and not ac.get("_connect_only"):
+        if ac and exit_code != 0 and not ac.get("_connect_only") and not self._done_flags.get(aid):
+            # _done_flags: 完成收尾（AllTasksCompleted）terminate 的 MAA 会以
+            # exit=-3 退出 — 若无此检查会被判"异常退出"→ 自动重启 → 已刷完
+            # 的账号重刷一遍（2026-08-11 官-41 刷完 14m49s 又被重入队）
             retries = ac.get("_auto_restart_count", 0) + 1
             if retries <= 3:
                 ac["_auto_restart_count"] = retries
