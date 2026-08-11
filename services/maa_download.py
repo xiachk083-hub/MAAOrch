@@ -32,19 +32,18 @@ def get_download_status() -> dict:
 
 
 def _is_source_ready(source_dir: Path) -> bool:
-    """Quick check: source MAA exists and has $type config."""
+    """Quick check: source MAA exists and has config.
+    ⚠️ 不检查 $type — $type 是 MAAOrch 注入/初始化时生成的（MAA 6.16 保存
+    配置后 TaskQueue 序列化为 {"type":...} 无 $type — 把 $type 当 ready
+    条件会误判不 ready → 清 source 重下 → GitHub 不可达时 source 被清空
+    （2026-08-12 部署放回后 source 丢失根因）。"""
     exe = source_dir / "MAA.exe"
     if not exe.exists():
         return False
     gj = source_dir / "config" / "gui.new.json"
     if not gj.exists():
         return False
-    try:
-        d = json.loads(gj.read_text(encoding="utf-8"))
-        tq = d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
-        return any("$type" in item for item in tq)
-    except Exception:
-        return False
+    return True
 
 
 def _detect_version(source_dir: Path, fallback_tag: str = "") -> str:
@@ -294,8 +293,20 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
             # no config/) — run MAA once to generate $type instead of re-downloading
             # the whole 250MB package (previous behavior looped forever).
             gj = source_dir / "config" / "gui.new.json"
-            if not gj.exists():
-                _log("[MAA] MAA.exe 存在但配置缺失，尝试初始化...")
+            _need_init = not gj.exists()
+            if gj.exists():
+                # config 存在但 $type 缺失（MAA 保存后序列化丢失）→ 重新
+                # 初始化补 $type — 防"判不 ready → 清 source 重下"循环
+                try:
+                    d = json.loads(gj.read_text(encoding="utf-8"))
+                    tq = d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
+                    if tq and not any("$type" in item for item in tq):
+                        _need_init = True
+                        _log("[MAA] gui.new.json 缺 $type（MAA 保存后序列化丢失），重新初始化")
+                except Exception:
+                    pass
+            if _need_init:
+                _log("[MAA] MAA.exe 存在但配置未初始化，尝试初始化...")
                 try:
                     _init_maa_source_wrapper(source_dir, _log)
                 except Exception as e:
