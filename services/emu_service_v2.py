@@ -220,8 +220,13 @@ class EmulatorService:
                           if lq is not None else set())
             for idx, st in list(self.states.items()):
                 try:
-                    if st.state not in (READY, IDLE):
-                        continue  # BUSY/EXTERNAL/CLOSING 转移表已拒绝
+                    if st.state not in (READY, IDLE, EXTERNAL):
+                        continue  # BUSY/CLOSING 转移表已拒绝
+                    if st.state == EXTERNAL:
+                        # 手动开的闲置超时才回收（用户 2026-08-12: 全归回收管）
+                        _ext_min = int(self.ctx.config.get("emu_external_reclaim_min", 30) or 30)
+                        if time.time() - st.state_since < _ext_min * 60:
+                            continue
                     # 关闭冷却（5 分钟 — 刚关过的进程可能还在退出）
                     _t = self._closed_at.get(idx, 0)
                     if _t and time.time() - _t < 300:

@@ -96,8 +96,9 @@ _TRANSITIONS: dict[str, dict[str, str | tuple]] = {
     },
     EXTERNAL: {
         EV_ACQUIRE: BUSY,            # 接管（连接页/账号启动直接连）
-        EV_CLOSE: ("reject",),       # 用户手动开的不关
-        EV_RECLAIM: ("reject",),     # 永不回收
+        EV_CLOSE: ("reject",),       # 直接 close 拒绝（用户手动开的）
+        EV_RECLAIM: CLOSING,         # 回收允许 — 闲置超时由 reclaim_tick 判定
+                                     # （2026-08-12 用户: 模拟器全归回收管）
         EV_LOST: OFF,                # 用户自己关了
     },
 }

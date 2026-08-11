@@ -876,8 +876,24 @@ class LaunchQueue:
                 # 也被关掉 — 回收把用户手动开的当闲置关了）。
                 from services.emu_service import is_system_started as _iss_fn
                 if not _iss_fn(idx):
-                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (非系统启动，用户手动开的)")
-                    continue
+                    # 非系统启动（EXTERNAL/手动开的）→ 闲置超时才回收
+                    # （用户 2026-08-12: 模拟器不是全归回收管吗 — 手动开的
+                    # 闲置久了也该回收：测试残留/忘关的清理。正常使用
+                    # 30 分钟内不被误关 — emu_external_reclaim_min 可配置）
+                    _ext_min = int(self.ctx.config.get("emu_external_reclaim_min", 30) or 30)
+                    _st_since = 0.0
+                    try:
+                        _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
+                        if _v2:
+                            _es = _v2.get(idx)
+                            if _es:
+                                _st_since = _es.state_since
+                    except Exception:
+                        pass
+                    if time.time() - _st_since < _ext_min * 60:
+                        _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (非系统启动，闲置不足 {_ext_min} 分钟)")
+                        continue
+                    _QUEUE_LOG.info(f"回收关闭 模拟器#{idx} (非系统启动但闲置超 {_ext_min} 分钟)")
                 # MAA 进程还活着（降级优雅关闭中/账号过渡期）→ 保留模拟器 —
                 # 否则关掉模拟器后 MAA 失联卡住，且进程活着不触发自动重启
                 # （用户: "MAA 还开着，模拟器自己关掉了，之后也没有重启"）。
