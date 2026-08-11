@@ -71,9 +71,12 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            # PostActions: ExitEmulator + ExitSelf via ADB (clean shutdown)
+            # PostActions: 只用 ExitSelf（8）— 12=ExitEmulator+ExitSelf 会让
+            # MAA 任务完成自动关模拟器（2026-08-12 根因: termination
+            # requested 的"突然关闭"，MAAOrch 无日志）。MAAOrch 管理模拟器
+            # 生命周期（回收统一关），MAA 只自己退出。
             if ac.get("post_action"):
-                c["MainFunction.PostActions"] = "12"
+                c["MainFunction.PostActions"] = "8"
             c["Connect.RetryOnDisconnected"]="True"
             c["Connect.AllowADBRestart"]="False"
             c["Connect.AllowADBHardRestart"]="False"
@@ -423,10 +426,13 @@ class ConfigService:
 
             if not use_v6:
                 self._set_connection(c, ac, use_v6=False)
-                c["MainFunction.PostActions"] = "12"
+                c["MainFunction.PostActions"] = "8"
             else:
                 self._set_connection(c, ac, use_v6=True)
-                c.pop("MainFunction.PostActions", None)
+                # 显式写 8 覆盖 MAA 保存合并的 12（旧格式残留 — MAA 保存
+                # 配置时把 gui.json 的扁平键合并进 gui.new.json，12 会随
+                # 完成关模拟器 — 2026-08-12）
+                c["MainFunction.PostActions"] = "8"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
