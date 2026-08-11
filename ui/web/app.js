@@ -1866,7 +1866,9 @@ async function renderEmus(container) {
       + '<span id="emu-connect-result" style="font-size:10px;color:var(--text3)"></span>'
       + '<button class="small" onclick="emuSortToggle()">↕ ' + _emuSortLabel() + '</button>'
       + '<button class="small" onclick="renderEmus(document.getElementById(\'content\'))">刷新</button>'
-      + '</div><div class="card-list" id="emus-list"></div>';
+      + '</div>'
+      + '<div class="card" id="emu-health-panel" style="margin-bottom:8px;padding:6px 10px;display:flex;flex-direction:column;gap:3px"></div>'
+      + '<div class="card-list" id="emus-list"></div>';
     const el = document.getElementById('emus-list');
     if (!el) return;
     let html = '';
@@ -1898,7 +1900,46 @@ async function renderEmus(container) {
       if (state.page !== 'emus') { clearInterval(window._emuTimer); window._emuTimer = null; return; }
       renderEmus(document.getElementById('content'));
     }, 5000);
+    // 实时体检面板（1s 刷新 — 2026-08-11 用户，游戏帧率检测粒度）
+    if (window._emuHealthTimer) clearInterval(window._emuHealthTimer);
+    window._emuHealthTimer = setInterval(emuHealthTick, 1000);
+    emuHealthTick();
   }
+}
+// 实时体检：每台运行中模拟器的 CPU%/内存/健康色标（1s）
+async function emuHealthTick() {
+  if (state.page !== 'emus') { if (window._emuHealthTimer) { clearInterval(window._emuHealthTimer); window._emuHealthTimer = null; } return; }
+  const el = document.getElementById('emu-health-panel');
+  if (!el) return;
+  try {
+    const r = await apiGet('/emulators/diagnose');
+    if (!r.ok) return;
+    const emus = r.emulators || [];
+    let html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">'
+      + '<span style="font-size:11px;font-weight:bold;color:var(--text2)">📊 实时体检</span>'
+      + '<span style="font-size:9px;color:var(--text3)">1s刷新 | CPU% 上限=核数×100%</span>'
+      + '<span style="flex:1"></span>'
+      + '<span style="font-size:9px;color:var(--text3)" id="emu-health-ts"></span>'
+      + '</div>';
+    for (const e of emus) {
+      const l = e.live || {};
+      const cpu = l.cpu_pct;
+      const mem = l.mem_mb;
+      const color = cpu === undefined ? 'var(--text3)' : (cpu >= 190 ? 'var(--danger)' : (cpu >= 150 ? '#f0a020' : 'var(--accent)'));
+      const pct = Math.min(100, (cpu === undefined ? 0 : cpu / 2)); // 2核=200% 满
+      html += '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'
+        + '<span style="width:8px;height:8px;border-radius:50%;background:' + color + '"></span>'
+        + '<span style="min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.name || '#' + e.idx) + '</span>'
+        + '<div style="flex:1;height:7px;background:var(--border);border-radius:3px;overflow:hidden">'
+        + '<div style="height:100%;width:' + pct + '%;background:' + color + ';transition:width .5s"></div></div>'
+        + '<span style="min-width:42px;text-align:right;color:' + color + ';font-weight:bold">' + (cpu === undefined ? '-' : cpu + '%') + '</span>'
+        + '<span style="min-width:52px;color:var(--text3)">' + (mem === undefined ? '-' : mem + 'MB') + '</span>'
+        + '</div>';
+    }
+    el.innerHTML = html || '<span style="font-size:10px;color:var(--text3)">无运行中模拟器</span>';
+    const tsEl = document.getElementById('emu-health-ts');
+    if (tsEl) tsEl.textContent = emus.length ? ('更新 ' + new Date().toLocaleTimeString()) : '';
+  } catch(e) {}
 }
 function emuSelUpdate() {
   window._emuChecks = window._emuChecks || {};
