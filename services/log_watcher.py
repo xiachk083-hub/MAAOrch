@@ -162,6 +162,12 @@ class LogWatcher(threading.Thread):
                     _record_event(self._aid, f"cb:{evt}", line)
                 except Exception:
                     pass
+            if "SubTaskError" in line:
+                _record_event(self._aid, "subtask_error", line)
+                try:
+                    self._on_event("subtask_error", self._aid, line)
+                except Exception:
+                    pass
             if "AllTasksCompleted" in line:
                 _record_event(self._aid, "completed", line)
                 self._on_event("completed", self._aid, line)

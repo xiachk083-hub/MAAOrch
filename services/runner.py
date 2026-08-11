@@ -143,6 +143,7 @@ class AccountRunner:
         self._adb_check_ts: float = 0.0
         self._done_flags: dict[str, bool] = {}  # 完成检测标记（归 0 竞态防护）
         self._watchers: dict = {}  # aid → LogWatcher（日志事件流）
+        self._err_windows: dict = {}  # aid -> [ts]（连续子任务错误窗口）
         self._emu_fail_count: dict[str, int] = {}
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
@@ -1088,6 +1089,29 @@ class AccountRunner:
             if not ac or not isinstance(p, subprocess.Popen) or p.poll() is not None:
                 return  # 已清理/已结束 — 防重复触发
             self._finish_completed(aid, ac, p)
+        elif event == "subtask_error":
+            # 连续子任务错误（游戏崩溃/流程异常 → MAA 反复报错，2026-08-11
+            # 用户: MAA 日志会报任务错误）— 2 分钟内 ≥3 次 → 杀 MAA 走重启链
+            try:
+                win = self._err_windows.get(aid, [])
+                now = time.time()
+                win = [t for t in win if now - t < 120]
+                win.append(now)
+                self._err_windows[aid] = win
+                if len(win) >= 3:
+                    self._err_windows.pop(aid, None)
+                    ac = self._active.get(aid)
+                    p = self._procs.get(aid)
+                    if ac and isinstance(p, subprocess.Popen) and p.poll() is None:
+                        self.emit_log(f"⚠ {ac.get('name', aid)} 连续子任务错误（游戏异常/崩溃），重启 MAA")
+                        try:
+                            p.terminate(); p.wait(3)
+                        except Exception:
+                            pass
+                        tasks, sanity, drops = self._parse_log(aid)
+                        self._cleanup(aid, -9, tasks, sanity, drops)
+            except Exception:
+                pass
         elif event == "battle_failed":
             # 作战失败降级触发（FightMissionFailed）— 与 _check_one 的判定
             # 共用防重（_downgrading 标志）
