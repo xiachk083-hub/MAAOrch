@@ -3902,7 +3902,17 @@ async function renderEvents(container) {
     if (cal && cal.ok) {
       const all = [];
       for (const evs of Object.values(cal.months || {})) all.push(...evs);
-      all.sort((a, b) => b.start.localeCompare(a.start));  // 最新在顶部（常用）
+      // 排序: 进行中 > 未来(近的在前) > 已结束(结束近的在前) — 2026-08-11 用户
+      const _ts = new Date().toISOString().slice(0, 10);
+      all.sort((a, b) => {
+        const aA = _ts >= a.start && _ts <= a.end, bA = _ts >= b.start && _ts <= b.end;
+        if (aA !== bA) return aA ? -1 : 1;
+        const aF = a.start > _ts, bF = b.start > _ts;
+        if (aF && bF) return a.start.localeCompare(b.start);
+        if (aF) return -1;
+        if (bF) return 1;
+        return b.end.localeCompare(a.end);
+      });
       const rg = window._ganttRange || 30;  // 默认前后 30 天
       html += '<div class="card" style="padding:8px 10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">'
         + '<span style="font-size:11px;font-weight:bold;color:var(--text2)">🗓 活动甘特日历</span>'
