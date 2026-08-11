@@ -59,7 +59,7 @@ def check_health(mw) -> dict:
     issues: list[dict] = []
     counts: dict = {"maa": 0, "emulators": 0, "running": 0, "queued": 0,
                     "zombie_maa": 0, "stale_emulators": 0, "port_drift": 0,
-                    "queue_stuck": 0, "connect_fail": 0}
+                    "queue_stuck": 0, "connect_fail": 0, "crash_reporter": 0}
 
     accounts = getattr(mw, "accounts", []) or []
     lq = getattr(mw, "launch_queue", None)
@@ -113,6 +113,26 @@ def check_health(mw) -> dict:
             except Exception:
                 issues.append({"severity": "error", "category": "zombie_maa",
                                "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
+
+    # ── 1b. MuMu 崩溃弹窗（MuMuNxCrashReporter）— 模拟器运行异常/崩溃的
+    # 信号。检测到即自动关闭弹窗（崩溃的模拟器由失联恢复链处理；弹窗只是
+    # 挂着碍眼 + 挡住模拟器画面 — 2026-08-11 用户: "一直莫名其妙运行异常，
+    # 这种情况不应该有关掉重试吗"）。计次供趋势统计（崩溃频率）。
+    try:
+        r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MuMuNxCrashReporter.exe"],
+                           capture_output=True, text=True, timeout=5,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        n_crash = r.stdout.count("MuMuNxCrashReporter.exe")
+        if n_crash:
+            counts["crash_reporter"] = n_crash
+            # 自动关弹窗（崩溃上报无价值，用户不需要）
+            subprocess.run(["taskkill", "/F", "/IM", "MuMuNxCrashReporter.exe"],
+                           capture_output=True, timeout=5,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            issues.append({"severity": "warn", "category": "emulator_crash",
+                           "detail": f"模拟器崩溃弹窗 ×{n_crash}（已自动清理）"})
+    except Exception:
+        pass
 
     # ── 2. stale emulators: emulator up but account not running ──
     emu2aid = {}
