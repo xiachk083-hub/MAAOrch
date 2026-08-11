@@ -846,6 +846,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 out.append(diagnose_emulator(cli, k))
         return {"ok": True, "emulators": out}
 
+    @app.get("/api/events/analyze")
+    def handle_events_analyze(year: int = 2026):
+        """活动历史分析（时长/月天数/重叠/月数量 — 2026-08-11 用户 4 问）。"""
+        from services.event_analyzer import analyze
+        try:
+            return {"ok": True, **analyze(year)}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     @app.get("/api/announcements")
     def handle_announcements():
         """游戏公告（独立收集任务 — 2026-08-11 用户，与日志分开）。"""
