@@ -2052,7 +2052,9 @@ async function renderConnect(container) {
     connSelUpdate();
     // Live screenshot refresh (chained: load-finished → next tick, staggered
     // start offsets so N emulators don't all request at the same instant).
-    const shotInterval = 5000;
+    // 降频 15s（2026-08-12 用户: 项目也有高频截屏 — adb screencap 走 vGPU
+    // 读取，叠加 MAA 自身截图 → vGPU 压力 → 模拟器崩溃触发嫌疑）。
+    const shotInterval = 15000;
     const allDetails = el.querySelectorAll('details');
     emus.forEach((e, i) => {
       const aid = 'emu' + e.index;
@@ -2610,7 +2612,7 @@ function previewEmulator(id, idx) {
   if (_previewTimer) clearInterval(_previewTimer);
   const update = () => { img.src = API + `/account/${idx}/screenshot?_t=${Date.now()}`; };
   update();
-  _previewTimer = setInterval(update, 2000);
+  _previewTimer = setInterval(update, 5000);  // 降频 5s（截图压力 — 2026-08-12）
 }
 function stopPreview() {
   if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
@@ -2634,7 +2636,7 @@ function togglePreview(aid, name) {
   if (idx < 0) return;
   const update = () => { img.src = API + `/account/${idx}/screenshot?_t=${Date.now()}`; img.style.display = ''; };
   update();
-  _previewTimers[aid] = setInterval(update, 2000);
+  _previewTimers[aid] = setInterval(update, 5000);  // 降频 5s（截图压力）
 }
 
 async function renderTaskConfig(container) {
