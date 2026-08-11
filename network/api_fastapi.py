@@ -846,6 +846,18 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 out.append(diagnose_emulator(cli, k))
         return {"ok": True, "emulators": out}
 
+    @app.get("/api/announcements")
+    def handle_announcements():
+        """游戏公告（独立收集任务 — 2026-08-11 用户，与日志分开）。"""
+        from services.announce_collector import get_announcements, collect_once
+        return get_announcements()
+
+    @app.post("/api/announcements/refresh")
+    def handle_announcements_refresh():
+        """手动刷新公告（抓取+新公告检测）。"""
+        from services.announce_collector import collect_once
+        return {"ok": True, **collect_once()}
+
     @app.get("/api/logs/collect_status")
     def handle_logs_collect_status():
         """样本收集健康（失败计数 — 收集是根不能漏，2026-08-11 用户）。"""

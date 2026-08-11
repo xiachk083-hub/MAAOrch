@@ -187,6 +187,13 @@ pause
     except Exception:
         pass
 
+    # 游戏公告收集线程（独立任务，每 6 小时 — 2026-08-11 用户）
+    try:
+        from services.announce_collector import AnnounceCollector
+        AnnounceCollector().start()
+    except Exception:
+        pass
+
     from services.scheduler import start_scheduler
     start_scheduler(ctx)
 
