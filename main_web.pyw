@@ -180,6 +180,13 @@ pause
     except Exception:
         pass
 
+    # 日志样本自动分拣线程（增量整理 + 实时索引 — 2026-08-11 用户）
+    try:
+        from services.log_sorter import start_sorter
+        start_sorter()
+    except Exception:
+        pass
+
     from services.scheduler import start_scheduler
     start_scheduler(ctx)
 

@@ -846,6 +846,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 out.append(diagnose_emulator(cli, k))
         return {"ok": True, "emulators": out}
 
+    @app.get("/api/logs/samples")
+    def handle_logs_samples():
+        """日志样本索引快照（自动分拣实时数据 — 2026-08-11 用户）。"""
+        from services.log_sorter import _SORTER
+        if _SORTER is None:
+            return {"ok": False, "error": "sorter 未启动"}
+        return {"ok": True, **(_SORTER.snapshot())}
+
     @app.get("/api/debug/state")
     def handle_debug_state():
         """内部状态快照（排障用）— 全部运行状态一眼可见，aid 脱敏前缀。

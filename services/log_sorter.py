@@ -114,3 +114,102 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# ── 自动分拣（2026-08-11 用户: 东西进来要识别分裂，不能堆着）──
+import threading as _th
+
+
+class LogSorterThread(_th.Thread):
+    """常驻分拣线程：每 60s 增量扫描 log_samples/*.jsonl（跟踪行号），
+    事件进来即时分裂（launch 切分运行、事件分类、新事件发现），
+    维护内存索引（API 实时可查）+ 每 10 分钟落盘。"""
+
+    def __init__(self):
+        super().__init__(daemon=True, name="log_sorter")
+        self._pos: dict = {}          # aid -> 已处理行号
+        self.runs: list = []          # 最近运行（内存，最多 200）
+        self.event_counter = Counter()
+        self.new_events: set = set()
+        self._lock = _th.Lock()
+        self._last_save = 0.0
+
+    def run(self) -> None:
+        while True:
+            try:
+                self._sweep()
+            except Exception:
+                pass
+            time.sleep(60)
+
+    def _sweep(self) -> None:
+        for fp in sorted(glob.glob(str(SAMPLES / "*.jsonl"))):
+            aid = os.path.basename(fp)[:8]
+            try:
+                lines = open(fp, encoding="utf-8", errors="replace").readlines()
+            except Exception:
+                continue
+            pos = self._pos.get(aid, 0)
+            if pos >= len(lines):
+                continue
+            for ln in lines[pos:]:
+                try:
+                    d = json.loads(ln)
+                except Exception:
+                    continue
+                evt = d.get("event", "")
+                with self._lock:
+                    self.event_counter[evt] += 1
+                    if evt and evt not in KNOWN_EVENTS:
+                        self.new_events.add(evt)
+                # 运行聚合（launch 切分）
+                with self._lock:
+                    if evt == "launch":
+                        self.runs.append({"aid": aid, "start": d.get("ts", ""), "events": [], "exit": None})
+                        if len(self.runs) > 200:
+                            self.runs = self.runs[-200:]
+                    if self.runs:
+                        r = self.runs[-1]
+                        r["events"].append({"t": d.get("ts", ""), "e": evt})
+                        if evt == "exit":
+                            r["exit"] = (d.get("line") or "")[:80]
+            self._pos[aid] = len(lines)
+        # 每 10 分钟落盘索引
+        if time.time() - self._last_save > 600:
+            self._last_save = time.time()
+            try:
+                INDEX.mkdir(parents=True, exist_ok=True)
+                with self._lock:
+                    snap = {
+                        "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "runs": len(self.runs),
+                        "event_stats": dict(self.event_counter.most_common(40)),
+                        "new_events": sorted(self.new_events),
+                    }
+                (INDEX / "live.json").write_text(json.dumps(snap, ensure_ascii=False, indent=1), encoding="utf-8")
+            except Exception:
+                pass
+
+    def snapshot(self) -> dict:
+        """实时索引快照（API 用）。"""
+        with self._lock:
+            return {
+                "runs": len(self.runs),
+                "event_stats": dict(self.event_counter.most_common(40)),
+                "new_events": sorted(self.new_events),
+                "recent_runs": [
+                    {"aid": r["aid"], "start": r.get("start", ""), "n_events": len(r["events"]), "exit": r.get("exit")}
+                    for r in self.runs[-10:]
+                ],
+            }
+
+_SORTER = None  # 全局实例（api_fastapi 读）
+
+
+def start_sorter() -> LogSorterThread:
+    """启动自动分拣线程（main_web 调用一次）。"""
+    global _SORTER
+    if _SORTER is None:
+        _SORTER = LogSorterThread()
+        _SORTER.start()
+    return _SORTER
