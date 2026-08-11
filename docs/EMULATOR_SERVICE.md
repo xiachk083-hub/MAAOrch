@@ -256,6 +256,78 @@ BUSY 释放: release_instance(account) → 归还 + 确保 MAA 进程死（优�
 
 ---
 
+## 9.2 第二轮评审补充（2026-08-12）
+
+### 9.2.1 任务层生命周期（模拟器状态机的配套）
+
+模拟器状态机只管模拟器——**任务层**（账号的一次运行：启动→任务→完成/失败/空转/卡死）是另一层状态机，两者通过事件衔接：
+
+```
+任务状态（runner 内部，独立于 emu_state）:
+  PENDING → LAUNCHING → RUNNING → DONE | FAILED | STALLED | RECOVERING
+  STALLED（空转/卡死检测 — 吸收 stall_loop 补丁）
+  RECOVERING（吸收 _recover_account / 自动重启 / _check_one 三套 → 统一一条）
+
+衔接:
+  LAUNCHING 需模拟器 READY（acquire）
+  RUNNING 时模拟器 = BUSY
+  DONE → 模拟器 release（IDLE）
+  FAILED/STALLED → 模拟器 RECOVERING 或保留（按失败类型）
+```
+
+- 任务状态机**不进 EmulatorService**（职责分离），但**恢复路径统一**（9.2.2）
+- 今天的任务层补丁（空转检测/完成误判/SubTaskError）在任务状态机里是正常转移——不再散落
+
+### 9.2.2 恢复路径统一（Phase 1 必做）
+
+今天三条恢复并存（`_recover_account` 失联链 / 自动重启重入队 / `_check_one` 轮询检测）——统一为：
+
+```
+失败检测（事件: 进程死/模拟器失联/空转/SubTaskError+停滞）
+  → 恢复决策（单入口 recover_decide(account, cause)）:
+      cause=完成误判      → 不恢复（_done_flags 语义）
+      cause=空转/卡死     → 杀 MAA（优雅）→ 重入队（计次 → 跳关/挂起）
+      cause=模拟器失联    → 模拟器 RECOVERING（重启模拟器）→ 账号重试
+      cause=进程异常      → 自动重启（第 N/3 次 → 挂起）
+  → 次数/频率统一管理（现有 _auto_restart_count/_recover_count/_stall_skip 归一）
+```
+
+### 9.2.3 状态机并发模型
+
+- **单线程事件循环**（模拟器事件 + 回收 tick + 用户操作统一入队，顺序处理）——转移表在事件循环内执行，**天然无锁**
+- 外部读取（health/前端查询）只读 `emu_state` 快照（复制引用）
+- 长操作（VBox 启动/关闭）异步（后台线程 + 完成事件回投事件循环）——状态立即转移（PREWARMING 发出即回，启动完成事件再转移）
+- 吸收教训：runner 双 tick 竞争（2026-08-11 tick 锁）——事件循环单线程从机制上消除
+
+### 9.2.4 配置项清单（config.json 字段）
+
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `prewarm_buffer` | 1 | 预热缓冲模拟器数（READY 保留上限）|
+| `emu_idle_keep_min` | 30 | IDLE 保留窗口（排位决策用）|
+| `emu_idle_reclaim_sec` | 60 | READY/EXTERNAL 闲置回收 |
+| `recover_attempts` | 3 | 恢复尝试次数（超 → 挂起账号）|
+| `vaddr_error_window_min` | 30 | VAddress 错误计数窗口 |
+| `vaddr_error_threshold` | 50 | 窗口内错误超限 → 建议降配 |
+
+### 9.2.5 测试策略
+
+- **转移表单测**（纯逻辑）：非法转移拒绝 / 竞态事件顺序 / 各状态退出条件
+- **状态恢复单测**：emu_state 重建（扫描进程 → 状态还原）
+- **集成**：模拟器启停生命周期（现有 lab 测试方法论）
+- 转移表 = 数据驱动 → 测试即表遍历
+
+### 9.2.6 降级交互（BUSY 期间）
+
+```
+降级（关卡不可用）: BUSY 不转移 — 内部动作: 优雅关 MAA → 重注入 → 重入队
+  （模拟器保持 BUSY/短暂 IDLE？— 决策: 降级期间模拟器保持 BUSY 占位，
+   账号重入队后原地复用 — 吸收"处理问题保持运行中占位无缝恢复"）
+```
+
+- 降级失败（模拟器起不来）→ 走 9.2.2 恢复路径（BUSY → RECOVERING）
+- 转移表加 `downgrade` 事件（BUSY 内处理，不退出 BUSY）
+
 ## 10. 与现有代码的映射
 
 | 现有 | 去向 |
@@ -263,6 +335,8 @@ BUSY 释放: release_instance(account) → 归还 + 确保 MAA 进程死（优�
 | `launch_queue._reclaim_idle_emus` | → `EmulatorService.reclaim_tick` |
 | `emu_service.graceful_shutdown/direct_shutdown/_body` | → `EmulatorService.close` 内部 |
 | `emu_service._system_started/recently_closed/_locks` | → `emu_state` 字段 + 转移表 |
+| `runner._recover_account` / 自动重启 / `_check_one` | → 9.2.2 统一恢复路径 |
+| `runner._stall_skip` / `_err_windows` / 空转检测 | → 任务层状态机（9.2.1）|
 | `runner._recover_account` | → `EmulatorService.handle_crash` + 恢复链 |
 | `runner._kill_maa_graceful` | → 保留（MAA 收尾工具）|
 | `runtime_health` 的 zombie/壳/弹窗检查 | → `EmulatorService` 内建（health 只读快照）|
