@@ -172,6 +172,14 @@ pause
     launch_queue.start()
     launch_queue.resume()  # Queue starts paused; resume for Web UI
 
+    # 实时体检线程（每 5s 采样运行中模拟器 CPU/内存 — 2026-08-11 用户）
+    try:
+        from services.emu_service import start_health_monitor
+        from infrastructure.task_constants import find_mumu_cli
+        start_health_monitor(find_mumu_cli)
+    except Exception:
+        pass
+
     from services.scheduler import start_scheduler
     start_scheduler(ctx)
 

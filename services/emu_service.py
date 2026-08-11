@@ -359,3 +359,77 @@ def diagnose_emulator(cli: str, emu_idx, vms_root: str = r"E:\MuMu Player 12\vms
     out["health"] = health
     out["health_reason"] = "; ".join(reasons)
     return out
+
+
+# ── 实时体检（2026-08-11 用户）──
+_health_cache: dict = {}          # idx -> {ts, cpu_pct, mem_mb, running}
+_health_baseline: dict = {}       # pid -> (cpu_time, ts) 采样基线
+_health_lock = threading.Lock()
+
+
+class HealthMonitor(threading.Thread):
+    """后台实时体检线程：每 5s 批量采样运行中模拟器的 CPU/内存。
+    采样差算 CPU%（快照 5s 内数据），API 即时读取。"""
+
+    def __init__(self, cli_finder):
+        super().__init__(daemon=True, name="emu_health")
+        self._cli_finder = cli_finder
+
+    def run(self) -> None:
+        import re as _re
+        while True:
+            try:
+                cli = self._cli_finder()
+                if cli:
+                    # 1) 运行中模拟器列表
+                    info = _info(cli, "all")
+                    running = set()
+                    if info:
+                        running = {k for k, v in info.items() if v.get("is_process_started")}
+                    # 2) 批量 VMM 进程 CPU/内存（一次查询）
+                    ps = ("Get-CimInstance Win32_Process -Filter \"Name='MuMuVMMHeadless.exe'\" | "
+                          "Select-Object ProcessId,WorkingSetSize,CommandLine,@{N='CT';E={$_.KernelModeTime+$_.UserModeTime}} | ConvertTo-Json -Compress")
+                    out = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
+                                         capture_output=True, text=True, timeout=15,
+                                         creationflags=_CF, errors="replace")
+                    procs = json.loads(out.stdout.strip() or "null")
+                    if isinstance(procs, dict):
+                        procs = [procs]
+                    now = time.time()
+                    for p in (procs or []):
+                        m = _re.search(r"MuMuPlayer-12\.0-(\d+)", p.get("CommandLine", ""))
+                        if not m:
+                            continue
+                        idx = m.group(1)
+                        pid = p.get("ProcessId")
+                        ct = p.get("CT", 0)
+                        cpu = 0
+                        base = _health_baseline.get(pid)
+                        if base:
+                            dt = now - base[1]
+                            if dt > 0:
+                                cpu = int((ct - base[0]) / 100000 / dt)
+                        _health_baseline[pid] = (ct, now)
+                        with _health_lock:
+                            _health_cache[idx] = {
+                                "ts": time.strftime("%H:%M:%S"),
+                                "cpu_pct": max(0, cpu),
+                                "mem_mb": int(p.get("WorkingSetSize", 0)) // 1048576,
+                                "running": idx in running,
+                            }
+            except Exception:
+                pass
+            time.sleep(5)
+
+
+def get_health_snapshot() -> dict:
+    """实时体检缓存快照（5s 内数据，无采样等待）。"""
+    with _health_lock:
+        return dict(_health_cache)
+
+
+def start_health_monitor(cli_finder) -> HealthMonitor:
+    """启动实时体检线程（main_web 启动时调用一次）。"""
+    m = HealthMonitor(cli_finder)
+    m.start()
+    return m
