@@ -1100,6 +1100,23 @@ class AccountRunner:
         _done_pct = (_cur / _mx * 100) if _cur is not None else 0
         _final = _done_pct <= _stop_threshold
         self._kill_maa_graceful(p, ac.get('name', aid))
+        # 完成后关闭游戏（用户: MAA 做完任务后让他关闭游戏 — 游戏退掉模拟器
+        # 空载，vGPU 渲染停止压力大降（60帧场景下 VAddress 错误减少），
+        # 模拟器本身交给回收统一关闭 — 回收关闭前游戏已停 → 不弹崩溃报告）
+        try:
+            _adb = ac.get("adb_path", "") or "adb"
+            _addr = ac.get("adb_address", "")
+            if _addr:
+                from services.emu_service import force_stop_games
+                try:
+                    subprocess.run([_adb, "connect", _addr], capture_output=True,
+                                   timeout=8, creationflags=CF)
+                except Exception:
+                    pass
+                force_stop_games(_adb, _addr)
+                self.emit_log(f"🎮 {ac.get('name', aid)} 已完成，游戏已关闭（模拟器交给回收）")
+        except Exception:
+            pass
         self._cleanup(aid, 0, tasks, sanity, drops)
         if not _final and not ac.get("_connect_only"):
             try:
