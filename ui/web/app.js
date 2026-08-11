@@ -3902,9 +3902,13 @@ async function renderEvents(container) {
     if (cal && cal.ok) {
       const all = [];
       for (const evs of Object.values(cal.months || {})) all.push(...evs);
-      all.sort((a, b) => a.start.localeCompare(b.start));
-      html += '<div class="card" style="padding:8px 10px;margin-bottom:8px"><div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:4px">🗓 活动甘特日历 <span style="font-size:9px;color:var(--text3)">一天一格，横向滚动</span></div>'
-        + ganttCalendar(2026, all) + '</div>';
+      all.sort((a, b) => b.start.localeCompare(a.start));  // 最新在顶部（常用）
+      html += '<div class="card" style="padding:8px 10px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+        + '<span style="font-size:11px;font-weight:bold;color:var(--text2)">🗓 活动甘特日历</span>'
+        + '<span style="font-size:9px;color:var(--text3)">一天一格 · 最新在上 · 横向滚动</span>'
+        + '<span style="flex:1"></span>'
+        + '<button class="small" onclick="ganttTodayScroll()">📍 跳到今天</button>'
+        + '</div>' + ganttCalendar(2026, all) + '</div>';
     }
     // 公告列表
     if (ann && ann.ok) {
@@ -3935,7 +3939,8 @@ function ganttCalendar(year, events) {
   const daysInYear = leap ? 366 : 365;
   const dayOffset = d => Math.round((new Date(d + 'T00:00:00') - new Date(year, 0, 1)) / 86400000);
   const GRID = 150 + 'px repeat(' + daysInYear + ', 11px)';
-  let html = '<div style="overflow-x:auto"><div style="min-width:' + (160 + daysInYear * 11) + 'px;font-size:9px">';
+  let html = '<div style="overflow-x:auto" id="gantt-scroll"><div style="min-width:' + (160 + daysInYear * 11) + 'px;font-size:9px">';
+  const nowTs = new Date().toISOString().slice(0, 10);
   // 月表头
   html += '<div style="display:grid;grid-template-columns:' + GRID + ';color:var(--text3);margin-bottom:1px">';
   html += '<div style="font-weight:bold;color:var(--text2)">月份</div>';
@@ -3957,11 +3962,23 @@ function ganttCalendar(year, events) {
     const off = dayOffset(e.start);
     const dur = e.duration_days;
     const col = e.type === '常驻' ? 'var(--accent)' : '#4caf50';
-    html += '<div style="display:grid;grid-template-columns:' + GRID + ';align-items:center;height:18px;border-top:1px solid var(--border)">';
-    html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px;color:var(--text2)">' + e.name + '</div>';
+    // 进行中（今天在活动区间内）→ 行高亮 + ▶ 标记
+    const active = nowTs >= e.start && nowTs <= e.end;
+    const rowBg = active ? 'background:rgba(76,175,80,0.08);box-shadow:inset 2px 0 0 #4caf50' : '';
+    html += '<div style="display:grid;grid-template-columns:' + GRID + ';align-items:center;height:18px;border-top:1px solid var(--border);' + rowBg + '">';
+    html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px;color:var(--text2);font-weight:' + (active ? 'bold' : 'normal') + '">' + (active ? '▶ ' : '') + e.name + '</div>';
     html += '<div style="grid-column:' + (off + 1) + ' / span ' + dur + ';background:' + col + ';border-radius:2px;height:12px;opacity:0.85" title="' + e.start + ' ~ ' + e.end + ' (' + dur + '天)"></div>';
     html += '</div>';
   }
   html += '</div></div>';
   return html;
+}
+
+// 跳到今天（滚动到今天的列 — 2026-08-11 用户）
+function ganttTodayScroll() {
+  const el = document.getElementById('gantt-scroll');
+  if (!el) return;
+  const year = 2026;
+  const off = Math.round((new Date() - new Date(year, 0, 1)) / 86400000);
+  if (off >= 0 && off < 366) el.scrollLeft = Math.max(0, 150 + off * 11 - 300);
 }
