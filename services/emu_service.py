@@ -32,6 +32,26 @@ def is_alive(d: dict) -> bool | None:
     return None
 
 
+def _headless_alive(emu_idx) -> bool:
+    """VMMHeadless 真实进程检测（按 --comment MuMuPlayer-12.0-{idx} 匹配）。
+    MuMuManager info 状态不可靠（残留/关闭请求即提前标记）— 关闭等待判定
+    以此为准（2026-08-11: info 误判已退出 → 提前结束等待 → taskkill 兜底
+    被跳过 → #4 空闲模拟器关不掉残留）。"""
+    try:
+        import psutil as _ps
+        import re as _re
+        for p in _ps.process_iter(["name", "cmdline"]):
+            try:
+                if p.info["name"] == "MuMuVMMHeadless.exe" and                         _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"",
+                                   " ".join(p.info["cmdline"] or [])):
+                    return True
+            except Exception:
+                pass
+    except Exception:
+        return True  # psutil 失败保守视为活着（等超时走 taskkill 兜底）
+    return False
+
+
 def get_adb_port(cli: str, emu_idx, flag: str = "-v") -> str:
     """实时 ADB 端口（MuMuManager info 真值，缓存 adb_address 重启后会漂移）。"""
     try:
@@ -152,6 +172,18 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
             force_stop_games(adb_path, addr, log)
         except Exception:
             pass
+    # 1b. adb 优雅关机（reboot -p — Android 内部关机；对正常 Android 比
+    #     shutdown 可靠。对卡死 Android 失败无害 — 后续 shutdown 兜底。
+    #     2026-08-11 用户: 是不是要先连上再用 adb — connect 在前 ✓）
+    if addr and adb_path:
+        try:
+            r = subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
+                               capture_output=True, timeout=10, creationflags=_CF)
+            if r.returncode == 0 and log:
+                log(f"[关闭] 模拟器#{emu_idx} adb reboot -p 已发送（Android 优雅关机）")
+            time.sleep(2)
+        except Exception:
+            pass
     # 2. 直接 MuMuManager shutdown（正常关闭 — 不依赖 Android 响应）
     try:
         subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
@@ -161,20 +193,15 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
     except Exception as ex:
         if log:
             log(f"[关闭] 模拟器#{emu_idx} shutdown 发送失败: {ex}")
-    # 3. 等进程退出
+    # 3. 等进程退出 — 判定用真实进程（MuMuManager info 在 shutdown 请求后
+    #    可能提前标记 process_started=false → 误判退出 → 兜底被跳过）
     dl = time.time() + wait
     while time.time() < dl:
         try:
-            r = subprocess.run([cli, "info", flag, str(emu_idx)],
-                               capture_output=True, text=True, timeout=5,
-                               creationflags=_CF, encoding="utf-8", errors="replace")
-            if r.returncode == 0:
-                d = json.loads(r.stdout.lstrip("﻿").strip())
-                st = is_alive(d)
-                if st is False:
-                    if log:
-                        log(f"[关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
-                    return True
+            if not _headless_alive(emu_idx):
+                if log:
+                    log(f"[关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
+                return True
         except Exception:
             pass
         time.sleep(2)
