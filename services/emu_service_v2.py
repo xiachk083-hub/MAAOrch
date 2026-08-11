@@ -213,21 +213,64 @@ class EmulatorService:
             lq = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
             pending_ids = ({e.account_id for e in lq._pending}
                            if lq is not None else set())
+            active_ids = (set(lq._active_emus.values())
+                          if lq is not None else set())
             for idx, st in list(self.states.items()):
                 try:
                     if st.state not in (READY, IDLE):
+                        continue  # BUSY/EXTERNAL/CLOSING 转移表已拒绝
+                    # 关闭冷却（5 分钟 — 刚关过的进程可能还在退出）
+                    _t = self._closed_at.get(idx, 0)
+                    if _t and time.time() - _t < 300:
                         continue
-                    # 排位决策: 账号在 pending（30 分钟内会轮到）→ 保留
-                    if st.account_id and st.account_id in pending_ids:
-                        continue
+                    # 排位决策: 账号在 pending/active → 保留（30 分钟内轮到）
+                    if st.account_id:
+                        if st.account_id in pending_ids or st.account_id in active_ids:
+                            continue
                     # 闲置超时（READY/IDLE — 60s）
                     if time.time() - st.state_since < 60:
                         continue
                     self._move(idx, EV_RECLAIM, "idle timeout")
+                    self._closed_at[idx] = time.time()
                     threading.Thread(target=self._close_bg, args=(idx,),
                                      daemon=True).start()
                 except Exception:
                     pass
+            # 壳识别（A 型崩溃残留 — <200MB + 启动 >5 分钟 → 直接 taskkill）
+            try:
+                from services.emu_service import _running_headless_idx
+                import psutil as _ps
+                running = set(_running_headless_idx())
+                for idx, st in list(self.states.items()):
+                    try:
+                        if idx not in running:
+                            continue
+                        if st.state in (BUSY, PREWARMING):
+                            continue
+                        for _p in _ps.process_iter(["name", "cmdline", "create_time", "memory_info"]):
+                            try:
+                                import re as _re
+                                if _p.info["name"] != "MuMuVMMHeadless.exe":
+                                    continue
+                                if not _re.search(r"MuMuPlayer-12\.0-" + str(idx) + r"",
+                                                  " ".join(_p.info["cmdline"] or [])):
+                                    continue
+                                _age = time.time() - _p.info["create_time"]
+                                _mb = (_p.info["memory_info"].rss if _p.info["memory_info"] else 0) / 1e6
+                                if _age > 300 and _mb < 200:
+                                    self._log(f"[状态机] 壳识别 #{idx} ({int(_mb)}MB 残留) — taskkill")
+                                    import subprocess
+                                    subprocess.run(["taskkill", "/F", "/PID", str(_p.pid)],
+                                                   capture_output=True, timeout=5,
+                                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                    self._move(idx, EV_LOST, "shell killed")
+                                break
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
         except Exception:
             pass
 

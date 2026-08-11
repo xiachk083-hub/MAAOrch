@@ -763,6 +763,12 @@ class LaunchQueue:
 
     def _reclaim_idle_emus(self) -> None:
         """Shutdown emulators whose accounts are neither running nor queued."""
+        # v2 状态机回收接管后旧逻辑跳过（防双重回收 — Phase 1 并存开关）
+        try:
+            if self.ctx.config.get("emu_v2_reclaim", False):
+                return
+        except Exception:
+            pass
         try:
             import json as _json
             # 只用 MuMuManager.exe（mumu-cli 在 MuMu 12 上 --vmindex 索引错位，
