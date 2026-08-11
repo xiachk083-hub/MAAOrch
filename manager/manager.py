@@ -459,7 +459,7 @@ def download_project() -> tuple[bool, str]:
                 log(f"部署前备份 config.json → {bk.name}")
         except Exception as e:
             log(f"部署前备份失败: {e}")
-        for rel in ("models/config.json", "logs/maa_history", "queue.json"):
+        for rel in ("models/config.json", "logs/maa_history", "services/queue.json"):
             src = root / rel
             if src.exists():
                 bak = tmp_dir / "preserve" / rel
