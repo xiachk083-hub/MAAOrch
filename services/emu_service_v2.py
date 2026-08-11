@@ -188,8 +188,11 @@ class EmulatorService:
             st.crash_count += 1
 
     def on_ready(self, idx) -> None:
-        """安卓就绪回调（PREWARMING → READY）。"""
-        self._move(idx, EV_READY)
+        """安卓就绪回调（PREWARMING → READY；若账号已占用 → BUSY）。"""
+        if self._move(idx, EV_READY):
+            st = self.states.get(str(idx))
+            if st and st.account_id:
+                self._move(idx, EV_ACQUIRE, "boot done → busy")
 
     def on_lost(self, idx, note: str = "") -> None:
         """进程消失（CLOSING → OFF / 其他 → 恢复语义由转移表定）。"""

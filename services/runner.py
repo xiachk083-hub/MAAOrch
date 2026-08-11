@@ -597,6 +597,14 @@ class AccountRunner:
                 except Exception:
                     pass
             if cli:
+                # EmulatorService v2 状态记录（Phase 1 — acquire 语义：
+                # OFF→PREWARMING / READY/IDLE/EXTERNAL→BUSY）
+                try:
+                    _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
+                    if _v2:
+                        _v2.acquire(ac)
+                except Exception:
+                    pass
                 # Serialize emulator launch: MuMu 12 fails when 2+ `control
                 # launch` run concurrently (2nd instance never boots).
                 with self._EMU_LAUNCH_LOCK:
@@ -630,6 +638,12 @@ class AccountRunner:
                         subprocess.run([cli, "control", idx_flag, str(emu_idx), "launch"], creationflags=CF, timeout=15)
                     except Exception as e:
                         self.emit_log(f"启动模拟器失败: {e}")
+                        try:
+                            _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
+                            if _v2:
+                                _v2.on_lost(str(emu_idx), f"launch fail {e}")
+                        except Exception:
+                            pass
             # Re-detect ADB port AFTER launching — detect_emu_instances only
             # returns running emulators, so a cold start needs a second pass.
             # Retry loop: right after `launch` the Android guest isn't up yet
@@ -671,6 +685,12 @@ class AccountRunner:
                         r = subprocess.run([adb, "connect", addr], capture_output=True, timeout=5, creationflags=CF)
                         if r.returncode == 0 and b"connected" in r.stdout.lower():
                             self.emit_log(f"模拟器 #{emu_idx} ADB 已连接")
+                            try:
+                                _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
+                                if _v2:
+                                    _v2.on_ready(str(emu_idx))
+                            except Exception:
+                                pass
                             break
                     except: pass
                     time.sleep(2)
