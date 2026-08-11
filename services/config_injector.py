@@ -457,9 +457,10 @@ class ConfigService:
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
-            # PostActions: ExitEmulator + ExitSelf via ADB (clean shutdown)
+            # PostActions: ExitSelf（8）— 不关模拟器（12=ExitEmulator 会让 MAA
+            # 完成自动关模拟器 — 2026-08-12 根因；MAAOrch 管理模拟器）
             if ac.get("post_action"):
-                c["MainFunction.PostActions"] = "12"
+                c["MainFunction.PostActions"] = "8"
 
             if use_v6:
                 task_set = {t.lower() for t in task_list}
