@@ -179,6 +179,14 @@ class LogWatcher(threading.Thread):
                         self._cur_task = _m.group(1)
                 elif "SubTaskStart" in line and "DoNothing" in line:
                     _task = getattr(self, "_cur_task", "?")
+                    # StartUp/加载阶段豁免（2026-08-12 用户: 日-4 日志正常只
+                    # 是时间差 — 游戏加载慢（VAddress 渲染 → 截图 479ms）时
+                    # MAA 在 LoadingIcon DoNothing 等待加载，3 分钟正常 →
+                    # 40 次误判"空转"→ 误杀重启循环）。只检测刷关/任务阶段。
+                    if _task.startswith("StartUp") or "Loading" in _task:
+                        self._dn_task = None
+                        self._dn_count = 0
+                        return
                     if getattr(self, "_dn_task", None) == _task:
                         self._dn_count = getattr(self, "_dn_count", 0) + 1
                     else:
