@@ -1409,16 +1409,27 @@ class AccountRunner:
                         with _p.open("r", encoding="utf-8", errors="replace") as _f:
                             _tail = _f.read()[-200000:]
                         if "Fight@PRTS1" in _tail and not ac.get("_connect_only"):
-                            _st = ac.setdefault("_prts_stall_since", time.time())
-                            if time.time() - _st > _prts_min * 60:
-                                self.emit_log(f"⚠ {ac.get('name', aid)} 代理作战卡死（PRTS1 超 {_prts_min} 分钟），终止")
-                                self._log.warn(f"[代理卡死] {ac.get('name', aid)} PRTS1 卡死")
-                                ac.pop("_prts_stall_since", None)
-                                try: p.terminate(); p.wait(5)
-                                except: pass
-                                tasks, sanity, drops = self._parse_log(aid)
-                                self._cleanup(aid, -9, tasks, sanity, drops)
-                                return
+                            # 卡死 = PRTS1 持续 + asst.log 停滞（画面无进展）。
+                            # 正常长刷关（代理作战 10+ 分钟）也有 PRTS1 但日志
+                            # 持续写入 — 只看关键词会误杀（2026-08-11 日-2/
+                            # 日-3: 13 分钟一轮被误判卡死 → 反复重启永远跑不完）。
+                            try:
+                                _stall = time.time() - _p.stat().st_mtime > 60
+                            except Exception:
+                                _stall = False
+                            if _stall:
+                                _st = ac.setdefault("_prts_stall_since", time.time())
+                                if time.time() - _st > _prts_min * 60:
+                                    self.emit_log(f"⚠ {ac.get('name', aid)} 代理作战卡死（PRTS1 超 {_prts_min} 分钟且日志停滞），终止")
+                                    self._log.warn(f"[代理卡死] {ac.get('name', aid)} PRTS1 卡死")
+                                    ac.pop("_prts_stall_since", None)
+                                    try: p.terminate(); p.wait(5)
+                                    except: pass
+                                    tasks, sanity, drops = self._parse_log(aid)
+                                    self._cleanup(aid, -9, tasks, sanity, drops)
+                                    return
+                            else:
+                                ac.pop("_prts_stall_since", None)  # 日志活跃 = 正常刷关，重置
                         else:
                             ac.pop("_prts_stall_since", None)
                 except Exception:
