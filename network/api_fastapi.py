@@ -1652,6 +1652,37 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         count = lq.stop_all()
         return {"ok": True, "stopped": count}
 
+    # ── MAA 远程控制（6.16 — MAA 每秒轮询 GetTask = 心跳；ReportStatus =
+    # 任务结果上报。检测 MAA 是否在运行的权威信号 — 2026-08-12 用户）──
+    @app.post("/api/maa_remote/task")
+    def handle_maa_remote_task(body: dict = {}):
+        # MAA 每秒轮询: 心跳记录（user=账号 id — MAA 活着就每秒报到）。
+        # 必须返回含 tasks 字段（空数组）— 否则 MAA 判连接无效。
+        try:
+            _user = body.get("user", "") if isinstance(body, dict) else ""
+            if _user:
+                _hb = getattr(mw, "_maa_heartbeat", None)
+                if _hb is None:
+                    _hb = mw._maa_heartbeat = {}
+                _hb[_user] = time.time()
+        except Exception:
+            pass
+        return {"tasks": []}
+
+    @app.post("/api/maa_remote/status")
+    def handle_maa_remote_status(body: dict = {}):
+        # MAA 任务结果上报（SUCCESS/FAILED — MAA 自己报错）。必须 200 —
+        # 否则 MAA 弹"上传失败"通知。
+        try:
+            _st = body.get("status", "") if isinstance(body, dict) else ""
+            _task = body.get("task", "") if isinstance(body, dict) else ""
+            _user = body.get("user", "") if isinstance(body, dict) else ""
+            if _st == "FAILED":
+                mw._log(f"[MAA远程] {str(_user)[:8]} 任务失败: {str(_task)[:60]}")
+        except Exception:
+            pass
+        return {"ok": True}
+
     def _stop_maa_for_emu(emu_idx) -> None:
         """Stop any MAA connected to this emulator before shutting it down.
         Otherwise MAA's ADB keepalive (RetryOnDisconnected) keeps reconnecting

@@ -318,6 +318,18 @@ class ConfigService:
             extras["EnableTouch"] = False
             if cli:
                 extras["EmulatorPath"] = str(cli)
+        # RemoteControl（MAA 6.16 — 每秒轮询 GetTask = 心跳，检测 MAA 是否
+        # 在运行的权威信号 — 2026-08-12 用户: 检测 MAA 自己是否在运行，它
+        # 自己有按钮；ReportStatus 上报任务结果 SUCCESS/FAILED = MAA 自己
+        # 报错。MAAOrch 端点 /api/maa_remote/*）
+        rc = gui.setdefault("RemoteControl", {})
+        rc.update({
+            "RemoteControlGetTaskEndpointUri": "http://127.0.0.1:19999/api/maa_remote/task",
+            "RemoteControlReportStatusUri": "http://127.0.0.1:19999/api/maa_remote/status",
+            "RemoteControlUserIdentity": str(ac.get("id", "")),
+            "RemoteControlDeviceIdentity": str(emu_idx),
+            "RemoteControlPollIntervalMs": 1000,
+        })
         ss = gui.setdefault("StartUpSettings", {})
         ss.update({
             "RunDirectly": True,
