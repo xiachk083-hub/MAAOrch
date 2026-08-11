@@ -1669,6 +1669,25 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             pass
         return {"tasks": []}
 
+    @app.get("/api/maa_remote")
+    def handle_maa_remote_view():
+        """心跳快照（浏览器可看 — 2026-08-12 用户: 你给的本地我看不见 —
+        给 MAA 的端点是 POST，浏览器 GET 看不到 → 加 GET 视图）。"""
+        try:
+            _hb = getattr(mw, "_maa_heartbeat", {}) or {}
+            now = time.time()
+            out = {}
+            for _aid, _ts in _hb.items():
+                _nm = next((a.get("name", "") for a in (mw.accounts or [])
+                            if a.get("id") == _aid), str(_aid)[:8])
+                out[_nm] = {"last_seen": time.strftime("%H:%M:%S", time.localtime(_ts)),
+                            "age_s": int(now - _ts),
+                            "alive": (now - _ts) < 10}
+            return {"ok": True, "heartbeats": out,
+                    "hint": "MAA 每秒 POST /api/maa_remote/task 报到；alive=10s 内有报到"}
+        except Exception:
+            return {"ok": False}
+
     @app.post("/api/maa_remote/status")
     def handle_maa_remote_status(body: dict = {}):
         # MAA 任务结果上报（SUCCESS/FAILED — MAA 自己报错）。必须 200 —
