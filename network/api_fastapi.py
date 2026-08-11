@@ -846,6 +846,24 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 out.append(diagnose_emulator(cli, k))
         return {"ok": True, "emulators": out}
 
+    @app.get("/api/events/list")
+    def handle_events_list(year: int = 2026):
+        """活动明细列表（开始/结束/时长/间隔 — 2026-08-11 用户）。"""
+        from services.event_analyzer import list_events_detail
+        try:
+            return {"ok": True, **list_events_detail(year)}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    @app.get("/api/events/calendar")
+    def handle_events_calendar(year: int = 2026):
+        """活动日历（按月分组）。"""
+        from services.event_analyzer import calendar
+        try:
+            return {"ok": True, **calendar(year)}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     @app.get("/api/events/analyze")
     def handle_events_analyze(year: int = 2026):
         """活动历史分析（时长/月天数/重叠/月数量 — 2026-08-11 用户 4 问）。"""

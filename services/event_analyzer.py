@@ -157,3 +157,42 @@ if __name__ == "__main__":
         n = collect_events()
         print(f"已收集 {len(n)} 个活动")
     print(json.dumps(analyze(), ensure_ascii=False, indent=1))
+
+
+def list_events_detail(year: int = 2026) -> dict:
+    """每活动明细：名称/开始/结束/时长/类型（2026-08-11 用户）。"""
+    fp = DIR / "events.json"
+    events = json.loads(fp.read_text(encoding="utf-8")) if fp.exists() else []
+    evs = []
+    for e in events:
+        s, en = _parse(e.get("start", "")), _parse(e.get("end", ""))
+        if s and en and s.year == year:
+            days = (en - s).days + 1
+            evs.append({
+                "name": e["name"],
+                "start": s.strftime("%Y-%m-%d"),
+                "start_time": s.strftime("%H:%M"),
+                "end": en.strftime("%Y-%m-%d"),
+                "duration_days": days,
+                "type": "常驻" if days > 60 else "常规",
+            })
+    evs.sort(key=lambda x: x["start"])
+    # 时间线：与上一个活动的间隔（活动日志语义）
+    timeline = []
+    prev_end = None
+    for e in evs:
+        s = datetime.strptime(e["start"], "%Y-%m-%d")
+        gap = (s - prev_end).days if prev_end else None
+        timeline.append({**e, "gap_after_prev_days": gap})
+        prev_end = datetime.strptime(e["end"], "%Y-%m-%d")
+    return {"year": year, "count": len(evs), "events": timeline}
+
+
+def calendar(year: int = 2026) -> dict:
+    """活动日历：按月分组（每月的活动条目）。"""
+    d = list_events_detail(year)
+    months = {}
+    for e in d["events"]:
+        m = e["start"][:7]
+        months.setdefault(m, []).append(e)
+    return {"year": year, "months": months}
