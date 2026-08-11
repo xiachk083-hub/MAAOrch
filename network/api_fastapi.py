@@ -1681,11 +1681,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             now = time.time()
             out = {}
             for _aid, _ts in _hb.items():
-                _nm = next((a.get("name", "") for a in (mw.accounts or [])
-                            if a.get("id") == _aid), str(_aid)[:8])
-                out[_nm] = {"last_seen": time.strftime("%H:%M:%S", time.localtime(_ts)),
-                            "age_s": int(now - _ts),
-                            "alive": (now - _ts) < 10}
+                _a = next((a for a in (mw.accounts or []) if a.get("id") == _aid), None)
+                _nm = _a.get("name", "") if _a else str(_aid)[:8]
+                # 昵称（note 首位 — 真实名字，2026-08-12 用户填入）显示
+                _nick = ""
+                if _a and _a.get("note"):
+                    _nick = str(_a["note"]).split()[0]
+                _disp = f"{_nm}({_nick})" if _nick else _nm
+                out[_disp] = {"last_seen": time.strftime("%H:%M:%S", time.localtime(_ts)),
+                              "age_s": int(now - _ts),
+                              "alive": (now - _ts) < 10}
             return {"ok": True, "heartbeats": out,
                     "hint": "MAA 每秒 POST /api/maa_remote/task 报到；alive=10s 内有报到"}
         except Exception:
