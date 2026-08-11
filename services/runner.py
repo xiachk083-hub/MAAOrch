@@ -1091,7 +1091,10 @@ class AccountRunner:
             self._finish_completed(aid, ac, p)
         elif event == "subtask_error":
             # 连续子任务错误（游戏崩溃/流程异常 → MAA 反复报错，2026-08-11
-            # 用户: MAA 日志会报任务错误）— 2 分钟内 ≥3 次 → 杀 MAA 走重启链
+            # 用户: MAA 日志会报任务错误）— 2 分钟内 ≥3 次 + asst.log 停滞
+            # （MAA 无进展）才判定异常。启动早期（游戏加载）的正常识别
+            # 重试也会报 SubTaskError 但日志持续写入 → 不误杀
+            # （2026-08-11 日-2: 3m45s 被误杀重启 — 用户观察"挺正常的"）。
             try:
                 win = self._err_windows.get(aid, [])
                 now = time.time()
@@ -1099,11 +1102,23 @@ class AccountRunner:
                 win.append(now)
                 self._err_windows[aid] = win
                 if len(win) >= 3:
+                    # 日志活性：MAA 还在重试（日志写）→ 正常，重置窗口
+                    p = self._procs.get(aid)
+                    _stalled = False
+                    try:
+                        if isinstance(p, subprocess.Popen):
+                            _al = Path(getattr(p, "_inst_path", "")) / "debug" / "asst.log"
+                            if _al.exists():
+                                _stalled = time.time() - _al.stat().st_mtime > 60
+                    except Exception:
+                        pass
+                    if not _stalled:
+                        self._err_windows[aid] = []
+                        return
                     self._err_windows.pop(aid, None)
                     ac = self._active.get(aid)
-                    p = self._procs.get(aid)
                     if ac and isinstance(p, subprocess.Popen) and p.poll() is None:
-                        self.emit_log(f"⚠ {ac.get('name', aid)} 连续子任务错误（游戏异常/崩溃），重启 MAA")
+                        self.emit_log(f"⚠ {ac.get('name', aid)} 连续子任务错误且日志停滞（游戏异常/崩溃），重启 MAA")
                         try:
                             p.terminate(); p.wait(3)
                         except Exception:
