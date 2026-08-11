@@ -492,38 +492,6 @@ def download_project() -> tuple[bool, str]:
             log("已清理残留 MAA.exe 进程")
         except Exception:
             pass
-        # Shut down all emulators gracefully — taskkill on MuMuVMMHeadless
-        # triggers MuMu's "运行终止" protection and the emulators refuse to
-        # die (orphans). MuMuManager `control -v <idx> shutdown` is the clean
-        # path; scan a generous index range (instances are 1..N, up to ~60).
-        try:
-            mm = None
-            try:
-                import glob as _g
-                adb_cands = _g.glob(str(root / "services" / "maa" / "source" / "**" / "adb.exe"), recursive=True)
-                if adb_cands:
-                    mm_cand = os.path.join(os.path.dirname(adb_cands[0]), "MuMuManager.exe")
-                    if os.path.exists(mm_cand):
-                        mm = mm_cand
-            except Exception:
-                pass
-            if mm is None:
-                for cand in (r"E:\MuMu Player 12\nx_main\MuMuManager.exe",
-                             r"C:\Program Files\Netease\MuMuPlayer-12.0\nx_main\MuMuManager.exe"):
-                    if os.path.exists(cand):
-                        mm = cand
-                        break
-            if mm:
-                for idx in range(1, 61):
-                    try:
-                        subprocess.run([mm, "control", "-v", str(idx), "shutdown"],
-                                       capture_output=True, timeout=10,
-                                       creationflags=subprocess.CREATE_NO_WINDOW)
-                    except Exception:
-                        pass
-                log("已优雅关闭全部模拟器 (MuMuManager)")
-        except Exception:
-            pass
         # Replace — services/maa (MAA binaries, ~500MB) is moved aside, NOT
         # copied: it's managed by MAAOrch itself (ensure_maa_available /
         # download_update) and must not be touched by deploys. Move = instant.
@@ -533,7 +501,10 @@ def download_project() -> tuple[bool, str]:
             # Move services/maa out of the way (fast rename, no copy)
             maa_src = root / "services" / "maa"
             if maa_src.exists():
-                maa_moved = tmp_dir / "maa_moved"
+                # MUST be same volume as root — %TEMP% (C:) cross-volume rename
+                # fails and the 500MB copytree fallback silently loses MAA
+                # (2026-08-11: deploy wiped services/maa/source).
+                maa_moved = root.parent / ".maa_moved_tmp"
                 try:
                     if maa_moved.exists():
                         shutil.rmtree(str(maa_moved), ignore_errors=True)

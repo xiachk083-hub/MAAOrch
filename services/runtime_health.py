@@ -71,7 +71,12 @@ def check_health(mw) -> dict:
     counts["queued"] = len(queued_ids)
 
     # ── 1. zombie MAA: .pid alive but account not running ──
-    for inst_dir in sorted(INSTANCES.iterdir(), key=lambda p: int(p.name) if p.name.isdigit() else 0):
+    # 目录不存在容错（实例池尚未创建/部署后丢失 — 2026-08-11 health 500 根因）
+    try:
+        _inst_dirs = sorted(INSTANCES.iterdir(), key=lambda p: int(p.name) if p.name.isdigit() else 0)
+    except FileNotFoundError:
+        _inst_dirs = []
+    for inst_dir in _inst_dirs:
         if not inst_dir.is_dir() or not inst_dir.name.isdigit():
             continue
         pid_file = inst_dir / ".pid"
