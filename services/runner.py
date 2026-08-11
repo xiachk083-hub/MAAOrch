@@ -1922,9 +1922,11 @@ class AccountRunner:
                     _f.write(_j2.dumps(_summary, ensure_ascii=False) + "\n")
             except Exception:
                 pass
-            # Retention: keep newest 30 runs per account, drop the oldest
+            # Retention: keep newest 100 runs per account, drop the oldest
+            # （2026-08-11 用户: 收集优先于识别 — 现场原始日志是分析底，
+            # 30 次太短会丢现场。磁盘 2TB 足够，延到 100 次）
             runs = sorted(hist.glob("*.log"))
-            while len(runs) > 60:  # 30 runs × 2 files
+            while len(runs) > 200:  # 100 runs × 2 files
                 try:
                     runs[0].unlink()
                 except Exception:

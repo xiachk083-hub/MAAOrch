@@ -21,7 +21,6 @@ from datetime import datetime
 from pathlib import Path
 
 _SAMPLES_DIR = Path(__file__).parent.parent / "logs" / "log_samples"
-_callback_counts: dict = {}  # (aid, event) -> 已收集条数（callback 全量限频）
 
 
 def _record_event(aid: str, event_type: str, line: str) -> None:
@@ -136,14 +135,12 @@ class LogWatcher(threading.Thread):
             # 关键词 — MAA 改文案/出新事件不会漏。2026-08-11 用户: 照词找
             # 日志会不会漏新日志）。每种事件每运行限 3 条防爆炸（采样足够）。
             if "Assistant::append_callback" in line and "|" in line:
+                # 全量收集（2026-08-11 用户: 收集优先于识别 — 现场漏掉就
+                # 永远不知道；限频=预先筛选，取消）
                 try:
                     tail = line.split("|")[-1].strip()
                     evt = tail.split()[0] if tail else "?"
-                    key = (self._aid, evt)
-                    n = _callback_counts.get(key, 0)
-                    if n < 3:
-                        _callback_counts[key] = n + 1
-                        _record_event(self._aid, f"cb:{evt}", line)
+                    _record_event(self._aid, f"cb:{evt}", line)
                 except Exception:
                     pass
             if "AllTasksCompleted" in line:
