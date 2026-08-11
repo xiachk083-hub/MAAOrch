@@ -796,6 +796,19 @@ class LaunchQueue:
                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                                encoding="utf-8", errors="replace")
             data = _json.loads(r.stdout.lstrip("\ufeff").strip())
+            # 补系统启动标记（重启/入队后模拟器归属恢复 — 2026-08-11 堆积
+            # 根因: main_web 启动时补一次，但那次重启队列为空 → 后来入队的
+            # 账号对应模拟器无标记 → 回收永不关 → 8 台空闲堆积）。
+            # 每次回收 tick 补: 运行中 + 账号在 active/pending → 标记。
+            try:
+                from services.emu_service import mark_system_started as _mss
+                for _idx, _info in data.items():
+                    _aid = emu2aid.get(str(_idx))
+                    if _aid and (_aid in active_ids or
+                                 any(e.account_id == _aid for e in self._pending)):
+                        _mss(str(_idx))
+            except Exception:
+                pass
             for idx, info in data.items():
                 if not info.get("is_process_started"):
                     continue
