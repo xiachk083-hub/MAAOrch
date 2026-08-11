@@ -160,6 +160,15 @@ pause
         _log=lambda msg: _LOG.info(msg),
     )
     launch_queue._restore()
+    # EmulatorService v2（Phase 1 — 模拟器状态机骨架，docs/EMULATOR_SERVICE.md）
+    try:
+        from services.emu_service_v2 import EmulatorService
+        ctx._mw.emu_service_v2 = EmulatorService(ctx, node_id="local")
+        ctx._mw.emu_service_v2.start()
+        # 启动恢复: 扫描真实进程重建状态（EXTERNAL 识别 — 有 .pid 的不标）
+        ctx._mw.emu_service_v2.scan_and_recover()
+    except Exception as _e:
+        _LOG.error(f"[状态机] v2 初始化失败: {_e}")
     # 恢复系统启动标记（重启不丢 — 否则重启前队列拉起的模拟器被当
     # "用户手动开的" → 永不回收 → 模拟器堆积（2026-08-11: 部署后 17 台残留））
     try:
