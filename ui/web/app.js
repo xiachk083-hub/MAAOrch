@@ -3898,23 +3898,13 @@ async function renderEvents(container) {
         + `<span>每月: ${Object.entries(ana.monthly || {}).map(([m, n]) => `${m.slice(5)}月×${n}`).join(' ')}</span>`
         + '</div>';
     }
-    // 活动日历（按月）
+    // 活动甘特日历（时间轴按天，一天一格 — 2026-08-11 用户）
     if (cal && cal.ok) {
-      const months = cal.months || {};
-      html += '<div class="card" style="padding:8px 10px;margin-bottom:8px"><div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:4px">🗓 活动日历</div>';
-      for (const [m, evs] of Object.entries(months)) {
-        html += `<div style="font-size:10px;color:var(--text3);margin:4px 0 2px">${m} 月 (${evs.length} 个)</div>`;
-        for (const e of evs) {
-          const col = e.type === '常驻' ? 'var(--accent)' : 'var(--text2)';
-          html += `<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:1px 0">
-            <span style="min-width:150px;color:${col}">${e.start} ~ ${e.end}</span>
-            <span style="min-width:40px;background:var(--border);border-radius:3px;text-align:center;padding:0 4px">${e.duration_days}天</span>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</span>
-            <span style="font-size:9px;color:var(--text3)">${e.type}</span>
-          </div>`;
-        }
-      }
-      html += '</div>';
+      const all = [];
+      for (const evs of Object.values(cal.months || {})) all.push(...evs);
+      all.sort((a, b) => a.start.localeCompare(b.start));
+      html += '<div class="card" style="padding:8px 10px;margin-bottom:8px"><div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:4px">🗓 活动甘特日历 <span style="font-size:9px;color:var(--text3)">一天一格，横向滚动</span></div>'
+        + ganttCalendar(2026, all) + '</div>';
     }
     // 公告列表
     if (ann && ann.ok) {
@@ -3936,4 +3926,42 @@ async function renderEvents(container) {
   } catch(e) {
     container.innerHTML = `<div style="color:var(--danger);padding:20px">加载失败: ${e.message}</div>`;
   }
+}
+
+
+// 甘特式活动日历（一天一格 — 2026-08-11 用户）
+function ganttCalendar(year, events) {
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const daysInYear = leap ? 366 : 365;
+  const dayOffset = d => Math.round((new Date(d + 'T00:00:00') - new Date(year, 0, 1)) / 86400000);
+  const GRID = 150 + 'px repeat(' + daysInYear + ', 11px)';
+  let html = '<div style="overflow-x:auto"><div style="min-width:' + (160 + daysInYear * 11) + 'px;font-size:9px">';
+  // 月表头
+  html += '<div style="display:grid;grid-template-columns:' + GRID + ';color:var(--text3);margin-bottom:1px">';
+  html += '<div style="font-weight:bold;color:var(--text2)">月份</div>';
+  for (let m = 0; m < 12; m++) {
+    const dm = new Date(year, m + 1, 0).getDate();
+    html += '<div style="grid-column:span ' + dm + ';text-align:center;background:var(--border);border-radius:2px 2px 0 0">' + (m + 1) + '月</div>';
+  }
+  html += '</div>';
+  // 日表头（每天一格，显示日号）
+  html += '<div style="display:grid;grid-template-columns:' + GRID + ';color:var(--text3);height:15px;margin-bottom:4px">';
+  html += '<div></div>';
+  for (let m = 0; m < 12; m++) {
+    const dm = new Date(year, m + 1, 0).getDate();
+    for (let d = 1; d <= dm; d++) html += '<div style="text-align:center;overflow:hidden">' + d + '</div>';
+  }
+  html += '</div>';
+  // 活动行（一天一格：开始日 → 结束日）
+  for (const e of events) {
+    const off = dayOffset(e.start);
+    const dur = e.duration_days;
+    const col = e.type === '常驻' ? 'var(--accent)' : '#4caf50';
+    html += '<div style="display:grid;grid-template-columns:' + GRID + ';align-items:center;height:18px;border-top:1px solid var(--border)">';
+    html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px;color:var(--text2)">' + e.name + '</div>';
+    html += '<div style="grid-column:' + (off + 1) + ' / span ' + dur + ';background:' + col + ';border-radius:2px;height:12px;opacity:0.85" title="' + e.start + ' ~ ' + e.end + ' (' + dur + '天)"></div>';
+    html += '</div>';
+  }
+  html += '</div></div>';
+  return html;
 }
