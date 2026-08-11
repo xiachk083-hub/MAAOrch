@@ -883,6 +883,33 @@ class LaunchQueue:
                     except Exception:
                         pass
                 _QUEUE_LOG.info(f"回收空闲模拟器 #{idx} (无运行任务)")
+                # A 型崩溃壳（2026-08-11 用户观察: 崩了不关的残留 — VMM 进程
+                # 低内存挂起，安卓已死）→ MuMuManager shutdown 无响应 →
+                # 直接 taskkill。判据: VMM 进程 <200MB + 启动 >5 分钟（排除
+                # 启动中的新进程）。
+                try:
+                    import psutil as _ps
+                    import re as _re
+                    for _p in _ps.process_iter(["name", "cmdline", "create_time", "memory_info"]):
+                        try:
+                            if _p.info["name"] != "MuMuVMMHeadless.exe":
+                                continue
+                            if not _re.search(r"MuMuPlayer-12\.0-" + str(idx) + r"",
+                                              " ".join(_p.info["cmdline"] or [])):
+                                continue
+                            _age = time.time() - _p.info["create_time"]
+                            _mb = (_p.info["memory_info"].rss if _p.info["memory_info"] else 0) / 1e6
+                            if _age > 300 and _mb < 200:
+                                _QUEUE_LOG.info(f"回收发现 A 型崩溃壳 模拟器#{idx} "
+                                                f"(进程 {int(_mb)}MB 残留 {int(_age/60)} 分钟) — taskkill")
+                                subprocess.run(["taskkill", "/F", "/PID", str(_p.pid)],
+                                               capture_output=True, timeout=5,
+                                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                continue
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
                 # 闲置模拟器 = 无 MAA/无任务 = 无游戏在跑 → 直接 MuMuManager
                 # shutdown 是正常关闭（用户手动关闭模拟器就是它），不会弹
                 # MuMu 崩溃报告（崩溃报告只在"游戏运行中被关"时出现）。
