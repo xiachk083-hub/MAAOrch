@@ -142,6 +142,7 @@ class AccountRunner:
         self._adb_restart_count: dict[str, int] = {}
         self._adb_check_ts: float = 0.0
         self._done_flags: dict[str, bool] = {}  # 完成检测标记（归 0 竞态防护）
+        self._stall_skip: dict[str, int] = {}  # 空转跳关计数（stall_loop）
         self._watchers: dict = {}  # aid → LogWatcher（日志事件流）
         self._err_windows: dict = {}  # aid -> [ts]（连续子任务错误窗口）
         self._emu_fail_count: dict[str, int] = {}
@@ -1055,6 +1056,7 @@ class AccountRunner:
         """
         try:
             self._done_flags[aid] = True
+            self._stall_skip.pop(aid, None)  # 正常完成重置空转计数
         except Exception:
             pass
         self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
@@ -1133,6 +1135,45 @@ class AccountRunner:
                             pass
                         tasks, sanity, drops = self._parse_log(aid)
                         self._cleanup(aid, -9, tasks, sanity, drops)
+            except Exception:
+                pass
+        elif event == "stall_loop":
+            # 空转检测（DoNothing 循环 ~3-5 分钟 — 2026-08-11 官-41 PRTS1
+            # 空转不触发卡死检测的盲区: 日志持续写 + 无 SubTaskError）。
+            # 第 1 次: 杀 MAA 自动重启（偶发画面卡）；第 2 次: 关卡不可用
+            # （PRTS 剿灭识别失败）→ 清剿灭配置防死循环。
+            try:
+                _n = self._stall_skip.get(aid, 0) + 1
+                self._stall_skip[aid] = _n
+                ac = self._active.get(aid)
+                p = self._procs.get(aid)
+                if ac and isinstance(p, subprocess.Popen) and p.poll() is None:
+                    if _n >= 2:
+                        for _key in ("smart_annihilation", "annihilation"):
+                            if ac.get(_key):
+                                ac[_key] = ""
+                        if ac.get("stages"):
+                            ac["stages"] = [s for s in ac["stages"] if not str(s).startswith("PRTS")]
+                        try:
+                            from models.config_manager import save_config
+                            save_config(self.ctx.config)
+                            self.emit_log(f"⏭ {ac.get('name', aid)} 空转 2 次，已跳过剿灭（PRTS 识别失败）")
+                        except Exception:
+                            pass
+                    self.emit_log(f"⚠ {ac.get('name', aid)} 任务空转（DoNothing 循环 {_n} 次），重启 MAA")
+                    try:
+                        p.terminate()
+                        try:
+                            p.wait(3)
+                        except Exception:
+                            pass
+                        if p.poll() is None:
+                            subprocess.run(["taskkill", "/F", "/PID", str(p.pid)],
+                                           capture_output=True, timeout=5, creationflags=CF)
+                    except Exception:
+                        pass
+                    tasks, sanity, drops = self._parse_log(aid)
+                    self._cleanup(aid, -11, tasks, sanity, drops)
             except Exception:
                 pass
         elif event == "battle_failed":

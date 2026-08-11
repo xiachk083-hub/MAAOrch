@@ -168,6 +168,31 @@ class LogWatcher(threading.Thread):
                     self._on_event("subtask_error", self._aid, line)
                 except Exception:
                     pass
+            # 空转检测（DoNothing 循环 — 2026-08-11 官-41 PRTS1 空转 60s+
+            # 不触发任何检测的盲区: 日志持续写（非停滞）+ 无 SubTaskError。
+            # 同一 cur_task 连续 ~40 次 DoNothing（约 3-5 分钟）→ stall_loop）
+            try:
+                if '"cur_task"' in line:
+                    import re as _re
+                    _m = _re.search(r'"cur_task":"([^"]+)"', line)
+                    if _m:
+                        self._cur_task = _m.group(1)
+                elif "SubTaskStart" in line and "DoNothing" in line:
+                    _task = getattr(self, "_cur_task", "?")
+                    if getattr(self, "_dn_task", None) == _task:
+                        self._dn_count = getattr(self, "_dn_count", 0) + 1
+                    else:
+                        self._dn_task = _task
+                        self._dn_count = 1
+                    if getattr(self, "_dn_count", 0) >= 40:
+                        self._dn_count = 0  # 重置防重复触发
+                        _record_event(self._aid, "stall_loop", line)
+                        try:
+                            self._on_event("stall_loop", self._aid, line)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             if "AllTasksCompleted" in line:
                 _record_event(self._aid, "completed", line)
                 self._on_event("completed", self._aid, line)
