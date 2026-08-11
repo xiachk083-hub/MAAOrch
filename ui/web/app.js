@@ -2037,9 +2037,10 @@ async function renderConnect(container) {
         + '<span class="conn-status" style="font-size:9px;color:' + statusColor + ';font-weight:bold">● ' + statusTxt + '</span>'
         + '</div>'
         + '<div style="margin-bottom:4px">'
-        + '<img src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:4px;border:1px solid var(--border);background:var(--bg3);display:block" onerror="this.style.opacity=0.3" onload="this.style.opacity=1">'
+        + '<img id="shot-' + aid + '" src="/api/connect/' + aid + '/screenshot?_t=' + Date.now() + '" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:4px;border:1px solid var(--border);background:var(--bg3);display:block" onerror="this.style.opacity=0.3" onload="this.style.opacity=1">'
         + '</div>'
         + '<div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap">'
+        + '<button class="small" onclick="refreshShot(' + aid + ')" title="手动截图">📷 截图</button>'
         + _launchMenuHTML(e.index, maaOn)
         + '<button class="small danger conn-stop" onclick="stopConnect(\'' + aid + '\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>⏹ 停止</button>'
         + '<button class="small conn-restart" onclick="restartConnect(\'' + aid + '\',\'connect\')" ' + (!maaOn ? 'disabled style="opacity:0.4"' : '') + '>🔄 重启</button>'
@@ -2050,31 +2051,14 @@ async function renderConnect(container) {
         + '</div>';
     }).join('');
     connSelUpdate();
-    // Live screenshot refresh (chained: load-finished → next tick, staggered
-    // start offsets so N emulators don't all request at the same instant).
-    // 降频 15s（2026-08-12 用户: 项目也有高频截屏 — adb screencap 走 vGPU
-    // 读取，叠加 MAA 自身截图 → vGPU 压力 → 模拟器崩溃触发嫌疑）。
-    const shotInterval = 15000;
+    // 截图改手动按钮（2026-08-12 用户: 项目不要自动截图，需要时按钮 —
+    // adb screencap 走 vGPU 读取，自动轮询叠加 MAA 截图 → 崩溃触发嫌疑）
     const allDetails = el.querySelectorAll('details');
     emus.forEach((e, i) => {
       const aid = 'emu' + e.index;
       const img = el.querySelector('img[src*="/' + aid + '/screenshot"]');
       if (img) {
-        const tick = () => {
-          if (state.page !== 'connect' || !img.isConnected) { return; }
-          img.src = '/api/connect/' + aid + '/screenshot?_t=' + Date.now();
-        };
-        // Stagger first load, then chain on load/error (no request pile-up)
-        let timer = setTimeout(() => {
-          if (state.page !== 'connect' || !img.isConnected) { return; }
-          tick();
-          timer = setInterval(() => {
-            if (state.page !== 'connect' || !img.isConnected) { clearInterval(timer); return; }
-            tick();
-          }, shotInterval);
-        }, (i * 400) % shotInterval);
-        window._connectTimers = window._connectTimers || [];
-        window._connectTimers.push(timer);
+        // 初始静态加载一次（无轮询）
       }
       const det = allDetails[i];
       if (det) {
@@ -2418,6 +2402,12 @@ function clearLogView() {
   if (el) el.textContent = '(已清空)';
 }
 
+// 手动截图（2026-08-12 用户: 需要时给个按钮截图 — 无自动轮询）
+function refreshShot(aid) {
+  const img = document.getElementById('shot-' + aid);
+  if (img) { img.src = '/api/connect/' + aid.replace('emu', '') + '/screenshot?_t=' + Date.now(); }
+}
+
 // ── Actions ──
 async function stopAll() {
   if (!await showConfirm('确认停止所有运行中的账号？')) return;
@@ -2612,7 +2602,7 @@ function previewEmulator(id, idx) {
   if (_previewTimer) clearInterval(_previewTimer);
   const update = () => { img.src = API + `/account/${idx}/screenshot?_t=${Date.now()}`; };
   update();
-  _previewTimer = setInterval(update, 5000);  // 降频 5s（截图压力 — 2026-08-12）
+  // 无自动轮询（2026-08-12 用户: 手动按钮截图）
 }
 function stopPreview() {
   if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
@@ -2636,7 +2626,7 @@ function togglePreview(aid, name) {
   if (idx < 0) return;
   const update = () => { img.src = API + `/account/${idx}/screenshot?_t=${Date.now()}`; img.style.display = ''; };
   update();
-  _previewTimers[aid] = setInterval(update, 5000);  // 降频 5s（截图压力）
+  // 无自动轮询
 }
 
 async function renderTaskConfig(container) {
