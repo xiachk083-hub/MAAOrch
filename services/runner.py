@@ -659,19 +659,35 @@ class AccountRunner:
                 wait = int(ac.get("emu_wait", 60))
                 deadline = time.time() + wait
                 _prev = ac.get("adb_address", "")
+                _found = False
                 while time.time() < deadline:
                     try:
                         for e in detect_emu_instances():
                             if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
-                                ac["adb_address"] = f"127.0.0.1:{e['adb_port']}"
-                                break
-                        if ac.get("adb_address"):
-                            _changed = "" if ac["adb_address"] == _prev else f"（{_prev} → {ac['adb_address']}）"
-                            self.emit_log(f"模拟器 #{emu_idx} ADB 端口 {ac['adb_address']}{_changed}")
+                                _addr = f"127.0.0.1:{e['adb_port']}"
+                                # 验证连通才采用 — 部署/重启期模拟器端口不稳，
+                                # detect 可能返回旧值/错位值（2026-08-12 官-47
+                                # 注入 16769 vs 实际 16708 → MAA 连不上卡住；
+                                # 旧逻辑 detect 没找到时缓存值恒真 → 直接注入
+                                # 旧缓存）。连不上继续轮询（端口在变化）。
+                                _adb = ac.get("adb_path", "") or "adb"
+                                try:
+                                    _vr = subprocess.run([_adb, "connect", _addr],
+                                                         capture_output=True, timeout=5, creationflags=CF)
+                                    if b"connected" in _vr.stdout.lower():
+                                        ac["adb_address"] = _addr
+                                        _found = True
+                                        break
+                                except Exception:
+                                    pass
+                        if _found:
                             break
                     except Exception:
                         pass
-                    time.sleep(5)
+                    time.sleep(3)
+                if ac.get("adb_address"):
+                    _changed = "" if ac["adb_address"] == _prev else f"（{_prev} → {ac['adb_address']}）"
+                    self.emit_log(f"模拟器 #{emu_idx} ADB 端口 {ac['adb_address']}{_changed}")
                 if not ac.get("adb_address"):
                     self.emit_log(f"警告: 模拟器 #{emu_idx} 端口探测超时")
             adb = ac.get("adb_path", "") or "adb"
