@@ -21,10 +21,19 @@ from datetime import datetime
 from pathlib import Path
 
 _SAMPLES_DIR = Path(__file__).parent.parent / "logs" / "log_samples"
+_collect_fail: int = 0  # 收集失败计数（健康检查暴露 — 收集绝不能静默丢）
+
+
+def get_collect_status() -> dict:
+    """收集健康状态（2026-08-11 用户: 收集是根，不能漏）。"""
+    return {"samples_dir": str(_SAMPLES_DIR), "fail_count": _collect_fail}
 
 
 def _record_event(aid: str, event_type: str, line: str) -> None:
-    """事件样本落盘（jsonl 追加，供训练/规则提炼）。"""
+    """事件样本落盘（jsonl 追加，供训练/规则提炼）。
+    收集优先：任何失败不静默 — 计数暴露；文件超 50MB 归档（旧文件
+    保留 .old，不丢数据 — 2026-08-11 用户: 得有垃圾才能分拣）。"""
+    global _collect_fail
     try:
         _SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
         rec = {
@@ -33,10 +42,20 @@ def _record_event(aid: str, event_type: str, line: str) -> None:
             "event": event_type,
             "line": line.strip()[:400],
         }
-        with open(_SAMPLES_DIR / f"{aid[:8]}.jsonl", "a", encoding="utf-8") as f:
+        fp = _SAMPLES_DIR / f"{aid[:8]}.jsonl"
+        # 归档：超 50MB 重命名 .old（保留）→ 新文件继续收（分拣扫 jsonl*）
+        try:
+            if fp.exists() and fp.stat().st_size > 50 * 1024 * 1024:
+                fp.replace(fp.with_suffix(".jsonl.old"))
+        except Exception:
+            pass
+        with open(fp, "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception:
-        pass
+        try:
+            _collect_fail += 1
+        except Exception:
+            pass
 
 
 def record_event(aid: str, event_type: str, line: str) -> None:

@@ -846,6 +846,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 out.append(diagnose_emulator(cli, k))
         return {"ok": True, "emulators": out}
 
+    @app.get("/api/logs/collect_status")
+    def handle_logs_collect_status():
+        """样本收集健康（失败计数 — 收集是根不能漏，2026-08-11 用户）。"""
+        from services.log_watcher import get_collect_status
+        return {"ok": True, **get_collect_status()}
+
     @app.get("/api/logs/samples")
     def handle_logs_samples():
         """日志样本索引快照（自动分拣实时数据 — 2026-08-11 用户）。"""

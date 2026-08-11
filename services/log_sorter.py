@@ -81,7 +81,7 @@ def build_index(days: int = 7) -> dict:
     cutoff = time.strftime("%Y-%m-%d", time.localtime(time.time() - days * 86400))
     all_stats = {}
     new_events = Counter()
-    for fp in sorted(glob.glob(str(SAMPLES / "*.jsonl"))):
+    for fp in sorted(glob.glob(str(SAMPLES / "*.jsonl*"))):
         aid = os.path.basename(fp)[:8]
         st = sort_account(aid, cutoff)
         all_stats[aid] = st
@@ -143,7 +143,7 @@ class LogSorterThread(_th.Thread):
             time.sleep(60)
 
     def _sweep(self) -> None:
-        for fp in sorted(glob.glob(str(SAMPLES / "*.jsonl"))):
+        for fp in sorted(glob.glob(str(SAMPLES / "*.jsonl*"))):
             aid = os.path.basename(fp)[:8]
             try:
                 lines = open(fp, encoding="utf-8", errors="replace").readlines()
