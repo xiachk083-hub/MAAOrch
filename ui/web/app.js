@@ -133,7 +133,7 @@ function renderPage() {
                 account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit,
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
-                emus: renderEmus, connect: renderConnect };
+                emus: renderEmus, connect: renderConnect, events: renderEvents };
   if (fns[state.page]) fns[state.page](c);
 }
 async function loadAccountStatusOverview() {
@@ -3874,4 +3874,65 @@ function closeMobileMenu(e) {
   if (e && e.target !== e.currentTarget) return;
   var el = document.getElementById('mobile-menu-overlay');
   if (el) el.style.display = 'none';
+}
+
+// ── 活动页（公告 + 活动日历/明细 + 分析 — 2026-08-11 用户）──
+async function renderEvents(container) {
+  showLoading(container, '加载活动数据...');
+  try {
+    const [ann, cal, ana] = await Promise.all([
+      apiGet('/announcements'), apiGet('/events/calendar?year=2026'), apiGet('/events/analyze?year=2026')
+    ]);
+    let html = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+      + '<span style="color:var(--text2);font-size:12px;font-weight:bold">📅 活动与公告</span>'
+      + '<span style="font-size:10px;color:var(--text3)">2026 年 | PRTS Wiki + 官网</span>'
+      + '<button class="small" onclick="renderEvents(document.getElementById(\'content\'))">刷新</button>'
+      + '</div>';
+    // 统计条
+    if (ana && ana.ok) {
+      html += '<div class="card" style="padding:6px 10px;margin-bottom:8px;font-size:10px;display:flex;gap:16px;flex-wrap:wrap">'
+        + `<span>🎯 活动 <b>${ana.total_events}</b> 个</span>`
+        + `<span>⏱ 平均 <b>${ana.avg_duration_days}</b> 天</span>`
+        + `<span>📈 重叠 <b>${ana.overlap_pairs}</b> 对</span>`
+        + `<span>每月: ${Object.entries(ana.monthly || {}).map(([m, n]) => `${m.slice(5)}月×${n}`).join(' ')}</span>`
+        + '</div>';
+    }
+    // 活动日历（按月）
+    if (cal && cal.ok) {
+      const months = cal.months || {};
+      html += '<div class="card" style="padding:8px 10px;margin-bottom:8px"><div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:4px">🗓 活动日历</div>';
+      for (const [m, evs] of Object.entries(months)) {
+        html += `<div style="font-size:10px;color:var(--text3);margin:4px 0 2px">${m} 月 (${evs.length} 个)</div>`;
+        for (const e of evs) {
+          const col = e.type === '常驻' ? 'var(--accent)' : 'var(--text2)';
+          html += `<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:1px 0">
+            <span style="min-width:150px;color:${col}">${e.start} ~ ${e.end}</span>
+            <span style="min-width:40px;background:var(--border);border-radius:3px;text-align:center;padding:0 4px">${e.duration_days}天</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</span>
+            <span style="font-size:9px;color:var(--text3)">${e.type}</span>
+          </div>`;
+        }
+      }
+      html += '</div>';
+    }
+    // 公告列表
+    if (ann && ann.ok) {
+      const items = ann.announcements || [];
+      html += '<div class="card" style="padding:8px 10px"><div style="font-size:11px;font-weight:bold;color:var(--text2);margin-bottom:4px">📰 最新公告</div>';
+      for (const a of items.slice(0, 12)) {
+        const tab = a.tab === '1' ? '活动' : '官方';
+        const col = a.tab === '1' ? 'var(--accent)' : 'var(--text3)';
+        html += `<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:1px 0">
+          <span style="min-width:80px;color:var(--text3)">${a.date || '--'}</span>
+          <span style="font-size:9px;color:${col};border:1px solid ${col};border-radius:3px;padding:0 4px">${tab}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</span>
+          ${a.url ? `<a href="${a.url}" target="_blank" style="font-size:9px;color:var(--accent)">详情</a>` : ''}
+        </div>`;
+      }
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = `<div style="color:var(--danger);padding:20px">加载失败: ${e.message}</div>`;
+  }
 }
