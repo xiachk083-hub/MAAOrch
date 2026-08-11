@@ -39,14 +39,21 @@ def _record_event(aid: str, event_type: str, line: str) -> None:
         pass
 
 
+def record_event(aid: str, event_type: str, line: str) -> None:
+    """公共样本记录接口（runner/launch_queue 项目事件也写入，跨源完整）。"""
+    _record_event(aid, event_type, line)
+
+
 class LogWatcher(threading.Thread):
     def __init__(self, inst_path: str, aid: str, on_event, name: str = ""):
         super().__init__(daemon=True, name=f"logwatch_{name or aid[:6]}")
         self._path = Path(inst_path) / "debug" / "asst.log"
+        self._gui_path = Path(inst_path) / "debug" / "gui.log"
         self._aid = aid
         self._on_event = on_event  # callable(event_type: str, aid: str, line: str)
         self._stop = False
         self._fp = None
+        self._gui_fp = None
 
     def stop(self) -> None:
         self._stop = True
@@ -61,6 +68,16 @@ class LogWatcher(threading.Thread):
             self._fp = None
             return False
 
+    def _open_gui_tail(self) -> bool:
+        """gui.log 尾部跟随（降级/配置信号在 gui.log — 2026-08-11 补全）。"""
+        try:
+            self._gui_fp = open(self._gui_path, "r", encoding="utf-8", errors="replace")
+            self._gui_fp.seek(0, 2)
+            return True
+        except Exception:
+            self._gui_fp = None
+            return False
+
     def run(self) -> None:
         if not self._open_tail():
             # 文件尚未出现（MAA 启动后才有）— 轮询等待
@@ -68,6 +85,7 @@ class LogWatcher(threading.Thread):
                 if self._open_tail():
                     break
                 time.sleep(1)
+        self._open_gui_tail()
         while not self._stop:
             try:
                 line = self._fp.readline()
@@ -83,6 +101,11 @@ class LogWatcher(threading.Thread):
                             self._open_tail()
                     except Exception:
                         pass
+                # gui.log 同步读取（降级/配置信号）
+                if self._gui_fp:
+                    gline = self._gui_fp.readline()
+                    if gline:
+                        self._dispatch_gui(gline)
             except Exception:
                 time.sleep(1)
                 try:
@@ -91,6 +114,20 @@ class LogWatcher(threading.Thread):
                     pass
                 if not self._open_tail():
                     time.sleep(2)
+
+    def _dispatch_gui(self, line: str) -> None:
+        """gui.log 事件：关卡无效/配置问题（降级信号）。"""
+        try:
+            if ("添加任务失败" in line and "理智" in line) or \
+               ("selected null" in line and "FightStage" in line) or \
+               "配置无效" in line:
+                _record_event(self._aid, "downgrade_signal", line)
+                try:
+                    self._on_event("downgrade_signal", self._aid, line)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def _dispatch(self, line: str) -> None:
         try:
@@ -103,5 +140,20 @@ class LogWatcher(threading.Thread):
             elif "ExceededLimit" in line:
                 _record_event(self._aid, "exceeded", line)
                 self._on_event("exceeded", self._aid, line)
+            # 补全事件类型（2026-08-11 用户: 日志要全量收集，避免遗漏）
+            elif "TaskStart" in line or "TaskChainStart" in line:
+                _record_event(self._aid, "task_start", line)
+            elif "FightTimes" in line and "sanity" in line.lower():
+                _record_event(self._aid, "fight_sanity", line)  # 刷次数+体力
+            elif "StageDrops" in line:
+                _record_event(self._aid, "stage_drops", line)   # 掉落
+            elif "RecruitResult" in line:
+                _record_event(self._aid, "recruit", line)       # 公招
+            elif "Connection" in line and ("failed" in line.lower() or "error" in line.lower()):
+                _record_event(self._aid, "connection_error", line)  # 连接失败
+            elif "OCR" in line and ("failed" in line.lower() or "error" in line.lower()):
+                _record_event(self._aid, "ocr_error", line)     # OCR 异常
+            elif "AsstLoadResource" in line and "failed" in line.lower():
+                _record_event(self._aid, "load_error", line)    # 资源加载失败
         except Exception:
             pass

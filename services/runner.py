@@ -767,6 +767,11 @@ class AccountRunner:
             self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list}")
             self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
             self.emit_log(f"注入配置: {config_dir}/")
+            try:
+                from services.log_watcher import record_event
+                record_event(aid, "launch", f"task_list={plan_txt}")
+            except Exception:
+                pass
             # 防孤儿 MAA: 启动等待期间（模拟器冷启动/ADB 探测）队列可能已释放
             # 本账号标记（_clean_stale_emus/超时清理）— 此刻再 spawn 就是孤儿
             # （进程活着但无人跟踪 → 占实例不释放 → 无空闲 MAA 实例连环）。
@@ -1980,6 +1985,11 @@ class AccountRunner:
         # blocked relaunches for up to 150s before this fix.
         self._release_emu_mark(aid)
 
+        try:
+            from services.log_watcher import record_event
+            record_event(aid, "exit", f"exit_code={exit_code} elapsed={duration}s")
+        except Exception:
+            pass
         name = ac.get("name", aid) if ac else aid
         if ac and ac.get("_connect_only"):
             # Connect-only temp account: release dispatch + remove from connect list
