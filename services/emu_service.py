@@ -261,6 +261,37 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
             except Exception:
                 pass
             time.sleep(3)
+        else:
+            # 最终兜底：shutdown 后进程仍未退（MuMu 层卡死）→ taskkill 杀
+            # VMMHeadless 进程（进程级强杀 — 必定关掉。2026-08-11 用户:
+            # 最后一次能关掉的命令是什么 — 就是它）
+            try:
+                import re as _re
+                pid = None
+                try:
+                    import psutil as _ps
+                    for p in _ps.process_iter(["name", "cmdline"]):
+                        try:
+                            if p.info["name"] == "MuMuVMMHeadless.exe" and \
+                               _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"\b",
+                                          " ".join(p.info["cmdline"] or [])):
+                                pid = p.pid
+                                break
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                if pid:
+                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                                   capture_output=True, timeout=10, creationflags=_CF)
+                    if log:
+                        log(f"[优雅关闭] 模拟器#{emu_idx} 最终兜底: taskkill VMMHeadless PID={pid}（进程级强杀）")
+                else:
+                    if log:
+                        log(f"[优雅关闭] 模拟器#{emu_idx} 未找到 VMMHeadless 进程（可能已退出）")
+            except Exception as ex:
+                if log:
+                    log(f"[优雅关闭] 模拟器#{emu_idx} 最终兜底失败: {ex}")
     except Exception as ex:
         if log:
             log(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底失败: {ex}")
