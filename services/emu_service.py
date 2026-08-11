@@ -134,167 +134,77 @@ def graceful_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
 
 
 def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log) -> None:
+    """关闭主体（2026-08-11 用户: reboot 实测基本无效，直接 shutdown）：
+    1. force-stop 游戏（防"前台强关"崩溃报告）
+    2. 直接 MuMuManager shutdown（用户手动关模拟器就是它 — 正常关闭）
+    3. 等进程退出（wait 秒）
+    4. 未退 → taskkill VMMHeadless（最终兜底 — 必定关掉）
+    """
     _t0 = time.time()
     if log:
-        log(f"[优雅关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'}, wait={wait}s)")
-    # 实时端口优先（缓存 adb_address 重启后漂移 → reboot 未送达 → 兜底强关弹窗）
-    if adb_path:
-        live = get_adb_port(cli, emu_idx, flag)
-        if live:
-            addr = live
-            if log:
-                log(f"[优雅关闭] 模拟器#{emu_idx} 实时 ADB 端口 {addr}")
+        log(f"[关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'})")
+    # 1. 停止游戏进程（游戏前台被强关 → MuMu 崩溃报告/模拟器出错）
     if addr and adb_path:
         try:
-            # 先 connect（闲置模拟器可能不在 adb server 设备列表）
             subprocess.run([adb_path, "connect", addr],
                            capture_output=True, timeout=10, creationflags=_CF)
             time.sleep(1)
-            # 关机前停止游戏（游戏前台被强关 → 崩溃报告/出错）
             force_stop_games(adb_path, addr, log)
-            r = subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                               capture_output=True, timeout=10, creationflags=_CF)
-            if r.returncode != 0 and log:
-                log(f"[优雅关闭] 模拟器#{emu_idx} reboot 返回 {r.returncode}: {r.stderr[:80]}")
-            if log:
-                log(f"[优雅关闭] 模拟器#{emu_idx} adb reboot -p 已发送")
-        except Exception as ex:
-            if log:
-                log(f"[优雅关闭] 模拟器#{emu_idx} adb reboot 失败: {ex}")
+        except Exception:
+            pass
+    # 2. 直接 MuMuManager shutdown（正常关闭 — 不依赖 Android 响应）
+    try:
+        subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
+                       capture_output=True, timeout=15, creationflags=_CF)
+        if log:
+            log(f"[关闭] 模拟器#{emu_idx} MuMuManager shutdown 已发送（正常关闭）")
+    except Exception as ex:
+        if log:
+            log(f"[关闭] 模拟器#{emu_idx} shutdown 发送失败: {ex}")
+    # 3. 等进程退出
     dl = time.time() + wait
-    _last_reboot = _t0
-    _reboot_count = 1
-    _prev_st = None        # 上一次状态（检测"动静"=状态变化）
-    _last_state_change = _t0  # 状态最后一次变化时间
     while time.time() < dl:
         try:
             r = subprocess.run([cli, "info", flag, str(emu_idx)],
                                capture_output=True, text=True, timeout=5,
                                creationflags=_CF, encoding="utf-8", errors="replace")
             if r.returncode == 0:
-                d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                d = json.loads(r.stdout.lstrip("﻿").strip())
                 st = is_alive(d)
-                if st is not None:
-                    if st != _prev_st:
-                        # 状态变化 = 有动静（Android 开始关机/进程开始退出）
-                        _prev_st = st
-                        _last_state_change = time.time()
-                        if log:
-                            log(f"[优雅关闭] 模拟器#{emu_idx} 状态变化 → {st}")
-                        if st is False:
-                            if log:
-                                log(f"[优雅关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
-                            return True
-                    elif st is True:
-                        # 重发：20s 无动静（状态一直没变）→ 再发一次 reboot
-                        if time.time() - _last_state_change > 20 and _reboot_count < 2:
-                            _reboot_count += 1
-                            _last_reboot = time.time()
-                            if addr and adb_path:
-                                try:
-                                    subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                                                   capture_output=True, timeout=10, creationflags=_CF)
-                                    if log:
-                                        log(f"[优雅关闭] 模拟器#{emu_idx} 20s 无动静，重发 reboot (2/2)")
-                                except Exception:
-                                    pass
-                        # 降级：40s 无动静（重发后仍无响应）→ MuMuManager shutdown
-                        if time.time() - _last_state_change > 40:
-                            if log:
-                                log(f"[优雅关闭] 模拟器#{emu_idx} 40s 状态无变化（Android 无响应），降级 shutdown")
-                            break
+                if st is False:
+                    if log:
+                        log(f"[关闭] 模拟器#{emu_idx} 已完全退出 ({int(time.time()-_t0)}s)")
+                    return True
         except Exception:
             pass
         time.sleep(2)
-    # 超时后确认：Android 已关仅进程收尾 → 再等 30s（不强制）；仅 Android 仍开走兜底
+    # 4. 最终兜底：shutdown 后进程未退（MuMu 层卡死）→ taskkill VMMHeadless
     try:
-        r = subprocess.run([cli, "info", flag, str(emu_idx)],
-                           capture_output=True, text=True, timeout=5,
-                           creationflags=_CF, encoding="utf-8", errors="replace")
-        if r.returncode == 0:
-            d = json.loads(r.stdout.lstrip("\ufeff").strip())
-            _pa = d.get("is_android_started")
-            _pp = d.get("is_process_started")
-            if isinstance(_pa, bool) and isinstance(_pp, bool) and not _pa and _pp:
-                if log:
-                    log(f"[优雅关闭] 模拟器#{emu_idx} Android 已关机，等进程收尾 (最多 30s)")
-                _dl2 = time.time() + 30
-                while time.time() < _dl2:
-                    time.sleep(2)
-                    try:
-                        r2 = subprocess.run([cli, "info", flag, str(emu_idx)],
-                                            capture_output=True, text=True, timeout=5,
-                                            creationflags=_CF, encoding="utf-8", errors="replace")
-                        if r2.returncode == 0:
-                            d2 = json.loads(r2.stdout.lstrip("\ufeff").strip())
-                            if isinstance(d2.get("is_process_started"), bool) and not d2.get("is_process_started"):
-                                if log:
-                                    log(f"[优雅关闭] 模拟器#{emu_idx} 进程已退出 ({int(time.time()-_t0)}s)")
-                                return True
-                    except Exception:
-                        pass
-                if log:
-                    log(f"[优雅关闭] 模拟器#{emu_idx} 进程 30s 未收尾，shutdown 兜底")
-            else:
-                if log:
-                    log(f"[优雅关闭] 模拟器#{emu_idx} 等待超时({wait}s) 且 Android 仍在，shutdown 兜底")
-    except Exception:
-        pass
-    try:
-        subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
-                       capture_output=True, timeout=15, creationflags=_CF)
-        if log:
-            log(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底完成")
-        # 兜底后等进程真正退出（最多 60s）— 否则回收看到 is_process_started=True 二次关闭
-        _dl3 = time.time() + 60
-        while time.time() < _dl3:
-            try:
-                r3 = subprocess.run([cli, "info", flag, str(emu_idx)],
-                                    capture_output=True, text=True, timeout=5,
-                                    creationflags=_CF, encoding="utf-8", errors="replace")
-                if r3.returncode == 0:
-                    d3 = json.loads(r3.stdout.lstrip("\ufeff").strip())
-                    if isinstance(d3.get("is_process_started"), bool) and not d3.get("is_process_started"):
-                        if log:
-                            log(f"[优雅关闭] 模拟器#{emu_idx} 兜底后进程已退出 ({int(time.time()-_t0)}s)")
-                        break
-            except Exception:
-                pass
-            time.sleep(3)
-        else:
-            # 最终兜底：shutdown 后进程仍未退（MuMu 层卡死）→ taskkill 杀
-            # VMMHeadless 进程（进程级强杀 — 必定关掉。2026-08-11 用户:
-            # 最后一次能关掉的命令是什么 — 就是它）
-            try:
-                import re as _re
-                pid = None
+        import re as _re
+        pid = None
+        try:
+            import psutil as _ps
+            for p in _ps.process_iter(["name", "cmdline"]):
                 try:
-                    import psutil as _ps
-                    for p in _ps.process_iter(["name", "cmdline"]):
-                        try:
-                            if p.info["name"] == "MuMuVMMHeadless.exe" and \
-                               _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"\b",
-                                          " ".join(p.info["cmdline"] or [])):
-                                pid = p.pid
-                                break
-                        except Exception:
-                            pass
+                    if p.info["name"] == "MuMuVMMHeadless.exe" and                        _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"",
+                                  " ".join(p.info["cmdline"] or [])):
+                        pid = p.pid
+                        break
                 except Exception:
                     pass
-                if pid:
-                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                                   capture_output=True, timeout=10, creationflags=_CF)
-                    if log:
-                        log(f"[优雅关闭] 模拟器#{emu_idx} 最终兜底: taskkill VMMHeadless PID={pid}（进程级强杀）")
-                else:
-                    if log:
-                        log(f"[优雅关闭] 模拟器#{emu_idx} 未找到 VMMHeadless 进程（可能已退出）")
-            except Exception as ex:
-                if log:
-                    log(f"[优雅关闭] 模拟器#{emu_idx} 最终兜底失败: {ex}")
+        except Exception:
+            pass
+        if pid:
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                           capture_output=True, timeout=10, creationflags=_CF)
+            if log:
+                log(f"[关闭] 模拟器#{emu_idx} 最终兜底: taskkill VMMHeadless PID={pid}（进程级强杀）")
+        elif log:
+            log(f"[关闭] 模拟器#{emu_idx} 未找到 VMMHeadless 进程（可能已退出）")
     except Exception as ex:
         if log:
-            log(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底失败: {ex}")
+            log(f"[关闭] 模拟器#{emu_idx} 最终兜底失败: {ex}")
+    return True
 
 
 def _info(cli: str, emu_idx, flag: str = "-v") -> dict:
