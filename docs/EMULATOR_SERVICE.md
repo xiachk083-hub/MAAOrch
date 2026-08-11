@@ -397,6 +397,63 @@ CLOSING 进入 → 关闭链（优雅 → shutdown → taskkill，现有 _body�
 - 事件循环重启后：emu_state 重建（扫描真实进程——与启动恢复同路径）——不丢状态
 - 状态机不依赖其他线程（回收 tick 就在事件循环内——心跳即回收活动）
 
+## 9.5 第五轮评审补充（2026-08-12）— 实施可行性
+
+### 9.5.1 连接模式交互（connect_accounts）
+
+- 连接页临时账号（内存、不进队列）使用模拟器 = **EXTERNAL 接管**：acquire 时状态机给临时账号发 `acquire_external(account)`（模拟器 READY/EXTERNAL → BUSY，account 标记 connect_only）
+- 连接页停止 → release → 回 READY/EXTERNAL（不回收——用户手动操作的保留语义）
+- 与队列账号互斥：同一模拟器 BUSY（队列账号）时连接页 acquire 拒绝（提示"模拟器被队列占用"）——现有 `_account_usable` 语义保留
+
+### 9.5.2 事件循环阻塞清单（必须异步的操作）
+
+| 操作 | 处理 |
+|------|------|
+| taskkill / MuMuManager control / adb 命令 | 一律后台线程（subprocess 超时兜底）|
+| VBox 启动/关闭等待 | 异步（完成事件回投）|
+| 文件 IO（.pid/.meta/config 写）| 快速操作可同步（<10ms）；日志写异步（队列落盘节流模式）|
+| MuMuManager info 查询 | 后台线程（5s 超时——今天卡 90s 的教训）|
+| psutil 进程扫描 | 后台线程（周期快照——不在事件循环内扫）|
+
+### 9.5.3 配置迁移
+
+- 新字段带默认值（9.2.4 表）——老 config 无字段时用默认（不迁移数据）
+- `parallel_max` 保留（现有）——`prewarm_buffer`/`prewarm_concurrency` 新加
+
+## 11. 完整状态转移矩阵（规格——实施唯一依据）
+
+> 事件: prewarm / acquire / release / close / reclaim / crash / ready / lost / manual / pause / downgrade / cancel
+
+| 当前状态 \ 事件 | prewarm | acquire | release | close | reclaim | crash | ready | lost | manual | pause | cancel |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **OFF** | PREWARMING | PREWARMING(冷启动) | — | — | — | — | — | — | EXTERNAL | — | — |
+| **PREWARMING** | 忽略 | 等 READY(排队) | — | cancel_pending→READY→CLOSING | — | — | READY | 失败→OFF(计次) | — | — | cancel_pending |
+| **READY** | 忽略 | BUSY | — | CLOSING | CLOSING(闲置超时) | — | — | 重建 | — | 保留 | — |
+| **BUSY** | — | 拒绝 | IDLE | 拒绝(先 release) | 拒绝 | RECOVERING | — | RECOVERING | — | 保留(跑完) | — |
+| **IDLE** | — | BUSY(复用) | 忽略(幂等) | CLOSING | CLOSING(排位决策) | — | — | 重建 | — | 保留 | — |
+| **CLOSING** | 忽略 | 拒绝(等 ready) | — | 忽略(幂等) | 忽略 | — | — | OFF(进程消失) | — | — | — |
+| **RECOVERING** | — | 拒绝 | — | — | — | 计次 | BUSY(账号重试) | — | — | — | — |
+| **EXTERNAL** | — | BUSY(接管) | — | 拒绝(用户手动的不关) | 拒绝(永不回收) | — | — | OFF | EXTERNAL | — | — |
+
+> 说明: `—` = 不允许/不适用（转移表拒绝）；`cancel_pending` = 标记后等自然完成再回收（9.4.1）
+
+## 12. Phase 1 实施拆解（任务级）
+
+| # | 任务 | 文件 | 验证点 |
+|---|------|------|--------|
+| 1 | `EmuState` dataclass + `emu_state` 单例 + 状态转移表 | 新 `services/emu_state.py` | 单测：转移矩阵遍历（合法/非法）|
+| 2 | `EmulatorService` 骨架：事件循环 + 心跳 + API（acquire/release/close/reclaim_tick/prewarm）| 新 `services/emu_service_v2.py` | 启动/停止/事件处理 |
+| 3 | 启动恢复：扫描真实进程重建 emu_state（含壳识别/EXTERNAL 识别）| emu_service_v2 + main_web 接入 | 重启后状态正确（含壳/手动场景）|
+| 4 | 回收逻辑迁入 `reclaim_tick`（吸收 9 道保护 → 转移表 + 排位决策）| launch_queue 改造（`_reclaim_idle_emus` → 调用 v2）| 行为等价：闲置回收/排队保留/EXTERNAL 不回收 |
+| 5 | 开启逻辑迁入 `acquire`（冷启动/预热统一 + 启动节流）| runner `_launch_job_body` 改造 | 账号启动流程不变（模拟器就绪路径）|
+| 6 | 实例池分配迁入（acquire_instance/release_instance——吸收 `_inst_reserved`）| runner/emu_state | 无并发竞态（原子分配）|
+| 7 | 状态转移审计日志（oplog 模式）| emu_service_v2 | 每次转移落日志 |
+| 8 | 前端接入（模拟器页/连接页读快照 + SSE 事件）| api_fastapi + app.js | 页面显示状态/增量更新 |
+| 9 | 全量回归 + 部署 | — | 队列轮转正常/回收正常/无回归 |
+
+- 顺序：1→2→3 骨架先行（可独立部署验证），4→5→6 迁入（行为等价），7→8 收尾
+- 每步可单独提交部署（不破坏现有功能——v2 与旧逻辑并存期：reclaim_tick 先跑新逻辑，旧 `_reclaim_idle_emus` 保留开关）
+
 ## 10. 与现有代码的映射
 
 | 现有 | 去向 |
