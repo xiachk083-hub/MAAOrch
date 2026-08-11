@@ -377,49 +377,42 @@ class HealthMonitor(threading.Thread):
 
     def run(self) -> None:
         import re as _re
+        try:
+            import psutil as _ps
+        except ImportError:
+            _ps = None
         while True:
             try:
                 cli = self._cli_finder()
-                if cli:
-                    # 1) 运行中模拟器列表
+                if cli and _ps:
+                    # 1) 运行中模拟器列表（MuMuManager）
                     info = _info(cli, "all")
                     running = set()
                     if info:
                         running = {k for k, v in info.items() if v.get("is_process_started")}
-                    # 2) 批量 VMM 进程 CPU/内存（一次查询）
-                    ps = ("Get-CimInstance Win32_Process -Filter \"Name='MuMuVMMHeadless.exe'\" | "
-                          "Select-Object ProcessId,WorkingSetSize,CommandLine,@{N='CT';E={$_.KernelModeTime+$_.UserModeTime}} | ConvertTo-Json -Compress")
-                    out = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
-                                         capture_output=True, text=True, timeout=15,
-                                         creationflags=_CF, errors="replace")
-                    procs = json.loads(out.stdout.strip() or "null")
-                    if isinstance(procs, dict):
-                        procs = [procs]
-                    now = time.time()
-                    for p in (procs or []):
-                        m = _re.search(r"MuMuPlayer-12\.0-(\d+)", p.get("CommandLine", ""))
-                        if not m:
-                            continue
-                        idx = m.group(1)
-                        pid = p.get("ProcessId")
-                        ct = p.get("CT", 0)
-                        cpu = 0
-                        base = _health_baseline.get(pid)
-                        if base:
-                            dt = now - base[1]
-                            if dt > 0:
-                                cpu = int((ct - base[0]) / 100000 / dt)
-                        _health_baseline[pid] = (ct, now)
-                        with _health_lock:
-                            _health_cache[idx] = {
-                                "ts": time.strftime("%H:%M:%S"),
-                                "cpu_pct": max(0, cpu),
-                                "mem_mb": int(p.get("WorkingSetSize", 0)) // 1048576,
-                                "running": idx in running,
-                            }
+                    # 2) psutil 批量采样（1s 窗口 — 游戏帧率检测粒度，2026-08-11 用户）
+                    for p in _ps.process_iter(["name", "cmdline", "memory_info"]):
+                        try:
+                            if p.info["name"] != "MuMuVMMHeadless.exe":
+                                continue
+                            m = _re.search(r"MuMuPlayer-12\.0-(\d+)", " ".join(p.info["cmdline"] or []))
+                            if not m:
+                                continue
+                            idx = m.group(1)
+                            cpu = int(p.cpu_percent())  # 跨调用差（1s 窗口）
+                            mem = int(p.info["memory_info"].rss) // 1048576
+                            with _health_lock:
+                                _health_cache[idx] = {
+                                    "ts": time.strftime("%H:%M:%S"),
+                                    "cpu_pct": max(0, cpu),
+                                    "mem_mb": mem,
+                                    "running": idx in running,
+                                }
+                        except Exception:
+                            pass
             except Exception:
                 pass
-            time.sleep(5)
+            time.sleep(1)
 
 
 def get_health_snapshot() -> dict:
