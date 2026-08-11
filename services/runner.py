@@ -475,6 +475,39 @@ class AccountRunner:
             pass
         return False
 
+    def _kill_maa_graceful(self, p, name: str = "MAA") -> None:
+        """优雅杀 MAA（WM_CLOSE → 等退出 → 兜底 taskkill）。
+        硬杀（terminate/taskkill）残留 minitouch 触摸服务 → MuMu 弹
+        "运行异常，请重启安卓设备"（2026-08-11 用户: 三个运行异常 —
+        空转检测硬杀导致）。统一收尾用这个，不直接 terminate。"""
+        try:
+            self._graceful_close(p)
+            # 优雅关闭触发 MAA "确认退出"弹窗（任务在跑）— 自动点"是"
+            for _ in range(4):
+                try:
+                    _close_mumu_popups()
+                except Exception:
+                    pass
+                if p.poll() is not None:
+                    break
+                time.sleep(1.5)
+            try:
+                p.wait(5)
+            except Exception:
+                pass
+            if p.poll() is None:
+                p.terminate()
+                try:
+                    p.wait(3)
+                except Exception:
+                    pass
+            if p.poll() is None:
+                # 最终兜底（极少 — MAA 完全无响应）
+                subprocess.run(["taskkill", "/F", "/PID", str(p.pid)],
+                               capture_output=True, timeout=5, creationflags=CF)
+        except Exception:
+            pass
+
     def _find_emu_pid(self, addr: str) -> int | None:
         if not addr:
             return None
@@ -1066,19 +1099,7 @@ class AccountRunner:
         _stop_threshold = int(ac.get("stop_sanity_pct", 30) or 30)
         _done_pct = (_cur / _mx * 100) if _cur is not None else 0
         _final = _done_pct <= _stop_threshold
-        try:
-            p.terminate()
-            try:
-                p.wait(2)
-            except Exception:
-                pass
-            if p.poll() is None:
-                # 立即强杀（terminate 后 MAA 未死会残留僵尸 — 2026-08-11
-                # 实测完成轮产生 7 个僵尸 MAA 占实例）
-                subprocess.run(["taskkill", "/F", "/PID", str(p.pid)],
-                               capture_output=True, timeout=5, creationflags=CF)
-        except Exception:
-            pass
+        self._kill_maa_graceful(p, ac.get('name', aid))
         self._cleanup(aid, 0, tasks, sanity, drops)
         if not _final and not ac.get("_connect_only"):
             try:
@@ -1129,10 +1150,7 @@ class AccountRunner:
                     ac = self._active.get(aid)
                     if ac and isinstance(p, subprocess.Popen) and p.poll() is None:
                         self.emit_log(f"⚠ {ac.get('name', aid)} 连续子任务错误且日志停滞（游戏异常/崩溃），重启 MAA")
-                        try:
-                            p.terminate(); p.wait(3)
-                        except Exception:
-                            pass
+                        self._kill_maa_graceful(p, ac.get('name', aid))
                         tasks, sanity, drops = self._parse_log(aid)
                         self._cleanup(aid, -9, tasks, sanity, drops)
             except Exception:
@@ -1161,17 +1179,7 @@ class AccountRunner:
                         except Exception:
                             pass
                     self.emit_log(f"⚠ {ac.get('name', aid)} 任务空转（DoNothing 循环 {_n} 次），重启 MAA")
-                    try:
-                        p.terminate()
-                        try:
-                            p.wait(3)
-                        except Exception:
-                            pass
-                        if p.poll() is None:
-                            subprocess.run(["taskkill", "/F", "/PID", str(p.pid)],
-                                           capture_output=True, timeout=5, creationflags=CF)
-                    except Exception:
-                        pass
+                    self._kill_maa_graceful(p, ac.get('name', aid))
                     tasks, sanity, drops = self._parse_log(aid)
                     self._cleanup(aid, -11, tasks, sanity, drops)
             except Exception:
