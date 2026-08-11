@@ -1706,7 +1706,7 @@ class AccountRunner:
             # 改: 每 30s 一次 `adb devices` 批量检查（1 次调用查全部设备），
             # 不在设备列表才计数/重连。
             ac = self._active.get(aid)
-            if ac and time.time() - self._adb_check_ts > 30:
+            if ac and time.time() - self._adb_check_ts > 300:
                 self._adb_check_ts = time.time()
                 try:
                     from infrastructure.task_constants import find_adb
@@ -1730,10 +1730,13 @@ class AccountRunner:
                     else:
                         fail = self._adb_fail_count.get(_aid, 0) + 1
                         self._adb_fail_count[_aid] = fail
-                        subprocess.run([adb_path, "connect", _addr], capture_output=True,
-                                       timeout=3, creationflags=CF)
+                        # 不再 connect 重连 — find_adb 的 server 与 MAA 用的
+                        # adb 不是同一个 → 设备永远"不在列表"→ 误报循环 +
+                        # connect 干扰 MAA 连接（2026-08-12 官-47/日-2 等
+                        # 失联第 3/6 次循环，但模拟器实测 ADB 全通）。
+                        # 连接健康已由 MAA 心跳（10s 断 → 恢复）接管。
                         if fail >= 3 and fail % 3 == 0:
-                            self.emit_log(f"[ADB] {(_ac or {}).get('name', _aid)} ADB 失联第 {fail} 次")
+                            self.emit_log(f"[ADB] {(_ac or {}).get('name', _aid)} 不在 adb devices（仅观察，心跳管恢复）")
 
     def _update_status(self, aid: str) -> None:
         """Read asst.log tail for current task name."""
@@ -2181,6 +2184,14 @@ class AccountRunner:
         duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)
         self.ctx.proc_status.discard(aid)
+        # 清心跳残留（MAA 死 → RemoteControl 心跳停 — 防假活记录残留，
+        # 2026-08-12: 官-17/13/37 死后心跳表留着 age=743s 的记录）
+        try:
+            _hb = getattr(getattr(self.ctx, "_mw", None), "_maa_heartbeat", None)
+            if _hb:
+                _hb.pop(aid, None)
+        except Exception:
+            pass
         # Release queue mark on ANY exit (crash/kill included) — stale marks
         # blocked relaunches for up to 150s before this fix.
         self._release_emu_mark(aid)
