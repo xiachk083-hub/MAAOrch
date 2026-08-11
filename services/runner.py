@@ -1397,6 +1397,26 @@ class AccountRunner:
                                 return
                     except Exception:
                         pass
+        # MAA 心跳检查（RemoteControl — MAA 每秒轮询 = 进程活着+网络通。
+        # 心跳断 >10s = MAA 停止/假死 — 比日志活性检测（10 分钟）快得多。
+        # 2026-08-12 用户: 检测 MAA 自己是否在运行。排除: 未配心跳的旧
+        # MAA（_last=0）/正常停止中（_stopping）/完成收尾（_done_flags）。
+        try:
+            _hb = getattr(getattr(self.ctx, "_mw", None), "_maa_heartbeat", {}) or {}
+            _last = _hb.get(aid, 0)
+            if _last and aid not in self._stopping and not self._done_flags.get(aid):
+                if time.time() - _last > 10:
+                    name = ac.get("name", aid) if ac else aid
+                    self._log.warn(f"[MAA心跳] {name} 心跳断 {int(time.time()-_last)}s（MAA 停止/假死），杀 MAA 恢复")
+                    try:
+                        self._kill_maa_graceful(p, name)
+                    except Exception:
+                        pass
+                    tasks, sanity, drops = self._parse_log(aid)
+                    self._cleanup(aid, -8, tasks, sanity, drops)
+                    return
+        except Exception:
+            pass
         if ac and emu_pid and aid not in self._stopping:
             name = ac.get("name", aid)
             try:
