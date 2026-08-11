@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 import json
+import os
 import subprocess
 import threading
 import time
@@ -255,3 +256,106 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
     except Exception as ex:
         if log:
             log(f"[优雅关闭] 模拟器#{emu_idx} shutdown 兜底失败: {ex}")
+
+
+def _info(cli: str, emu_idx, flag: str = "-v") -> dict:
+    """MuMuManager info 查询（统一入口，失败返回空 dict）。"""
+    try:
+        r = subprocess.run([cli, "info", flag, str(emu_idx)],
+                           capture_output=True, text=True, timeout=5,
+                           creationflags=_CF, encoding="utf-8", errors="replace")
+        if r.returncode == 0:
+            return json.loads(r.stdout.lstrip("\ufeff").strip())
+    except Exception:
+        pass
+    return {}
+
+
+def diagnose_emulator(cli: str, emu_idx, vms_root: str = r"E:\MuMu Player 12\vms") -> dict:
+    """模拟器体检（2026-08-11 用户: 状态收集=常用检测功能）—
+    配置 + 运行状态 + 资源占用 + 健康评估（优越程度）。
+    返回: {idx, name, running, android, adb_port, config{...}, resources{...}, health}
+    """
+    out = {"idx": str(emu_idx)}
+    info = _info(cli, emu_idx)
+    out["name"] = info.get("name", "")
+    out["running"] = bool(info.get("is_process_started"))
+    out["android"] = bool(info.get("is_android_started"))
+    out["adb_port"] = info.get("adb_port")
+    # 1) 配置（vm_config: cpu/memory; customer_config: 帧率/分辨率/渲染）
+    cfg = {"cpu": "?", "memory": "?", "fps": "?", "resolution": "?", "render": "?"}
+    try:
+        import json as _j
+        base = os.path.join(vms_root, f"MuMuPlayer-12.0-{emu_idx}", "configs")
+        vp = os.path.join(base, "vm_config.json")
+        cp = os.path.join(base, "customer_config.json")
+        if os.path.exists(vp):
+            vd = _j.load(open(vp, encoding="utf-8"))
+            cfg["cpu"] = vd.get("vm", {}).get("cpu", "?")
+            cfg["memory"] = vd.get("vm", {}).get("memory", "?") + "GB"
+        if os.path.exists(cp):
+            cd = _j.load(open(cp, encoding="utf-8"))
+            st = cd.get("setting", {})
+            fs = st.get("frame_setting", {})
+            cfg["fps"] = fs.get("desired_framerate", "?")
+            rs = st.get("resolution", {})
+            cfg["resolution"] = (rs.get("current") or "").split(":")[0] + "x" + (rs.get("current") or "").split(":")[1] if ":" in (rs.get("current") or "") else "?"
+            rd = st.get("render", {}).get("mode", {})
+            cfg["render"] = rd.get("choose", "?")
+    except Exception:
+        pass
+    out["config"] = cfg
+    # 2) 资源占用（VMMHeadless 进程 CPU/内存 — 采样差算 CPU%）
+    res = {"cpu_pct": None, "mem_mb": None, "pid": None}
+    try:
+        import glob as _g
+        pid = None
+        for p in _g.glob(vms_root + f"/MuMuPlayer-12.0-{emu_idx}/*.pid"):
+            pass
+        # 按 --comment 找进程
+        ps1 = ("Get-CimInstance Win32_Process -Filter \"Name='MuMuVMMHeadless.exe'\" | "
+               "Where-Object { $_.CommandLine -like '*MuMuPlayer-12.0-" + str(emu_idx) + "*' } | "
+               "Select-Object ProcessId,WorkingSetSize,@{N='CT';E={$_.KernelModeTime+$_.UserModeTime}} | ConvertTo-Json -Compress")
+        out2 = subprocess.run(["powershell", "-NoProfile", "-Command", ps1],
+            capture_output=True, text=True, timeout=20, creationflags=_CF, errors="replace")
+        import json as _j2
+        data = _j2.loads(out2.stdout.strip() or "null")
+        if isinstance(data, dict):
+            data = [data]
+        if data:
+            d0 = data[0]
+            pid = d0.get("ProcessId")
+            res["pid"] = pid
+            res["mem_mb"] = int(d0.get("WorkingSetSize", 0)) // 1048576
+            ct0 = d0.get("CT", 0)
+            time.sleep(3)
+            ps2 = ("Get-CimInstance Win32_Process -Filter \"ProcessId=" + str(pid) + "\" | "
+                   "Select-Object @{N='CT';E={$_.KernelModeTime+$_.UserModeTime}} | ConvertTo-Json -Compress")
+            out3 = subprocess.run(["powershell", "-NoProfile", "-Command", ps2],
+                capture_output=True, text=True, timeout=15, creationflags=_CF, errors="replace")
+            d1 = _j2.loads(out3.stdout.strip() or "null")
+            if d1:
+                ct1 = d1.get("CT", ct0)
+                res["cpu_pct"] = int((ct1 - ct0) / 100000 / 3.0) if ct1 > ct0 else 0
+    except Exception:
+        pass
+    out["resources"] = res
+    # 3) 健康评估（优越程度）: CPU% vs 核数（100%/核）; 内存 vs 2GB
+    health = "ok"
+    reasons = []
+    try:
+        cpu = int(cfg["cpu"])
+        if res["cpu_pct"] is not None and res["cpu_pct"] >= cpu * 150:
+            health = "busy"
+            reasons.append(f"CPU {res['cpu_pct']}% >= {cpu}核×150%")
+        if res["mem_mb"] and res["mem_mb"] >= 1800:
+            if health == "ok":
+                health = "busy"
+            reasons.append(f"内存 {res['mem_mb']}MB 接近 2GB")
+        if res["cpu_pct"] is not None and res["cpu_pct"] >= cpu * 190:
+            health = "bottleneck"
+    except Exception:
+        pass
+    out["health"] = health
+    out["health_reason"] = "; ".join(reasons)
+    return out

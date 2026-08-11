@@ -817,6 +817,31 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         from services.runtime_health import check_health
         return check_health(mw)
 
+    @app.get("/api/emulators/diagnose")
+    def handle_emulators_diagnose(idx: str = ""):
+        """模拟器体检（2026-08-11 用户）— 配置+运行状态+资源占用+健康评估。
+        ?idx=21 查单台；不带 idx 查全部运行中的。"""
+        from services.emu_service import diagnose_emulator
+        from infrastructure.task_constants import find_mumu_cli
+        cli = find_mumu_cli()
+        if not cli:
+            return {"ok": False, "error": "mumu-cli not found"}
+        if idx:
+            return diagnose_emulator(cli, idx)
+        # 全部运行中
+        import subprocess as _sp, json as _j
+        r = _sp.run([cli, "info", "-v", "all"], capture_output=True, text=True, timeout=10,
+                    creationflags=getattr(_sp, "CREATE_NO_WINDOW", 0), encoding="utf-8", errors="replace")
+        try:
+            data = _j.loads(r.stdout.lstrip("﻿").strip())
+        except Exception:
+            return {"ok": False, "error": "info 解析失败"}
+        out = []
+        for k, v in data.items():
+            if v.get("is_process_started"):
+                out.append(diagnose_emulator(cli, k))
+        return {"ok": True, "emulators": out}
+
     @app.get("/api/debug/state")
     def handle_debug_state():
         """内部状态快照（排障用）— 全部运行状态一眼可见，aid 脱敏前缀。
