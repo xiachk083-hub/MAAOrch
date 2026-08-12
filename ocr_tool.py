@@ -23,10 +23,11 @@ def load_keys(path):
 def det_text_regions(img_bgr, det_session):
     """DB 文本检测: 返回 [x,y,w,h] 列表（原图坐标）"""
     h, w = img_bgr.shape[:2]
-    # 缩放至 960 宽（PaddleOCR 标准预处理），且宽高 8 对齐（ONNX 输入要求）
+    # 缩放到 960 宽（PaddleOCR 标准预处理），宽高必须 32 对齐
+    # （fastdeploy 导出的 onnx 硬性要求——8 对齐会在 p2o.Add 处广播崩溃）
     scale = 960.0 / w if w > 960 else 1.0
-    tw = int(round(w * scale / 8) * 8)
-    th = int(round(h * scale / 8) * 8)
+    tw = max(32, int(round(w * scale / 32) * 32))
+    th = max(32, int(round(h * scale / 32) * 32))
     if (tw, th) != (w, h):
         img = cv2.resize(img_bgr, (tw, th))
     else:
