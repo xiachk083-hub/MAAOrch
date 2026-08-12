@@ -168,6 +168,15 @@ class LogWatcher(threading.Thread):
                     self._on_event("subtask_error", self._aid, line)
                 except Exception:
                     pass
+            # MAA 成功执行 adb（截图） = 已连接模拟器开始干活 — 启动节流
+            # 就绪信号（2026-08-12: 等上一台 boot + MAA 连上再启动下一台）。
+            # runner 侧只在首次处理（后续截图行不再通知）。
+            if " Call ` " in line and "adb" in line and " ret 0" in line:
+                _record_event(self._aid, "adb_connected", line)
+                try:
+                    self._on_event("adb_connected", self._aid, line)
+                except Exception:
+                    pass
             # 空转检测（DoNothing 循环 — 2026-08-11 官-41 PRTS1 空转 60s+
             # 不触发任何检测的盲区: 日志持续写（非停滞）+ 无 SubTaskError。
             # 同一 cur_task 连续 ~40 次 DoNothing（约 3-5 分钟）→ stall_loop）

@@ -84,7 +84,14 @@ class LaunchQueue:
         self._recover_count: dict[str, int] = {}  # aid → 30min 窗口内 recover 次数
         self._recover_ts: dict[str, float] = {}  # aid → 上次 recover 时间
         self._paused = True  # queue starts paused; user must explicitly start
-        self._last_launch_time: float = 0  # timestamp of last successful launch (60s interval)
+        # 就绪信号驱动启动（2026-08-12 用户: 固定 20s 间隔是猜的 — 等上一台
+        # 模拟器 boot 完成 + MAA 连上（第一次成功 adb）才启动下一台）。
+        self._launching_aid: str | None = None   # 当前启动中的账号（串行 gate）
+        self._launching_ts: float = 0.0          # 该账号启动时间（超时兜底）
+        self._launch_ready: set[str] = set()     # 已连上模拟器的账号（runner 通知）
+        # 就绪等待超时: boot 60-120s（50 台负载）+ spawn + MAA 连接 ≈ 150s 上限。
+        # 超时放行（防账号启动中挂死/信号缺失卡队列 — 信号缺失退化为间隔节流）。
+        self._launch_ready_timeout: int = int(self.ctx.config.get("launch_ready_timeout", 150) or 150)
         # 运行超时（任务级卡死防护）: 单次运行超过该秒数 → 判定卡死 → 重置。
         # 可配置 max_run_minutes（默认 180 分钟 — 正常一轮日常+剿灭远小于此）。
         self._max_run_sec: int = int(self.ctx.config.get("max_run_minutes", 180) or 180) * 60
@@ -107,7 +114,9 @@ class LaunchQueue:
         # Clear stale state from previous process
         self._active_emus.clear()
         self._active_emus_ts.clear()
-        self._last_launch_time = 0
+        self._launching_aid = None
+        self._launching_ts = 0.0
+        self._launch_ready.clear()
         self._tick_lock = threading.Lock()
         self._last_save_ts: float = 0.0  # 队列落盘节流
         # Guard against duplicate _bg_tick threads
@@ -536,14 +545,31 @@ class LaunchQueue:
                     _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 模拟器 {emu_idx} 被 {occupant_name} 占用")
                     heapq.heappush(self._pending, entry)
                     continue
-                # Launch interval — prevent burst launches
-                if time.time() - self._last_launch_time < 20:
-                    _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 启动间隔 (上次: {int(time.time()-self._last_launch_time)}s前)")
-                    heapq.heappush(self._pending, entry)
-                    continue
+                # 就绪信号驱动启动（替代固定 20s 间隔）— 等上一台模拟器
+                # boot 完成 + MAA 连上（runner 通知 _launch_ready）才启动
+                # 下一台（2026-08-12 用户: 20s 是猜的，用真实信号）。
+                # 冷启动 → 串行 boot（防多台同时 boot 的 VAddress 并发压力）；
+                # 热复用（模拟器已 boot）→ 信号秒回 → 高速轮转。
+                # 超时兜底（launch_ready_timeout）: 信号缺失/启动挂死不卡队列。
+                _launching = self._launching_aid
+                if _launching:
+                    # 启动已结束（完成/失败释放）→ 放行
+                    if _launching not in self._active_emus.values() and \
+                       not any(e.account_id == _launching for e in self._pending):
+                        self._launching_aid = None
+                    elif _launching not in self._launch_ready and \
+                         time.time() - self._launching_ts < self._launch_ready_timeout:
+                        _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 等待上一台就绪 ({int(time.time()-self._launching_ts)}s)")
+                        heapq.heappush(self._pending, entry)
+                        continue
+                    else:
+                        self._launching_aid = None  # 已就绪或超时 → 放行
+                        self._launch_ready.discard(_launching)
+                self._launching_aid = entry.account_id
+                self._launching_ts = time.time()
+                self._launch_ready.discard(entry.account_id)
                 self._active_emus[emu_idx] = entry.account_id
                 self._active_emus_ts[emu_idx] = time.time()
-                self._last_launch_time = time.time()
                 launch_now.append(entry)
                 # Push back remaining to_launch entries (serial launch: only one per tick)
                 idx = to_launch.index(entry)
@@ -572,6 +598,11 @@ class LaunchQueue:
         except Exception:
             pass
         self._clean_stale_emus()
+
+    def _mark_launch_ready(self, aid: str) -> None:
+        """runner 通知: 该账号 MAA 已连上模拟器（第一次成功 adb）— 放行下一台。
+        （就绪信号驱动启动，2026-08-12）"""
+        self._launch_ready.add(aid)
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""

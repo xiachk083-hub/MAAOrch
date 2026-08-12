@@ -147,6 +147,7 @@ class AccountRunner:
         self._err_windows: dict = {}  # aid -> [ts]（连续子任务错误窗口）
         self._emu_fail_count: dict[str, int] = {}
         self._emu_lost_suspect: dict[str, float] = {}  # aid -> ts（失联嫌疑，连续 2 轮确认才杀）
+        self._adb_connected: dict[str, bool] = {}  # aid -> MAA 首次成功 adb（连接信号，启动节流用）
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
@@ -1174,6 +1175,18 @@ class AccountRunner:
             if not ac or not isinstance(p, subprocess.Popen) or p.poll() is not None:
                 return  # 已清理/已结束 — 防重复触发
             self._finish_completed(aid, ac, p)
+        elif event == "adb_connected":
+            # MAA 第一次成功调 adb = 已连接模拟器 — 启动节流就绪信号
+            # （等上一台连上才启动下一台，2026-08-12 用户）。
+            if not self._adb_connected.get(aid):
+                self._adb_connected[aid] = True
+                try:
+                    mw = getattr(self.ctx, "_mw", None)
+                    lq = getattr(mw, "launch_queue", None)
+                    if lq is not None:
+                        lq._mark_launch_ready(aid)
+                except Exception:
+                    pass
         elif event == "subtask_error":
             # 连续子任务错误（游戏崩溃/流程异常 → MAA 反复报错，2026-08-11
             # 用户: MAA 日志会报任务错误）— 2 分钟内 ≥3 次 + asst.log 停滞
@@ -2228,6 +2241,7 @@ class AccountRunner:
         # blocked relaunches for up to 150s before this fix.
         self._release_emu_mark(aid)
         self._emu_lost_suspect.pop(aid, None)  # 清失联嫌疑（防重入队后残留误杀）
+        self._adb_connected.pop(aid, None)  # 清连接信号（重入队后重新触发）
 
         try:
             from services.log_watcher import record_event
