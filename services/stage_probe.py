@@ -71,6 +71,12 @@ class StageProbe:
     def _log(self, msg: str) -> None:
         self._log_lines.append(msg)
         print(msg, flush=True)
+        try:  # 落盘（pythonw 无控制台，print 丢失 — 2026-08-12 排查用）
+            with open(pathlib.Path(__file__).parent.parent / "logs" / "probe.log",
+                      "a", encoding="utf-8") as f:
+                f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
+        except Exception:
+            pass
 
     @property
     def logs(self) -> list[str]:
