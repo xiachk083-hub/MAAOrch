@@ -699,6 +699,20 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             ac.get("game_client", ""), "Official")
 
         def _run():
+            # 保护标记: probe 直接 MuMuManager launch 启动模拟器，没走队列/
+            # v2 状态机 — 回收器看 state_since 旧值 + 无账号映射会当闲置
+            # 关掉（2026-08-12 #19 启动 5s 后被回收 shutdown，probe 卡死）。
+            # mark_external 重置外部闲置计时（30min 重新算）+ manual_emu_started
+            # 10 分钟保护期 — 足够覆盖一轮检测（5 关 × 2-4min）。
+            try:
+                v2 = getattr(mw, "emu_service_v2", None)
+                if v2 is not None:
+                    v2.mark_external(str(emu))
+                mts = getattr(mw, "manual_emu_started", None)
+                if mts is not None:
+                    mts[str(emu)] = time.time()
+            except Exception:
+                pass
             try:
                 probe = StageProbe(emu, client_type=client)
                 result = probe.probe(stage)
