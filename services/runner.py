@@ -33,6 +33,38 @@ def _close_mumu_popups():
             h = rect.bottom - rect.top
             return w < 500 and h < 300
 
+        def _is_16_9_like(hwnd):
+            """MuMu 模拟器悬浮画面窗（384×216 ≈ 16:9，排序窗口后出现，
+            WS_EX_TOOLWINDOW + owner=模拟器主窗口，无按钮）— 不是错误弹窗。
+            只按尺寸判定会把它当弹窗 WM_CLOSE，直接关掉整个模拟器
+            （2026-08-12 用户: 排序 mumu 窗口后模拟器退出）。"""
+            rect = ctypes.wintypes.RECT()
+            user32.GetWindowRect(hwnd, ctypes.byref(rect))
+            w = rect.right - rect.left
+            h = rect.bottom - rect.top
+            return h > 0 and 1.6 <= w / h <= 1.95
+
+        def _has_button(hwnd):
+            """递归找文本按钮（忽略/再次启动/确定/OK/Yes）— 错误弹窗的强特征。"""
+            try:
+                found = []
+
+                def _walk(parent):
+                    child = user32.GetWindow(parent, 5)  # GW_CHILD
+                    while child:
+                        ln = user32.GetWindowTextLengthW(child) + 1
+                        buf = ctypes.create_unicode_buffer(ln)
+                        user32.GetWindowTextW(child, buf, ln)
+                        t = buf.value
+                        if t and any(k in t for k in ("忽略", "Ignore", "再次启动", "确定", "OK", "Yes")):
+                            found.append(child)
+                        _walk(child)
+                        child = user32.GetWindow(child, 2)  # GW_HWNDNEXT
+                _walk(hwnd)
+                return found
+            except Exception:
+                return []
+
         def _close_hwnd(hwnd, method="close"):
             try: user32.PostMessageW(hwnd, WM_CLOSE if method == "close" else 0x0001, 0, 0)
             except: pass
@@ -63,7 +95,10 @@ def _close_mumu_popups():
                 return True
             is_error = False
             if title == 'MuMuNxDevice':
-                if _is_popup(hwnd):
+                # 悬浮画面窗 16:9 无按钮 → 跳过；有按钮或非 16:9 小窗 → 真弹窗
+                if _is_popup(hwnd) and not _is_16_9_like(hwnd):
+                    is_error = True
+                elif _has_button(hwnd):
                     is_error = True
             elif '异常' in title and _is_popup(hwnd):
                 is_error = True
