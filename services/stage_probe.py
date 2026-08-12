@@ -77,30 +77,52 @@ class StageProbe:
                 time.sleep(2)
 
     def _run_asst(self, stage: str, start_game: bool) -> bool:
-        """Run MAA StartUp or Fight-nav via the Python API in-process."""
-        import sys as _sys
-        _sys.path.insert(0, str(self._inst_dir() / "Python"))
-        from asst.asst import Asst  # type: ignore
+        """Run MAA StartUp or Fight-nav via SUBPROCESS.
 
-        self._clear_log()
-        Asst.load(path=self._inst_dir())
-        asst = Asst()
-        ok = asst.connect(self._adb_path(), self._adb_address())
-        if not ok:
-            self._log("MAA connect 失败")
+        in-process Asst (MaaCore ctypes) 会崩溃项目进程 — 2026-08-12
+        probe 检测时项目进程直接死（crash.log 空，看门狗拉起）。MaaCore
+        in-process 与项目环境冲突（项目设计本就禁用 ctypes 直连）。
+        改独立 python 子进程执行 — 崩了只影响自己，项目安全。"""
+        import sys as _sys
+        inst_dir = str(self._inst_dir())
+        py_dir = str(self._inst_dir() / "Python")
+        lines = [
+            "import sys",
+            "sys.path.insert(0, %r)" % py_dir,
+            "from asst.asst import Asst",
+            "Asst.load(path=%r)" % inst_dir,
+            "asst = Asst()",
+            "ok = asst.connect(%r, %r)" % (self._adb_path(), self._adb_address()),
+            "if not ok:",
+            "    print('CONNECT_FAIL')",
+            "    sys.exit(1)",
+            "if %r:" % start_game,
+            "    asst.append_task('StartUp', {'client_type': %r, 'start_game_enabled': True})" % self.client_type,
+            "else:",
+            "    asst.append_task('Fight', {'stage': %r, 'times': 0, 'medicine': 0, 'stone': 0})" % stage,
+            "asst.start()",
+            "import time",
+            "dl = time.time() + %r" % self.timeout,
+            "while time.time() < dl and asst.running():",
+            "    time.sleep(2)",
+            "asst.stop()",
+            "print('DONE')",
+        ]
+        code = """ + repr(NL) + """.join(lines)
+        try:
+            r = subprocess.run([_sys.executable, "-c", code],
+                               capture_output=True, text=True,
+                               timeout=self.timeout + 60, encoding="utf-8",
+                               errors="replace",
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if "DONE" in (r.stdout or ""):
+                return True
+            self._log(f"asst 子进程异常: {(r.stdout or '').strip()[-100:]} "
+                      f"{(r.stderr or '').strip()[-100:]}")
             return False
-        if start_game:
-            asst.append_task("StartUp", {"client_type": self.client_type,
-                                         "start_game_enabled": True})
-        else:
-            asst.append_task("Fight", {"stage": stage, "times": 0,
-                                       "medicine": 0, "stone": 0})
-        asst.start()
-        deadline = time.time() + self.timeout
-        while time.time() < deadline and asst.running():
-            time.sleep(2)
-        asst.stop()
-        return True
+        except Exception as e:
+            self._log(f"asst 子进程失败: {e}")
+            return False
 
     def _adb_path(self) -> str:
         from infrastructure.task_constants import find_mumu_cli, find_adb
