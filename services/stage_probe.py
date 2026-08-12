@@ -36,12 +36,13 @@ VERDICT_CANNOT = "CANNOT"
 VERDICT_DONE = "DONE"
 
 # ── 普通关卡判定（2026-08-12 用户: 检测活动关 TO-9/TO-8/TO-7/TO-5）──
-# 详情页标题区（720x1280 竖屏截图，右侧标题文字）
-TITLE_ROI = (860, 170, 340, 150)
+# 详情页**关卡名**区（720x1280 竖屏截图，左上角大字如 "TO-9"。
+# 实测: 关卡名在 (236,245) 附近; 右侧 (969,233) 是关卡简介（非标题）。
+STAGE_NAME_ROI = (80, 200, 450, 130)
 # 活动关卡列表网格（实测 720x1280: "直到大地变成一颗酸橙" 列表布局。
-# 12 个位置 = 横向滑动前后两批。MAA OCR 识别不了列表小字关卡名
-# （9→2 / 8→6 误读 → SwipeToStage 滑 50 次找不到），改为按网格 tap 进
-# 详情页 → 标题 OCR 验证（详情页大字识别可靠）。
+# 12 个位置 = 横向滑动前后两批，OCR 框定位失败时的 fallback。
+# MAA OCR 识别不了列表小字关卡名（9→2 / 8→6 误读 → SwipeToStage 滑
+# 50 次找不到），改为按网格 tap 进详情页 → 关卡名 OCR 验证（大字可靠）。
 GRID_POSITIONS = [
     (168, 349), (886, 341), (1208, 341), (302, 489), (654, 488), (1128, 488),
     (237, 245), (534, 341), (856, 341), (301, 488), (772, 489), (1154, 493),
@@ -241,7 +242,7 @@ class StageProbe:
                     confs.append(float(pred[t, idx]))
                 prev = idx
             if text:
-                out.append((text, sum(confs) / len(confs) if confs else 0.0))
+                out.append((text, (x, y, bw, bh), sum(confs) / len(confs) if confs else 0.0))
         return out
 
     @staticmethod
@@ -278,43 +279,64 @@ class StageProbe:
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
     def _judge_normal(self, img: np.ndarray, stage: str) -> dict:
-        """普通关卡判定: 详情页标题 OCR 匹配目标关卡（能进详情页 = 可刷）。
+        """普通关卡判定: 详情页关卡名 OCR 匹配目标关卡（能进详情页 = 可刷）。
 
-        导航链: MAA Fight 导航（可能停在列表/详情页）→ 标题匹配 →
-        不匹配则网格遍历（tap 列表位置 → 详情页标题验证）。
+        导航链: MAA Fight 导航（可能停在列表/详情页）→ 关卡名匹配 →
+        不匹配则列表遍历（OCR 框动态定位 + 固定网格 fallback → tap →
+        详情页关卡名验证）。详情页关卡名大字识别可靠（列表小字识别差，
+        9→2/8→6 误读 — MAA SwipeToStage 滑 50 次找不到的根因）。
         """
         import cv2
-        # 详情页标志: "开始行动"按钮区域金色占比
-        x0, y0, w, h = START_BTN_ROI
-        reg = img[y0:y0 + h, x0:x0 + w]
-        b = reg[:, :, 2].astype(int); r = reg[:, :, 0].astype(int); g = reg[:, :, 1].astype(int)
-        gold = ((b < 110) & (r > 150) & (g > 90)).mean()
         titles = self._load_stage_titles()
-        expected = titles.get(stage, "")
-        self._log(f"普通关卡判定 {stage} (标题: {expected or '无'}, 详情页gold={gold:.2f})")
+        expected_title = titles.get(stage, "")
+        num = stage.rsplit("-", 1)[-1] if "-" in stage else stage  # "9"
 
         def _check() -> dict | None:
             shot = self._capture()
             if shot is None:
                 return {"verdict": "SHOTFAIL", "score": 0.0, "detail": "截图失败"}
-            texts = self._ocr_texts(shot, TITLE_ROI)
-            joined = "|".join(t for t, _ in texts)
-            self._log(f"  标题区 OCR: {joined[:80]}")
-            if expected and self._title_match(texts, expected):
-                return {"verdict": VERDICT_CAN_FARM, "score": round(max(s for _, s in texts) if texts else 0, 3),
-                        "detail": f"详情页标题匹配 {expected}"}
+            texts = self._ocr_texts(shot, STAGE_NAME_ROI)
+            joined = "|".join(t for t, _b, _s in texts)
+            self._log(f"  关卡名区 OCR: {joined[:80]}")
+            for text, _box, score in texts:
+                # 1) 关卡名数字匹配: 含 "-" 且数字 == 目标（"TO-9"→"9"）
+                if "-" in text and num in text:
+                    return {"verdict": VERDICT_CAN_FARM, "score": round(score, 3),
+                            "detail": f"详情页关卡名匹配 {stage}（OCR: {text}）"}
+                # 2) 标题匹配（详情页若显示标题）: 目标标题前 3 字
+                if expected_title and expected_title[:3] in text:
+                    return {"verdict": VERDICT_CAN_FARM, "score": round(score, 3),
+                            "detail": f"详情页标题匹配 {expected_title}（OCR: {text}）"}
             return None
+
+        def _detail_gold(shot) -> float:
+            x0, y0, w, h = START_BTN_ROI
+            reg = shot[y0:y0 + h, x0:x0 + w]
+            b = reg[:, :, 2].astype(int); r = reg[:, :, 0].astype(int); g = reg[:, :, 1].astype(int)
+            return ((b < 110) & (r > 150) & (g > 90)).mean()
 
         # 1) 当前截图判定（MAA 可能已停在目标详情页）
         r = _check()
         if r:
             return r
-        # 2) 若在详情页但标题不匹配 → 返回列表
-        if gold >= 0.10:
+        # 2) 若在详情页但关卡名不匹配 → 返回列表
+        if _detail_gold(img) >= 0.10:
+            self._log("  详情页但关卡名不匹配，返回列表")
             self._back()
             time.sleep(1.5)
-        # 3) 网格遍历（列表 tap → 详情页标题验证）
-        for i, (px, py) in enumerate(GRID_POSITIONS):
+        # 3) 列表遍历: 动态 OCR 框优先，固定网格 fallback
+        shot = self._capture()
+        positions = []
+        if shot is not None:
+            texts = self._ocr_texts(shot)
+            for text, (x, y, w, h), score in texts:
+                if any(k in text for k in ("TO-", "O-", "IO-", "T0-")) and 280 < y < 580:
+                    positions.append((int(x + w / 2), int(y + h / 2)))
+            if positions:
+                self._log(f"  列表 OCR 定位 {len(positions)} 个关卡框: {positions}")
+        positions = positions or GRID_POSITIONS
+        self._log(f"  遍历 {len(positions)} 个位置")
+        for i, (px, py) in enumerate(positions):
             if i == len(GRID_POSITIONS) // 2:
                 self._swipe(*GRID_SWIPE)  # 批次 2 前横向滑动
                 time.sleep(1.5)
@@ -326,7 +348,7 @@ class StageProbe:
             self._back()
             time.sleep(1.2)
         return {"verdict": VERDICT_DONE, "score": 0.0,
-                "detail": f"网格遍历未找到 {stage}（列表不可见/关卡未开放）"}
+                "detail": f"遍历未找到 {stage}（列表不可见/关卡未开放）"}
 
     # ── judgement ──
     @staticmethod
