@@ -35,6 +35,19 @@ VERDICT_CAN_FARM = "CAN_FARM"
 VERDICT_CANNOT = "CANNOT"
 VERDICT_DONE = "DONE"
 
+# ── 普通关卡判定（2026-08-12 用户: 检测活动关 TO-9/TO-8/TO-7/TO-5）──
+# 详情页标题区（720x1280 竖屏截图，右侧标题文字）
+TITLE_ROI = (860, 170, 340, 150)
+# 活动关卡列表网格（实测 720x1280: "直到大地变成一颗酸橙" 列表布局。
+# 12 个位置 = 横向滑动前后两批。MAA OCR 识别不了列表小字关卡名
+# （9→2 / 8→6 误读 → SwipeToStage 滑 50 次找不到），改为按网格 tap 进
+# 详情页 → 标题 OCR 验证（详情页大字识别可靠）。
+GRID_POSITIONS = [
+    (168, 349), (886, 341), (1208, 341), (302, 489), (654, 488), (1128, 488),
+    (237, 245), (534, 341), (856, 341), (301, 488), (772, 489), (1154, 493),
+]
+GRID_SWIPE = (1000, 640, 200, 640)  # 列表横向滑动（批次 1 → 批次 2）
+
 
 class StageProbe:
     """Probe one account's ability on a stage (MAA nav + screenshot judgement).
@@ -154,6 +167,166 @@ class StageProbe:
             return None
         return cv2.imdecode(np.frombuffer(r.stdout, np.uint8), cv2.IMREAD_COLOR)
 
+    # ── 普通关卡判定（活动关/主线，非剿灭 — 2026-08-12）──
+    @staticmethod
+    def _load_stage_titles() -> dict:
+        """读 MAA 资源的活动关卡标题表（act53side_XX → {code, name}）。"""
+        titles = {}
+        import glob
+        base = (pathlib.Path(__file__).parent.parent
+                / "services" / "maa" / "instances" / "1"
+                / "resource" / "Arknights-Tile-Pos")
+        for f in glob.glob(str(base / "act53side_*.json")):
+            try:
+                d = json.load(open(f, encoding="utf-8"))
+                if d.get("code") and d.get("name"):
+                    titles[d["code"]] = d["name"]
+            except Exception:
+                pass
+        return titles
+
+    def _ocr_texts(self, img: np.ndarray, roi=None) -> list[tuple[str, float]]:
+        """OCR 截图（内联复用 MAA PaddleOCR ONNX — ocr_tool.py 核心）。"""
+        import cv2
+        import onnxruntime as ort
+        inst = self._inst_dir()
+        try:
+            det = ort.InferenceSession(str(inst / "resource" / "PaddleOCR" / "det" / "inference.onnx"))
+            rec = ort.InferenceSession(str(inst / "resource" / "PaddleOCR" / "rec" / "inference.onnx"))
+            keys = [l.strip() for l in open(inst / "resource" / "PaddleOCR" / "rec" / "keys.txt",
+                                            encoding="utf-8")]
+        except Exception as e:
+            self._log(f"OCR 初始化失败: {e}")
+            return []
+        if roi:
+            x, y, w, h = roi
+            img = img[y:y + h, x:x + w]
+        ih, iw = img.shape[:2]
+        scale = 960.0 / iw if iw > 960 else 1.0
+        tw = int(round(iw * scale / 8) * 8)
+        th = int(round(ih * scale / 8) * 8)
+        im = img if (tw, th) == (iw, ih) else cv2.resize(img, (tw, th))
+        p = im.astype(np.float32) / 255.0
+        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(3, 1, 1)
+        std = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(3, 1, 1)
+        p = (p.transpose(2, 0, 1) - mean) / std
+        p = p[np.newaxis, :, :, :].astype(np.float32)
+        prob = det.run(None, {det.get_inputs()[0].name: p})[0][0, 0]
+        if prob.shape != (th, tw):
+            prob = cv2.resize(prob, (tw, th))
+        thr = (prob > 0.3).astype(np.uint8) * 255
+        k = max(2, int(3 * scale)) if scale != 1.0 else 2
+        thr = cv2.dilate(thr, np.ones((k, k), np.uint8))
+        contours, _ = cv2.findContours(thr, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        out = []
+        for c in contours:
+            x, y, bw, bh = cv2.boundingRect(c)
+            if bw < 8 or bh < 8:
+                continue
+            x, y, bw, bh = int(x / scale), int(y / scale), int(bw / scale), int(bh / scale)
+            crop = img[y:y + bh, x:x + bw]
+            if crop.size == 0:
+                continue
+            rh = 48.0
+            rw = max(8, min(int(round(crop.shape[1] * rh / crop.shape[0] / 8) * 8), 480))
+            crop = cv2.resize(crop, (rw, 48)).astype(np.float32) / 255.0
+            crop = (crop - 0.5) / 0.5
+            crop = crop.transpose(2, 0, 1)[np.newaxis, :, :, :].astype(np.float32)
+            pred = rec.run(None, {rec.get_inputs()[0].name: crop})[0][0]
+            text, confs, prev = "", [], -1
+            for t, idx in enumerate(np.argmax(pred, axis=1)):
+                if idx != prev and idx != 0:
+                    text += keys[idx - 1]
+                    confs.append(float(pred[t, idx]))
+                prev = idx
+            if text:
+                out.append((text, sum(confs) / len(confs) if confs else 0.0))
+        return out
+
+    @staticmethod
+    def _title_match(ocr_texts: list[tuple[str, float]], expected: str) -> bool:
+        """标题匹配（容错 OCR 误读）: 任一 OCR 文本含标题前 3+ 字符。"""
+        if not expected:
+            return False
+        head = expected[:3]
+        for text, _score in ocr_texts:
+            if head in text or text in expected or expected[:2] in text and len(text) >= 2:
+                return True
+        return False
+
+    def _tap(self, x: int, y: int) -> None:
+        addr = self._adb_address()
+        if addr:
+            subprocess.run([self._adb_path(), "-s", addr, "shell", "input", "tap", str(x), str(y)],
+                           capture_output=True, timeout=10,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+    def _swipe(self, x1: int, y1: int, x2: int, y2: int) -> None:
+        addr = self._adb_address()
+        if addr:
+            subprocess.run([self._adb_path(), "-s", addr, "shell", "input", "swipe",
+                            str(x1), str(y1), str(x2), str(y2), "500"],
+                           capture_output=True, timeout=10,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+    def _back(self) -> None:
+        addr = self._adb_address()
+        if addr:
+            subprocess.run([self._adb_path(), "-s", addr, "shell", "input", "keyevent", "4"],
+                           capture_output=True, timeout=10,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+    def _judge_normal(self, img: np.ndarray, stage: str) -> dict:
+        """普通关卡判定: 详情页标题 OCR 匹配目标关卡（能进详情页 = 可刷）。
+
+        导航链: MAA Fight 导航（可能停在列表/详情页）→ 标题匹配 →
+        不匹配则网格遍历（tap 列表位置 → 详情页标题验证）。
+        """
+        import cv2
+        # 详情页标志: "开始行动"按钮区域金色占比
+        x0, y0, w, h = START_BTN_ROI
+        reg = img[y0:y0 + h, x0:x0 + w]
+        b = reg[:, :, 2].astype(int); r = reg[:, :, 0].astype(int); g = reg[:, :, 1].astype(int)
+        gold = ((b < 110) & (r > 150) & (g > 90)).mean()
+        titles = self._load_stage_titles()
+        expected = titles.get(stage, "")
+        self._log(f"普通关卡判定 {stage} (标题: {expected or '无'}, 详情页gold={gold:.2f})")
+
+        def _check() -> dict | None:
+            shot = self._capture()
+            if shot is None:
+                return {"verdict": "SHOTFAIL", "score": 0.0, "detail": "截图失败"}
+            texts = self._ocr_texts(shot, TITLE_ROI)
+            joined = "|".join(t for t, _ in texts)
+            self._log(f"  标题区 OCR: {joined[:80]}")
+            if expected and self._title_match(texts, expected):
+                return {"verdict": VERDICT_CAN_FARM, "score": round(max(s for _, s in texts) if texts else 0, 3),
+                        "detail": f"详情页标题匹配 {expected}"}
+            return None
+
+        # 1) 当前截图判定（MAA 可能已停在目标详情页）
+        r = _check()
+        if r:
+            return r
+        # 2) 若在详情页但标题不匹配 → 返回列表
+        if gold >= 0.10:
+            self._back()
+            time.sleep(1.5)
+        # 3) 网格遍历（列表 tap → 详情页标题验证）
+        for i, (px, py) in enumerate(GRID_POSITIONS):
+            if i == len(GRID_POSITIONS) // 2:
+                self._swipe(*GRID_SWIPE)  # 批次 2 前横向滑动
+                time.sleep(1.5)
+            self._tap(px, py)
+            time.sleep(2.0)
+            r = _check()
+            if r:
+                return r
+            self._back()
+            time.sleep(1.2)
+        return {"verdict": VERDICT_DONE, "score": 0.0,
+                "detail": f"网格遍历未找到 {stage}（列表不可见/关卡未开放）"}
+
     # ── judgement ──
     @staticmethod
     def _template_score(img: np.ndarray, tpl_path: str, roi: tuple) -> float:
@@ -240,6 +413,9 @@ class StageProbe:
         img = self._capture()
         if img is None:
             return {"verdict": "SHOTFAIL", "score": 0.0, "detail": "截图失败"}
+        # 普通关卡（活动关/主线）→ 标题 OCR 判定 + 网格遍历兜底
+        if stage not in STAGES_ANNIHILATION:
+            return self._judge_normal(img, stage)
         result = self.judge(img)
         self._log(f"判定: {result['verdict']} ({result['score']}) {result['detail']}")
         return result
