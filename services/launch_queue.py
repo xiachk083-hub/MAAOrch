@@ -551,6 +551,14 @@ class LaunchQueue:
                 # 冷启动 → 串行 boot（防多台同时 boot 的 VAddress 并发压力）；
                 # 热复用（模拟器已 boot）→ 信号秒回 → 高速轮转。
                 # 超时兜底（launch_ready_timeout）: 信号缺失/启动挂死不卡队列。
+                def _lr_timeout() -> float:
+                    # 运行期自适应（2026-08-12 用户: 参数不能是死的）—
+                    # 启动链路耗时滚动窗口动态计算；config 显式配置优先。
+                    try:
+                        from services.dynamic_params import get_launch_ready_timeout
+                        return get_launch_ready_timeout(self.ctx.config, self._launch_ready_timeout)
+                    except Exception:
+                        return self._launch_ready_timeout
                 _launching = self._launching_aid
                 if _launching:
                     # 启动已结束（完成/失败释放）→ 放行
@@ -558,7 +566,7 @@ class LaunchQueue:
                        not any(e.account_id == _launching for e in self._pending):
                         self._launching_aid = None
                     elif _launching not in self._launch_ready and \
-                         time.time() - self._launching_ts < self._launch_ready_timeout:
+                         time.time() - self._launching_ts < _lr_timeout():
                         _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 等待上一台就绪 ({int(time.time()-self._launching_ts)}s)")
                         heapq.heappush(self._pending, entry)
                         continue
@@ -603,6 +611,13 @@ class LaunchQueue:
         """runner 通知: 该账号 MAA 已连上模拟器（第一次成功 adb）— 放行下一台。
         （就绪信号驱动启动，2026-08-12）"""
         self._launch_ready.add(aid)
+        # 启动链路耗时记录（动态参数数据源 — 2026-08-12 用户: 参数要活着）
+        try:
+            from services.dynamic_params import record_launch_chain
+            if aid == self._launching_aid:
+                record_launch_chain(aid, time.time() - self._launching_ts)
+        except Exception:
+            pass
 
     def _do_launch(self, entry) -> None:
         """Launch a single queued account."""
@@ -647,6 +662,13 @@ class LaunchQueue:
         if not runner:
             _QUEUE_LOG.warn(f"清洁跳过: runner={runner}")
             return
+        # 运行超时保险丝 — 运行期自适应（2026-08-12 用户: 参数不能是死的）
+        def _run_timeout() -> float:
+            try:
+                from services.dynamic_params import get_max_run_sec
+                return get_max_run_sec(self.ctx.config, self._max_run_sec)
+            except Exception:
+                return self._max_run_sec
         now = time.time()
         for emu_idx, aid in list(self._active_emus.items()):
             ts = self._active_emus_ts.get(emu_idx, 0)
@@ -711,7 +733,7 @@ class LaunchQueue:
             # 任务级死循环（如 PRTS 误匹配卡死）检测不到进程/模拟器异常 —
             # 进程活着、模拟器正常、ADB 通，但任务永远不推进。超时即判定
             # 卡死 → 完整处理链（杀 MAA + 关模拟器 + 重启）→ 自动恢复。
-            if real and ts > 0 and now - ts > self._max_run_sec:
+            if real and ts > 0 and now - ts > _run_timeout():
                 _QUEUE_LOG.warn(f"运行超时: {aid[:8]} 已运行 {int((now-ts)//60)} 分钟（判定卡死，重置）")
                 self._recover_account(aid, emu_idx, self._recover_cli(),
                                       self._recover_flag(), "运行超时（任务级卡死）")
@@ -897,8 +919,15 @@ class LaunchQueue:
                 # ⚠️ 30 分钟 → 10 分钟（2026-08-12 数据: 失败→重试间隔 15
                 # 样本中位 2.7m / p90 3.5m / max 8.6m，≤10m 覆盖 100% —
                 # 30m 里后 20m 是纯空转；emu_pending_keep_min 可配置）。
+                # ⚠️ 2026-08-12 运行期自适应（动态参数）: 全量 402 短重试
+                # 样本 p90=44.5m — 10m 只覆盖约 40% 重试，一半以上冷启动。
+                # 现在按最近短重试 p90+5 动态取值（config 显式配置优先）。
                 if aid and any(e.account_id == aid for e in self._pending):
-                    _keep_min = int(self.ctx.config.get("emu_pending_keep_min", 10) or 10)
+                    try:
+                        from services.dynamic_params import get_pending_keep_min
+                        _keep_min = get_pending_keep_min(self.ctx.config, 10)
+                    except Exception:
+                        _keep_min = int(self.ctx.config.get("emu_pending_keep_min", 10) or 10)
                     _recent = any(
                         (datetime.now() - e.not_before).total_seconds() < _keep_min * 60
                         for e in self._pending if e.account_id == aid)
