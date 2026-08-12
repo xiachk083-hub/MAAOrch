@@ -203,8 +203,9 @@ class StageProbe:
             img = img[y:y + h, x:x + w]
         ih, iw = img.shape[:2]
         scale = 960.0 / iw if iw > 960 else 1.0
-        tw = int(round(iw * scale / 8) * 8)
-        th = int(round(ih * scale / 8) * 8)
+        # det 模型要求 32 对齐（8 对齐在 ROI 小图报 Add 广播错误 21by22）
+        tw = max(32, int(round(iw * scale / 32) * 32))
+        th = max(32, int(round(ih * scale / 32) * 32))
         im = img if (tw, th) == (iw, ih) else cv2.resize(img, (tw, th))
         p = im.astype(np.float32) / 255.0
         mean = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(3, 1, 1)
