@@ -47,7 +47,7 @@ def _restart_hot(root: Path, mw: Any = None) -> None:
     Running tasks keep their process; next task launch uses the new code."""
     import importlib
     for mod in ("services.config_injector", "services.runner",
-                "services.launch_queue", "services.scheduler",
+                "services.launch_queue",
                 "services.dispatch_pool", "services.instance_pool",
                 "services.maa_download", "services.log_parser",
                 "infrastructure.task_constants", "models.config_manager",

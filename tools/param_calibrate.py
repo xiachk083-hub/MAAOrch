@@ -23,15 +23,15 @@ MANAGER_TOKEN = "e210ad4863f14c4e"
 MIN_SAMPLES = 10  # 低于该样本量的统计项标记缺数据
 
 
-def _exec(script: str, timeout: int = 90) -> str:
+def _exec(script: str, timeout: int = 90, url: str = MANAGER_URL, token: str = MANAGER_TOKEN) -> str:
     """通过 manager 在目标机执行 python 脚本（base64 内嵌，规避引号转义）。"""
     b64 = base64.b64encode(script.encode("utf-8")).decode()
     cmd = "python -X utf8 -c \"import base64;exec(base64.b64decode('%s'))\"" % b64
     req = urllib.request.Request(
-        MANAGER_URL,
+        url,
         data=json.dumps({"command": cmd, "timeout": timeout}).encode(),
         headers={"Content-Type": "application/json",
-                 "x-manager-token": MANAGER_TOKEN},
+                 "x-manager-token": token},
         method="POST")
     r = json.loads(urllib.request.urlopen(req, timeout=timeout + 15).read().decode())
     if not r.get("ok"):
@@ -132,8 +132,12 @@ def pct(v, d=None):
 def main():
     ap = argparse.ArgumentParser(description="MAAOrch 参数校准")
     ap.add_argument("--host", default="100.79.173.69")
+    ap.add_argument("--project-dir", default=r"E:\MAAOrch",
+                    help="目标机项目根目录（默认 E:\\MAAOrch）")
     args = ap.parse_args()
-    raw = _exec(STAT_SCRIPT)
+    # 脚本内路径注入目标机项目根（2026-08-12 整理: 写死绝对路径参数化）
+    raw = _exec(STAT_SCRIPT.replace(r"E:\MAAOrch", args.project_dir),
+                url=f"http://{args.host}:19998/api/exec")
     try:
         data = json.loads(raw)
     except Exception:

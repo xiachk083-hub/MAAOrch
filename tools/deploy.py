@@ -41,7 +41,6 @@ DEFAULT_FILES = [
     "services/stage_probe.py",
     "services/backfill_stats.py",
     "network/api_fastapi.py",
-    "network/api_server.py",
     "ui/web/app.js",
     "ui/web/index.html",
     "manager/manager.py",

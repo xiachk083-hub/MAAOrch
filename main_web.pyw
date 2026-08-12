@@ -219,9 +219,6 @@ pause
     except Exception:
         pass
 
-    from services.scheduler import start_scheduler
-    start_scheduler(ctx)
-
     from services.dispatch_pool import create_dispatch
     for a in ctx.accounts:
         plan = a.get("smart_plan", "")

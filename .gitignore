@@ -71,3 +71,9 @@ env/
 .DS_Store
 Thumbs.db
 queue_snapshot*.md
+
+# 调试归档（2026-08-12 整理：截图/一次性脚本/历史副本）
+debug/
+
+# ZCode 工具目录（2026-08-12）
+.zcode/

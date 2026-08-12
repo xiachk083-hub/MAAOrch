@@ -307,15 +307,8 @@ def _find_maa_source(config: dict | None = None) -> Path | None:
     return None
 
 
-def _trigger_batch(svc):
-    """Daily batch: enqueue all accounts."""
-    lq = getattr(svc.ctx._mw, "launch_queue", None)
-    if lq:
-        lq.batch_enqueue_all()
-        svc.ctx.log("[调度] 每日批量入队")
-
-
 class MaintService:
+
     def __init__(self, ctx: ServiceContext) -> None:
         self.ctx = ctx
 
@@ -594,30 +587,6 @@ class MaintService:
         if mw and hasattr(mw, "_do_save"):
             mw._do_save()
         QApplication.quit()
-
-    def start_schedule(self) -> None:
-        has_batch = bool(self.ctx.config.get("daily_batch_time", ""))
-        sched = self.ctx.config.get("schedule", {})
-        if sched.get("enabled") or has_batch:
-            self._ensure_schedule_config(has_batch, sched)
-            self._start_schedule_thread()
-
-    def _ensure_schedule_config(self, has_batch: bool, sched: dict) -> None:
-        if not sched.get("enabled") and has_batch:
-            bt = self.ctx.config.get("daily_batch_time", "")
-            self.ctx.config["schedule"] = {"enabled": True, "type": "daily", "time": bt, "days_of_week": []}
-
-    def _start_schedule_thread(self) -> None:
-        if self.ctx.schedule_thread and self.ctx.schedule_thread.isRunning():
-            return  # config changes propagate automatically via shared dict
-        try:
-            from services.schedule_thread import ScheduleThread  # Qt desktop legacy
-        except ImportError:
-            return  # Web mode uses services/scheduler.py instead
-        self.ctx.schedule_thread = ScheduleThread(self.ctx.config)
-        self.ctx.schedule_thread.trigger.connect(self.ctx.start_pipeline)
-        self.ctx.schedule_thread.batch_trigger.connect(lambda: _trigger_batch(self))
-        self.ctx.schedule_thread.start()
 
     def check_orch_update(self) -> None:
         """Check for MAAOrch self-update, download and replace if newer."""
