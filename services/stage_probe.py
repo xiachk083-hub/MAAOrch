@@ -108,7 +108,7 @@ class StageProbe:
             "asst.stop()",
             "print('DONE')",
         ]
-        code = """ + repr(NL) + """.join(lines)
+        code = chr(10).join(lines)
         try:
             r = subprocess.run([_sys.executable, "-c", code],
                                capture_output=True, text=True,
