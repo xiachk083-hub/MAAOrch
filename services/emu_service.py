@@ -119,8 +119,10 @@ def is_system_started(emu_idx) -> bool:
 
 
 def direct_shutdown(cli: str, emu_idx, flag: str = "-v", log=None) -> None:
-    """直接关闭（闲置无游戏场景）— MuMuManager shutdown 是正常关闭，
-    无游戏在跑不会弹崩溃报告。与优雅关闭共用锁（防并发二次关闭）。"""
+    """直接关闭（闲置无游戏场景）— MuMuManager shutdown 是正常关闭。
+    2026-08-12 用户: 关闭只用 MAA 方式（MAA 关游戏 → 回收关模拟器），
+    不碰 ADB（force_stop/connect 抢 MAA 端口）。VMM 残留由 health 兜底。
+    与优雅关闭共用锁（防并发二次关闭）。"""
     with _glock:
         _lk = _locks.setdefault(str(emu_idx), threading.Lock())
     if not _lk.acquire(blocking=False):
@@ -129,12 +131,6 @@ def direct_shutdown(cli: str, emu_idx, flag: str = "-v", log=None) -> None:
         return
     try:
         try:
-            # 关机前停止游戏（MAA 完成后的残留前台游戏 → 强关会出错）
-            try:
-                force_stop_games(_DIRECT_ADB.get(str(emu_idx), ("", ""))[0],
-                                 _DIRECT_ADB.get(str(emu_idx), ("", ""))[1], log)
-            except Exception:
-                pass
             subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
                            capture_output=True, timeout=15, creationflags=_CF)
             if log:
@@ -173,37 +169,18 @@ def graceful_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
 
 
 def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log) -> None:
-    """关闭主体（2026-08-11 用户: reboot 实测基本无效，直接 shutdown）：
-    1. force-stop 游戏（防"前台强关"崩溃报告）
-    2. 直接 MuMuManager shutdown（用户手动关模拟器就是它 — 正常关闭）
-    3. 等进程退出（wait 秒）
-    4. 未退 → taskkill VMMHeadless（最终兜底 — 必定关掉）
+    """关闭主体（2026-08-12 用户: 用 MAA 的关闭方式 — MAA 做完任务关游戏
+    （PostActions=8），模拟器关闭只走 MuMuManager shutdown，**绝不碰 ADB**：
+    adb connect/force_stop/reboot 会抢 MAA 的 ADB 端口（MAA 还连着时被
+    重置 → 失联/出错）。VMM 残留由 health 僵尸清理兜底）：
+    1. 直接 MuMuManager shutdown（正常关闭）
+    2. 等进程退出（wait 秒）
+    3. 未退 → taskkill VMMHeadless（最终兜底 — 必定关掉）
     """
     _t0 = time.time()
     if log:
         log(f"[关闭] 模拟器#{emu_idx} 开始 (adb={'有' if addr and adb_path else '无'})")
-    # 1. 停止游戏进程（游戏前台被强关 → MuMu 崩溃报告/模拟器出错）
-    if addr and adb_path:
-        try:
-            subprocess.run([adb_path, "connect", addr],
-                           capture_output=True, timeout=10, creationflags=_CF)
-            time.sleep(1)
-            force_stop_games(adb_path, addr, log)
-        except Exception:
-            pass
-    # 1b. adb 优雅关机（reboot -p — Android 内部关机；对正常 Android 比
-    #     shutdown 可靠。对卡死 Android 失败无害 — 后续 shutdown 兜底。
-    #     2026-08-11 用户: 是不是要先连上再用 adb — connect 在前 ✓）
-    if addr and adb_path:
-        try:
-            r = subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                               capture_output=True, timeout=10, creationflags=_CF)
-            if r.returncode == 0 and log:
-                log(f"[关闭] 模拟器#{emu_idx} adb reboot -p 已发送（Android 优雅关机）")
-            time.sleep(2)
-        except Exception:
-            pass
-    # 2. 直接 MuMuManager shutdown（正常关闭 — 不依赖 Android 响应）
+    # 1. 直接 MuMuManager shutdown（正常关闭 — 不依赖 Android 响应）
     try:
         subprocess.run([cli, "control", flag, str(emu_idx), "shutdown"],
                        capture_output=True, timeout=15, creationflags=_CF)
@@ -212,7 +189,7 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
     except Exception as ex:
         if log:
             log(f"[关闭] 模拟器#{emu_idx} shutdown 发送失败: {ex}")
-    # 3. 等进程退出 — 判定用真实进程（MuMuManager info 在 shutdown 请求后
+    # 2. 等进程退出 — 判定用真实进程（MuMuManager info 在 shutdown 请求后
     #    可能提前标记 process_started=false → 误判退出 → 兜底被跳过）
     dl = time.time() + wait
     while time.time() < dl:
@@ -224,7 +201,7 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
         except Exception:
             pass
         time.sleep(2)
-    # 4. 最终兜底：shutdown 后进程未退（MuMu 层卡死）→ taskkill VMMHeadless
+    # 3. 最终兜底：shutdown 后进程未退（MuMu 层卡死）→ taskkill VMMHeadless
     try:
         import re as _re
         pid = None
