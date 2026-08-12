@@ -858,19 +858,22 @@ class LaunchQueue:
                 # 马上要重新启动，回收会导致反复开关（2026-08-10 用户: 降级后
                 # 模拟器被关 → 又要重新拉起）。但长队列下"无条件保留"会让
                 # 闲置模拟器全开着（每台 2-4GB，卡机 — 2026-08-10 用户: 开
-                # 这么多多余的模拟器有点卡）→ 入队超过 30 分钟（一轮任务+
-                # 重试周期内不回收；超 30 分钟 = 队列长期不动的遗留）才回收，
-                # 轮到启动时 _launch_job_body 自动拉起。
+                # 这么多多余的模拟器有点卡）→ 入队超过 keep 分钟（覆盖一轮
+                # 重试周期）才回收，轮到启动时 _launch_job_body 自动拉起。
                 # ⚠️ 曾用 5 分钟 — 实测启动失败重试的账号（20s 间隔重试）
                 # 模拟器被回收 → 每次重试都冷启动 → 启动风暴 → 失联/挂起
                 # （2026-08-11 B 服轮: #22 被回收后 b-12/b-4 连环失败）。
+                # ⚠️ 30 分钟 → 10 分钟（2026-08-12 数据: 失败→重试间隔 15
+                # 样本中位 2.7m / p90 3.5m / max 8.6m，≤10m 覆盖 100% —
+                # 30m 里后 20m 是纯空转；emu_pending_keep_min 可配置）。
                 if aid and any(e.account_id == aid for e in self._pending):
+                    _keep_min = int(self.ctx.config.get("emu_pending_keep_min", 10) or 10)
                     _recent = any(
-                        (datetime.now() - e.not_before).total_seconds() < 1800
+                        (datetime.now() - e.not_before).total_seconds() < _keep_min * 60
                         for e in self._pending if e.account_id == aid)
                     if _recent:
                         continue
-                    _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 30 分钟，回收省资源)")
+                    _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 {_keep_min} 分钟，回收省资源)")
                 # 非系统启动的模拟器 = 用户在 MuMu 管理器手动开的 → 永不回收
                 # （系统只回收自己拉起的。2026-08-11 用户: 手动启动的模拟器
                 # 也被关掉 — 回收把用户手动开的当闲置关了）。
