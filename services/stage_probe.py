@@ -297,10 +297,18 @@ class StageProbe:
         expected_title = titles.get(stage, "")
         num = stage.rsplit("-", 1)[-1] if "-" in stage else stage  # "9"
 
-        def _check() -> dict | None:
+        def _check(tag: str = "") -> dict | None:
             shot = self._capture()
             if shot is None:
                 return {"verdict": "SHOTFAIL", "score": 0.0, "detail": "截图失败"}
+            # 保存现场截图（排查用 — 遍历每步画面落盘 logs/probe_shots/）
+            try:
+                import cv2
+                d = pathlib.Path(__file__).parent.parent / "logs" / "probe_shots"
+                d.mkdir(exist_ok=True)
+                cv2.imwrite(str(d / f"{tag}_{int(time.time())}.png"), shot)
+            except Exception:
+                pass
             texts = self._ocr_texts(shot, STAGE_NAME_ROI)
             joined = "|".join(t for t, _b, _s in texts)
             self._log(f"  关卡名区 OCR: {joined[:80]}")
@@ -322,7 +330,7 @@ class StageProbe:
             return ((b < 110) & (r > 150) & (g > 90)).mean()
 
         # 1) 当前截图判定（MAA 可能已停在目标详情页）
-        r = _check()
+        r = _check(f"{stage}_init")
         if r:
             return r
         # 2) 若在详情页但关卡名不匹配 → 返回列表
@@ -348,7 +356,7 @@ class StageProbe:
                 time.sleep(1.5)
             self._tap(px, py)
             time.sleep(2.0)
-            r = _check()
+            r = _check(f"{stage}_{i}")
             if r:
                 return r
             self._back()
