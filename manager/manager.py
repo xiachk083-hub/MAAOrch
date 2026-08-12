@@ -545,6 +545,13 @@ def download_project() -> tuple[bool, str]:
                 log("MAA 目录已放回")
             except Exception:
                 shutil.copytree(maa_moved, maa_dst, dirs_exist_ok=True)
+            # 放回后验证 MAA.exe — 放回失败/不完整会静默丢 MAA（2026-08-12
+            # 反复事故: 部署后 source 半删 → 实例池 0）。失败不静默。
+            try:
+                if not (maa_dst / "source" / "MAA.exe").exists():
+                    log(f"⚠️ 警告: 放回后 MAA.exe 缺失（{maa_dst}）— 部署未破坏 source")
+            except Exception:
+                pass
 
         # Restore preserved data
         for rel, bak in preserve.items():

@@ -266,28 +266,15 @@ def _ensure_maa_available_locked(ctx: Any, source_dir: Path) -> bool:
         _dl_update(state="done", pct=100, version=ver, message="就绪")
         return True
 
-    # If source exists but MAA.exe missing, it's corrupted → clean up
+    # If source exists but MAA.exe missing, it's corrupted → try re-download
+    # WITHOUT rmtree (2026-08-12 反复事故: rmtree 部分失败（DLL 被锁残留）
+    # → 下载又失败（GitHub 不可达）→ source 半删（只剩 DLL）→ 实例池 0 →
+    # MAA 无法运行。不删 — 保留现场，提示手动修复（失败可见不破坏）。）
     if source_dir.exists():
         exe = source_dir / "MAA.exe"
         if not exe.exists():
-            _log("[MAA] source 目录不完整，清理后重新下载")
-            # Orphaned MAA.exe processes hold locks on source files and make
-            # rmtree fail → mkdir then hits WinError 183. Kill them first.
-            try:
-                import subprocess as _sp
-                _sp.run(["taskkill", "/F", "/IM", "MAA.exe"],
-                        capture_output=True, timeout=10,
-                        creationflags=_sp.CREATE_NO_WINDOW)
-            except Exception:
-                pass
-            time.sleep(2)
-            for _ in range(5):
-                try:
-                    shutil.rmtree(source_dir)
-                    break
-                except Exception:
-                    time.sleep(2)
-            source_dir.mkdir(parents=True, exist_ok=True)
+            _log("[MAA] source 目录不完整（缺 MAA.exe）— 不清理，尝试下载补齐（保留现场）")
+            _dl_update(state="error", error="source 不完整", message="source 缺 MAA.exe（保留现场，尝试下载）")
         else:
             # MAA.exe present but config not initialized (fresh official zip has
             # no config/) — run MAA once to generate $type instead of re-downloading
