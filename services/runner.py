@@ -19,9 +19,36 @@ def _close_mumu_popups():
     try:
         import ctypes, ctypes.wintypes, time as _tt
         user32 = ctypes.windll.user32
+        # x64 句柄是 64 位：不声明 argtypes 会被默认 c_int 截断，
+        # 子窗口句柄（按钮识别/递归遍历）全部失灵 — 统一声明
+        RECT = ctypes.POINTER(ctypes.wintypes.RECT)
+        user32.GetWindowRect.argtypes = [ctypes.c_void_p, RECT]
+        user32.GetWindowRect.restype = ctypes.c_bool
+        user32.GetWindowTextLengthW.argtypes = [ctypes.c_void_p]
+        user32.GetWindowTextLengthW.restype = ctypes.c_int
+        user32.GetWindowTextW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
+        user32.GetWindowTextW.restype = ctypes.c_int
+        user32.GetClassNameW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
+        user32.GetClassNameW.restype = ctypes.c_int
+        user32.IsWindowVisible.argtypes = [ctypes.c_void_p]
+        user32.IsWindowVisible.restype = ctypes.c_bool
+        user32.IsIconic.argtypes = [ctypes.c_void_p]
+        user32.IsIconic.restype = ctypes.c_bool
+        user32.IsZoomed.argtypes = [ctypes.c_void_p]
+        user32.IsZoomed.restype = ctypes.c_bool
+        user32.GetWindow.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+        user32.GetWindow.restype = ctypes.c_void_p
+        user32.FindWindowExW.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.c_wchar_p, ctypes.c_wchar_p]
+        user32.FindWindowExW.restype = ctypes.c_void_p
+        user32.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint,
+                                        ctypes.c_void_p, ctypes.c_void_p]
+        user32.PostMessageW.restype = ctypes.c_bool
+        user32.GetWindowLongW.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        user32.GetWindowLongW.restype = ctypes.c_long
         WM_CLOSE = 0x0010
         enum_windows = user32.EnumWindows
-        enum_proc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_int, ctypes.c_int)
+        enum_proc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
         closed = set()
 
         def _is_popup(hwnd):
@@ -33,16 +60,22 @@ def _close_mumu_popups():
             h = rect.bottom - rect.top
             return w < 500 and h < 300
 
-        def _is_16_9_like(hwnd):
-            """MuMu 模拟器悬浮画面窗（384×216 ≈ 16:9，排序窗口后出现，
-            WS_EX_TOOLWINDOW + owner=模拟器主窗口，无按钮）— 不是错误弹窗。
-            只按尺寸判定会把它当弹窗 WM_CLOSE，直接关掉整个模拟器
-            （2026-08-12 用户: 排序 mumu 窗口后模拟器退出）。"""
-            rect = ctypes.wintypes.RECT()
-            user32.GetWindowRect(hwnd, ctypes.byref(rect))
-            w = rect.right - rect.left
-            h = rect.bottom - rect.top
-            return h > 0 and 1.6 <= w / h <= 1.95
+        def _is_floating_view(hwnd):
+            """模拟器画面/悬浮窗身份：类名 Qt5156QWindowToolSaveBits + WS_EX_TOOLWINDOW。
+
+            实测身份链（2026-08-12 tools/window_identify.py）：
+                主窗口    标题=实例名（如"1"） 类名 Qt5156QWindowIcon   exstyle 0x00000100 owner=0
+                画面/悬浮窗 标题=MuMuNxDevice   类名 Qt5156QWindowToolSaveBits exstyle 0x000800A0
+                          （WS_EX_TOOLWINDOW）owner=同进程主窗口 无按钮
+            悬浮窗尺寸随排列动态变化（384×216 ~ 1022×575 均实测），尺寸启发式
+            不可靠；类名+TOOLWINDOW 是恒定强特征 → 命中即永不关。
+            """
+            cls = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, cls, 256)
+            if cls.value != 'Qt5156QWindowToolSaveBits':
+                return False
+            ex = user32.GetWindowLongW(hwnd, -20) & 0xFFFFFFFF  # GWL_EXSTYLE
+            return bool(ex & 0x80)  # WS_EX_TOOLWINDOW
 
         def _has_button(hwnd):
             """递归找文本按钮（忽略/再次启动/确定/OK/Yes）— 错误弹窗的强特征。"""
@@ -95,10 +128,9 @@ def _close_mumu_popups():
                 return True
             is_error = False
             if title == 'MuMuNxDevice':
-                # 悬浮画面窗 16:9 无按钮 → 跳过；有按钮或非 16:9 小窗 → 真弹窗
-                if _is_popup(hwnd) and not _is_16_9_like(hwnd):
-                    is_error = True
-                elif _has_button(hwnd):
+                # 画面/悬浮窗（ToolSaveBits+TOOLWINDOW 身份）永不关；
+                # 其余（非画面类小窗 / 有按钮）→ 真弹窗
+                if not _is_floating_view(hwnd) and (_has_button(hwnd) or _is_popup(hwnd)):
                     is_error = True
             elif '异常' in title and _is_popup(hwnd):
                 is_error = True
@@ -134,8 +166,15 @@ def _close_mumu_popups():
             return True
 
         enum_windows(enum_proc(callback), 0)
-    except Exception:
-        pass
+    except Exception as _e:
+        # 不静默：弹窗清理异常要能看到（pythonw 无控制台时写日志兜底）
+        import traceback
+        traceback.print_exc()
+        try:
+            from infrastructure.logger import Logger
+            Logger("runner").error(f"_close_mumu_popups: {_e}")
+        except Exception:
+            pass
 
 
 class AccountRunner:

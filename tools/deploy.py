@@ -102,7 +102,7 @@ def exec_ps(script: str, timeout: int = 120) -> tuple[str, str]:
 def deploy_file(local: str, remote: str) -> bool:
     data = open(local, "rb").read()
     b64 = base64.b64encode(data).decode("ascii")
-    tmp = r"E:\MAAOrch\probe_shots\_dep.b64"
+    tmp = r"E:\MAAOrch\_dep.b64"
     exec_ps("[IO.File]::WriteAllText('" + tmp + "', '')")
     parts = [b64[i:i + CHUNK] for i in range(0, len(b64), CHUNK)]
     for part in parts:
@@ -110,7 +110,7 @@ def deploy_file(local: str, remote: str) -> bool:
         if err.strip():
             print("  chunk err:", err[:120])
             return False
-    out, err = exec_ps("python 'E:\\MAAOrch\\probe_shots\\_dep2.py' '" + remote + "'", 60)
+    out, err = exec_ps("python 'E:\\MAAOrch\\_dep2.py' '" + remote + "'", 60)
     if "WROTE" not in out:
         print("  WRITE FAIL:", out[:200], err[:200])
         return False
@@ -123,18 +123,18 @@ def deploy_file(local: str, remote: str) -> bool:
 
 def ensure_decoder() -> None:
     src = ("import sys, base64\n"
-           "raw = open(r'E:\\MAAOrch\\probe_shots\\_dep.b64', encoding='ascii').read()\n"
+           "raw = open(r'E:\\MAAOrch\\_dep.b64', encoding='ascii').read()\n"
            "data = base64.b64decode(raw)\n"
            "open(sys.argv[1], 'wb').write(data)\n"
            "print('WROTE', len(data))\n")
     b64 = base64.b64encode(src.encode("utf-8")).decode("ascii")
-    exec_ps("[IO.File]::WriteAllText('E:\\MAAOrch\\probe_shots\\_dep2.py', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + b64 + "')))", 30)
+    exec_ps("[IO.File]::WriteAllText('E:\\MAAOrch\\_dep2.py', [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + b64 + "')))", 30)
 
 
 def restart() -> None:
     def post(path: str, timeout: int = 180) -> str:
-        req = urllib.request.Request(MANAGER + path, data=b"{}",
-            headers={"x-manager-token": MANAGER_TOKEN, "Content-Type": "application/json"})
+        req = urllib.request.Request(G_MANAGER + path, data=b"{}",
+            headers={"x-manager-token": G_MANAGER_TOKEN, "Content-Type": "application/json"})
         resp = urllib.request.urlopen(req, timeout=timeout)
         return resp.read().decode("utf-8", "replace")
     print("stop:", post("/api/stop", 120))
