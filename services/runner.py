@@ -146,6 +146,7 @@ class AccountRunner:
         self._watchers: dict = {}  # aid → LogWatcher（日志事件流）
         self._err_windows: dict = {}  # aid -> [ts]（连续子任务错误窗口）
         self._emu_fail_count: dict[str, int] = {}
+        self._emu_lost_suspect: dict[str, float] = {}  # aid -> ts（失联嫌疑，连续 2 轮确认才杀）
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
@@ -1400,17 +1401,32 @@ class AccountRunner:
                             # is_* 字段 → None → 误判"失联"→ 杀 MAA + 关模拟器
                             # （2026-08-10 实测 3 台同时误判）。无法确认 → 跳过。
                             _pa = d.get("is_android_started"); _pp = d.get("is_process_started")
+                            # 连续 2 轮确认才杀 — MuMuManager shutdown 执行窗口会
+                            # 短暂对**其他** VM 返回合法的 false/false（bool 防御拦
+                            # 不住）：2026-08-12 b-2 完成关模拟器时 6 台在跑账号
+                            # 同时被误判"失联"→ 杀 MAA → 集体 -8 → 自动重启循环。
                             if isinstance(_pa, bool) and isinstance(_pp, bool) and not (_pa or _pp):
+                                if aid in self._emu_lost_suspect:
+                                    # 第 2 轮仍失联 → 确认，杀 MAA 恢复
+                                    self._emu_lost_suspect.pop(aid, None)
+                                    name = ac.get("name", aid)
+                                    self._log.warn(f"[模拟器失联] {name} 模拟器#{emu_idx} 进程不在（连续 2 轮确认），杀 MAA 恢复")
+                                    try:
+                                        p.terminate()
+                                        p.wait(3)
+                                    except Exception:
+                                        pass
+                                    tasks, sanity, drops = self._parse_log(aid)
+                                    self._cleanup(aid, -8, tasks, sanity, drops)
+                                    return
+                                # 第 1 次失联 → 只记嫌疑，下一轮确认（5s 后）
+                                self._emu_lost_suspect[aid] = time.time()
                                 name = ac.get("name", aid)
-                                self._log.warn(f"[模拟器失联] {name} 模拟器#{emu_idx} 进程不在（MAA 空转），杀 MAA 恢复")
-                                try:
-                                    p.terminate()
-                                    p.wait(3)
-                                except Exception:
-                                    pass
-                                tasks, sanity, drops = self._parse_log(aid)
-                                self._cleanup(aid, -8, tasks, sanity, drops)
+                                self._log.warn(f"[模拟器失联?] {name} 模拟器#{emu_idx} 疑似不在（第1次，5s 后确认）")
                                 return
+                            else:
+                                # info 正常或无法确认 → 清嫌疑（防累积误杀）
+                                self._emu_lost_suspect.pop(aid, None)
                     except Exception:
                         pass
         # MAA 心跳检查（RemoteControl — MAA 每秒轮询 = 进程活着+网络通。
@@ -2211,6 +2227,7 @@ class AccountRunner:
         # Release queue mark on ANY exit (crash/kill included) — stale marks
         # blocked relaunches for up to 150s before this fix.
         self._release_emu_mark(aid)
+        self._emu_lost_suspect.pop(aid, None)  # 清失联嫌疑（防重入队后残留误杀）
 
         try:
             from services.log_watcher import record_event
@@ -2230,35 +2247,11 @@ class AccountRunner:
                     except ValueError: pass
             except Exception:
                 pass
-        # Close the account's emulator ONLY on normal completion (exit==0).
-        # On abnormal exit (connection lost etc.) the auto-restart re-enqueues
-        # the account and needs the emulator still alive — closing it here
-        # caused a death loop (close → restart can't connect → fail → close).
-        # One-to-one binding means completed accounts leave their emulator
-        # running forever otherwise — that's what this closes. Connect-only
-        # (manual use) never closes.
-        if ac and exit_code == 0 and not ac.get("_connect_only"):
-            try:
-                emu_idx = ac.get("emu_instance_index", "")
-                if emu_idx:
-                    cli = find_mumu_cli()
-                    if cli is None and ac.get("adb_path"):
-                        cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
-                        if cand.exists():
-                            cli = str(cand)
-                    if cli:
-                        idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
-                        self.emit_log(f"[完成] {name} 关闭模拟器 #{emu_idx}")
-                        # 统一优雅关闭（adb reboot -p → 等退出 → 兜底）—
-                        # 直接 shutdown 留 VMM 残留（用户 2026-08-10）
-                        try:
-                            from services.launch_queue import graceful_emu_shutdown
-                            graceful_emu_shutdown(cli, emu_idx, ac.get("adb_path", ""), ac.get("adb_address", ""))
-                        except Exception:
-                            subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
-                                          timeout=10, capture_output=True, creationflags=CF)
-            except Exception:
-                pass
+        # 模拟器生命周期不归 runner 管（职责分区，2026-08-12）：正常完成后
+        # 模拟器保持运行，交给回收（launch_queue._reclaim_idle_emus / v2 状态机）
+        # 统一关闭。曾在 exit==0 时立即 graceful_emu_shutdown — MuMuManager
+        # shutdown 执行窗口会让其他 VM 的 info 短暂返回 false/false → 在跑
+        # 账号集体误判"失联"→ 杀 MAA → -8 自动重启循环（"账号旅行多次"根因）。
         if exit_code == 0 and ac:
             self._log.debug(f"[完成] {name} MAA 退出 (exit=0)")
         if ac:
