@@ -71,12 +71,12 @@ class ConfigService:
             # Start options
             if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            # PostActions: 只用 ExitSelf（8）— 12=ExitEmulator+ExitSelf 会让
-            # MAA 任务完成自动关模拟器（2026-08-12 根因: termination
-            # requested 的"突然关闭"，MAAOrch 无日志）。MAAOrch 管理模拟器
-            # 生命周期（回收统一关），MAA 只自己退出。
+            # PostActions: MAA 的方式关闭（2026-08-12 用户: MAA 怎么用我们
+            # 就怎么用 — MAA 完成任务自己关游戏+关模拟器（ExitEmulator+ExitSelf，
+            # MuMuManager shutdown），MAAOrch 不干预、不抢 ADB 端口）。
+            # connect-only（手动连接）不关模拟器（用户手动用的）。
             if ac.get("post_action"):
-                c["MainFunction.PostActions"] = "8"
+                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
             c["Connect.RetryOnDisconnected"]="True"
             c["Connect.AllowADBRestart"]="False"
             c["Connect.AllowADBHardRestart"]="False"
@@ -426,13 +426,12 @@ class ConfigService:
 
             if not use_v6:
                 self._set_connection(c, ac, use_v6=False)
-                c["MainFunction.PostActions"] = "8"
+                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
             else:
                 self._set_connection(c, ac, use_v6=True)
-                # 显式写 8 覆盖 MAA 保存合并的 12（旧格式残留 — MAA 保存
-                # 配置时把 gui.json 的扁平键合并进 gui.new.json，12 会随
-                # 完成关模拟器 — 2026-08-12）
-                c["MainFunction.PostActions"] = "8"
+                # MAA 的方式关闭（2026-08-12 用户）— ExitEmulator+ExitSelf，
+                # MAA 完成自己关模拟器；显式写覆盖 MAA 保存合并的旧值
+                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
@@ -457,10 +456,10 @@ class ConfigService:
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
-            # PostActions: ExitSelf（8）— 不关模拟器（12=ExitEmulator 会让 MAA
-            # 完成自动关模拟器 — 2026-08-12 根因；MAAOrch 管理模拟器）
+            # PostActions: MAA 的方式关闭（2026-08-12 用户: MAA 怎么用我们
+            # 就怎么用 — MAA 完成自己关游戏+关模拟器）。connect-only 不关。
             if ac.get("post_action"):
-                c["MainFunction.PostActions"] = "8"
+                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
 
             if use_v6:
                 task_set = {t.lower() for t in task_list}
