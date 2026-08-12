@@ -118,8 +118,12 @@ def _close_mumu_popups():
                 # 只有带按钮才可能是真弹窗（"运行异常"弹窗走 '异常' 标题分支，不在这里）。
                 if _has_button(hwnd):
                     is_error = True
-            elif '异常' in title and _is_popup(hwnd):
-                is_error = True
+            elif '异常' in title:
+                # "运行异常"弹窗：小窗或带按钮即关（2026-08-12 加按钮兜底 —
+                # 大尺寸异常弹窗原来会因 _is_popup 尺寸限制漏关）。
+                # 画面窗不会含"异常"标题（MuMuNxDevice/实例名），无误杀面。
+                if _is_popup(hwnd) or _has_button(hwnd):
+                    is_error = True
             elif 'CrashReporter' in title or '崩溃' in title:
                 # MuMu 崩溃报告弹窗（关闭模拟器时可能出现）— 直接关闭
                 if hwnd not in closed:
