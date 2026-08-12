@@ -60,23 +60,6 @@ def _close_mumu_popups():
             h = rect.bottom - rect.top
             return w < 500 and h < 300
 
-        def _is_floating_view(hwnd):
-            """模拟器画面/悬浮窗身份：类名 Qt5156QWindowToolSaveBits + WS_EX_TOOLWINDOW。
-
-            实测身份链（2026-08-12 tools/window_identify.py）：
-                主窗口    标题=实例名（如"1"） 类名 Qt5156QWindowIcon   exstyle 0x00000100 owner=0
-                画面/悬浮窗 标题=MuMuNxDevice   类名 Qt5156QWindowToolSaveBits exstyle 0x000800A0
-                          （WS_EX_TOOLWINDOW）owner=同进程主窗口 无按钮
-            悬浮窗尺寸随排列动态变化（384×216 ~ 1022×575 均实测），尺寸启发式
-            不可靠；类名+TOOLWINDOW 是恒定强特征 → 命中即永不关。
-            """
-            cls = ctypes.create_unicode_buffer(256)
-            user32.GetClassNameW(hwnd, cls, 256)
-            if cls.value != 'Qt5156QWindowToolSaveBits':
-                return False
-            ex = user32.GetWindowLongW(hwnd, -20) & 0xFFFFFFFF  # GWL_EXSTYLE
-            return bool(ex & 0x80)  # WS_EX_TOOLWINDOW
-
         def _has_button(hwnd):
             """递归找文本按钮（忽略/再次启动/确定/OK/Yes）— 错误弹窗的强特征。"""
             try:
@@ -128,9 +111,12 @@ def _close_mumu_popups():
                 return True
             is_error = False
             if title == 'MuMuNxDevice':
-                # 画面/悬浮窗（ToolSaveBits+TOOLWINDOW 身份）永不关；
-                # 其余（非画面类小窗 / 有按钮）→ 真弹窗
-                if not _is_floating_view(hwnd) and (_has_button(hwnd) or _is_popup(hwnd)):
+                # 正常模拟器画面/悬浮窗永不关（用户原则: 误杀成本>>漏关成本）。
+                # 实机证据（2026-08-12 任务运行中监测）: MuMuNxDevice 标题窗口全是
+                # 模拟器画面窗 —— ToolSaveBits(384×216~1022×575) 和 Qt5156QWindow(316×257)
+                # 两种类名变体，均无按钮、owner=同进程主窗口；尺寸/类名都不该当判定依据。
+                # 只有带按钮才可能是真弹窗（"运行异常"弹窗走 '异常' 标题分支，不在这里）。
+                if _has_button(hwnd):
                     is_error = True
             elif '异常' in title and _is_popup(hwnd):
                 is_error = True
