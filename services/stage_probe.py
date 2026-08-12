@@ -284,18 +284,50 @@ class StageProbe:
                            capture_output=True, timeout=10,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
-    def _judge_normal(self, img: np.ndarray, stage: str) -> dict:
-        """普通关卡判定: 详情页关卡名 OCR 匹配目标关卡（能进详情页 = 可刷）。
+    @staticmethod
+    def _split_difficulty(stage: str) -> tuple[str, str | None]:
+        """剥离 MAA 难度后缀: "10-6-HARD" → ("10-6", "HARD")。
 
-        导航链: MAA Fight 导航（可能停在列表/详情页）→ 关卡名匹配 →
-        不匹配则列表遍历（OCR 框动态定位 + 固定网格 fallback → tap →
-        详情页关卡名验证）。详情页关卡名大字识别可靠（列表小字识别差，
-        9→2/8→6 误读 — MAA SwipeToStage 滑 50 次找不到的根因）。
+        MAA 原生支持磨难（官方格式 = 关卡名末尾加 -HARD/-NORMAL，
+        10-14 章标准/磨难，15 章后常规/险地），导航全交给 MAA，
+        这里只负责把后缀剥掉做关卡名匹配。
+        """
+        for suffix in ("-HARD", "-NORMAL"):
+            if stage.endswith(suffix):
+                return stage[: -len(suffix)], suffix[1:]
+        return stage, None
+
+    def _judge_normal(self, img: np.ndarray, stage: str) -> dict:
+        """普通关卡判定（含磨难）: 详情页判定。
+
+        能刷 = UsePrtsSuccess 图标命中（全权委托已激活，实测 0.998）
+        锁   = UnableToAgent2 图标命中（代理锁定）
+        兜底 = 关卡名/开始行动按钮 OCR（进入详情页 = 可刷）
+
+        2026-08-12 修正: 普通/磨难关卡详情页按钮是暗色（非金色），
+        金色判定只适用于剿灭（金色高亮图标）。MATERIAL_FARMING 的
+        "10 章锁"结论来自金色误判 — 实测 10-6-HARD 能刷（UsePrtsSuccess 0.998）。
         """
         import cv2
+        base, diff = self._split_difficulty(stage)
         titles = self._load_stage_titles()
-        expected_title = titles.get(stage, "")
-        num = stage.rsplit("-", 1)[-1] if "-" in stage else stage  # "9"
+        expected_title = titles.get(base, "")
+        num = base.rsplit("-", 1)[-1] if "-" in base else base  # "6"
+
+        def _tpl(name: str, thresh: float) -> tuple[bool, float]:
+            """全图模板匹配（模板小、位置随关卡布局变化 → 全图扫）。"""
+            inst = self._inst_dir()
+            tpls = list((inst / "resource" / "template" / "Battle" / "UsePrts").glob(name + ".png"))
+            if not tpls:
+                return False, 0.0
+            t = cv2.imread(str(tpls[0]), 0)
+            if t is None:
+                return False, 0.0
+            t = t.astype(np.float32)
+            g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            res = cv2.matchTemplate(g, t, cv2.TM_CCOEFF_NORMED)
+            _mn, mx, _a, _b = cv2.minMaxLoc(res)
+            return bool(mx >= thresh), float(mx)
 
         def _check(tag: str = "") -> dict | None:
             shot = self._capture()
@@ -309,18 +341,35 @@ class StageProbe:
                 cv2.imwrite(str(d / f"{tag}_{int(time.time())}.png"), shot)
             except Exception:
                 pass
-            texts = self._ocr_texts(shot, STAGE_NAME_ROI)
+            # 1) 全权委托已激活图标（能刷的权威信号 — 2026-08-12 实测 0.998）
+            hit, val = _tpl("UsePrtsSuccess", 0.9)
+            if hit:
+                return {"verdict": VERDICT_CAN_FARM, "score": round(val, 3),
+                        "detail": f"全权委托已激活（UsePrtsSuccess {val:.3f}）"}
+            # 2) 锁定图标（代理锁定 → 不能刷）
+            lhit, lval = _tpl("UnableToAgent2", 0.6)
+            if lhit:
+                return {"verdict": VERDICT_CANNOT, "score": round(lval, 3),
+                        "detail": f"代理锁定（UnableToAgent2 {lval:.3f}）"}
+            # 3) 详情页标志: 开始行动按钮 OCR（防列表页关卡名误匹配 —
+            #    列表节点 '40-6' 也含 '-'，必须先确认在详情页）
+            texts = self._ocr_texts(shot)
             joined = "|".join(t for t, _b, _s in texts)
-            self._log(f"  关卡名区 OCR: {joined[:80]}")
+            self._log(f"  OCR: {joined[:100]}")
+            on_detail = any("开始行动" in t or "开始作战" in t or "开始推演" in t
+                            for t, _b, _s in texts)
             for text, _box, score in texts:
-                # 1) 关卡名数字匹配: 含 "-" 且数字 == 目标（"TO-9"→"9"）
-                if "-" in text and num in text:
+                # 关卡名数字匹配: 含 "-" 且数字 == 目标（"TO-9"→"9"）
+                if on_detail and "-" in text and num in text and len(text) <= 12:
                     return {"verdict": VERDICT_CAN_FARM, "score": round(score, 3),
-                            "detail": f"详情页关卡名匹配 {stage}（OCR: {text}）"}
-                # 2) 标题匹配（详情页若显示标题）: 目标标题前 3 字
-                if expected_title and expected_title[:3] in text:
+                            "detail": f"详情页关卡名匹配 {base}（OCR: {text}）"}
+                # 标题匹配（详情页若显示标题）: 目标标题前 3 字
+                if on_detail and expected_title and expected_title[:3] in text:
                     return {"verdict": VERDICT_CAN_FARM, "score": round(score, 3),
                             "detail": f"详情页标题匹配 {expected_title}（OCR: {text}）"}
+            if on_detail:
+                return {"verdict": VERDICT_CANNOT, "score": 0.0,
+                        "detail": f"在详情页但关卡名不匹配 {base}（可能点了别的关）"}
             return None
 
         def _detail_gold(shot) -> float:
@@ -330,7 +379,7 @@ class StageProbe:
             return ((b < 110) & (r > 150) & (g > 90)).mean()
 
         # 1) 当前截图判定（MAA 可能已停在目标详情页）
-        r = _check(f"{stage}_init")
+        r = _check(f"{base}_init")
         if r:
             return r
         # 2) 若在详情页但关卡名不匹配 → 返回列表
@@ -356,13 +405,13 @@ class StageProbe:
                 time.sleep(1.5)
             self._tap(px, py)
             time.sleep(2.0)
-            r = _check(f"{stage}_{i}")
+            r = _check(f"{base}_{i}")
             if r:
                 return r
             self._back()
             time.sleep(1.2)
         return {"verdict": VERDICT_DONE, "score": 0.0,
-                "detail": f"遍历未找到 {stage}（列表不可见/关卡未开放）"}
+                "detail": f"遍历未找到 {base}（列表不可见/关卡未开放）"}
 
     # ── judgement ──
     @staticmethod
