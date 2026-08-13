@@ -224,6 +224,21 @@ class LogWatcher(threading.Thread):
                 _record_event(self._aid, "task_start", line)
             elif "FightTimes" in line and "sanity" in line.lower():
                 _record_event(self._aid, "fight_sanity", line)  # 刷次数+体力
+                # 体力实时快照（2026-08-12 用户: 以最后实时的结果为准）—
+                # SanityBeforeStage 每次进关卡都报 → 快照即最新体力，
+                # 消费方（sanity 门/界面）读它而不是运行结束的死值。
+                # inst_dir 传实例目录 → .meta 归属校验（防账号串号）。
+                try:
+                    from services.sanity_tracker import update_from_line
+                    update_from_line(self._aid, line, self._path.parent.parent)
+                except Exception:
+                    pass
+                # 通知 runner 记录本次运行首体力（统计真实消耗 — 2026-08-13）
+                try:
+                    if self._on_event:
+                        self._on_event("sanity_before", self._aid, line)
+                except Exception:
+                    pass
             elif "StageDrops" in line:
                 _record_event(self._aid, "stage_drops", line)   # 掉落
             elif "RecruitResult" in line:

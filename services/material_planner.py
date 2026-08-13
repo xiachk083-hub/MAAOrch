@@ -117,6 +117,44 @@ def load_snapshot(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def observed_daily_ap(aid: str) -> float | None:
+    """近 24h 实际体力消耗（2026-08-13 用户: 号是自己刷的，用实测预测）。
+
+    统计每次运行的首末体力差求和（runner 记录 sanity_before/after，
+    每次进关卡前/结束时的体力），即真实刷关消耗；运行中的自然回复
+    会使其略微低估（每 30 分钟约 5 点），可忽略。
+    无近 24h 有效记录（旧数据无首末字段/当天没刷）→ None，调用方回退
+    配置默认预算（ap_budget_per_day）。
+    """
+    import time as _t
+    try:
+        from models.stats import RunStats
+        now_ts = _t.time()
+        runs = RunStats(aid).runs
+        total = 0.0
+        has = False
+        for r in runs:
+            try:
+                t = _t.mktime(_t.strptime(str(r.get("ts", "")), "%Y-%m-%d %H:%M:%S"))
+            except Exception:
+                continue
+            if t <= now_ts - 86400:
+                continue
+            b = r.get("sanity_before")
+            a = r.get("sanity_after")
+            if (isinstance(b, dict) and isinstance(a, dict)
+                    and b.get("current") is not None and a.get("current") is not None):
+                d = int(b["current"]) - int(a["current"])
+                if d >= 0:  # 负数=运行中吃药补体力，跳过（药量另行不可见）
+                    total += d
+                    has = True
+        if not has or total < 60:  # 当天基本没刷 → 不算数
+            return None
+        return total
+    except Exception:
+        return None
+
+
 def plan(snapshot: dict, config: dict, budget: int | None = None,
          chapter: int | None = None, probe_fn=None) -> dict:
     """Water-level planning. Returns full plan dict for report rendering.

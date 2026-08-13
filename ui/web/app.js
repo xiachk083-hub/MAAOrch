@@ -4035,6 +4035,7 @@ function ganttTodayScroll() {
 window._depotState = { sel: '', cfg: null, autoload: false };
 
 async function renderDepot(container) {
+  const keepScroll = (container.scrollTop || 0);
   container.innerHTML = `<div style="padding:20px;color:var(--text3)">加载中...</div>`;
   const [st, cfg, pgn, act] = await Promise.all([apiGet('/depot/status'), apiGet('/depot/config'), apiGet('/penguin/status'), apiGet('/activity/stages')]);
   window._depotState.cfg = (cfg.ok ? cfg.config : null);
@@ -4083,7 +4084,7 @@ async function renderDepot(container) {
       <td style="padding:4px;border:1px solid var(--border);text-align:center">${fmt(s.depot_ts)}</td>
       <td style="padding:4px;border:1px solid var(--border);text-align:center">${fmt(s.plan_ts)}</td>
       <td style="padding:4px;border:1px solid var(--border)">${stateBadge(s)}</td>
-      <td style="padding:4px;border:1px solid var(--border);text-align:center"><button class="small" ${s.plan_ts?'':'disabled'} onclick="depotShowPlan('${s.id}')">查看计划</button></td>
+      <td style="padding:4px;border:1px solid var(--border);text-align:center"><button class="small" style="${s.plan_ts?'':'opacity:.45;cursor:not-allowed'}" onclick="${s.plan_ts ? `depotShowPlan('${s.id}')` : "toast('该账号还没有计划，先勾选并点「扫描仓库」')"}">查看计划</button></td>
     </tr>`;
   }
   html += `</tbody></table>
@@ -4095,6 +4096,8 @@ async function renderDepot(container) {
   container.innerHTML = html;
   renderDepotActivity(act);
   renderDepotConfig();
+  // 自动刷新保持滚动位置（扫描中 8s 重渲染会重置滚动）
+  container.scrollTop = keepScroll;
   if (window._depotState.sel) depotShowPlan(window._depotState.sel);
   // 扫描中自动刷新
   if (accts.some(a => a.state === 'running')) {
@@ -4221,6 +4224,11 @@ async function depotShowPlan(aid) {
     const p = await apiGet('/depot/plan?account_id=' + encodeURIComponent(aid));
     if (!p || p.error) { el.innerHTML = `<div style="padding:10px;color:var(--danger)">${(p&&(p.detail||p.error))||'加载失败'}</div>`; return; }
     let h = `<div style="font-size:13px;font-weight:bold;margin:6px 0">📋 ${p.account||''} 计划 ${p.ts||''} <span style="color:var(--text3);font-weight:normal;font-size:10px">（当日有效${p.chapter?`，进度 ≤${p.chapter} 章`:''}）</span></div>`;
+    if (p.budget) {
+      const src = p.budget_source === '近24h实测' ? `预算 ${p.budget} AP/天（${p.budget_source}）` : `预算 ${p.budget} AP/天（默认）`;
+      const remain = p.remaining_days !== undefined ? ` · 预计还需 ${p.remaining_days} 天` : '';
+      h += `<div style="font-size:10px;color:var(--text3);margin-bottom:4px">${src}${p.cur_sanity ? ` · 当前体力 ${p.cur_sanity}` : ''}${remain}</div>`;
+    }
     if (p.all_met) h += `<div style="color:var(--ok,#4caf50);font-size:12px">✅ 全部达标 ${p.met_count}/${p.total} — 刷余量最小材料保底</div>`;
     else {
       const extras = [];
@@ -4282,6 +4290,16 @@ async function depotShowPlan(aid) {
     }
     if (p.topup) h += `<div style="font-size:10px;color:var(--accent);margin-top:4px">🎯 补刀（${p.all_met?'当日预算':'排程末剩余'}）: ${p.topup.name} 余量${p.topup.margin>0?'+':''}${p.topup.margin} → ${p.topup.stage} × ${p.topup.rounds}</div>`;
     el.innerHTML = h;
+    // 计划在账号表下方，主动滚动 #content 到可视区（scrollIntoView 会被
+    // 自动刷新重置，直接调滚动容器 scrollTop — 2026-08-13 用户反馈点查看没反应）
+    try {
+      const c = document.getElementById('content');
+      if (c) {
+        const rc = c.getBoundingClientRect();
+        const re = el.getBoundingClientRect();
+        c.scrollTop += (re.top - rc.top) - 12;
+      }
+    } catch (e) {}
   } catch (e) {
     el.innerHTML = `<div style="padding:10px;color:var(--danger)">加载失败: ${e.message}</div>`;
   }

@@ -212,6 +212,7 @@ class AccountRunner:
         self._emu_fail_count: dict[str, int] = {}
         self._emu_lost_suspect: dict[str, float] = {}  # aid -> ts（失联嫌疑，连续 2 轮确认才杀）
         self._adb_connected: dict[str, bool] = {}  # aid -> MAA 首次成功 adb（连接信号，启动节流用）
+        self._run_sanity_first: dict[str, dict] = {}  # aid -> 本次运行首体力快照（统计真实消耗 — 2026-08-13）
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
@@ -1424,6 +1425,16 @@ class AccountRunner:
                         lq._mark_launch_ready(aid)
                 except Exception:
                     pass
+        elif event == "sanity_before":
+            # 本次运行首次进关卡体力（真实消耗统计的"首"值 — 2026-08-13）
+            if aid not in self._run_sanity_first:
+                try:
+                    from services.sanity_tracker import get as _sg
+                    _snap = _sg(aid)
+                    if _snap and _snap.get("current") is not None:
+                        self._run_sanity_first[aid] = dict(_snap)
+                except Exception:
+                    pass
         elif event == "subtask_error":
             # Probe 检测进行中（MAA 挂着等 StageProbe 子进程）— 跳过错误
             # 窗口检测，防误杀（2026-08-12 关卡检测调度）。
@@ -2631,6 +2642,8 @@ class AccountRunner:
             st.save_run(tasks, sanity, drops,
                         exit_code=exit_code,
                         elapsed=duration,
+                        sanity_before=self._run_sanity_first.pop(aid, None),
+                        sanity_after=sanity,
                         status=("完成" if exit_code == 0 else "失败"))
         except Exception as e:
             self._log.warn(f"[统计] {name} save_run 失败: {e}")

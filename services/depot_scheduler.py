@@ -103,12 +103,13 @@ class DepotScanner:
             return i
         return None
 
-    def _ensure_emu(self, emu: str) -> None:
-        """模拟器没起则拉起（复刻 stage_probe.probe 的启动段）。"""
+    def _ensure_emu(self, emu: str) -> bool:
+        """模拟器没起则拉起（复刻 stage_probe.probe 的启动段）。
+        返回 True=本扫描器拉起的（扫描完应关闭），False=原本就在跑（不碰）。"""
         from infrastructure.task_constants import find_mumu_cli
         cli = find_mumu_cli()
         if not cli:
-            return
+            return False
         idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
         import subprocess
         try:
@@ -118,7 +119,7 @@ class DepotScanner:
                                encoding="utf-8", errors="replace")
             d = json.loads(r.stdout.lstrip("\ufeff").strip())
             if d.get("is_android_started") and d.get("adb_port"):
-                return
+                return False
         except Exception:
             pass
         self._log(f"启动模拟器 #{emu}...")
@@ -138,9 +139,31 @@ class DepotScanner:
                                     encoding="utf-8", errors="replace")
                 d2 = json.loads(r2.stdout.lstrip("\ufeff").strip())
                 if d2.get("is_android_started") and d2.get("adb_port"):
-                    return
+                    return True
             except Exception:
                 pass
+        return True
+
+    def _close_emu_if_launched(self, ac, emu: str, launched: bool) -> None:
+        """扫描完关闭本扫描器拉起的模拟器（2026-08-13 用户: 测完的模拟器
+        不应等 30 分钟回收期；用户手动开的绝不碰）。走项目统一优雅关闭。"""
+        if not launched:
+            return
+        try:
+            from infrastructure.task_constants import find_mumu_cli
+            cli = find_mumu_cli()
+            if not cli:
+                return
+            from services.launch_queue import graceful_emu_shutdown
+            graceful_emu_shutdown(cli, emu, ac.get("adb_path", ""),
+                                  ac.get("adb_address", ""))
+            # 清掉手动保护标记（模拟器已关，不再需要保护期）
+            mts = getattr(self.mw, "manual_emu_started", None)
+            if mts is not None:
+                mts.pop(str(emu), None)
+            self._log(f"关闭扫描拉起模拟器 #{emu}")
+        except Exception as e:
+            self._log(f"关闭模拟器 #{emu} 失败: {e}")
 
     def _adb_address(self, ac, emu: str) -> str:
         """端口以模拟器实测为准（禁止公式 — 重启漂移）。"""
@@ -277,7 +300,7 @@ class DepotScanner:
         client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
             ac.get("game_client", ""), "Official")
         self._protect_emu(emu)
-        self._ensure_emu(emu)
+        launched = self._ensure_emu(emu)
         _set_status(aid, state="running")
         self._log(f"扫描 {ac.get('name', aid)} (#{emu} {addr}, inst {inst})...")
         try:
@@ -292,8 +315,31 @@ class DepotScanner:
             chapter_raw = ac.get("mainline_chapter", 0)
             chapter = int(chapter_raw) if chapter_raw else None
             cfg = load_config()
+            # 自适应预算（2026-08-13 用户: 近 24h 实测消耗预测还需几天）
+            from services.material_planner import observed_daily_ap
+            budget = observed_daily_ap(aid)
+            budget_source = "近24h实测" if budget else "默认"
+            if budget is None:
+                budget = int(cfg.get("ap_budget_per_day", 280))
             probe_fn = self._make_probe_fn(ac, emu, client)
-            result = plan(snap, cfg, chapter=chapter, probe_fn=probe_fn)
+            result = plan(snap, cfg, budget=budget, chapter=chapter, probe_fn=probe_fn)
+            # 剩余体力 + 预计还需几天
+            cur_sanity = 0
+            try:
+                from services.sanity_tracker import get as _sg
+                _live = _sg(aid)
+                if _live and _live.get("current") is not None:
+                    cur_sanity = int(_live["current"])
+            except Exception:
+                pass
+            result["budget_source"] = budget_source
+            result["cur_sanity"] = cur_sanity
+            if budget and result.get("total_ap"):
+                import math as _m
+                result["remaining_days"] = int(_m.ceil(
+                    max(0, result["total_ap"] - cur_sanity) / budget))
+            else:
+                result["remaining_days"] = len(result.get("days") or [])
             # 活动关顺带预检（2026-08-13）: 分派时锁了要能回退
             self._probe_activity_stages(ac, probe_fn)
             out = ROOT / "models" / "accounts" / aid / "plan.json"
@@ -313,6 +359,9 @@ class DepotScanner:
             _set_status(aid, state="error", error=str(e)[:300])
             self._log(f"扫描异常 {ac.get('name', aid)}: {e}")
             return False
+        finally:
+            # 扫描收尾：本扫描器拉起的模拟器扫完即关（不等回收期）
+            self._close_emu_if_launched(ac, emu, launched)
 
     def scan_accounts(self, account_ids: list[str]) -> dict:
         """串行扫描指定账号（全局锁，一次只扫一台）。"""
