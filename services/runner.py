@@ -1738,6 +1738,15 @@ class AccountRunner:
                             if isinstance(_pa, bool) and isinstance(_pp, bool) and not (_pa or _pp):
                                 if aid in self._emu_lost_suspect:
                                     # 第 2 轮仍失联 → 确认，杀 MAA 恢复
+                                    # 2026-08-14 修复：此前不读时间戳 — 嫌疑标记
+                                    # 一旦落上永不超时（失联恢复后 else 分支会
+                                    # 清，但若 else 不走到则残留），跨运行误杀
+                                    # 面（cd3d400 审查复核）。读时间戳：仅相邻
+                                    # 轮次（≤30s）的嫌疑才升级为确认。
+                                    _sus_ts = self._emu_lost_suspect.get(aid, 0)
+                                    if not _sus_ts or time.time() - _sus_ts > 30:
+                                        self._emu_lost_suspect[aid] = time.time()
+                                        return
                                     self._emu_lost_suspect.pop(aid, None)
                                     name = ac.get("name", aid)
                                     self._log.warn(f"[模拟器失联] {name} 模拟器#{emu_idx} 进程不在（连续 2 轮确认），杀 MAA 恢复")
@@ -2665,19 +2674,10 @@ class AccountRunner:
                                   creationflags=subprocess.CREATE_NO_WINDOW)
             except: pass
 
-        # Close emulator on error via ADB — but NOT when auto-restart will
-        # re-enqueue (the restarted MAA needs the emulator alive; closing it
-        # here loops: close → restart can't connect → fail → close again).
-        if is_real_error and ac and not ac.get("_auto_restart_count"):
-            emu_idx = ac.get("emu_instance_index", "")
-            addr = ac.get("adb_address", "")
-            adb_path = ac.get("adb_path", "") or "adb"
-            if addr:
-                try:
-                    subprocess.run([adb_path, "-s", addr, "shell", "reboot", "-p"],
-                                  capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
-                    self._log.info(f"[关闭] {name} ADB 关机")
-                except: pass
+        # 错误路径不再用 ADB reboot 关模拟器（2026-08-14 清除残留）：
+        # 用户铁律「关闭链绝不碰 ADB」——reboot -p 抢 MAA 端口 → 失联弹窗；
+        # 且 reboot 后端口漂移而 adb_address 缓存未清（审查记录）。模拟器
+        # 关闭统一交给回收/优雅关闭链，MAA 完成关游戏（PostActions）。
 
         self.emit_finished((aid, exit_code, tasks))
         if ac:
