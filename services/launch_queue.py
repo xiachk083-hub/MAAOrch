@@ -639,9 +639,13 @@ class LaunchQueue:
                         return self._launch_ready_timeout
                 _launching = self._launching_aid
                 if _launching:
-                    # 启动已结束（完成/失败释放）→ 放行
-                    if _launching not in self._active_emus.values() and \
-                       not any(e.account_id == _launching for e in self._pending):
+                    # 启动已结束（完成/失败释放）→ 放行。2026-08-14 修复：
+                    # 原条件还要求"不在 pending"——启动失败的账号被自动重试
+                    # re-enqueue 后必在 pending → 释放条件永不成立 → 后续
+                    # 账号卡满 150s 超时才放行（0709647 审查复核）。active_emus
+                    # 由 _release_emu_mark 在 stop/crash/cleanup 路径立即清，
+                    # 是准确的"正在用"标记，只看它。
+                    if _launching not in self._active_emus.values():
                         self._launching_aid = None
                     elif _launching not in self._launch_ready and \
                          time.time() - self._launching_ts < _lr_timeout():
