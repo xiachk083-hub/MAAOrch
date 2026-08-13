@@ -14,7 +14,20 @@ from pathlib import Path
 PROJ = Path(__file__).parent.parent
 INSTANCES = PROJ / "services" / "maa" / "instances"
 EVENTS_LOG = PROJ / "events.log"
-MM = r"E:\MuMu Player 12\nx_main\MuMuManager.exe"
+# 模拟器 CLI 走单点（单点收敛 Step 4 — 2026-08-14）：不再硬编码路径，
+# 复用 task_constants.find_mumu_cli（MuMuManager 优先/索引防错的统一入口）
+MM = None  # 惰性解析（health 端点可能先于模拟器环境就绪调用）
+
+
+def _mu_cli() -> str:
+    global MM
+    if not MM:
+        try:
+            from infrastructure.task_constants import find_mumu_cli
+            MM = find_mumu_cli() or r"E:\MuMu Player 12\nx_main\MuMuManager.exe"
+        except Exception:
+            MM = r"E:\MuMu Player 12\nx_main\MuMuManager.exe"
+    return MM
 
 
 def _pid_alive(pid: int) -> bool:
@@ -42,7 +55,7 @@ def _running_emulators() -> dict[str, dict]:
     """{index: info} for emulators with process started. 查询失败返回 None。"""
     out = {}
     try:
-        r = subprocess.run([MM, "info", "-v", "all"], capture_output=True, text=True,
+        r = subprocess.run([_mu_cli(), "info", "-v", "all"], capture_output=True, text=True,
                            timeout=10, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                            encoding="utf-8", errors="replace")
         d = json.loads(r.stdout.lstrip("\ufeff").strip())
