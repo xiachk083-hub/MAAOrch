@@ -11,12 +11,22 @@
 
 | 游戏 | MAA 系工具 | 引擎 | 成熟度 |
 |---|---|---|---|
-| 终末地 | **`MaaEnd/MaaEnd`**（3.6k★，**Go**，4h 前仍在更新） | **MaaFramework & MXU**，视觉 AI | 高：日常（任务/邮件/战令/材料/基建/好友/商店）、刷取（自动拾取/矩阵/农场/协议空间/送货贸易）、战斗支持（普攻/闪避/技能/大招/连携/锁敌）、便利（跳剧情/解谜/对话/拾取/传送/送礼）；PC 前台 + 安卓 ADB |
-| 重返未来 1999 | **`MAA1999/M9A`**（1.9k★，**Python**，1816 commits） | **MaaFramework 强力驱动**，图像技术+模拟控制 | 高：启停游戏/荒原收集/心相分析/智能材料刷取/常规战斗/活动代币/深眠/银行商店/奖励/兑换码/账号切换/活动关卡；Win/Linux/macOS + 模拟器/PC 客户端连接；AGPL-3.0 |
+| 终末地 | **`MaaEnd/MaaEnd`**（3.6k★，**Go**，4h 前仍在更新） | **MaaFramework 底座 + MXU（GUI 壳）+ 自研视觉 AI（Agent 机制）** —— 识别核心不是纯 MaaFramework 模板匹配，3D 实时战斗靠自研视觉 AI | 高：日常（任务/邮件/战令/材料/基建/好友/商店）、刷取（自动拾取/矩阵/农场/协议空间/送货贸易）、战斗支持（普攻/闪避/技能/大招/连携/锁敌）、便利（跳剧情/解谜/对话/拾取/传送/送礼）；PC 前台 + 安卓 ADB |
+| 重返未来 1999 | **`MAA1999/M9A`**（1.9k★，**Python**，2026-08-13 仍在更新） | **MaaFramework 强力驱动**（纯 MaaFramework 系，2D 回合制模板/OCR 够用） | 高：启停游戏/荒原收集/心相分析/智能材料刷取/常规作战/活动代币/深眠/银行购物/奖励/兑换码/账号切换/活动推图/UTTU/翻斗棋等 20+ 模块；Win/Linux/macOS；AGPL-3.0 |
 | 终末地（非 MAA 系，参考） | `AliceJump/ok-end-field`（534★，Python/ok-script） | ok-script（Windows UI 自动化+OCR/模板匹配/HSV） | 高（任务地图可参考，非 MAA 系不优先） |
 
 **结论：MaaFramework 对两个游戏都有成熟社区适配**（MaaEnd + M9A），
 原方向「执行引擎优先评估 MaaFramework」**成立**，无需自研识别框架。
+
+**技术栈澄清（2026-08-14 用户质疑「Maaf 真能做到吗/终末用的不是这个吧」后查证）**：
+- MXU = MaaFramework 生态的 **GUI 客户端**（Tauri+React，解析 PI V2 interface.json），
+  不是识别框架。MaaEnd = MaaFramework 底座 + MXU 界面 + **自研视觉 AI
+  （MaaFramework Agent 机制扩展）** —— 终末地是 3D 实时战斗，纯模板匹配/OCR
+  不够，MaaEnd 用自己的视觉 AI 补全。
+- M9A = 纯 MaaFramework 驱动（2D 回合制，模板/OCR 够用），20+ 功能模块。
+- **对平台定位无影响**：我们调配的是 MaaEnd/M9A **成品**（黑盒），不直接使用
+  MaaFramework —— 引擎内部缺什么由引擎自己补（MaaEnd 已自研视觉 AI），
+  我们只管配置注入/启动/事件解析；「跟随最新版」铁律保证引擎持续更新。
 
 ## 2. 平台定位（2026-08-14 用户拍板）：MAAOrch = 调配平台，引擎 = 黑盒
 
