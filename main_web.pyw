@@ -293,6 +293,14 @@ pause
     except Exception:
         pass
 
+    # 日常定时批量入队线程（每日 daily_batch_time — 2026-08-14 恢复被误删
+    # 的活功能：UI「日常定时」配置曾无任何消费方）
+    try:
+        from services.daily_batch_scheduler import DailyBatchScheduler
+        DailyBatchScheduler(ctx._mw).start()
+    except Exception:
+        pass
+
     # 活动关识别线程（每小时 — 2026-08-13 用户: 活动当天晚上数据出来后自动切换）
     try:
         from services.activity_tracker import ActivityScheduler
