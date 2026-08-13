@@ -134,6 +134,24 @@ class LogWatcher(threading.Thread):
                 if not self._open_tail():
                     time.sleep(2)
 
+    def _fire(self, event_type: str, line: str) -> None:
+        """事件分发：兼容现有 runner 回调 + 同时进事件总线（单点收敛
+        Step 2 — LogWatcher 事件唯一化，其余模块不再自读 asst.log）。"""
+        try:
+            self._on_event(event_type, self._aid, line)
+        except Exception:
+            pass
+        try:
+            from services.event_bus import emit
+            _type = {"adb_connected": "emu.adb_connected",
+                     "completed": "maa.completed",
+                     "sanity_before": "fight.sanity_before",
+                     "medicine_used": "fight.medicine_used"}.get(event_type,
+                                                               "maa." + event_type)
+            emit(_type, {"line": line[:200]}, aid=self._aid)
+        except Exception:
+            pass
+
     def _dispatch_gui(self, line: str) -> None:
         """gui.log 事件：关卡无效/配置问题（降级信号）。"""
         try:
@@ -142,7 +160,7 @@ class LogWatcher(threading.Thread):
                "配置无效" in line:
                 _record_event(self._aid, "downgrade_signal", line)
                 try:
-                    self._on_event("downgrade_signal", self._aid, line)
+                    self._fire("downgrade_signal", line)
                 except Exception:
                     pass
         except Exception:
@@ -165,7 +183,7 @@ class LogWatcher(threading.Thread):
             if "SubTaskError" in line:
                 _record_event(self._aid, "subtask_error", line)
                 try:
-                    self._on_event("subtask_error", self._aid, line)
+                    self._fire("subtask_error", line)
                 except Exception:
                     pass
             # MAA 成功执行 adb（截图） = 已连接模拟器开始干活 — 启动节流
@@ -174,7 +192,7 @@ class LogWatcher(threading.Thread):
             if " Call ` " in line and "adb" in line and " ret 0" in line:
                 _record_event(self._aid, "adb_connected", line)
                 try:
-                    self._on_event("adb_connected", self._aid, line)
+                    self._fire("adb_connected", line)
                 except Exception:
                     pass
             # 空转检测（DoNothing 循环 — 2026-08-11 官-41 PRTS1 空转 60s+
@@ -205,20 +223,20 @@ class LogWatcher(threading.Thread):
                         self._dn_count = 0  # 重置防重复触发
                         _record_event(self._aid, "stall_loop", line)
                         try:
-                            self._on_event("stall_loop", self._aid, line)
+                            self._fire("stall_loop", line)
                         except Exception:
                             pass
             except Exception:
                 pass
             if "AllTasksCompleted" in line:
                 _record_event(self._aid, "completed", line)
-                self._on_event("completed", self._aid, line)
+                self._fire("completed", line)
             elif "FightMissionFailed" in line or "PrtsErrorConfirm" in line:
                 _record_event(self._aid, "battle_failed", line)
-                self._on_event("battle_failed", self._aid, line)
+                self._fire("battle_failed", line)
             elif "ExceededLimit" in line:
                 _record_event(self._aid, "exceeded", line)
-                self._on_event("exceeded", self._aid, line)
+                self._fire("exceeded", line)
             # 补全事件类型（2026-08-11 用户: 日志要全量收集，避免遗漏）
             elif "TaskStart" in line or "TaskChainStart" in line:
                 _record_event(self._aid, "task_start", line)
@@ -236,7 +254,7 @@ class LogWatcher(threading.Thread):
                 # 通知 runner 记录本次运行首体力（统计真实消耗 — 2026-08-13）
                 try:
                     if self._on_event:
-                        self._on_event("sanity_before", self._aid, line)
+                        self._fire("sanity_before", line)
                 except Exception:
                     pass
             elif ("MedicineConfirmed" in line or '"task":"UseMedicine"' in line):
@@ -245,7 +263,7 @@ class LogWatcher(threading.Thread):
                 _record_event(self._aid, "medicine_used", line)
                 try:
                     if self._on_event:
-                        self._on_event("medicine_used", self._aid, line)
+                        self._fire("medicine_used", line)
                 except Exception:
                     pass
             elif "StageDrops" in line:
