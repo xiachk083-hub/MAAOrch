@@ -12,9 +12,9 @@
 
 | 项 | 值 |
 |----|-----|
-| 项目位置 | `E:\MAAOrch`（目标机器 100.79.173.69） |
+| 项目位置 | `E:\MAAOrch`（目标机器 目标机） |
 | Manager 位置 | `E:\MAAOrch-Manager`（常驻管理服务，端口 19998） |
-| Web UI | `http://100.79.173.69:19999` |
+| Web UI | `http://<目标机>:19999` |
 | 最新部署提交 | `65b6a4b`（全部提交已推送 `main`） |
 | MAA 版本 | 6.16.5（官方包，含外服资源 `resource/global/YoStarEN/JP/KR/txwy`） |
 | 实例池 | 11 个（parallel_max=10） |

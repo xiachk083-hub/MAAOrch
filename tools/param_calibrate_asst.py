@@ -207,6 +207,13 @@ def main():
         import urllib.request
         # 自包含：把本文件除 __main__ 外的全部源码注入远程 python 执行
         # （目标机无此工具文件 — 部署保留路径只有 maa_history/queue.json）
+        # 凭据从 ~/.maorch_deploy.json 读（2026-08-14 修复：硬编码 token/IP
+        # 曾入公开仓库；轮换后此处自动生效）
+        try:
+            from pathlib import Path as _P
+            _cred = json.loads((_P.home() / ".maorch_deploy.json").read_text(encoding="utf-8"))
+        except Exception:
+            _cred = {}
         src = open(__file__, encoding="utf-8").read().rsplit('if __name__ == "__main__":', 1)[0]
         src = src.replace("from __future__ import annotations\n", "")  # exec 里必须文件头
         remote = (
@@ -217,10 +224,10 @@ def main():
         b64 = base64.b64encode(remote.encode("utf-8")).decode()
         cmd = "python -X utf8 -c \"import base64;exec(base64.b64decode('%s'))\"" % b64
         req = urllib.request.Request(
-            "http://100.79.173.69:19998/api/exec",
+            _cred.get("manager", "") + "/api/exec",
             data=json.dumps({"command": cmd, "timeout": 300}).encode(),
             headers={"Content-Type": "application/json",
-                     "x-manager-token": "e210ad4863f14c4e"},
+                     "x-manager-token": _cred.get("manager_token", "")},
             method="POST")
         r = json.loads(urllib.request.urlopen(req, timeout=320).read().decode())
         print(r.get("stdout", "") or r.get("error", ""))

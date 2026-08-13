@@ -86,6 +86,6 @@ main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.
 
 ## 7. 开发/生产拓扑提醒
 
-- 本地 D:\1-2\MAAOrch = 开发副本；目标机 100.79.173.69 E:\MAAOrch = 生产（45+ 账号运行中）
+- 本地 D:\1-2\MAAOrch = 开发副本；目标机 目标机 E:\MAAOrch = 生产（45+ 账号运行中）
 - 结构改动 = 部署改动：**部署要克制**，结构整理随功能部署一次到位，不要频繁部署重启
 - 第三工作区 E:\maa-alas\fz-maa（l- 系列模拟器）与 MAAOrch 共用机器：批量操作严禁碰 l- 前缀（task_constants 单点过滤）

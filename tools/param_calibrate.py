@@ -1,7 +1,7 @@
 """参数校准工具 — 用真实运行数据校准拍脑袋的时间参数（2026-08-12）。
 
 读远程 events.log / emu_state_oplog / debug.log 统计分布，输出校准建议表。
-用法: python tools/param_calibrate.py [--host 100.79.173.69] [--days 1]
+用法: python tools/param_calibrate.py [--host <目标机>] [--days 1]
 
 统计项 → 校准参数:
   启动链路分布 ([启动]→Android 开机完成)  → launch_ready_timeout / boot_wait
@@ -18,8 +18,18 @@ import json
 import sys
 import urllib.request
 
-MANAGER_URL = "http://100.79.173.69:19998/api/exec"
-MANAGER_TOKEN = "e210ad4863f14c4e"
+# 凭据从 ~/.maorch_deploy.json 读（2026-08-14 修复：硬编码 token/IP 曾入
+# 公开仓库，见 deploy.py 的凭据约定；轮换后此处自动生效）
+def _load_cred() -> dict:
+    try:
+        from pathlib import Path
+        return json.loads((Path.home() / ".maorch_deploy.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+_CRED = _load_cred()
+MANAGER_URL = _CRED.get("manager") + "/api/exec" if _CRED.get("manager") else ""
+MANAGER_TOKEN = _CRED.get("manager_token", "")
 MIN_SAMPLES = 10  # 低于该样本量的统计项标记缺数据
 
 
@@ -131,7 +141,14 @@ def pct(v, d=None):
 
 def main():
     ap = argparse.ArgumentParser(description="MAAOrch 参数校准")
-    ap.add_argument("--host", default="100.79.173.69")
+    # 默认 host 从凭据文件推导（2026-08-14 修复：硬编码 IP 入公开仓库）
+    _def_host = ""
+    try:
+        from urllib.parse import urlparse
+        _def_host = urlparse(_CRED.get("manager", "")).hostname or ""
+    except Exception:
+        pass
+    ap.add_argument("--host", default=_def_host)
     ap.add_argument("--project-dir", default=r"E:\MAAOrch",
                     help="目标机项目根目录（默认 E:\\MAAOrch）")
     args = ap.parse_args()

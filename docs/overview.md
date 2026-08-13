@@ -51,6 +51,6 @@ main_web.pyw                唯一业务入口（FastAPI + uvicorn，19999）
 
 ## 6. 部署与生产
 
-- 开发 D:\1-2\MAAOrch（本地）→ deploy.py → 生产 E:\MAAOrch（100.79.173.69）
+- 开发 D:\1-2\MAAOrch（本地）→ deploy.py → 生产 E:\MAAOrch（目标机）
 - 结构改动 = 部署改动：部署要克制，清单必须同步（STRUCTURE.md §5）
 - manager 自包含铁律：不 import 项目代码、stop 默认不关模拟器
