@@ -1010,6 +1010,21 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             # （旧数据/写入缺时间戳）→ 退化用 captured_at / last_complete
             san_ts = san.get("report_time", "") or san.get("captured_at", "") or ""
             done_ts = san_ts or st.get("last_complete", "")
+            # 最近一次清体：时间 + 清完剩余（2026-08-13 用户: 上次什么时候清、
+            # 清完剩多少 — stats.json 最近一条完成 run 的 sanity_after）
+            last_clear_ts = ""
+            last_sanity_after = None
+            try:
+                from models.stats import RunStats
+                for run in reversed(RunStats(a["id"]).runs):
+                    if run.get("status") == "完成" and run.get("end_ts"):
+                        last_clear_ts = run.get("end_ts", "")
+                        _sa = run.get("sanity_after") or run.get("sanity")
+                        if isinstance(_sa, dict) and _sa.get("current") is not None:
+                            last_sanity_after = int(_sa["current"])
+                        break
+            except Exception:
+                pass
             running = lq.is_running(a["id"]) if lq else False
             queued = lq.is_queued(a["id"]) if lq else False
             rows.append({
@@ -1020,6 +1035,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "sanity_time": san_ts,
                 "done_ts": done_ts,
                 "last_complete": st.get("last_complete", ""),
+                "last_clear_ts": last_clear_ts,
+                "last_sanity_after": last_sanity_after,
                 "today_runs": int(st.get("today_runs", 0)),
                 "last_status": st.get("last_status", ""),
                 "last_login": st.get("last_login", ""),
@@ -1331,6 +1348,42 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             return {"ok": True, "aid": aid, "checks": d.get(aid, [])}
         return {"ok": True, "accounts": {k: v for k, v in d.items() if v}}
 
+    def _account_sanity(aid: str) -> dict:
+        """账号体力快照（实时优先，回退 AccountState）。"""
+        try:
+            from services.sanity_tracker import get as _sg
+            _snap = _sg(aid)
+            if _snap and _snap.get("current") is not None:
+                return {"current": int(_snap["current"]),
+                        "max": int(_snap.get("max", 0) or 0),
+                        "time": _snap.get("report_time", "") or _snap.get("captured_at", "")}
+        except Exception:
+            pass
+        return {}
+
+    def _account_last_clear(aid: str) -> dict:
+        """最近一次清体: 时间 + 清完剩余（stats.json 完成 run 的 sanity_after）。
+
+        完成 run 后面常跟 0s 完成记录（完成检测路径不记体力）→ 回退扫描到
+        最近一条带 sanity 的完成 run，时间以它为准。
+        """
+        try:
+            from models.stats import RunStats
+            latest = None
+            for run in reversed(RunStats(aid).runs):
+                if run.get("status") != "完成" or not run.get("end_ts"):
+                    continue
+                if latest is None:
+                    latest = run
+                _sa = run.get("sanity_after") or run.get("sanity")
+                if isinstance(_sa, dict) and _sa.get("current") is not None:
+                    return {"ts": run.get("end_ts", ""), "sanity": int(_sa["current"])}
+            if latest:
+                return {"ts": latest.get("end_ts", ""), "sanity": None}
+        except Exception:
+            pass
+        return {}
+
     @app.get("/api/accounts")
     def handle_accounts():
         data = []
@@ -1361,6 +1414,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "stage_ability": a.get("stage_ability", {}),
                 "farm_tag": a.get("farm_tag", "material"),
                 "mainline_chapter": a.get("mainline_chapter", 0),
+                "sanity": _account_sanity(aid),
+                "last_clear": _account_last_clear(aid),
                 "state": _account_state(aid),
             })
         return {"ok": True, "accounts": data}
@@ -2729,6 +2784,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         include_anni = body.get("include_anni", True)
         only_anni = body.get("only_anni", False)
         probe_mode = body.get("mode") == "probe"  # 仅检测（关卡检测调度）
+        probe_stages = body.get("probe_stages") or []  # 指定检测关卡（2026-08-14
+        # 活动关预检走队列：队列启动模拟器有回收保护，手动拉起会被回收）
         lq = _lq()
         if lq._paused:
             lq.resume()
@@ -2761,14 +2818,17 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             # 账号级肉鸽（l-4/l-6 业务机）— 只跑肉鸽不清日常
             if a.get("roguelike_only"):
                 tasks = ["StartUp", "Roguelike"]
-            a["dispatch_id"] = create_dispatch(tasks)
-            # 任务类型打标（肉鸽让位/检测用）：肉鸽长任务低优先级让位，
-            # 检测任务独立槽位语义 — 2026-08-13。
+            if probe_mode and probe_stages:
+                a["probe_stages"] = [str(s) for s in probe_stages]  # 瞬态不落盘
+            # dispatch 键按 slot 化（2026-08-14 凌晨修：probe 分支曾写旧键
+            # dispatch_id → runner 按 slot 找 _dispatch_probe 找不回 → 回退
+            # 默认清日常任务，检测变清日常被用户画面抓到）
             _slot = ""
             if "Roguelike" in tasks or a.get("roguelike_only"):
                 _slot = "roguelike"
             elif probe_mode:
                 _slot = "probe"
+            _dispatch_slot(a, tasks, _slot)
             lq.enqueue(aid, "force", priority=0, slot=_slot)
             count += 1
         if count:

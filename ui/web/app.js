@@ -169,13 +169,23 @@ async function loadAccountStatusOverview() {
       // 具体数值: 当前/上限 + 更新时间（2026-08-13 用户问剩余体力在哪看）
       const num = (a.sanity_current !== null && a.sanity_current !== undefined)
         ? `${a.sanity_current}/${a.sanity_max || '?'}` : '—';
-      const ttip = `${a.name} 体力 ${num} 今日${a.today_runs}次 ${a.last_status||''}${a.sanity_time ? ' · 更新 ' + a.sanity_time.slice(5, 16) : ''}`;
-      bars += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:9px" title="${ttip}">
+      // 时效: 体力快照超过 12 小时 → 灰显「旧」（2026-08-13 用户问时效）
+      let stale = false;
+      if (a.sanity_time) {
+        try { stale = (Date.now() - new Date(a.sanity_time.replace(' ', 'T')).getTime()) > 12 * 3600 * 1000; } catch (e) {}
+      }
+      // 上次清体: 时间 + 清完剩余（用户: 上次什么时候清、清完剩多少）
+      const clearInfo = a.last_clear_ts
+        ? `${a.last_clear_ts.slice(5, 16)} 余${a.last_sanity_after !== null && a.last_sanity_after !== undefined ? a.last_sanity_after : '?'}`
+        : '';
+      const ttip = `${a.name} 体力 ${num} 今日${a.today_runs}次 ${a.last_status||''}${a.sanity_time ? ' · 更新 ' + a.sanity_time.slice(5, 16) : ''}${clearInfo ? ' · 上次清体 ' + clearInfo : ''}${stale ? '（数据超过12小时）' : ''}`;
+      bars += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:9px${stale ? ';opacity:.5' : ''}" title="${ttip}">
         <span style="width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${runMark}${a.name}</span>
         <div style="flex:1;background:var(--bg3);border-radius:3px;height:10px">
           <div style="width:${pct === null ? 0 : pct}%;height:10px;border-radius:3px;background:${color}"></div>
         </div>
-        <span style="width:34px;text-align:right;color:var(--text2)">${num}</span>
+        <span style="width:34px;text-align:right;color:var(--text2)">${num}${stale ? '·旧' : ''}</span>
+        <span style="width:64px;text-align:right;color:var(--text3)">${clearInfo}</span>
         <span style="width:28px;text-align:right">${label}</span>
         <span style="width:12px">${stat}</span>
         <span style="width:26px;color:var(--text3)">${a.today_runs}次</span>
@@ -338,8 +348,8 @@ function _renderTable() {
   const container = _tableContainer;
   const accts = _tableData;
   const stageIds = _tableStages;
-  const fields = ['名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停','剿灭','主线章','刷取标签'];
-  const eng = { '名称':'name','游戏客户端':'game_client','模拟器索引':'emu_instance_index','切换标识':'account_switch','UID':'uid','备注':'note','过期日':'expire_date','已暂停':'suspended','剿灭':'smart_annihilation','主线章':'mainline_chapter','刷取标签':'farm_tag' };
+  const fields = ['名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停','剿灭','主线章','刷取标签','体力','上次清'];
+  const eng = { '名称':'name','游戏客户端':'game_client','模拟器索引':'emu_instance_index','切换标识':'account_switch','UID':'uid','备注':'note','过期日':'expire_date','已暂停':'suspended','剿灭':'smart_annihilation','主线章':'mainline_chapter','刷取标签':'farm_tag','体力':'__sanity','上次清':'__last_clear' };
   
   let html = `<div style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:10px">
   <table style="width:100%;border-collapse:collapse;white-space:nowrap">
@@ -384,6 +394,40 @@ function _renderTable() {
           html += `<option value="${ov}" ${ov===v?'selected':''}>${on}</option>`;
         }
         html += `</select></td>`;
+      } else if (key === '__sanity') {
+        const s = a.sanity || {};
+        const has = s.current !== undefined && s.current !== null;
+        const cur = has ? Number(s.current) : null;
+        const mx = has ? Number(s.max || 0) : 0;
+        let pct = null;
+        if (has && mx > 0) pct = Math.min(100, Math.max(0, cur / mx * 100));
+        let color = 'var(--bg3)';
+        if (pct !== null) color = pct <= 20 ? '#4caf50' : pct <= 60 ? 'var(--warn)' : 'var(--accent)';
+        let stale = false;
+        if (has && s.time) { try { stale = (Date.now() - new Date(String(s.time).replace(' ', 'T')).getTime()) > 12 * 3600 * 1000; } catch (e) {} }
+        const num = has ? `${cur}/${mx || '?'}` : '—';
+        const pctTxt = pct === null ? '' : `<span style="width:28px;text-align:right;color:var(--text3)">${pct.toFixed(0)}%</span>`;
+        html += `<td style="padding:2px 4px;border:1px solid var(--border)${stale ? ';opacity:.55' : ''}" title="${s.time || '暂无数据'}">
+          <div style="display:flex;align-items:center;gap:3px;white-space:nowrap">
+            <div style="flex:1;min-width:36px;max-width:90px;background:var(--bg3);border-radius:2px;height:7px"><div style="width:${pct === null ? 0 : pct}%;height:7px;border-radius:2px;background:${color}"></div></div>
+            <span style="color:var(--text2)">${num}${stale ? '·旧' : ''}</span>${pctTxt}
+          </div></td>`;
+      } else if (key === '__last_clear') {
+        const lc = a.last_clear || {};
+        if (!lc.ts) {
+          html += `<td style="padding:2px 4px;border:1px solid var(--border);text-align:center;color:var(--text3)">—</td>`;
+        } else {
+          const san = lc.sanity !== undefined && lc.sanity !== null ? lc.sanity : '?';
+          // 相对时间更易扫视: 今天 HH:MM / 昨 HH:MM / 更早 MM-DD
+          let t = String(lc.ts).slice(5, 10);
+          try {
+            const d = new Date(String(lc.ts).replace(' ', 'T'));
+            const now = new Date(), yest = new Date(now); yest.setDate(now.getDate() - 1);
+            if (now.toDateString() === d.toDateString()) t = String(lc.ts).slice(11, 16);
+            else if (yest.toDateString() === d.toDateString()) t = '昨' + String(lc.ts).slice(11, 16);
+          } catch (e) {}
+          html += `<td style="padding:2px 4px;border:1px solid var(--border);text-align:center;color:var(--text3)" title="上次清体时间+清完剩余体力">${t} 余${san}</td>`;
+        }
       } else {
         const val = a[key] !== undefined && a[key] !== null ? String(a[key]).replace(/"/g,'&quot;') : '';
         html += `<td style="padding:2px 4px;border:1px solid var(--border)"><input type="text" value="${val}" onchange="editTableVal(${i},'${key}',this.value)" style="min-width:30px;max-width:150px;border:none;background:transparent;color:var(--text);font-size:10px;outline:none"></td>`;
