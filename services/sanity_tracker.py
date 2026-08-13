@@ -68,9 +68,11 @@ def update(aid: str, current, max_sanity, report_time: str = "") -> None:
         pass  # 快照失败不影响主流程（消费方回退 stats.json）
 
 
-def update_from_line(aid: str, line: str, inst_dir=None) -> bool:
-    """从 asst.log 原始行解析 SanityBeforeStage 并更新快照。返回是否命中。
-    inst_dir: 实例目录（含 .meta）— 归属校验，防账号串号。
+def parse_line(line: str) -> dict | None:
+    """从 asst.log 原始行解析 SanityBeforeStage（纯函数，供 log_watcher 事件
+    payload 与 update_from_line 共用 — 单点收敛 Step 3a 账房收口）。
+
+    返回 {current, max, report_time} 或 None（未命中）。
 
     双格式兼容（2026-08-13 生产 MAA 换成 6.16.0，回调字段变了）:
       - 6.16.6/8: SubTaskExtraInfo what="SanityBeforeStage"
@@ -79,22 +81,68 @@ def update_from_line(aid: str, line: str, inst_dir=None) -> bool:
     try:
         m = _JSON_RE.search(line)
         if not m:
-            return False
+            return None
         data = json.loads(m.group(0))
         if data.get("what") == "SanityBeforeStage":
             det = data.get("details") or {}
         elif data.get("class") == "asst::FightTimesTaskPlugin":
             det = data.get("details") or {}
         else:
-            return False
+            return None
         cur = det.get("current_sanity")
         if cur is None:
-            return False
-        update(_resolve_aid(aid, inst_dir), cur, det.get("max_sanity", 0),
-               det.get("report_time", ""))
-        return True
+            return None
+        return {
+            "current": cur,
+            "max": det.get("max_sanity", 0),
+            "report_time": det.get("report_time", ""),
+        }
     except Exception:
+        return None
+
+
+def update_from_line(aid: str, line: str, inst_dir=None) -> bool:
+    """从 asst.log 原始行解析 SanityBeforeStage 并更新快照。返回是否命中。
+    inst_dir: 实例目录（含 .meta）— 归属校验，防账号串号。
+    """
+    det = parse_line(line)
+    if not det:
         return False
+    update(_resolve_aid(aid, inst_dir), det["current"], det["max"],
+           det["report_time"])
+    return True
+
+
+# ── EventBus 订阅（单点收敛 Step 3a — 体力写入者收口到本模块） ──
+
+_subscribed = False
+
+
+def _on_bus_sanity(evt: dict) -> None:
+    """消费 fight.sanity_before 事件 → 更新快照（与 log_watcher 直调
+    双写同值，幂等；迁移期双写，行为等价后删直调 — STRUCTURE.md 原则）。"""
+    try:
+        d = evt.get("data") or {}
+        s = d.get("sanity")
+        if not s or s.get("current") is None:
+            return
+        update(_resolve_aid(evt.get("aid", ""), d.get("inst_dir")),
+               s["current"], s.get("max", 0), s.get("report_time", ""))
+    except Exception:
+        pass
+
+
+def subscribe_bus() -> None:
+    """注册 bus 订阅（幂等）。runner 启动时调用，保证先于 LogWatcher 生效。"""
+    global _subscribed
+    if _subscribed:
+        return
+    try:
+        from services.event_bus import subscribe
+        subscribe("fight.sanity_before", _on_bus_sanity)
+        _subscribed = True
+    except Exception:
+        pass
 
 
 def get(aid: str) -> dict | None:

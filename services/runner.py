@@ -222,6 +222,13 @@ class AccountRunner:
         self._probe_running: dict[str, bool] = {}  # aid -> 关卡检测进行中（抑制 stall/error 误杀）
         from infrastructure.logger import Logger
         self._log = Logger("runner")
+        # 单点收敛 Step 3a: 体力写入者收口 — sanity_tracker 订阅 bus
+        # （先于任何 LogWatcher 生效；与直调双写同值，迁移期过渡）
+        try:
+            from services.sanity_tracker import subscribe_bus
+            subscribe_bus()
+        except Exception:
+            pass
         self._clean_orphan_marks()
 
     def _clean_orphan_marks(self) -> None:

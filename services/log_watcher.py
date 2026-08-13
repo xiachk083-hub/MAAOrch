@@ -148,7 +148,19 @@ class LogWatcher(threading.Thread):
                      "sanity_before": "fight.sanity_before",
                      "medicine_used": "fight.medicine_used"}.get(event_type,
                                                                "maa." + event_type)
-            emit(_type, {"line": line[:200]}, aid=self._aid)
+            _payload = {"line": line[:200]}
+            # Step 3a: sanity 事件带结构化数据 + 实例目录（归属校验）—
+            # bus 订阅者（sanity_tracker）直接消费，不再各自解析原始行
+            if event_type == "sanity_before":
+                try:
+                    from services.sanity_tracker import parse_line
+                    _det = parse_line(line)
+                    if _det:
+                        _payload["sanity"] = _det
+                        _payload["inst_dir"] = str(self._path.parent.parent)
+                except Exception:
+                    pass
+            emit(_type, _payload, aid=self._aid)
         except Exception:
             pass
 
