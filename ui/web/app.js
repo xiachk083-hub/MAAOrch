@@ -154,9 +154,9 @@ async function loadAccountStatusOverview() {
       <span style="color:var(--danger)">● 运行中 ${st.running||0}</span>
       <button class="small" style="font-size:9px;padding:1px 6px" onclick="refreshAccountStatus()">刷新</button>
     </div>`;
-    // 体力排行条（前 12 + 滚动）
-    const top = r.accounts.slice(0, 12);
-    let bars = '';
+    // 体力排行条（全部账号 + 滚动 — 2026-08-13 用户: 不能只显示前 12）
+    const top = r.accounts;
+    let bars = `<div style="max-height:280px;overflow-y:auto">`;
     for (const a of top) {
       const pct = a.sanity_pct;
       let color = 'var(--bg3)', label = '?';
@@ -166,16 +166,22 @@ async function loadAccountStatusOverview() {
       else { color = 'var(--accent)'; label = pct.toFixed(0) + '%'; }
       const runMark = a.running ? '<span style="color:var(--danger)">▶</span>' : '';
       const stat = a.last_status === '完成' ? '✓' : a.last_status === '失败' ? '✗' : a.last_status === '卡死' ? '⚠' : '';
-      bars += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:9px" title="${a.name} 今日${a.today_runs}次 ${a.last_status||''}">
+      // 具体数值: 当前/上限 + 更新时间（2026-08-13 用户问剩余体力在哪看）
+      const num = (a.sanity_current !== null && a.sanity_current !== undefined)
+        ? `${a.sanity_current}/${a.sanity_max || '?'}` : '—';
+      const ttip = `${a.name} 体力 ${num} 今日${a.today_runs}次 ${a.last_status||''}${a.sanity_time ? ' · 更新 ' + a.sanity_time.slice(5, 16) : ''}`;
+      bars += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:9px" title="${ttip}">
         <span style="width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${runMark}${a.name}</span>
         <div style="flex:1;background:var(--bg3);border-radius:3px;height:10px">
           <div style="width:${pct === null ? 0 : pct}%;height:10px;border-radius:3px;background:${color}"></div>
         </div>
+        <span style="width:34px;text-align:right;color:var(--text2)">${num}</span>
         <span style="width:28px;text-align:right">${label}</span>
         <span style="width:12px">${stat}</span>
         <span style="width:26px;color:var(--text3)">${a.today_runs}次</span>
       </div>`;
     }
+    bars += `</div>`;
     el.innerHTML = head + bars;
   } catch(e) {}
 }

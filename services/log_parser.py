@@ -215,7 +215,11 @@ class LogService:
                     except Exception:
                         data = {}
                     what = data.get("what", "")
-                    if what == "SanityBeforeStage":
+                    cls = data.get("class", "")
+                    # 双格式兼容（2026-08-13 生产 MAA 6.16.0 用 class 而非 what）:
+                    #   SanityBeforeStage <-> asst::FightTimesTaskPlugin
+                    #   StageDrops        <-> asst::StageDropsTaskPlugin
+                    if what == "SanityBeforeStage" or cls == "asst::FightTimesTaskPlugin":
                         d = data.get("details", {})
                         if d.get("current_sanity") is not None:
                             last_sanity = {"current": d["current_sanity"], "max": d.get("max_sanity", 0),
@@ -227,7 +231,7 @@ class LogService:
                         if d.get("current_sanity") is not None:
                             last_sanity = {"current": d["current_sanity"], "max": d.get("max_sanity", 0),
                                            "report_time": d.get("report_time", "")}
-                    elif what == "StageDrops":
+                    elif what == "StageDrops" or cls == "asst::StageDropsTaskPlugin":
                         stats = data.get("details", {}).get("stats", [])
                         if stats:
                             last_drops = {s["itemName"]: s["quantity"] for s in stats}
