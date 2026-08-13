@@ -1359,6 +1359,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "fight_priority": a.get("fight_priority", {}),
                 "fight_materials": a.get("fight_materials", []),
                 "stage_ability": a.get("stage_ability", {}),
+                "farm_tag": a.get("farm_tag", "material"),
+                "mainline_chapter": a.get("mainline_chapter", 0),
                 "state": _account_state(aid),
             })
         return {"ok": True, "accounts": data}

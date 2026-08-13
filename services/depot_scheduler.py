@@ -285,6 +285,9 @@ class DepotScanner:
         o = act.get("orundum") or {}
         if o.get("stage"):
             stages.append(o["stage"])
+        for s in act.get("orundum_stages") or []:  # 全部搓玉关（含 TO-5 等）
+            if s.get("stage") and s["stage"] not in stages:
+                stages.append(s["stage"])
         for m in act.get("resource") or []:
             if m.get("stage"):
                 stages.append(m["stage"])

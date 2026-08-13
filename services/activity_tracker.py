@@ -243,7 +243,9 @@ def detect() -> dict:
         material_cand = []
         orundum_cand = []
         resource_cand = []
-        orundum_id = name2id.get("固源岩", "")
+        # 搓玉关 = 固源岩/装置/酮凝集主掉落关（2026-08-13 用户: TO-5 也是
+        # 搓玉关 — 装置+酮凝集高效双掉落，官-3-搓玉等号的搓玉路径）
+        orundum_ids = {name2id.get(n, "") for n in ("固源岩", "装置", "酮凝集")}
         for sid, drops in stage_drops.items():
             code, ap = stage_map[sid]
             for iid, _dt in drops:
@@ -253,7 +255,7 @@ def detect() -> dict:
                     continue
                 rate = q / t
                 entry = {"stage": code, "item": name, "rate": round(rate, 3)}
-                if iid == orundum_id:
+                if iid in orundum_ids:
                     orundum_cand.append(entry)
                 elif name in RESOURCE_ITEMS:
                     resource_cand.append(entry)
@@ -262,6 +264,14 @@ def detect() -> dict:
         material_cand.sort(key=lambda x: -x["rate"])
         orundum_cand.sort(key=lambda x: -x["rate"])
         resource_cand.sort(key=lambda x: -x["rate"])
+        # 搓玉关去重列表（TO-4 固源岩 + TO-5 装置/酮凝集 — 2026-08-13 用户）
+        seen_o: set = set()
+        orundum_stages = []
+        for e in orundum_cand:
+            if e["stage"] in seen_o:
+                continue
+            seen_o.add(e["stage"])
+            orundum_stages.append(e)
         # 同一关取最高掉率那条，去重取前 3
         seen, material = set(), []
         for e in material_cand:
@@ -280,7 +290,8 @@ def detect() -> dict:
                       if win[1] else _until_from_events(azone.get("zoneName", ""))),
             "window_source": win[2] or "数据活跃度(无日历/公告窗口)",
             "material": material,
-            "orundum": orundum_cand[0] if orundum_cand else None,
+            "orundum": orundum_stages[0] if orundum_stages else None,
+            "orundum_stages": orundum_stages,
             "resource": resource_cand[:2],
             "recent_times": zone_times[active_zone_id],
             "ts": time.time(),

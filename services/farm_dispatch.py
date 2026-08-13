@@ -98,6 +98,21 @@ def pick_farm_stage(ac: dict, activity: dict, depot: dict,
 
     if tag == "orundum":
         if act_active:
+            # 账号自带关卡若是活动搓玉关且可刷 → 用它（如官-3-搓玉的 TO-5，
+            # 2026-08-13 用户: TO-5 也是搓玉关 — 装置+酮凝集双掉落）
+            own = [str(ac.get("fight_default", "") or "")]
+            prio = ac.get("fight_priority") or {}
+            if isinstance(prio, dict):
+                try:
+                    own += [s for s, _p in sorted(prio.items(),
+                                                  key=lambda kv: -int(kv[1] or 0))]
+                except Exception:
+                    pass
+            o_names = {s.get("stage") for s in (activity.get("orundum_stages") or [])
+                       if s.get("stage")}
+            for s in own:
+                if s in o_names and _probe_ok(probe, s):
+                    return s
             o = activity.get("orundum") or {}
             st = o.get("stage", "")
             if st and _probe_ok(probe, st):
