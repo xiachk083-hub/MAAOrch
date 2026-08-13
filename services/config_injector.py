@@ -68,8 +68,16 @@ class ConfigService:
             sw=ac.get("account_switch","")
             if sw: c["Start.RunDirectly"]="False"; c["Start.StartGame"]="True"
             else: c["Start.RunDirectly"]="True"; c["Start.StartGame"]="True"
-            # Start options
-            if ac.get("start_minimized"): d.setdefault("Global",{})["GUI.MinimizeToTray"]="True"
+            # Start options. MAA 6.16 reads gui.new.json top-level Gui.* (nested
+            # bools); flat Global."GUI.*" keys are only read by old gui.json
+            # (v5/6.11). Writing flat keys to gui.new.json silently does nothing.
+            if fn.endswith("new.json"):
+                g = d.setdefault("Gui", {})
+                g["MinimizeToTray"] = bool(ac.get("start_minimized"))
+                g["MinimizeOnStartup"] = bool(ac.get("start_minimized"))
+                g["UseTray"] = True
+            else:
+                d.setdefault("Global", {})["GUI.MinimizeToTray"] = "True" if ac.get("start_minimized") else "False"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
             # PostActions: MAA 的方式关闭（2026-08-12 用户: MAA 怎么用我们
             # 就怎么用 — MAA 完成任务自己关游戏+关模拟器（ExitEmulator+ExitSelf，
@@ -173,7 +181,7 @@ class ConfigService:
                                 elif tt=="award":
                                     item["Award"] = True
                                     item["Mail"] = True
-                                    item["FreeGacha"] = False
+                                    item["FreeGacha"] = True
                                     item["Orundum"] = True
                                     item["Mining"] = True
                                     item["SpecialAccess"] = True
@@ -379,7 +387,8 @@ class ConfigService:
         # 2026-08-10: 先保证可控 — None + 主动检测更可控）。
         gui["PostActions"] = "None"
 
-    def inject_smart(self, task_list: list[str], ac: dict, config_dir: str) -> None:
+    def inject_smart(self, task_list: list[str], ac: dict, config_dir: str,
+                     params: dict | None = None) -> None:
         """Inject smart-generated task list into MAA config directory."""
         cd = Path(config_dir)
         cd.mkdir(parents=True, exist_ok=True)
@@ -414,12 +423,23 @@ class ConfigService:
                         del c[k]
             if use_v6:
                 c.setdefault("InfrastOrder", {})
-            # MAA v6 reads GUI settings from gui.json Global section
-            g = d.setdefault("Global", {})
-            g.setdefault("GUI.Localization", "zh-cn")
-            g.setdefault("GUI.MinimizeToTray", "True")
-            g.setdefault("GUI.UseTray", "True")
-            g.setdefault("Start.MinimizeDirectly", "True")
+            # MAA v6 reads GUI settings from gui.json Global section (v5/6.11
+            # flat keys); 6.16 reads gui.new.json top-level Gui.* nested bools.
+            # Direct assignment (not setdefault): template already ships
+            # MinimizeToTray=false / MinimizeOnStartup=false, setdefault would
+            # keep the false values and the window would flash on launch.
+            if fn.endswith("new.json"):
+                g = d.setdefault("Gui", {})
+                g["Localization"] = "zh-cn"
+                g["MinimizeToTray"] = True
+                g["MinimizeOnStartup"] = True
+                g["UseTray"] = True
+            else:
+                g = d.setdefault("Global", {})
+                g.setdefault("GUI.Localization", "zh-cn")
+                g.setdefault("GUI.MinimizeToTray", "True")
+                g.setdefault("GUI.UseTray", "True")
+                g.setdefault("Start.MinimizeDirectly", "True")
 
             for stale in ("Start.Minimized",):
                 c.pop(stale, None)
@@ -466,58 +486,77 @@ class ConfigService:
                 run_annihilation = "annihilation" in task_set
                 # Per-account fight strategy
                 fight_mode = ac.get("fight_mode", "")
-                if fight_mode:
-                    default = ac.get("fight_default", "1-7")
-                    stages = ac.get("stages", []) or []
-                    _diag = ac.get("_stage_override", "")
-                    self.ctx.log(f"[注入] {ac.get('name', '?')} fight_mode={fight_mode!r} default={default!r} override={_diag!r} stages={stages}")
-                    if fight_mode == "schedule":
-                        weekdays = ["mon","tue","wed","thu","fri","sat","sun"]
-                        wd = weekdays[datetime.now().weekday()]
-                        weekly = ac.get("schedule_weekly", {}) or {}
-                        if wd in weekly and weekly[wd]:
-                            day_stage = weekly[wd]
-                        else:
-                            day = str(datetime.now().day)
-                            monthly = ac.get("schedule_monthly", {}) or {}
-                            if day in monthly and monthly[day]:
-                                day_stage = monthly[day]
-                            else:
-                                day_stage = default
-                        self.ctx.log(f"[注入] schedule: wd={wd} weekly={weekly} monthly={ac.get('schedule_monthly', {})} day_stage={day_stage!r}")
-                    elif fight_mode == "priority":
-                        priority = ac.get("fight_priority", {}) or {}
-                        # Ordered by priority desc; only stages with prio > 0 join
-                        ordered = [s for s in stages if priority.get(s, 0) > 0]
-                        ordered.sort(key=lambda s: priority.get(s, 0), reverse=True)
-                        # _stage_override: set by the downgrade loop (retry next stage)
-                        day_stage = ac.get("_stage_override") or (ordered[0] if ordered else default)
-                        # Fallback chain for the per-account downgrade loop
-                        ac["_stage_fallback"] = ordered[1:]
-                        ac["_stage_current"] = day_stage
-                        ac["_stage_times"] = int(ac.get("fight_times_per_stage", 3)) if ac.get("fight_times_per_stage") not in (None, "", 0) else 0
-                        ac["_stage_series"] = int(ac.get("fight_series", 1)) if ac.get("fight_series") not in (None, "") else 1
-                    elif fight_mode == "material":
-                        _MS = {"固源岩":"1-7","装置":"S3-4","聚酸酯":"S3-3","酯":"S3-1","异铁":"S3-2","酮凝集":"S3-5","凝胶":"S3-5","龙门币":"CE-6","作战记录":"LS-6"}
-                        materials = ac.get("fight_materials", []) or []
-                        unfinished = [m for m in materials if m.get("achieved",0) < m.get("target",0)]
-                        day_stage = default
-                        for m in unfinished:
-                            stage = _MS.get(m.get("item",""))
-                            if stage:
-                                day_stage = stage
-                                break
-                    else:
-                        day_stage = default
+                # 任务参数（调度台带参任务 — 2026-08-13）: 最高优先，
+                # dispatch 打包时已算好 stage/times，注入直接采用
+                fparams = (params or {}).get("fight") or {}
+                if fparams.get("stage"):
+                    day_stage = fparams["stage"]
+                    self.ctx.log(f"[注入] {ac.get('name', '?')} 任务参数 → {day_stage} ×{fparams.get('times', 0)}")
                 else:
-                    from services.smart_scheduler import _arknights_now, _get_material_stage
-                    weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
-                    today_key = weekday_names[_arknights_now().weekday()]
-                    day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
-                    if ac.get("smart_materials_enabled", True):
-                        mat_stage = _get_material_stage(ac, self.ctx.config.get("smart_global", {}))
-                        if mat_stage:
-                            day_stage = mat_stage
+                    # 标签分派优先（2026-08-13）: farm_tag × 活动/非活动 →
+                    # 返回 None 时走原 fight_mode 逻辑（存量账号不受影响）
+                    farm_stage = None
+                    try:
+                        from services.farm_dispatch import pick_farm_stage_for
+                        farm_stage = pick_farm_stage_for(ac)
+                    except Exception:
+                        farm_stage = None
+                    if farm_stage:
+                        day_stage = farm_stage
+                        self.ctx.log(f"[注入] {ac.get('name', '?')} 标签分派 "
+                                     f"(farm_tag={ac.get('farm_tag', 'material')}) → {day_stage}")
+                    elif fight_mode:
+                        default = ac.get("fight_default", "1-7")
+                        stages = ac.get("stages", []) or []
+                        _diag = ac.get("_stage_override", "")
+                        self.ctx.log(f"[注入] {ac.get('name', '?')} fight_mode={fight_mode!r} default={default!r} override={_diag!r} stages={stages}")
+                        if fight_mode == "schedule":
+                            weekdays = ["mon","tue","wed","thu","fri","sat","sun"]
+                            wd = weekdays[datetime.now().weekday()]
+                            weekly = ac.get("schedule_weekly", {}) or {}
+                            if wd in weekly and weekly[wd]:
+                                day_stage = weekly[wd]
+                            else:
+                                day = str(datetime.now().day)
+                                monthly = ac.get("schedule_monthly", {}) or {}
+                                if day in monthly and monthly[day]:
+                                    day_stage = monthly[day]
+                                else:
+                                    day_stage = default
+                            self.ctx.log(f"[注入] schedule: wd={wd} weekly={weekly} monthly={ac.get('schedule_monthly', {})} day_stage={day_stage!r}")
+                        elif fight_mode == "priority":
+                            priority = ac.get("fight_priority", {}) or {}
+                            # Ordered by priority desc; only stages with prio > 0 join
+                            ordered = [s for s in stages if priority.get(s, 0) > 0]
+                            ordered.sort(key=lambda s: priority.get(s, 0), reverse=True)
+                            # _stage_override: set by the downgrade loop (retry next stage)
+                            day_stage = ac.get("_stage_override") or (ordered[0] if ordered else default)
+                            # Fallback chain for the per-account downgrade loop
+                            ac["_stage_fallback"] = ordered[1:]
+                            ac["_stage_current"] = day_stage
+                            ac["_stage_times"] = int(ac.get("fight_times_per_stage", 3)) if ac.get("fight_times_per_stage") not in (None, "", 0) else 0
+                            ac["_stage_series"] = int(ac.get("fight_series", 1)) if ac.get("fight_series") not in (None, "") else 1
+                        elif fight_mode == "material":
+                            _MS = {"固源岩":"1-7","装置":"S3-4","聚酸酯":"S3-3","酯":"S3-1","异铁":"S3-2","酮凝集":"S3-5","凝胶":"S3-5","龙门币":"CE-6","作战记录":"LS-6"}
+                            materials = ac.get("fight_materials", []) or []
+                            unfinished = [m for m in materials if m.get("achieved",0) < m.get("target",0)]
+                            day_stage = default
+                            for m in unfinished:
+                                stage = _MS.get(m.get("item",""))
+                                if stage:
+                                    day_stage = stage
+                                    break
+                        else:
+                            day_stage = default
+                    else:
+                        from services.smart_scheduler import _arknights_now, _get_material_stage
+                        weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
+                        today_key = weekday_names[_arknights_now().weekday()]
+                        day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
+                        if ac.get("smart_materials_enabled", True):
+                            mat_stage = _get_material_stage(ac, self.ctx.config.get("smart_global", {}))
+                            if mat_stage:
+                                day_stage = mat_stage
                 day_stage = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff_\-]', '', day_stage) if day_stage else ""
 
                 existing_tq = c.get("TaskQueue", [])
@@ -553,6 +592,17 @@ class ConfigService:
                         if sp:
                             item["StagePlan"] = [s for s in sp if isinstance(s, str) and re.match(r'^[a-zA-Z0-9\u4e00-\u9fff_\-]+$', s)]
                         item["IsEnable"] = tt in task_set
+                        if tt == "award":
+                            # 领取奖励显式默认（2026-08-12: 实例已有 TaskQueue 时
+                            # 保留旧模板字段 — FreeGacha 曾为 false；直接赋值覆盖
+                            # （setdefault 遇已有 False 不生效 — 实测坑）。免费
+                            # 单抽默认领取，task_settings 合并仍可覆盖）。
+                            item["Award"] = True
+                            item["Mail"] = True
+                            item["FreeGacha"] = True
+                            item["Orundum"] = True
+                            item["Mining"] = True
+                            item["SpecialAccess"] = True
                         if tt == "fight" and run_annihilation:
                             if has_fight and not anni_appended:
                                 item["UseCustomAnnihilation"] = False
@@ -602,7 +652,11 @@ class ConfigService:
                             # times<=0 (frontend "每关次数"=0) = no limit: run until
                             # sanity runs out. Apply to ALL fight modes so the
                             # frontend "每关次数" field is always honored.
-                            _raw_times = ac.get("fight_times_per_stage", 3)
+                            # 任务参数 times 覆盖（调度台带参任务 — 2026-08-13）
+                            if fparams.get("times") is not None:
+                                _raw_times = fparams["times"]
+                            else:
+                                _raw_times = ac.get("fight_times_per_stage", 3)
                             _times = int(_raw_times) if _raw_times not in (None, "", 0) else 0
                             if day_stage and _times > 0:
                                 item["EnableTimesLimit"] = True
@@ -632,6 +686,13 @@ class ConfigService:
                         enabled = task_type.lower() in task_set
                         item = {"$type": TYPE_MAP.get(task_type, task_type + "Task"),
                                 "Name": "", "IsEnable": enabled, "TaskType": task_type}
+                        if task_type == "Award":
+                            # 领取奖励完整选项（无 TaskQueue 构建时缺字段 → MAA
+                            # 用默认值 FreeGacha=false — 2026-08-12 实测: task_settings
+                            # 为空时 768 行合并分支不执行，必须在这里给全）。
+                            item.update({"Award": True, "Mail": True, "FreeGacha": True,
+                                         "Orundum": True, "Mining": True,
+                                         "SpecialAccess": True})
                         if task_type == "Fight":
                             item.update({"UseMedicine": False, "MedicineCount": 0,
                                          "UseStone": False, "StoneCount": 0,
@@ -766,12 +827,12 @@ class ConfigService:
                             if "only_buy_discount" in st: item["OnlyBuyDiscount"] = st["only_buy_discount"]
                             if "reserve_max_credit" in st: item["ReserveMaxCredit"] = st["reserve_max_credit"]
                         elif tt == "award":
-                            # Default: claim everything EXCEPT FreeGacha (免费寻访
-                            # 单抽 — user explicitly doesn't want it). task_settings
-                            # can override individual flags.
+                            # Default: claim everything incl. FreeGacha (免费单抽 —
+                            # 2026-08-12 实测: 只 OCR "赠送一次" 按钮，已抽过秒停不花
+                            # 资源，安全). task_settings can override individual flags.
                             item["Award"] = True
                             item["Mail"] = True
-                            item["FreeGacha"] = False
+                            item["FreeGacha"] = True
                             item["Orundum"] = True
                             item["Mining"] = True
                             item["SpecialAccess"] = True
@@ -790,6 +851,7 @@ class ConfigService:
                             if "roles" in st: item["Roles"] = st["roles"]
                             if "core_char" in st: item["CoreChar"] = st["core_char"]
                             if "start_count" in st: item["StartCount"] = st["start_count"]
+                            if "stop_when_level_max" in st: item["StopWhenLevelMax"] = st["stop_when_level_max"]
                             if "investment" in st: item["Investment"] = st["investment"]
                             if "invest_count" in st: item["InvestCount"] = st["invest_count"]
                             if "invest_with_more_score" in st: item["InvestWithMoreScore"] = st["invest_with_more_score"]

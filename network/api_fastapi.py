@@ -780,6 +780,187 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 latest[aid] = {k: r.get(k) for k in ("verdict", "score", "detail")}
             return {"ok": True, "results": latest}
 
+    # ═══════════════════════════════════════════
+    # 材料规划（仓库识别 + 水位计划 — 2026-08-13 产品化）
+    # 模型: 扫描器独立 Asst 子进程（不进 queue，用户拍板），互斥跳过忙的账号
+    # ═══════════════════════════════════════════
+
+    @app.post("/api/depot/scan")
+    def handle_depot_scan(body: dict):
+        """扫描指定账号仓库并生成材料规划（异步）。
+        Body: {account_ids: [...]} — 状态轮询 GET /api/depot/status。"""
+        from services.depot_scheduler import DepotScanner
+        ids = [str(x) for x in (body.get("account_ids") or [])]
+        acs = [a for a in mw.accounts if a.get("id") in ids]
+        if not acs:
+            raise HTTPException(400, "no valid account_ids")
+        def _run():
+            try:
+                DepotScanner(mw).scan_accounts([a.get("id") for a in acs])
+            except Exception as e:
+                mw._log(f"[材料规划] 扫描异常: {e}")
+        threading.Thread(target=_run, daemon=True).start()
+        return {"ok": True, "count": len(acs), "status": "running"}
+
+    @app.get("/api/depot/status")
+    def handle_depot_status():
+        """各账号仓库快照/计划状态 + 正在扫描标记。"""
+        from services.depot_scheduler import _SCAN_STATUS, _SCAN_LOCK
+        base = Path(__file__).parent.parent / "models" / "accounts"
+        out = []
+        with _SCAN_LOCK:
+            st = dict(_SCAN_STATUS)
+        for a in mw.accounts:
+            aid = a.get("id", "")
+            depot_f = base / aid / "depot.json"
+            plan_f = base / aid / "plan.json"
+            s = st.get(aid, {})
+            out.append({
+                "id": aid, "name": a.get("name", ""),
+                "emu": a.get("emu_instance_index", ""),
+                "mainline_chapter": a.get("mainline_chapter", 0),
+                "suspended": a.get("suspended", False),
+                "state": s.get("state", ""), "reason": s.get("reason", ""),
+                "error": s.get("error", ""), "summary": s.get("summary", ""),
+                "depot_ts": int(depot_f.stat().st_mtime) if depot_f.exists() else 0,
+                "plan_ts": int(plan_f.stat().st_mtime) if plan_f.exists() else 0,
+            })
+        return {"ok": True, "accounts": out}
+
+    @app.get("/api/depot/plan")
+    def handle_depot_plan(account_id: str = ""):
+        """该账号最近一次扫描生成的规划（models/accounts/<id>/plan.json）。"""
+        if not account_id:
+            raise HTTPException(400, "account_id required")
+        p = Path(__file__).parent.parent / "models" / "accounts" / account_id / "plan.json"
+        if not p.exists():
+            raise HTTPException(404, "该账号还没有规划，先扫描仓库")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:
+            raise HTTPException(500, f"计划文件损坏: {e}")
+
+    @app.get("/api/depot/config")
+    def handle_depot_config():
+        """水位/预算/定时配置（config/material_water_levels.json）。"""
+        p = Path(__file__).parent.parent / "config" / "material_water_levels.json"
+        try:
+            return {"ok": True, "config": json.loads(p.read_text(encoding="utf-8"))}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    @app.post("/api/depot/config")
+    def handle_depot_config_save(body: dict):
+        """保存水位/预算/定时配置。Body: {materials: {名: 数量}, ap_budget_per_day,
+        daily_scan_time: "HH:MM", scan_enabled: bool,
+        penguin_refresh_time: "HH:MM", penguin_enabled: bool}"""
+        import re as _re
+        mats = body.get("materials")
+        budget = body.get("ap_budget_per_day")
+        hhmm = body.get("daily_scan_time")
+        phhmm = body.get("penguin_refresh_time")
+        if not isinstance(mats, dict) or not mats:
+            raise HTTPException(400, "materials 必须是非空对象")
+        for k, v in mats.items():
+            if not isinstance(v, int) or v < 0:
+                raise HTTPException(400, f"材料 {k} 水位必须是非负整数")
+        if budget is not None and (not isinstance(budget, int) or budget <= 0):
+            raise HTTPException(400, "ap_budget_per_day 必须是正整数")
+        if hhmm is not None and not _re.match(r"^\d{2}:\d{2}$", str(hhmm)):
+            raise HTTPException(400, "daily_scan_time 格式 HH:MM")
+        if phhmm is not None and not _re.match(r"^\d{2}:\d{2}$", str(phhmm)):
+            raise HTTPException(400, "penguin_refresh_time 格式 HH:MM")
+        p = Path(__file__).parent.parent / "config" / "material_water_levels.json"
+        cfg = {}
+        if p.exists():
+            cfg = json.loads(p.read_text(encoding="utf-8"))
+        cfg["materials"] = mats
+        if budget is not None:
+            cfg["ap_budget_per_day"] = budget
+        if hhmm is not None:
+            cfg["daily_scan_time"] = hhmm
+        if "scan_enabled" in body:
+            cfg["scan_enabled"] = bool(body["scan_enabled"])
+        if phhmm is not None:
+            cfg["penguin_refresh_time"] = phhmm
+        if "penguin_enabled" in body:
+            cfg["penguin_enabled"] = bool(body["penguin_enabled"])
+        tmp = p.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(p)
+        mw._log(f"[材料规划] 配置已保存: {len(mats)} 材料水位, 预算 {cfg.get('ap_budget_per_day')}")
+        return {"ok": True}
+
+    # ═══════════════════════════════════════════
+    # 企鹅物流数据采集（2026-08-13: 权威掉率数据定期入库）
+    # ═══════════════════════════════════════════
+
+    @app.post("/api/penguin/refresh")
+    def handle_penguin_refresh():
+        """手动触发采集（异步）: 拉取 → SQLite 入库 → 变了自动重生成备选榜。"""
+        from services.penguin_data import refresh
+        def _run():
+            try:
+                r = refresh()
+                mw._log(f"[企鹅物流] 采集: {r.get('rows', 0)} 对, "
+                        f"变化={r.get('changed')}, 榜重生成={r.get('farm_regen', {}).get('ok')}")
+            except Exception as e:
+                mw._log(f"[企鹅物流] 采集异常: {e}")
+        threading.Thread(target=_run, daemon=True).start()
+        return {"ok": True, "status": "running"}
+
+    @app.get("/api/penguin/status")
+    def handle_penguin_status():
+        from services.penguin_data import status
+        return status()
+
+    # ═══════════════════════════════════════════
+    # 活动关识别（2026-08-13: 每小时自动 + 手动修正）
+    # ═══════════════════════════════════════════
+
+    @app.get("/api/activity/stages")
+    def handle_activity_get():
+        from services.activity_tracker import status
+        return status()
+
+    @app.post("/api/activity/refresh")
+    def handle_activity_refresh():
+        """手动触发当前活动识别（异步）。"""
+        from services.activity_tracker import detect
+        def _run():
+            try:
+                r = detect()
+                mw._log(f"[活动] 手动识别: active={r.get('active')} "
+                        f"{r.get('zone_name', '')}")
+            except Exception as e:
+                mw._log(f"[活动] 识别异常: {e}")
+        threading.Thread(target=_run, daemon=True).start()
+        return {"ok": True, "status": "running"}
+
+    @app.post("/api/activity/stages")
+    def handle_activity_save(body: dict):
+        """人工修正活动关配置。Body: {material: [{stage, item}], orundum: {stage, item},
+        resource: [{stage, item}], until, active} — 写 manual=true 防自动覆盖。"""
+        from services.activity_tracker import CONFIG_PATH
+        p = CONFIG_PATH
+        cfg = {}
+        try:
+            cfg = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+        for k in ("material", "orundum", "resource", "until", "active"):
+            if k in body:
+                cfg[k] = body[k]
+        if body.get("manual") is False:
+            cfg.pop("manual", None)  # 清空人工修正，恢复自动识别
+        else:
+            cfg["manual"] = True
+        tmp = p.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(p)
+        mw._log(f"[活动] 人工修正活动配置: {cfg.get('zone_name', '')}")
+        return {"ok": True}
+
     @app.get("/api/account_status")
     def handle_account_status():
         """账号状态总览：体力排行 + 今日运行 + 完成情况（图表/排行榜数据源）。"""
@@ -791,11 +972,20 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             st = AccountState(a["id"]).data
             san = st.get("sanity") or {}
+            # 实时快照优先（最后进关卡前体力 — 2026-08-12 用户: 以最后
+            # 实时的结果为准），快照缺失回退 AccountState 死值。
+            try:
+                from services.sanity_tracker import get as _sn_get
+                _snap = _sn_get(a["id"])
+                if _snap and _snap.get("current") is not None:
+                    san = _snap
+            except Exception:
+                pass
             cur = san.get("current")
             mx = san.get("max")
             # 体力记录的时间戳（判断"刷完"是否今天）— report_time 可能为空
-            # （旧数据/写入缺时间戳）→ 退化用 last_complete
-            san_ts = san.get("report_time", "") or ""
+            # （旧数据/写入缺时间戳）→ 退化用 captured_at / last_complete
+            san_ts = san.get("report_time", "") or san.get("captured_at", "") or ""
             done_ts = san_ts or st.get("last_complete", "")
             running = lq.is_running(a["id"]) if lq else False
             queued = lq.is_queued(a["id"]) if lq else False
@@ -989,6 +1179,21 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             pass
         now = datetime.now()
         entries = sorted(lq._pending, key=lambda x: x.sort_key)
+        # 任务内容（调度台可见 — 2026-08-13）: dispatch 带参任务 → 「刷关×次数」
+        from services.dispatch_pool import get_template_info
+        def _task_desc(a, slot: str) -> str:
+            if not a:
+                return ""
+            key = f"_dispatch_{slot}" if slot else "dispatch_id"
+            did = a.get(key, "") or a.get("dispatch_id", "")
+            if not did:
+                return ""
+            tasks, params = get_template_info(did)
+            f = params.get("fight") or {}
+            if f.get("stage"):
+                t = f.get("times") or 0
+                return f"刷 {f['stage']}" + (f" ×{t}" if t else " ×不限")
+            return "、".join(tasks) or ""
         pending = []
         for pos, e in enumerate(entries, start=1):
             a = next((x for x in mw.accounts if x["id"] == e.account_id), None)
@@ -1005,8 +1210,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "eta": eta_dt.strftime("%Y-%m-%d %H:%M:%S"),
                 "eta_min": ahead_slots * avg_sec // 60,
                 "suspended": a.get("suspended", False) if a else False,
+                "slot": e.slot or "",
+                "task": _task_desc(a, e.slot or ""),
             })
-        active = list(lq._active_emus.values())
+        active = []
+        for aid in list(lq._active_emus.values()):
+            a = next((x for x in mw.accounts if x["id"] == aid), None)
+            active.append({"account_id": aid,
+                           "account_name": a.get("name", "") if a else "",
+                           "task": _task_desc(a, a.get("_slot", "") if a else "")})
         return {"pending": pending, "active": active,
                 "pending_count": len(pending), "active_count": len(active),
                 "paused": lq._paused, "avg_duration_min": avg_sec // 60}
@@ -1224,7 +1436,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 aid = uuid.uuid4().hex[:12]
             existing = next((a for a in mw.accounts if a["id"] == aid), None)
             if existing:
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "adb_address", "fight_default", "stage_ability"):
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "adb_address", "fight_default", "stage_ability", "farm_tag", "mainline_chapter"):
                     if f in ac:
                         # 挂起变更审计 — suspended 被全量保存覆盖过（2026-08-10
                         # 官-2/官-25/官-41 挂起丢失），记录谁改的以便定位
@@ -1236,7 +1448,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 updated += 1
             else:
                 new_ac = {"id": aid, "consecutive_failures": 0}
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages", "adb_address", "fight_default", "stage_ability"):
+                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages", "adb_address", "fight_default", "stage_ability", "farm_tag", "mainline_chapter"):
                     if f in ac:
                         new_ac[f] = ac[f]
                 mw.accounts.append(new_ac)
@@ -1512,7 +1724,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         a = _account_by_idx(idx)
         for field in ("name", "game_client", "emu_instance_index", "account_switch",
                       "uid", "suspended", "note", "expire_date", "stages",
-                      "skip_daily"):
+                      "skip_daily", "roguelike_only", "maa_instance_dir",
+                      "adb_address", "adb_path", "roguelike_themes",
+                      "roguelike_theme_idx"):
             if field in body:
                 a[field] = body[field]
         mw.config["accounts"] = mw.accounts
@@ -1967,11 +2181,23 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         threading.Thread(target=_do_restart, daemon=True).start()
         return {"ok": True, "message": "重启中..."}
 
-    def _dispatch_slot(ac, tasks, slot: str) -> None:
+    def _dispatch_slot(ac, tasks, slot: str, params: dict | None = None) -> None:
         """Create a dispatch for the given slot and store on the account."""
         from services.dispatch_pool import create_dispatch
         key = f"_dispatch_{slot}" if slot else "dispatch_id"
-        ac[key] = create_dispatch(tasks)
+        ac[key] = create_dispatch(tasks, params)
+
+    def _fight_task_pack(ac) -> tuple[list, dict]:
+        """Fight 槽位任务打包（2026-08-13 任务参数化）: 标签分派 → 带参任务。
+        分派无结果 → 纯任务名（注入时现算，存量行为）。"""
+        try:
+            from services.farm_dispatch import build_farm_task
+            t = build_farm_task(ac)
+            if t and t.get("fight", {}).get("stage"):
+                return t["tasks"], {"fight": t["fight"]}
+        except Exception:
+            pass
+        return ["StartUp", "Fight"], {}
 
     _MATERIAL_STAGES = {
         "固源岩": "1-7", "装置": "S3-4", "聚酸酯": "S3-3", "酯": "S3-1",
@@ -2085,8 +2311,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             _dispatch_slot(a, maint_tasks, "maintenance")
             lq.enqueue(aid, "force", priority=0, slot="maintenance")
             # Fight slot (stage selected by inject_smart in config_injector.py)
-            fight_tasks = ["StartUp", "Fight"]
-            _dispatch_slot(a, fight_tasks, "fight")
+            fight_tasks, fight_params = _fight_task_pack(a)
+            _dispatch_slot(a, fight_tasks, "fight", fight_params or None)
             lq.enqueue(aid, "force", priority=0, slot="fight")
             # Annihilation slot
             if a.get("smart_annihilation", ""):
@@ -2136,8 +2362,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             if lq.is_queued(aid, slot="fight"):
                 continue
-            tasks = ["StartUp", "Fight"]
-            _dispatch_slot(a, tasks, "fight")
+            tasks, params = _fight_task_pack(a)
+            _dispatch_slot(a, tasks, "fight", params or None)
             lq.enqueue(aid, "force", priority=0, slot="fight")
             count += 1
         if count:
@@ -2477,12 +2703,16 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         ids = body.get("account_ids", [])
         include_anni = body.get("include_anni", True)
         only_anni = body.get("only_anni", False)
+        probe_mode = body.get("mode") == "probe"  # 仅检测（关卡检测调度）
         lq = _lq()
         if lq._paused:
             lq.resume()
         smart = mw.config.get("smart_global", {}).get("enabled", False)
-        base_tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
-            "StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
+        if probe_mode:
+            base_tasks = ["StartUp", "Probe"]
+        else:
+            base_tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
+                "StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
         count = 0
         for a in mw.accounts:
             aid = a.get("id", "")
@@ -2496,18 +2726,29 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             # Per-account annihilation
             tasks = list(base_tasks)
-            anni = a.get("smart_annihilation", "")
-            has_anni = "Annihilation" in tasks
-            if has_anni and not anni:
-                tasks.remove("Annihilation")
-            elif not has_anni and anni:
-                tasks.append("Annihilation")
+            if not probe_mode:
+                anni = a.get("smart_annihilation", "")
+                has_anni = "Annihilation" in tasks
+                if has_anni and not anni:
+                    tasks.remove("Annihilation")
+                elif not has_anni and anni:
+                    tasks.append("Annihilation")
+            # 账号级肉鸽（l-4/l-6 业务机）— 只跑肉鸽不清日常
+            if a.get("roguelike_only"):
+                tasks = ["StartUp", "Roguelike"]
             a["dispatch_id"] = create_dispatch(tasks)
-            lq.enqueue(aid, "force", priority=0)
+            # 任务类型打标（肉鸽让位/检测用）：肉鸽长任务低优先级让位，
+            # 检测任务独立槽位语义 — 2026-08-13。
+            _slot = ""
+            if "Roguelike" in tasks or a.get("roguelike_only"):
+                _slot = "roguelike"
+            elif probe_mode:
+                _slot = "probe"
+            lq.enqueue(aid, "force", priority=0, slot=_slot)
             count += 1
         if count:
-            mw._log(f"▶ 调度选中: {count} 个账号已入队")
-            _log_op("调度选中", f"{count} 个账号")
+            mw._log(f"▶ 调度选中: {count} 个账号已入队" + ("（仅检测）" if probe_mode else ""))
+            _log_op("调度选中", f"{count} 个账号" + ("（仅检测）" if probe_mode else ""))
             lq.tick()
         return {"ok": True, "count": count}
 

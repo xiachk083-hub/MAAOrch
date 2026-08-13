@@ -4,15 +4,68 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from infrastructure.platform_helper import is_admin, run_as_admin
-from infrastructure.logger import Logger
+from infrastructure.logger import Logger, enable_console
 
 _LOG = Logger("app")
+
+_console_ctrl_handler = None  # 保持引用，防止回调被 GC 回收
+
+
+def _register_console_close(quit_fn) -> None:
+    """终端模式：关窗口（X 按钮）= CTRL_CLOSE_EVENT → 调 quit_fn 优雅退出。
+    Ctrl+C 等其它事件返回 False，交回 Python 默认 KeyboardInterrupt 处理。"""
+    if "--console" not in sys.argv or sys.platform != "win32":
+        return
+    global _console_ctrl_handler
+    try:
+        import ctypes
+        _CTRL_CLOSE_EVENT = 2
+
+        @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)
+        def _handler(event: int) -> bool:
+            if event == _CTRL_CLOSE_EVENT:
+                try:
+                    quit_fn()
+                except Exception:
+                    pass
+                return True  # 已处理，系统随后给宽限期并终止进程
+            return False
+
+        _console_ctrl_handler = _handler  # 防 GC
+        ctypes.windll.kernel32.SetConsoleCtrlHandler(_handler, True)
+    except Exception as e:
+        _LOG.warn(f"控制台关闭处理器注册失败: {e}")
 
 def main():
     if "--admin" in sys.argv and not is_admin():
         run_as_admin()
         sys.exit(0)
     # --no-elevate kept for backward compatibility (no-op now)
+
+    # 终端模式（--console）：终端仪表盘（状态区+日志区）；端口被占=项目已在运行 → 提示退出
+    _console_mode = "--console" in sys.argv
+    _dash = None
+    if _console_mode:
+        try:
+            import socket as _sock
+            from models.config_manager import load_config as _lc
+            _port = int(_lc().get("api_port", 19999))
+            _s = _sock.create_connection(("127.0.0.1", _port), timeout=1)
+            _s.close()
+            print(f"[MAAOrch] 项目已在运行（端口 {_port} 被占用），终端模式退出。")
+            print("[MAAOrch] 如要重启，请先停止现有实例（manager 停止 / 任务管理器结束进程）。")
+            sys.exit(0)
+        except OSError:
+            pass  # 端口空闲，正常启动
+        # 终端仪表盘：顶部固定 CPU/内存/带宽状态 + 下方日志区；
+        # stdout 非终端（管道重定向）时自动降级为普通日志输出
+        from infrastructure.console_dash import ConsoleDash
+        _dash = ConsoleDash()
+        if _dash.start():
+            enable_console(_dash)
+            _LOG.info("终端仪表盘已启动：顶部状态区固定，日志在下方滚动")
+        else:
+            enable_console()
 
     import ctypes as _ct
     hwnd = _ct.windll.user32.FindWindowW(None, "MAAOrchWeb")
@@ -22,16 +75,19 @@ def main():
         sys.exit(0)
 
     # PySide6 is optional — pure Web mode works without it
-    try:
-        from PySide6.QtWidgets import QApplication
-        _app = QApplication(sys.argv)
-        _app.setQuitOnLastWindowClosed(False)
-        _app.setStyle("Fusion")
-        _has_qt = True
-    except ImportError:
-        _app = None
-        _has_qt = False
-        _LOG.info("PySide6 未安装，使用纯 Web 模式（无托盘图标）")
+    # 终端模式（--console）强制纯 Web：终端窗口本身就是"界面"，不走 Qt 托盘
+    # （否则 Ctrl+C / 关窗口都不生效，只能点托盘菜单退出）
+    _has_qt = False
+    _app = None
+    if not _console_mode:
+        try:
+            from PySide6.QtWidgets import QApplication
+            _app = QApplication(sys.argv)
+            _app.setQuitOnLastWindowClosed(False)
+            _app.setStyle("Fusion")
+            _has_qt = True
+        except ImportError:
+            _LOG.info("PySide6 未安装，使用纯 Web 模式（无托盘图标）")
 
     _LOG.info("══ MAAOrch Web 启动 ══")
 
@@ -219,6 +275,27 @@ pause
     except Exception:
         pass
 
+    # 材料规划定时扫描线程（每日 daily_scan_time 扫全部非挂起账号 — 2026-08-13）
+    try:
+        from services.depot_scheduler import DepotScheduler
+        DepotScheduler(ctx._mw).start()
+    except Exception:
+        pass
+
+    # 企鹅物流数据采集线程（每日 penguin_refresh_time 拉取入库 — 2026-08-13）
+    try:
+        from services.penguin_data import PenguinScheduler
+        PenguinScheduler(ctx._mw).start()
+    except Exception:
+        pass
+
+    # 活动关识别线程（每小时 — 2026-08-13 用户: 活动当天晚上数据出来后自动切换）
+    try:
+        from services.activity_tracker import ActivityScheduler
+        ActivityScheduler(ctx._mw).start()
+    except Exception:
+        pass
+
     from services.dispatch_pool import create_dispatch
     for a in ctx.accounts:
         plan = a.get("smart_plan", "")
@@ -234,7 +311,18 @@ pause
     import uvicorn, threading as _th
     _fastapi_app = create_app(ctx._mw)
     _bind = config.get("bind_address", "0.0.0.0")
-    _uvicorn_config = uvicorn.Config(_fastapi_app, host=_bind, port=port, log_level="info")
+    if _console_mode:
+        # uvicorn 自带日志转发进仪表盘日志区；访问日志关闭（避免每请求刷屏）
+        import logging as _logging
+        class _UvBridge(_logging.Handler):
+            def emit(self, record):
+                _LOG.info(f"[uvicorn] {record.getMessage()}")
+        for _n in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+            _lg = _logging.getLogger(_n)
+            _lg.handlers = [_UvBridge()]
+            _lg.propagate = False
+    _uvicorn_config = uvicorn.Config(_fastapi_app, host=_bind, port=port, log_level="info",
+                                     access_log=not _console_mode)
     _uvicorn_server = uvicorn.Server(_uvicorn_config)
     _th.Thread(target=_uvicorn_server.run, daemon=True).start()
 
@@ -245,6 +333,11 @@ pause
     webbrowser.open(url)
 
     def _quit():
+        if _dash:
+            try:
+                _dash.stop()  # 恢复终端原屏幕
+            except Exception:
+                pass
         try:
             for aid in list(runner._active.keys()):
                 runner.stop(aid)
@@ -267,6 +360,7 @@ pause
         sys.exit(_app.exec())
     else:
         _LOG.info("按 Ctrl+C 退出")
+        _register_console_close(_quit)
         try:
             threading.Event().wait()
         except KeyboardInterrupt:

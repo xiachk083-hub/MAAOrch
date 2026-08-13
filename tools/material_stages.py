@@ -24,6 +24,7 @@ import urllib.request
 from pathlib import Path
 
 PROJ = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJ))  # 单独运行时能 import services（采集/审计唯一实现）
 RES = PROJ / "services" / "maa" / "source" / "resource"
 PS_MATRIX_CACHE = Path(os.environ.get("TEMP", "/tmp")) / "ps_matrix.json"
 PS_API = "https://penguin-stats.io/PenguinStats/api/v2/result/matrix?show_closed_zones=false&server=CN"
@@ -45,7 +46,20 @@ def load() -> tuple[dict, list]:
 
 
 def fetch_matrix(refresh: bool = False) -> list:
-    """企鹅物流掉落矩阵（掉率 = quantity/times，缓存到 %TEMP%）。"""
+    """掉落矩阵（行列表）。优先本地 SQLite 库（services/penguin_data），
+    无库则回退 %TEMP% 缓存，再回退企鹅物流 API。"""
+    try:
+        from services.penguin_data import latest_agg, _conn
+        c = _conn()
+        try:
+            agg = latest_agg(c)
+        finally:
+            c.close()
+        if agg:
+            return [{"stageId": k[0], "itemId": k[1],
+                     "quantity": v[0], "times": v[1]} for k, v in agg.items()]
+    except Exception:
+        pass
     if not refresh and PS_MATRIX_CACHE.exists():
         return json.loads(PS_MATRIX_CACHE.read_text(encoding="utf-8"))["matrix"]
     req = urllib.request.Request(PS_API, headers={"User-Agent": "MAAOrch/1.0"})
@@ -101,7 +115,7 @@ def rate_report(items: dict, stages: list, matrix: list) -> str:
             if not st:
                 continue
             rate = q / t
-            if rate <= 0 or rate > 1.05:  # 掉率异常剔除
+            if rate <= 0 or rate > 5:  # 异常剔除（rate>1 合法=双掉落关）
                 continue
             rows.append((st[1] / rate, st[0], rate, t, is_resident(sid)))
         # code 去重（主线普通/困难双记录合并，保留更优）
@@ -166,10 +180,41 @@ def main() -> None:
     ap.add_argument("--search", help="按关键词搜材料名")
     ap.add_argument("--rate", action="store_true", help="企鹅物流真实掉率报告")
     ap.add_argument("--refresh", action="store_true", help="强制重拉企鹅物流数据")
+    ap.add_argument("--dump-farm", action="store_true",
+                    help="导出全量常驻备选表到 config/farm_stages.json")
+    ap.add_argument("--audit", action="store_true",
+                    help="漏检审计: stages.json 全部主掉落关 vs farm_stages.json 收录")
     args = ap.parse_args()
 
     items, stages = load()
     id2name = {k: v["name"] for k, v in items.items()}
+
+    if args.dump_farm or args.audit:
+        # 生成/审计的唯一实现在 services/penguin_data.py（避免两份漂移）
+        from services.penguin_data import refresh, regen_farm_table, audit_farm_table
+        out_p = PROJ / "config" / "farm_stages.json"
+        if args.dump_farm:
+            r = refresh()
+            if not r.get("ok"):
+                sys.exit(f"企鹅物流拉取失败: {r.get('error')}")
+            if not r.get("changed") and not out_p.exists():
+                regen_farm_table()
+            farm = json.loads(out_p.read_text(encoding="utf-8"))
+            print(f"已导出 {len(farm)} 个材料的常驻备选表 → {out_p}")
+            print(f"采集: {r['rows']} 对, 变化={r['changed']}, "
+                  f"重生成={r.get('farm_regen', {}).get('ok')}")
+            for name, rows in farm.items():
+                top = " > ".join(f"{x['stage']}({x['rate']:.2f})" for x in rows[:3])
+                print(f"  {name}: {top}")
+        if args.audit:
+            farm = json.loads(out_p.read_text(encoding="utf-8"))
+            missing = audit_farm_table(farm)
+            if missing:
+                for m in missing:
+                    print("❌", m)
+                sys.exit(1)
+            print(f"总漏: 0 — {len(farm)} 个材料全部主掉落关（含磨难）在榜")
+        return
 
     if args.rate:
         try:

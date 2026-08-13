@@ -199,13 +199,21 @@ class LaunchQueue:
     def enqueue(self, account_id: str, source: str = "manual",
                 priority: int = 0, not_before: datetime | None = None,
                 persist_plan: bool = False, slot: str = "") -> None:
-        """Add an account to the launch queue. slot=maintenance/fight/annihilation."""
+        """Add an account to the launch queue. slot=maintenance/fight/annihilation.
+
+        任务类型优先级（2026-08-13 用户）: 不同任务之间要有优先级 —
+        enqueue 时把 slot 权重并入 priority（越小越先跑）:
+        维护/登录 30 > 刷关 20 > 剿灭/检测 10 > 肉鸽 0。
+        排队自然插队；运行中让位保持「只断肉鸽」策略（体力宝贵）。
+        """
         # Reject if this account already has a running MAA process
         if self._has_running_process(account_id):
             ac = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
             name = ac.get("name", account_id) if ac else account_id
             self.ctx.log(f"[队列] {name} 已在运行中，跳过入队")
             return
+        slot_prio = self._slot_priority().get(slot, 0)
+        priority = priority - slot_prio
         with self._lock:
             # Remove only same-slot pending entries (allow different slots)
             self._pending = [e for e in self._pending if not (e.account_id == account_id and e.slot == slot)]
@@ -218,6 +226,22 @@ class LaunchQueue:
         src_map = {"manual": "手动", "schedule": "定时", "sanity": "理智"}
         nb_str = f" → {entry.not_before.strftime('%H:%M')}" if entry.not_before > datetime.now() else ""
         self.emit_log_msg(f"[队列] {name} 入队 ({src_map.get(source, source)}){nb_str}")
+
+    _SLOT_PRIORITY_DEFAULT = {
+        "maintenance": 30, "connect": 30, "login": 30,
+        "fight": 20, "annihilation": 10, "probe": 10,
+        "roguelike": 0, "": 0,
+    }
+
+    def _slot_priority(self) -> dict:
+        """任务类型优先级权重（config.json slot_priority 可覆盖）。"""
+        try:
+            cfg = (self.ctx.config or {}).get("slot_priority")
+            if isinstance(cfg, dict) and cfg:
+                return {**self._SLOT_PRIORITY_DEFAULT, **cfg}
+        except Exception:
+            pass
+        return dict(self._SLOT_PRIORITY_DEFAULT)
 
     def enqueue_batch(self, source: str = "schedule", priority: int = 1,
                       accounts: list[str] | None = None) -> None:
@@ -475,8 +499,14 @@ class LaunchQueue:
                 if entry.source == "sanity":
                     ac = next((a for a in self.ctx.accounts if a.get("id") == entry.account_id), None)
                     if ac:
-                        st = RunStats(entry.account_id)
-                        s = st.get_last_sanity()
+                        # 体力用实时快照（最后进关卡前的值 — 2026-08-12 用户:
+                        # 以最后实时的结果为准），快照缺失回退 stats.json。
+                        try:
+                            from services.sanity_tracker import get as _sn_get
+                            _snap = _sn_get(entry.account_id)
+                            s = _snap or RunStats(entry.account_id).get_last_sanity()
+                        except Exception:
+                            s = RunStats(entry.account_id).get_last_sanity()
                         min_s = ac.get("min_sanity", 0)
                         if s and s.get("current", 0) < min_s:
                             _QUEUE_LOG.debug(f"跳过 {entry.account_id}: 理智不足 ({s.get('current',0)}/{s.get('max',1)})")
@@ -531,9 +561,57 @@ class LaunchQueue:
             launch_now = []
             for entry in to_launch:
                 max_parallel = self.ctx.config.get("parallel_max", 1)
+                # 肉鸽让位（2026-08-13 用户）: 肉鸽是 24*7 长任务，短任务
+                # （日常清体/剿灭/检测）优先。只要 pending 里还有非肉鸽任务，
+                # 肉鸽就让位（降级到队尾）— 包括槽位未满时（短任务永远先走）。
+                if entry.slot == "roguelike":
+                    _has_short = any(e.slot != "roguelike" for e in self._pending)
+                    if _has_short:
+                        _base = entry.sort_key[0] if entry.sort_key else 0
+                        _degraded = QueueEntry.make(
+                            entry.account_id, entry.source,
+                            priority=_base + 1000,
+                            not_before=entry.not_before,
+                            persist_plan=entry.persist_plan, slot=entry.slot)
+                        heapq.heappush(self._pending, _degraded)
+                        _QUEUE_LOG.info(
+                            f"肉鸽让位 {entry.account_id[:8]}: 有短任务待跑，降级到队尾 "
+                            f"(pending={len(self._pending)})")
+                        self.emit_skipped(entry.account_id, "肉鸽让位（短任务优先）")
+                        continue
                 if len(self._active_emus) >= max_parallel:
-                    heapq.heappush(self._pending, entry)
-                    continue
+                    # 运行中肉鸽让位（2026-08-13 用户）: 短任务要启动但槽位
+                    # 满 → 中断运行中的肉鸽（24*7 长任务，可安全中断 — MAA
+                    # 停肉鸽保留进度），释放槽位给短任务；肉鸽重新入队放队尾，
+                    # 短任务跑完继续。
+                    if entry.slot != "roguelike":
+                        _rogue_running = None
+                        for _eidx, _aid in list(self._active_emus.items()):
+                            _tpl = self._account_dispatch(_aid)
+                            if _tpl and "Roguelike" in _tpl:
+                                _rogue_running = _aid
+                                break
+                        if _rogue_running:
+                            _QUEUE_LOG.info(
+                                f"运行中肉鸽让位 {_rogue_running[:8]}: 短任务 {entry.account_id[:8]} "
+                                f"需要槽位，中断肉鸽放队尾")
+                            self.emit_skipped(_rogue_running, "肉鸽让位（短任务优先）")
+                            try:
+                                self._interrupt_roguelike(_rogue_running)
+                            except Exception as _e:
+                                _QUEUE_LOG.warn(f"中断肉鸽失败: {_e}")
+                            # 释放后槽位空出，本 entry 继续走启动流程（不推回）
+                            emu_idx = self._get_emu_key(entry.account_id)
+                            if emu_idx and emu_idx in self._active_emus:
+                                heapq.heappush(self._pending, entry)
+                                continue
+                            # 槽位已释放 → 走正常启动
+                        else:
+                            heapq.heappush(self._pending, entry)
+                            continue
+                    else:
+                        heapq.heappush(self._pending, entry)
+                        continue
                 emu_idx = self._get_emu_key(entry.account_id)
                 if emu_idx and emu_idx in self._active_emus:
                     occupant = self._active_emus[emu_idx]
@@ -1167,12 +1245,59 @@ class LaunchQueue:
             pass
         return f"__unknown_{account_id}"
 
+    def _account_dispatch(self, account_id: str) -> list[str] | None:
+        """账号 dispatch 模板（任务列表）— 用于识别肉鸽/检测等任务类型。"""
+        try:
+            from services.dispatch_pool import get_template
+            ac = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
+            if ac is None:
+                return None
+            _slot = ac.get("_slot", "")
+            _did_key = f"_dispatch_{_slot}" if _slot else "dispatch_id"
+            did = ac.get(_did_key, "") or ac.get("dispatch_id", "")
+            return get_template(did) if did else None
+        except Exception:
+            return None
+
+    def _interrupt_roguelike(self, aid: str) -> None:
+        """中断运行中的肉鸽（短任务让位）：停 MAA（优雅）→ 释放槽位 →
+        肉鸽重新入队放队尾（slot=roguelike）。MAA 停肉鸽保留进度，
+        短任务跑完后肉鸽继续。"""
+        _mw = getattr(self.ctx, "_mw", None)
+        # 1) 优雅停 MAA（释放 ADB/槽位）
+        try:
+            if _mw is not None and getattr(_mw, "runner", None):
+                _mw.runner.stop(aid)
+        except Exception as e:
+            _QUEUE_LOG.warn(f"肉鸽中断 stop 失败: {e}")
+        # 2) 释放 _active_emus 槽位
+        try:
+            with self._lock:
+                for _eidx, _aid in list(self._active_emus.items()):
+                    if _aid == aid:
+                        self._active_emus.pop(_eidx, None)
+                        self._active_emus_ts.pop(_eidx, None)
+                        break
+        except Exception:
+            pass
+        # 3) 重新入队（放队尾 — 短任务优先，肉鸽最后跑）
+        if not self.is_queued(aid) and not self.is_running(aid):
+            self.enqueue(aid, "retry", priority=1000, slot="roguelike")
+            _QUEUE_LOG.info(f"肉鸽 {aid[:8]} 已放回队尾（等短任务跑完继续）")
+
     def _queue_path(self) -> Path:
         return Path(__file__).parent / "queue.json"
 
     def _last_archived_sanity(self, account_id: str) -> tuple[int | None, int | None]:
-        """Read the last recorded sanity (current, max) from the newest archived
-        asst.log for this account. Returns (None, None) if no archive exists."""
+        """Read the last recorded sanity (current, max) — 实时快照优先
+        （log_watcher 每次进关卡更新），回退归档 asst.log 的最后值。"""
+        try:
+            from services.sanity_tracker import get as _sn_get
+            snap = _sn_get(account_id)
+            if snap and snap.get("current") is not None:
+                return snap["current"], snap.get("max") or 0
+        except Exception:
+            pass
         try:
             hist = Path(__file__).parent.parent / "logs" / "maa_history" / str(account_id)
             if not hist.exists():
@@ -1218,12 +1343,21 @@ class LaunchQueue:
         for e in self._pending:
             data.append({"account_id": e.account_id, "source": e.source,
                          "priority": e.sort_key[0], "not_before": e.not_before.strftime("%Y-%m-%d %H:%M:%S"),
-                         "persist_plan": e.persist_plan, "active": False})
+                         "persist_plan": e.persist_plan, "active": False,
+                         "slot": e.slot or ""})
         for emu_idx, aid in list(self._active_emus.items()):
             ts = self._active_emus_ts.get(emu_idx, 0)
             nb = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)) if ts else time.strftime("%Y-%m-%d %H:%M:%S")
+            # active 账号带 slot（重启恢复任务语义 — 2026-08-13，此前 slot
+            # 不落盘，重启后 _slot 丢失走默认模板）
+            slot = ""
+            for a in self.ctx.accounts:
+                if a.get("id") == aid:
+                    slot = a.get("_slot", "") or ""
+                    break
             data.append({"account_id": aid, "source": "active", "priority": 0,
-                         "not_before": nb, "persist_plan": False, "active": True})
+                         "not_before": nb, "persist_plan": False, "active": True,
+                         "slot": slot})
         try:
             import json
             from infrastructure.utils import atomic_write
@@ -1255,7 +1389,8 @@ class LaunchQueue:
                 nb = dt.now()
             entry = QueueEntry.make(aid, d.get("source", "saved"),
                                     d.get("priority", 0), nb,
-                                    persist_plan=d.get("persist_plan", False))
+                                    persist_plan=d.get("persist_plan", False),
+                                    slot=d.get("slot", "") or "")
             heapq.heappush(self._pending, entry)
         self.ctx.config["queue"] = []
         self.ctx.log(f"[队列] 从历史恢复 {len(data)} 个等待项")

@@ -133,7 +133,8 @@ function renderPage() {
                 account: renderAccount, taskcfg: renderTaskConfig, batch: renderBatchEdit,
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
-                emus: renderEmus, connect: renderConnect, events: renderEvents };
+                emus: renderEmus, connect: renderConnect, events: renderEvents,
+                depot: renderDepot };
   if (fns[state.page]) fns[state.page](c);
   else { c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">页面未找到，请 Ctrl+F5 强刷更新前端</div>`; }
 }
@@ -331,8 +332,8 @@ function _renderTable() {
   const container = _tableContainer;
   const accts = _tableData;
   const stageIds = _tableStages;
-  const fields = ['名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停','剿灭'];
-  const eng = { '名称':'name','游戏客户端':'game_client','模拟器索引':'emu_instance_index','切换标识':'account_switch','UID':'uid','备注':'note','过期日':'expire_date','已暂停':'suspended','剿灭':'smart_annihilation' };
+  const fields = ['名称','游戏客户端','模拟器索引','切换标识','UID','备注','过期日','已暂停','剿灭','主线章','刷取标签'];
+  const eng = { '名称':'name','游戏客户端':'game_client','模拟器索引':'emu_instance_index','切换标识':'account_switch','UID':'uid','备注':'note','过期日':'expire_date','已暂停':'suspended','剿灭':'smart_annihilation','主线章':'mainline_chapter','刷取标签':'farm_tag' };
   
   let html = `<div style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);font-size:10px">
   <table style="width:100%;border-collapse:collapse;white-space:nowrap">
@@ -367,6 +368,14 @@ function _renderTable() {
         html += `<td style="padding:2px 4px;border:1px solid var(--border)"><select onchange="editTableVal(${i},'${key}',this.value)" style="border:none;background:var(--bg3);color:var(--text);font-size:10px;outline:none;padding:1px 2px;border-radius:2px;cursor:pointer">`;
         for (const o of opts) {
           html += `<option value="${o}" ${o===v?'selected':''}>${o}</option>`;
+        }
+        html += `</select></td>`;
+      } else if (key === 'farm_tag') {
+        const opts = [['material','补材料'],['orundum','搓玉'],['resource','补资源']];
+        const v = a[key] || 'material';
+        html += `<td style="padding:2px 4px;border:1px solid var(--border)"><select onchange="editTableVal(${i},'${key}',this.value)" style="border:none;background:var(--bg3);color:var(--text);font-size:10px;outline:none;padding:1px 2px;border-radius:2px;cursor:pointer">`;
+        for (const [ov, on] of opts) {
+          html += `<option value="${ov}" ${ov===v?'selected':''}>${on}</option>`;
         }
         html += `</select></td>`;
       } else {
@@ -1186,6 +1195,8 @@ async function loadDashboard() {
 
     // ── 运行中 + 排队 ──
     const runningProcs = procs.filter(p => p.running);
+    const activeMap = {};
+    for (const a of (q.active||[])) activeMap[a.account_id] = a.task || '';
     const pending = (q.pending||[]).slice(0, 5);
     html += `<div class="dash-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">`;
     html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
@@ -1193,7 +1204,7 @@ async function loadDashboard() {
     if (runningProcs.length) {
       for (const p of runningProcs) {
         const mem = ((p.maa_mem_mb||0)+(p.emu_mem_mb||0))/1024;
-        const task = p.last_task || '-';
+        const task = activeMap[p.aid] || p.last_task || '-';
         html += `<div style="font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">`;
         html += `<span>${p.name}</span>`;
         html += `<span style="color:var(--text3)">${task} · ${mem.toFixed(1)}G <a href="#" onclick="stopAccountByAid('${p.aid}');return false" style="color:var(--danger);text-decoration:none">停止</a>`;
@@ -1207,10 +1218,12 @@ async function loadDashboard() {
     html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch">`;
     html += `<div style="font-size:10px;font-weight:bold;color:var(--warn);margin-bottom:4px">⏳ 排队中 ${q.pending_count||0}</div>`;
     if (pending.length) {
+      const slotNames = {maintenance:'维护', fight:'刷关', annihilation:'剿灭', probe:'检测', login:'登录', connect:'连接', roguelike:'肉鸽'};
       for (const item of pending) {
         const timeStr = item.not_before ? item.not_before.slice(11, 16) : '';
+        const slotBadge = slotNames[item.slot] ? `<span style="color:var(--text3)">[${slotNames[item.slot]}]</span> ` : '';
         html += `<div style="font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">`;
-        html += `<span>${item.suspended ? '⏸' : ''} ${item.account_name}</span>`;
+        html += `<span>${item.suspended ? '⏸' : ''} ${slotBadge}${item.account_name}${item.task ? ` <span style="color:var(--accent)">${item.task}</span>` : ''}</span>`;
         html += `<span style="color:var(--text3)">${timeStr || item.source} <a href="#" onclick="dequeueAccount('${item.account_id}');return false" style="color:var(--danger);text-decoration:none">出队</a></span></div>`;
       }
     } else {
@@ -1421,7 +1434,8 @@ function showNewDispatchDialog(accts) {
       <div style="margin-bottom:8px;font-size:10px;color:var(--text3)">
         <label style="margin-right:8px"><input type="radio" name="dispatch-mode" value="" checked onchange="window._dispatchMode=this.value"> 日常</label>
         <label style="margin-right:8px"><input type="radio" name="dispatch-mode" value="anni" onchange="window._dispatchMode=this.value"> 含剿灭</label>
-        <label><input type="radio" name="dispatch-mode" value="anni-only" onchange="window._dispatchMode=this.value"> 仅剿灭</label>
+        <label style="margin-right:8px"><input type="radio" name="dispatch-mode" value="anni-only" onchange="window._dispatchMode=this.value"> 仅剿灭</label>
+        <label><input type="radio" name="dispatch-mode" value="probe" onchange="window._dispatchMode=this.value"> 仅检测</label>
       </div>
       <div class="btn-row">
         <button class="primary" onclick="submitDispatch()">开始调度</button>
@@ -1444,7 +1458,9 @@ async function submitDispatch() {
   const mode = window._dispatchMode || '';
   const include_anni = mode === 'anni' || mode === 'anni-only';
   const only_anni = mode === 'anni-only';
-  const r = await apiPost('/action/smart_selected', { account_ids: ids, include_anni, only_anni });
+  const body = { account_ids: ids, include_anni, only_anni };
+  if (mode === 'probe') body.mode = 'probe';  // 仅检测（关卡检测调度）
+  const r = await apiPost('/action/smart_selected', body);
   document.querySelector('.dialog-overlay')?.remove();
   if (r.ok) toast(`已调度 ${ids.length} 个账号`); else toast(r.error || '调度失败', 'error');
 }
@@ -4011,4 +4027,309 @@ function ganttTodayScroll() {
   if (!el) return;
   const win = window._ganttRange || 30;
   el.scrollLeft = Math.max(0, 150 + win * 14 - 250);
+}
+
+// ═══════════════════════════════════════════
+// 📦 材料规划（仓库识别 + 水位计划 — 2026-08-13）
+// ═══════════════════════════════════════════
+window._depotState = { sel: '', cfg: null, autoload: false };
+
+async function renderDepot(container) {
+  container.innerHTML = `<div style="padding:20px;color:var(--text3)">加载中...</div>`;
+  const [st, cfg, pgn, act] = await Promise.all([apiGet('/depot/status'), apiGet('/depot/config'), apiGet('/penguin/status'), apiGet('/activity/stages')]);
+  window._depotState.cfg = (cfg.ok ? cfg.config : null);
+  if (!st.ok) { container.innerHTML = `<div style="padding:20px;color:var(--danger)">❌ 加载失败，请 Ctrl+F5 强刷前端</div>`; return; }
+  const accts = st.accounts || [];
+  const fmt = t => t ? new Date(t * 1000).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+  const stateBadge = s => {
+    if (s.state === 'running') return `<span style="color:var(--accent)">⏳ 扫描中</span>`;
+    if (s.state === 'done') return `<span style="color:var(--ok,#4caf50)">✅ ${s.summary||''}</span>`;
+    if (s.state === 'error') return `<span style="color:var(--danger)">❌ ${(s.error||'').slice(0,60)}</span>`;
+    if (s.state === 'skipped') return `<span style="color:var(--text3)">⏭ ${s.reason||''}</span>`;
+    return `<span style="color:var(--text3)">—</span>`;
+  };
+  const sorted = [...accts].sort((a,b) => (b.plan_ts||b.depot_ts) - (a.plan_ts||a.depot_ts));
+  let html = `
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <span style="font-size:14px;font-weight:bold">📦 材料规划</span>
+    <span style="flex:1"></span>
+    <button class="small" onclick="depotScan()">🔍 扫描仓库（勾选账号）</button>
+    <button class="small" onclick="renderPage()">🔄 刷新</button>
+  </div>
+  <div style="font-size:10px;color:var(--text3);margin-bottom:8px">
+    仓库无上限：低于水位刷缺口；全达标刷余量最小材料。纯刷取不合成，计划当日有效，每日 ${cfg.ok?(cfg.config.daily_scan_time||'04:30'):'04:30'} 自动扫全部非挂起账号。
+  </div>
+  <div style="font-size:10px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    🐧 企鹅物流数据：${depotPenguinBadge(pgn)}
+    <button class="small" onclick="depotPenguinRefresh()">🔄 采集更新</button>
+  </div>
+  <div id="depot-activity" style="margin-bottom:8px"></div>
+  <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px">
+    <thead><tr style="background:var(--bg2)">
+      <th style="padding:4px;border:1px solid var(--border);text-align:left"><input type="checkbox" onchange="depotToggleAll(this)"></th>
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">账号</th>
+      <th style="padding:4px;border:1px solid var(--border)">主线章</th>
+      <th style="padding:4px;border:1px solid var(--border)">快照</th>
+      <th style="padding:4px;border:1px solid var(--border)">计划</th>
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">状态</th>
+      <th style="padding:4px;border:1px solid var(--border)"></th>
+    </tr></thead><tbody>`;
+  for (const s of sorted) {
+    const sel = window._depotState.sel === s.id;
+    html += `<tr style="${sel?'background:var(--bg3)':''}${s.suspended?';opacity:.5':''}">
+      <td style="padding:2px 4px;border:1px solid var(--border)"><input type="checkbox" class="depot-cb" data-id="${s.id}" ${s.suspended?'disabled':''}></td>
+      <td style="padding:4px;border:1px solid var(--border)">${s.name||s.id.slice(0,8)}${s.suspended?' <span style="color:var(--danger)">[挂起]</span>':''}</td>
+      <td style="padding:4px;border:1px solid var(--border);text-align:center">${s.mainline_chapter||'—'}</td>
+      <td style="padding:4px;border:1px solid var(--border);text-align:center">${fmt(s.depot_ts)}</td>
+      <td style="padding:4px;border:1px solid var(--border);text-align:center">${fmt(s.plan_ts)}</td>
+      <td style="padding:4px;border:1px solid var(--border)">${stateBadge(s)}</td>
+      <td style="padding:4px;border:1px solid var(--border);text-align:center"><button class="small" ${s.plan_ts?'':'disabled'} onclick="depotShowPlan('${s.id}')">查看计划</button></td>
+    </tr>`;
+  }
+  html += `</tbody></table>
+  <div id="depot-plan"></div>
+  <details style="margin-top:10px">
+    <summary style="cursor:pointer;font-size:12px;color:var(--text2)">⚙ 水位/预算/定时配置</summary>
+    <div id="depot-cfg" style="margin-top:8px"></div>
+  </details>`;
+  container.innerHTML = html;
+  renderDepotActivity(act);
+  renderDepotConfig();
+  if (window._depotState.sel) depotShowPlan(window._depotState.sel);
+  // 扫描中自动刷新
+  if (accts.some(a => a.state === 'running')) {
+    if (!window._depotState.autoload) {
+      window._depotState.autoload = true;
+      setTimeout(() => { window._depotState.autoload = false; renderPage(); }, 8000);
+    }
+  }
+}
+
+function depotToggleAll(cb) {
+  document.querySelectorAll('.depot-cb').forEach(c => { if (!c.disabled) c.checked = cb.checked; });
+}
+
+function depotPenguinBadge(pgn) {
+  if (!pgn || !pgn.ok) return `<span style="color:var(--danger)">未连接</span>`;
+  const last = pgn.last_refresh ? new Date(pgn.last_refresh * 1000).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+  const st = pgn.scan && pgn.scan.state === 'running' ? '⏳ 采集中' : '';
+  const chg = pgn.last_changed ? '（上次有变化，榜已重生成）' : '';
+  return `<span>上次更新 ${last} · ${pgn.snapshots} 个快照 · ${pgn.last_row_count} 对数据 ${chg}${st}</span>`;
+}
+
+async function depotPenguinRefresh() {
+  const r = await apiPost('/penguin/refresh', {});
+  if (r.ok) { toast('已启动企鹅物流采集（拉取约 1 分钟，完成后自动刷新页面）'); setTimeout(renderPage, 8000); }
+  else toast('采集启动失败: ' + (r.detail || ''));
+}
+
+// ── 🎪 活动关区块（自动识别 + 人工修正）──
+function renderDepotActivity(act) {
+  const box = document.getElementById('depot-activity');
+  if (!box) return;
+  const cfg = (act && act.ok) ? (act.config || {}) : {};
+  window._depotState.act = cfg;
+  const manual = cfg.manual ? ' <span style="color:var(--accent)">[人工修正]</span>' : '';
+  let h = `<details open style="margin-top:4px">
+    <summary style="cursor:pointer;font-size:11px;color:var(--text2)">🎪 活动关（${cfg.active ? (cfg.zone_name || '进行中') : '无进行中活动'}）${manual}</summary>
+    <div style="margin-top:6px;font-size:10px;line-height:1.8">`;
+  if (cfg.active) {
+    const mats = cfg.material || [];
+    const o = cfg.orundum || null;
+    h += `<div>材料关: ${mats.length ? mats.map(m => `${m.stage}=${m.item}(${m.rate})`).join('、') : '—'}</div>`;
+    h += `<div>搓玉关: ${o ? `${o.stage}=${o.item}(${o.rate})` : '—'}</div>`;
+    h += `<div>资源关: ${(cfg.resource || []).length ? cfg.resource.map(m => `${m.stage}=${m.item}`).join('、') : '—'}</div>`;
+    h += `<div>截止: ${cfg.until || '未知（按数据活跃度判定）'} · 样本活跃 ${(cfg.recent_times||0).toLocaleString()}</div>`;
+    h += `<div style="color:var(--text3)">分派: 补材料=库存最少材料关 · 搓玉=搓玉关 · 补资源=资源关；预检锁自动回退</div>`;
+  } else {
+    h += `<div style="color:var(--text3)">${cfg.reason || '等待每小时自动识别'}。活动开启当晚数据出来后自动切换。</div>`;
+  }
+  h += `<div style="margin-top:6px;display:flex;gap:6px">
+    <button class="small" onclick="depotActivityRefresh()">🔄 重新识别</button>
+    <button class="small" onclick="depotActivityManual()">✏️ 人工修正</button>
+  </div></div></details>`;
+  box.innerHTML = h;
+}
+
+async function depotActivityRefresh() {
+  const r = await apiPost('/activity/refresh', {});
+  if (r.ok) { toast('已启动活动识别，稍后自动刷新'); setTimeout(renderPage, 6000); }
+  else toast('识别启动失败: ' + (r.detail || ''));
+}
+
+function depotActivityManual() {
+  const box = document.getElementById('depot-activity');
+  if (!box) return;
+  const cfg = window._depotState.act || {};
+  const mats = (cfg.material && cfg.material.length) ? cfg.material : [{stage:'',item:''},{stage:'',item:''},{stage:'',item:''}];
+  const o = cfg.orundum || {stage:'',item:''};
+  const mrows = mats.map((m,i) => `<div style="display:flex;gap:4px;margin:3px 0">材料关${i+1}: <input id="actm-s${i}" value="${m.stage||''}" placeholder="关卡 如 TO-7" style="width:80px"> <input id="actm-i${i}" value="${m.item||''}" placeholder="材料 如 糖组" style="width:90px"></div>`).join('');
+  const h = `<div style="font-size:10px;margin-top:4px;padding:6px;border:1px solid var(--border);border-radius:4px">
+    <div style="margin-bottom:4px;color:var(--text2)">✏️ 人工修正活动关（保存后自动识别不再覆盖）</div>
+    ${mrows}
+    <div style="display:flex;gap:4px;margin:3px 0">搓玉关: <input id="acto-s" value="${o.stage||''}" placeholder="关卡 如 TO-4" style="width:80px"> <input id="acto-i" value="${o.item||''}" placeholder="材料 如 固源岩" style="width:90px"></div>
+    <div style="display:flex;gap:4px;margin:3px 0">截止日: <input id="act-until" value="${cfg.until||''}" placeholder="YYYY-MM-DD" style="width:90px">
+      <label><input id="act-active" type="checkbox" ${cfg.active!==false?'checked':''}> 活动中</label></div>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <button class="small" onclick="depotActivitySave()">💾 保存修正</button>
+      <button class="small danger" onclick="depotActivityClear()">清空修正(恢复自动)</button>
+    </div>
+  </div>`;
+  box.innerHTML = h;
+}
+
+async function depotActivitySave() {
+  const material = [];
+  for (let i = 0; i < 3; i++) {
+    const s = document.getElementById(`actm-s${i}`).value.trim();
+    const it = document.getElementById(`actm-i${i}`).value.trim();
+    if (s && it) material.push({stage: s, item: it});
+  }
+  const os = document.getElementById('acto-s').value.trim();
+  const oi = document.getElementById('acto-i').value.trim();
+  const body = {
+    material, active: document.getElementById('act-active').checked,
+    until: document.getElementById('act-until').value.trim() || undefined,
+    orundum: (os && oi) ? {stage: os, item: oi} : null,
+  };
+  const r = await apiPost('/activity/stages', body);
+  if (r.ok) { toast('活动配置已保存（人工修正优先）'); renderPage(); }
+  else toast('保存失败: ' + (r.detail || ''));
+}
+
+async function depotActivityClear() {
+  const r = await apiPost('/activity/stages', {manual: false});
+  if (r.ok) { toast('已清空人工修正'); renderPage(); }
+  else toast('操作失败: ' + (r.detail || ''));
+}
+
+function depotScan() {
+  const ids = Array.from(document.querySelectorAll('.depot-cb:checked')).map(c => c.dataset.id);
+  if (!ids.length) { toast('先勾选要扫描的账号'); return; }
+  apiPost('/depot/scan', { account_ids: ids }).then(r => {
+    if (r.ok) { toast(`已启动扫描 ${r.count} 个账号（后台串行，每号约 2-4 分钟）`); setTimeout(renderPage, 2000); }
+    else toast('扫描启动失败: ' + (r.detail || r.error || ''));
+  }).catch(e => toast('扫描启动失败: ' + e.message));
+}
+
+async function depotShowPlan(aid) {
+  window._depotState.sel = aid;
+  const el = document.getElementById('depot-plan');
+  if (!el) return;
+  el.innerHTML = `<div style="padding:10px;color:var(--text3)">加载计划...</div>`;
+  try {
+    const p = await apiGet('/depot/plan?account_id=' + encodeURIComponent(aid));
+    if (!p || p.error) { el.innerHTML = `<div style="padding:10px;color:var(--danger)">${(p&&(p.detail||p.error))||'加载失败'}</div>`; return; }
+    let h = `<div style="font-size:13px;font-weight:bold;margin:6px 0">📋 ${p.account||''} 计划 ${p.ts||''} <span style="color:var(--text3);font-weight:normal;font-size:10px">（当日有效${p.chapter?`，进度 ≤${p.chapter} 章`:''}）</span></div>`;
+    if (p.all_met) h += `<div style="color:var(--ok,#4caf50);font-size:12px">✅ 全部达标 ${p.met_count}/${p.total} — 刷余量最小材料保底</div>`;
+    else {
+      const extras = [];
+      if (p.skipped && p.skipped.length) extras.push(`${p.skipped.length} 个无推荐关`);
+      if (p.locked && p.locked.length) extras.push(`${p.locked.length} 个进度锁定`);
+      h += `<div style="color:#ff9800;font-size:12px">⚠️ ${p.met_count}/${p.total} 达标, ${p.gap_fills.length} 个低于水位${extras.length?'（'+extras.join('、')+'）':''}</div>`;
+    }
+    h += `<table style="width:100%;border-collapse:collapse;font-size:10px;margin:8px 0">
+      <thead><tr style="background:var(--bg2)">
+      <th style="padding:3px 6px;border:1px solid var(--border);text-align:left">材料</th>
+      <th style="padding:3px 6px;border:1px solid var(--border)">仓库</th>
+      <th style="padding:3px 6px;border:1px solid var(--border)">水位</th>
+      <th style="padding:3px 6px;border:1px solid var(--border)">余量</th>
+      <th style="padding:3px 6px;border:1px solid var(--border);text-align:left">推荐关</th>
+      <th style="padding:3px 6px;border:1px solid var(--border)">次数</th>
+      <th style="padding:3px 6px;border:1px solid var(--border)">期望收获</th>
+      <th style="padding:3px 6px;border:1px solid var(--border)">期望AP</th>
+      </tr></thead><tbody>`;
+    for (const r of p.rows) {
+      const locked = r.locked;
+      const pr = (p.probe||{})[r.stage];
+      const badge = locked ? '🔒' : (pr ? (pr.ok === true ? '🟢' : pr.ok === false ? '🔴' : '⚪') : '');
+      const stage = (locked ? `锁(最优${r.best})` : (r.stage||'') + (r.alt_of?' *':'') + badge);
+      const rounds = locked ? '-' : (r.rounds!==undefined?r.rounds:'-');
+      const gain = locked ? '-' : (r.rounds?(r.expected_gain??0):'-');
+      const apc = locked ? '-' : (r.ap_cost!==undefined?r.ap_cost:'-');
+      const color = r.margin < 0 ? 'color:var(--danger)' : '';
+      h += `<tr><td style="padding:3px 6px;border:1px solid var(--border);text-align:left">${r.name}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:right">${r.cur}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:right">${r.level}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:right;${color}">${r.margin>0?'+':''}${r.margin}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:left">${stage}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:right">${rounds}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:right">${gain}</td>
+        <td style="padding:3px 6px;border:1px solid var(--border);text-align:right">${apc}</td></tr>`;
+    }
+    h += `</tbody></table>`;
+    if (p.gap_fills && p.gap_fills.length) {
+      h += `<div style="font-size:11px;font-weight:bold;margin:4px 0">刷取任务（AP 升序，合计 ${p.total_ap} AP）</div><div style="font-size:10px;color:var(--text2);line-height:1.7">`;
+      for (const r of p.gap_fills) h += `▸ ${r.name} 缺${r.gap} → ${r.stage} × ${r.rounds}（${r.ap_cost} AP${r.alt_of?`，次优于${r.alt_of}`:''}）<br>`;
+      h += `</div>`;
+      if (p.days && p.days.length) {
+        h += `<div style="font-size:11px;font-weight:bold;margin:4px 0">多日排程（每日预算 ${p.budget} AP）</div><div style="font-size:10px;color:var(--text2);line-height:1.7">`;
+        p.days.forEach((d, i) => {
+          h += `D${i+1}: ` + d.items.map(x => `${x.name}×${x.rounds}`).join(' + ') + `（${d.ap_used} AP）<br>`;
+        });
+        h += `→ 共 ${p.days.length} 天</div>`;
+      }
+    }
+    if (p.locked && p.locked.length) h += `<div style="font-size:10px;color:var(--danger);margin-top:4px">🔒 无法刷取: ${p.locked.map(r=>`${r.name}缺${r.gap}(${r.lock_reason||'锁定'})`).join('、')}</div>`;
+    if (p.skipped && p.skipped.length) h += `<div style="font-size:10px;color:var(--text3);margin-top:4px">⏭ 无推荐关: ${p.skipped.map(r=>r.name).join('、')}</div>`;
+    if (p.probe && Object.keys(p.probe).length) {
+      h += `<div style="font-size:10px;color:var(--text2);margin-top:4px;line-height:1.6">🔎 代理预检: `;
+      h += Object.entries(p.probe).map(([st, pr]) => {
+        const tag = pr.ok === true ? '🟢可刷' : pr.ok === false ? '🔴锁定' : '⚪未测';
+        return `${st} ${tag}${pr.detail?`（${pr.detail.slice(0,40)}）`:''}`;
+      }).join(' · ');
+      h += `</div>`;
+    }
+    if (p.topup) h += `<div style="font-size:10px;color:var(--accent);margin-top:4px">🎯 补刀（${p.all_met?'当日预算':'排程末剩余'}）: ${p.topup.name} 余量${p.topup.margin>0?'+':''}${p.topup.margin} → ${p.topup.stage} × ${p.topup.rounds}</div>`;
+    el.innerHTML = h;
+  } catch (e) {
+    el.innerHTML = `<div style="padding:10px;color:var(--danger)">加载失败: ${e.message}</div>`;
+  }
+}
+
+function renderDepotConfig() {
+  const box = document.getElementById('depot-cfg');
+  if (!box) return;
+  const cfg = window._depotState.cfg;
+  if (!cfg) { box.innerHTML = `<div style="color:var(--danger)">配置加载失败</div>`; return; }
+  const mats = cfg.materials || {};
+  let h = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:11px">
+    每日AP预算 <input id="depot-budget" type="number" value="${cfg.ap_budget_per_day||1000}" style="width:70px">
+    定时扫描 <input id="depot-time" type="text" value="${cfg.daily_scan_time||'04:30'}" style="width:60px">
+    启用 <input id="depot-enabled" type="checkbox" ${cfg.scan_enabled!==false?'checked':''}>
+    <button class="small" onclick="depotSaveCfg()">💾 保存配置</button>
+  </div>`;
+  h += `<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--bg2)">`;
+  const names = Object.keys(mats);
+  const cols = Math.ceil(names.length / 2);
+  for (let c = 0; c < 2; c++) h += `<th style="padding:3px 6px;border:1px solid var(--border);text-align:left">材料</th><th style="padding:3px 6px;border:1px solid var(--border)">水位</th>`;
+  h += `</tr></thead><tbody>`;
+  for (let i = 0; i < cols; i++) {
+    h += `<tr>`;
+    for (let c = 0; c < 2; c++) {
+      const n = names[i + c * cols];
+      if (!n) { h += `<td colspan="2" style="border:1px solid var(--border)"></td>`; continue; }
+      h += `<td style="padding:2px 6px;border:1px solid var(--border)">${n}</td>
+        <td style="padding:2px 6px;border:1px solid var(--border);text-align:center"><input type="number" data-mat="${n}" value="${mats[n]}" style="width:60px"></td>`;
+    }
+    h += `</tr>`;
+  }
+  h += `</tbody></table>`;
+  box.innerHTML = h;
+}
+
+async function depotSaveCfg() {
+  const cfg = window._depotState.cfg || {};
+  const mats = {};
+  document.querySelectorAll('[data-mat]').forEach(inp => {
+    const v = parseInt(inp.value, 10);
+    if (!isNaN(v) && v >= 0) mats[inp.dataset.mat] = v;
+  });
+  const budget = parseInt(document.getElementById('depot-budget').value, 10);
+  const time = document.getElementById('depot-time').value.trim();
+  const enabled = document.getElementById('depot-enabled').checked;
+  if (!/^\d{2}:\d{2}$/.test(time)) { toast('定时时间格式 HH:MM'); return; }
+  const r = await apiPost('/depot/config', { materials: mats, ap_budget_per_day: budget, daily_scan_time: time, scan_enabled: enabled });
+  if (r.ok) { toast('配置已保存'); window._depotState.cfg = { ...cfg, materials: mats, ap_budget_per_day: budget, daily_scan_time: time, scan_enabled: enabled }; renderDepotConfig(); }
+  else toast('保存失败: ' + (r.detail || ''));
 }

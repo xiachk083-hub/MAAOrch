@@ -215,6 +215,8 @@ class AccountRunner:
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
+        self._probe_pending: dict[str, dict] = {}  # aid -> {ac, inst_dir, ts, probe_stages}（关卡检测待跑）
+        self._probe_running: dict[str, bool] = {}  # aid -> 关卡检测进行中（抑制 stall/error 误杀）
         from infrastructure.logger import Logger
         self._log = Logger("runner")
         self._clean_orphan_marks()
@@ -413,7 +415,17 @@ class AccountRunner:
         if not ac.get("adb_path") and not ac.get("_connect_only"):
             self.emit_log(f"{ac.get('name', aid)} 未找到 adb.exe，跳过")
             return False
-        inst = self._get_free_instance(aid)
+        # 自定义 MAA 实例目录（l-4/l-6 等 fz-maa 业务机 — 2026-08-13 用户:
+        # 像正常账号一样管理但不清日常，MAA 实例在 E:\maa-alas\fz-maa\l\l-N）。
+        # 不走实例池（独立实例，不占 MAAOrch 的 instances/N）。
+        if ac.get("maa_instance_dir"):
+            _custom = Path(ac["maa_instance_dir"])
+            if not (_custom / "MAA.exe").exists():
+                self.emit_log(f"{ac.get('name', aid)} 自定义 MAA 目录无效: {ac['maa_instance_dir']}")
+                return False
+            inst = (-1, str(_custom))
+        else:
+            inst = self._get_free_instance(aid)
         if not inst:
             from services.maa_download import _is_source_ready
             _src = Path(__file__).parent / "maa" / "source"
@@ -876,13 +888,45 @@ class AccountRunner:
             pass
         try:
             # Unified dispatch path: use slot-based dispatch_id
-            from services.dispatch_pool import get_template
+            from services.dispatch_pool import get_template_info
             _slot = ac.get("_slot", "")
             _did_key = f"_dispatch_{_slot}" if _slot else "dispatch_id"
             did = ac.get(_did_key, "") or ac.get("dispatch_id", "")
-            task_list = get_template(did) if did else None
-            if task_list is None:
-                if mode == "roguelike":
+            task_list, params = (get_template_info(did) if did else ([], {}))
+            if not task_list:
+                # slot 模板缺失回退固定默认（2026-08-13: 重启丢账号瞬态指针
+                # 后模板找不回，按 slot 语义兜底 — maintenance/fight/annihilation）
+                _slot_defaults = {
+                    "maintenance": ["StartUp", "Infrast", "Recruit", "Mall", "Award"],
+                    "fight": ["StartUp", "Fight"],
+                    "annihilation": ["StartUp", "Fight"],
+                    "roguelike": ["StartUp", "Roguelike"],
+                }
+                if _slot in _slot_defaults:
+                    task_list = list(_slot_defaults[_slot])
+            if not task_list:
+                if ac.get("roguelike_only"):
+                    # 账号级肉鸽（l-4/l-6 等业务机 — 2026-08-13 用户: 像正常
+                    # 账号一样管理但不清日常，只跑肉鸽 24*7）。
+                    task_list = ["StartUp", "Roguelike"]
+                    # 主题轮换（l-4 打 5 主题 / l-6 只界园）：当前主题写进
+                    # task_settings（注入时应用 theme + 满级停止），完成时
+                    # _finish_completed 推进到下一主题（2026-08-13）。
+                    try:
+                        _themes = ac.get("roguelike_themes") or []
+                        if _themes:
+                            _idx = int(ac.get("roguelike_theme_idx", 0) or 0) % len(_themes)
+                            _theme = _themes[_idx]
+                            _ts = dict(ac.get("task_settings") or {})
+                            _rl = dict(_ts.get("Roguelike") or {})
+                            _rl["theme"] = _theme
+                            _rl["stop_when_level_max"] = True  # 满级自动停（MAA CheckLevelMax）
+                            _ts["Roguelike"] = _rl
+                            ac["task_settings"] = _ts
+                            self.emit_log(f"🎮 {ac.get('name', aid)} 肉鸽主题 {_idx + 1}/{len(_themes)}: {_theme}")
+                    except Exception:
+                        pass
+                elif mode == "roguelike":
                     task_list = ["StartUp", "Roguelike"]
                 elif mode == "reclamation":
                     task_list = ["StartUp", "Reclamation"]
@@ -899,14 +943,25 @@ class AccountRunner:
             else:
                 if "Annihilation" in task_list:
                     task_list.remove("Annihilation")
+            # Probe 模式（关卡检测 — 调度台"仅检测"）：MAA 只跑 StartUp 登录，
+            # 检测由 StageProbe 子进程完成（不占 MAA 任务链）。注入时过滤
+            # Probe（MAA 不认此任务），登录完成后 _run_probe_for_account 接管。
+            _probe_mode = "Probe" in task_list
+            if _probe_mode:
+                task_list = [t for t in task_list if t != "Probe"]
             plan_txt = ",".join(task_list)
-            self.emit_log(f"🧠 智能调度: {plan_txt}")
-            self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list}")
-            self.ctx.cfg.inject_smart(task_list, ac, str(config_dir))
+            self.emit_log(f"🧠 智能调度: {plan_txt}" + (" (+Probe 关卡检测)" if _probe_mode else ""))
+            self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list} params={params}")
+            self.ctx.cfg.inject_smart(task_list, ac, str(config_dir), params=params)
             self.emit_log(f"注入配置: {config_dir}/")
+            if _probe_mode:
+                self._probe_pending[aid] = {
+                    "ac": ac, "inst_dir": str(inst_dir), "ts": time.time(),
+                    "probe_stages": ac.get("probe_stages") or [],
+                }
             try:
                 from services.log_watcher import record_event
-                record_event(aid, "launch", f"task_list={plan_txt}")
+                record_event(aid, "launch", f"task_list={plan_txt}" + ("+Probe" if _probe_mode else ""))
             except Exception:
                 pass
             # 防孤儿 MAA: 启动等待期间（模拟器冷启动/ADB 探测）队列可能已释放
@@ -990,7 +1045,7 @@ class AccountRunner:
                                            "blacklist": ["碳", "家具", "加急许可"]}))
                 elif t == "Award":
                     tasks.append(("Award", {"enable": True, "award": True, "mail": True,
-                                            "free_gacha": False, "orundum": True}))
+                                            "free_gacha": True, "orundum": True}))
                 elif t == "Fight":
                     stage = self._pick_daily_stage(ac)
                     tasks.append(("Fight", {"enable": True, "stage": stage, "times": 99,
@@ -1185,6 +1240,88 @@ class AccountRunner:
         except Exception:
             pass
 
+    def _run_probe_for_account(self, aid: str) -> None:
+        """Probe 模式执行（关卡检测 — 调度台"仅检测"入队）。
+
+        MAA 只跑 StartUp 登录（注入时已过滤 Probe），登录完成后这里接管：
+        逐关 StageProbe 检测（导航 + 判定）→ 结果写 stage_ability →
+        触发产线映射 → 完成收尾。检测是子进程（StageProbe 设计），
+        不阻塞 MAA 任务链；MAA 此时已登录，直接复用。
+        """
+        pend = self._probe_pending.pop(aid, None)
+        if not pend:
+            return
+        ac = pend["ac"]
+        name = ac.get("name", aid)
+        inst_dir = pend["inst_dir"]
+        stages = pend.get("probe_stages") or ac.get("probe_stages") or [
+            "Chernobog@Annihilation", "LungmenOutskirts@Annihilation",
+            "LungmenDowntown@Annihilation"]
+        self._probe_running[aid] = True  # 抑制 stall/error 误杀（检测期间 MAA 挂着）
+        self.emit_log(f"🔬 {name} 开始关卡检测（{len(stages)} 关）...")
+
+        # MAA GUI 的 StartUp 已完成（游戏已登录）— 先优雅杀掉 MAA，让
+        # StageProbe 子进程独占 ADB（双连接会抢端口/冲突 — 2026-08-12）。
+        try:
+            _p0 = self._procs.get(aid)
+            if isinstance(_p0, subprocess.Popen) and _p0.poll() is None:
+                self._kill_maa_graceful(_p0, name)
+                time.sleep(1)
+        except Exception:
+            pass
+
+        def _do_probe():
+            try:
+                from services.stage_probe import StageProbe
+                client = {"Bilibili": "Bilibili", "YoStarJP": "JP",
+                          "YoStarEN": "EN"}.get(ac.get("game_client", ""), "Official")
+                # 实例号从 inst_dir 推导（检测必须用队列分配的实例，不是
+                # 固定实例 1 — 2026-08-12: 模拟器/实例一一对应）。
+                _ma = 1
+                try:
+                    _ma = int(Path(inst_dir).name)
+                except Exception:
+                    pass
+                probe = StageProbe(str(ac.get("emu_instance_index", "")),
+                                   client_type=client, maa_instance=_ma)
+                results = {}
+                for st in stages:
+                    try:
+                        r = probe.probe(st)
+                        results[st] = r.get("verdict", "ERROR")
+                        self.emit_log(f"🔬 {name} {st}: {r.get('verdict')} "
+                                      f"({r.get('score', '')}) {r.get('detail', '')[:40]}")
+                    except Exception as e:
+                        results[st] = "ERROR"
+                        self.emit_log(f"🔬 {name} {st}: ERROR {e}")
+                # 持久化 stage_ability + 产线映射
+                try:
+                    mw = getattr(self.ctx, "_mw", None)
+                    if mw is not None:
+                        ability = dict(ac.get("stage_ability") or {})
+                        ability.update(results)
+                        ac["stage_ability"] = ability
+                        from models.config_manager import save_config
+                        save_config(mw.config)
+                        self.emit_log(f"🔬 {name} 检测完成: " +
+                                      ", ".join(f"{k}={v}" for k, v in results.items()))
+                except Exception as e:
+                    self.emit_log(f"🔬 {name} 结果持久化失败: {e}")
+            except Exception as e:
+                self.emit_log(f"🔬 {name} 检测异常: {e}")
+            finally:
+                self._probe_running.pop(aid, None)  # 检测结束，恢复 stall/error 检测
+                # 完成收尾（复用正常完成路径 — 关闭游戏 + cleanup + 出队）
+                try:
+                    _ac = self._active.get(aid)
+                    _p = self._procs.get(aid)
+                    if _ac and isinstance(_p, subprocess.Popen):
+                        self._finish_completed(aid, _ac, _p)
+                except Exception:
+                    pass
+
+        threading.Thread(target=_do_probe, daemon=True).start()
+
     def _finish_completed(self, aid: str, ac: dict, p) -> None:
         """完成收尾（AllTasksCompleted）— 轮询检测与 LogWatcher 事件共用。
         完成标记 _done_flags 防 _wait_exit 抢先 cleanup 的竞态（2026-08-11）。
@@ -1195,6 +1332,25 @@ class AccountRunner:
         except Exception:
             pass
         self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+        # 肉鸽主题推进（l-4/l-6 — 满级停止后换下一主题，2026-08-13 用户:
+        # MAA 自己刷到满级就停止，停止后我们切下一个主题继续）。
+        try:
+            _themes = ac.get("roguelike_themes") or []
+            if ac.get("roguelike_only") and _themes:
+                _idx = int(ac.get("roguelike_theme_idx", 0) or 0)
+                _next = (_idx + 1) % len(_themes)
+                ac["roguelike_theme_idx"] = _next
+                try:
+                    mw = getattr(self.ctx, "_mw", None)
+                    if mw is not None:
+                        from models.config_manager import save_config
+                        save_config(mw.config)
+                except Exception:
+                    pass
+                self.emit_log(f"🎮 {ac.get('name', aid)} 肉鸽主题推进: "
+                              f"{_themes[_idx]} → {_themes[_next]}（下一轮生效）")
+        except Exception:
+            pass
         tasks, sanity, drops = self._parse_log(aid)
         _cur = (sanity or {}).get("current")
         _mx = (sanity or {}).get("max") or 1
@@ -1220,7 +1376,19 @@ class AccountRunner:
         except Exception:
             pass
         self._cleanup(aid, 0, tasks, sanity, drops)
-        if not _final and not ac.get("_connect_only"):
+        # 肉鸽账号（l-4/l-6）24*7 自动续跑：满级停止/一局结束都重新入队，
+        # 下一轮用推进后的主题（2026-08-13）。slot=roguelike 让短任务优先。
+        if ac.get("roguelike_only"):
+            try:
+                mw = getattr(self.ctx, "_mw", None)
+                lq = getattr(mw, "launch_queue", None)
+                if lq is not None and ac.get("emu_instance_index"):
+                    self.emit_log(f"↻ {ac.get('name', aid)} 肉鸽一轮结束，自动续跑（24*7）")
+                    lq.enqueue(aid, "auto", priority=1000, slot="roguelike")
+                    lq.tick()
+            except Exception:
+                pass
+        elif not _final and not ac.get("_connect_only"):
             try:
                 mw = getattr(self.ctx, "_mw", None)
                 lq = getattr(mw, "launch_queue", None)
@@ -1238,6 +1406,11 @@ class AccountRunner:
             p = self._procs.get(aid)
             if not ac or not isinstance(p, subprocess.Popen) or p.poll() is not None:
                 return  # 已清理/已结束 — 防重复触发
+            # Probe 模式（关卡检测）：MAA 只跑 StartUp 登录，登录完成后
+            # 由 StageProbe 逐关检测，完成后才走完成收尾（2026-08-12）。
+            if aid in self._probe_pending:
+                self._run_probe_for_account(aid)
+                return
             self._finish_completed(aid, ac, p)
         elif event == "adb_connected":
             # MAA 第一次成功调 adb = 已连接模拟器 — 启动节流就绪信号
@@ -1252,6 +1425,10 @@ class AccountRunner:
                 except Exception:
                     pass
         elif event == "subtask_error":
+            # Probe 检测进行中（MAA 挂着等 StageProbe 子进程）— 跳过错误
+            # 窗口检测，防误杀（2026-08-12 关卡检测调度）。
+            if self._probe_running.get(aid):
+                return
             # 连续子任务错误（游戏崩溃/流程异常 → MAA 反复报错，2026-08-11
             # 用户: MAA 日志会报任务错误）— 2 分钟内 ≥3 次 + asst.log 停滞
             # （MAA 无进展）才判定异常。启动早期（游戏加载）的正常识别
@@ -1295,6 +1472,9 @@ class AccountRunner:
             except Exception:
                 pass
         elif event == "stall_loop":
+            # Probe 检测进行中（MAA 挂着等 StageProbe）— 跳过空转检测
+            if self._probe_running.get(aid):
+                return
             # 空转检测（DoNothing 循环 ~3-5 分钟 — 2026-08-11 官-41 PRTS1
             # 空转不触发卡死检测的盲区: 日志持续写 + 无 SubTaskError）。
             # 第 1 次: 杀 MAA 自动重启（偶发画面卡）；第 2 次: 关卡不可用
@@ -2221,6 +2401,8 @@ class AccountRunner:
 
     def _cleanup(self, aid: str, exit_code: int, tasks: list[dict], sanity: dict | None = None, drops: dict | None = None) -> None:
         self._inst_reserved.pop(aid, None)
+        self._probe_pending.pop(aid, None)  # 清理未跑/跑一半的关卡检测（防泄漏）
+        self._probe_running.pop(aid, None)
         # 停止日志监控线程
         try:
             _w = self._watchers.pop(aid, None)

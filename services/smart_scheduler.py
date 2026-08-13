@@ -180,6 +180,16 @@ def _is_annihilation_done_this_week(account_id: str) -> bool:
 
 def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
     try:
+        # 实时快照优先（最后进关卡前体力 — 2026-08-12 用户: 以最后实时的
+        # 结果为准），快照缺失才读 stats.json 死值。
+        try:
+            from services.sanity_tracker import get as _sn_get
+            snap = _sn_get(account_id)
+            if snap and snap.get("current") is not None:
+                cur, mx = snap["current"], snap.get("max") or 1
+                return (cur / mx) * 100 >= threshold
+        except Exception:
+            pass
         sp = Path(__file__).parent / "accounts" / account_id / "stats.json"
         if not sp.exists():
             return True
@@ -210,13 +220,16 @@ def _check_sanity_above_threshold(account_id: str, threshold: int) -> bool:
 
 def _get_material_stage(account: dict, global_cfg: dict) -> str | None:
     try:
-        sp = Path(__file__).parent / "accounts" / account["id"] / "depot.json"
+        # 快照在 models/accounts/<id>/depot.json 且库存键是 named
+        # （旧代码 services/accounts + items 键恒取不到 — 2026-08-13 修复）
+        sp = (Path(__file__).parent.parent / "models" / "accounts"
+              / account["id"] / "depot.json")
         if not sp.exists():
             return None
         depot = _cached_read_json(sp)
         if depot is None:
             return None
-        items = depot.get("items", {})
+        items = depot.get("named", {})
         materials = global_cfg.get("materials", [])
         sorted_mats = sorted(materials, key=lambda m: m.get("priority", 99))
         today_day = get_today_key()

@@ -60,6 +60,12 @@ class Account:
     uid: str = ""
     suspended: bool = False
     stage_ability: dict = field(default_factory=dict)
+    # 主线进度（章数）— 材料规划选关用: 0=未设置(不过滤, 按最优关出计划);
+    # 如 10=只规划 ≤10 章可刷的关（2026-08-13 材料规划产品化）
+    mainline_chapter: int = 0
+    # 刷取标签 — 每日刷关分派: material(补材料,默认)/orundum(搓玉)/resource(补资源)
+    # 活动/非活动双模式分派见 services/farm_dispatch.py（2026-08-13 用户拍板）
+    farm_tag: str = "material"
 
     # Fight strategy (kept as dataclass fields so from_dict/to_dict persist them —
     # dynamic attributes were silently dropped on reload, resetting configs)
@@ -71,6 +77,11 @@ class Account:
     fight_materials: list = field(default_factory=list)
     fight_times_per_stage: int = 3
     fight_series: int = 1
+
+    # 肉鸽业务机（l-4/l-6 — 2026-08-13 用户: 只刷肉鸽不清日常，24*7）
+    roguelike_only: bool = False
+    roguelike_themes: list = field(default_factory=list)
+    roguelike_theme_idx: int = 0
 
     # ---- Backward-compatible dict access ----
     def __getitem__(self, key: str):
