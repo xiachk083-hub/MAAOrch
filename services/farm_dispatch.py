@@ -19,7 +19,7 @@ import time
 
 ROOT = pathlib.Path(__file__).parent.parent
 
-# 资源本周分流（与 smart_scheduler.MATERIAL_STAGES 一致 — 2026-08-13）
+# 资源本周分流（smart_scheduler 旧表已删 — 2026-08-14 单点收敛，本表唯一）
 RES_DAYS = {
     "lmd": {"stage": "CE-6", "fallback": "CE-5",
             "days": {"wed", "sat", "sun"}},

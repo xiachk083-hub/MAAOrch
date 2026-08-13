@@ -550,14 +550,10 @@ class ConfigService:
                         else:
                             day_stage = default
                     else:
-                        from services.smart_scheduler import _arknights_now, _get_material_stage
-                        weekday_names = ["mon","tue","wed","thu","fri","sat","sun"]
-                        today_key = weekday_names[_arknights_now().weekday()]
-                        day_stage = ac.get(f"smart_{today_key}", "") or ac.get("smart_stage", "")
-                        if ac.get("smart_materials_enabled", True):
-                            mat_stage = _get_material_stage(ac, self.ctx.config.get("smart_global", {}))
-                            if mat_stage:
-                                day_stage = mat_stage
+                        # 旧 smart_global.materials 选关逻辑已删（单点收敛
+                        # 2026-08-14：材料关选择只有 farm_dispatch 一个账房，
+                        # 分派无结果回退 default，不再走第二套表）
+                        day_stage = default
                 day_stage = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff_\-]', '', day_stage) if day_stage else ""
 
                 existing_tq = c.get("TaskQueue", [])

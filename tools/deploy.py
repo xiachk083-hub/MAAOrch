@@ -49,7 +49,6 @@ DEFAULT_FILES = [
     "services/penguin_data.py",
     "services/activity_tracker.py",
     "services/farm_dispatch.py",
-    "services/smart_scheduler.py",
     "services/dispatch_pool.py",
     # 2026-08-14 补全：主链路依赖此前不在清单（目标机靠存量文件运行，
     # 一旦缺失 import 即崩全链 — 全面盘点发现约半数模块脱节）
