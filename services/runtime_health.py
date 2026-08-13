@@ -39,7 +39,7 @@ def _pid_alive(pid: int) -> bool:
 
 
 def _running_emulators() -> dict[str, dict]:
-    """{index: info} for emulators with process started."""
+    """{index: info} for emulators with process started. 查询失败返回 None。"""
     out = {}
     try:
         r = subprocess.run([MM, "info", "-v", "all"], capture_output=True, text=True,
@@ -50,7 +50,9 @@ def _running_emulators() -> dict[str, dict]:
             if info.get("is_process_started"):
                 out[str(idx)] = info
     except Exception:
-        pass
+        # 2026-08-14 修复：失败静默空集 = 僵尸 VMM 清理把运行中模拟器
+        # 全量误杀面（92a3d6d 审查复核）— 必须显式区分失败与真空集
+        return None
     return out
 
 
@@ -141,31 +143,36 @@ def check_health(mw) -> dict:
     # 保护: 启动 5 分钟内不判僵尸（boot 中/刚 launch 的模拟器）。
     try:
         _running = _running_emulators()
-        import psutil as _ps
-        import re as _re
-        import time as _time
-        for _p in _ps.process_iter(["name", "cmdline", "pid", "create_time"]):
-            try:
-                if _p.info["name"] != "MuMuVMMHeadless.exe":
-                    continue
-                _m = _re.search(r"MuMuPlayer-12\.0-(\d+)", " ".join(_p.info["cmdline"] or []))
-                if not _m:
-                    continue
-                _idx = _m.group(1)
-                if _idx in _running:
-                    counts["vmm"] = counts.get("vmm", 0) + 1
-                    continue
-                # boot 保护: VMM 刚起（<5 分钟）可能是 launch 中的模拟器
-                if _time.time() - (_p.info["create_time"] or 0) < 300:
-                    continue
-                subprocess.run(["taskkill", "/F", "/PID", str(_p.info["pid"])],
-                               capture_output=True, timeout=5,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                counts["zombie_vmm_killed"] = counts.get("zombie_vmm_killed", 0) + 1
-                issues.append({"severity": "warning", "category": "zombie_vmm",
-                               "detail": f"僵尸 VMM: #{_idx} 模拟器不在运行，已清理"})
-            except Exception:
-                pass
+        if _running is None:
+            # 查询失败跳过僵尸清理（防全量误杀 — 2026-08-14）
+            issues.append({"severity": "info", "category": "vmm_query",
+                           "detail": "MuMuManager info all 查询失败，跳过僵尸 VMM 清理"})
+        else:
+            import psutil as _ps
+            import re as _re
+            import time as _time
+            for _p in _ps.process_iter(["name", "cmdline", "pid", "create_time"]):
+                try:
+                    if _p.info["name"] != "MuMuVMMHeadless.exe":
+                        continue
+                    _m = _re.search(r"MuMuPlayer-12\.0-(\d+)", " ".join(_p.info["cmdline"] or []))
+                    if not _m:
+                        continue
+                    _idx = _m.group(1)
+                    if _idx in _running:
+                        counts["vmm"] = counts.get("vmm", 0) + 1
+                        continue
+                    # boot 保护: VMM 刚起（<5 分钟）可能是 launch 中的模拟器
+                    if _time.time() - (_p.info["create_time"] or 0) < 300:
+                        continue
+                    subprocess.run(["taskkill", "/F", "/PID", str(_p.info["pid"])],
+                                   capture_output=True, timeout=5,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    counts["zombie_vmm_killed"] = counts.get("zombie_vmm_killed", 0) + 1
+                    issues.append({"severity": "warning", "category": "zombie_vmm",
+                                   "detail": f"僵尸 VMM: #{_idx} 模拟器不在运行，已清理"})
+                except Exception:
+                    pass
     except Exception:
         pass
 
@@ -176,6 +183,8 @@ def check_health(mw) -> dict:
         if ei:
             emu2aid[str(ei)] = a["id"]
     emus = _running_emulators()
+    if emus is None:
+        emus = {}  # 查询失败按空处理（只影响体检展示，不做清理动作）
     counts["emulators"] = len(emus)
     for idx in sorted(emus, key=int):
         aid = emu2aid.get(str(idx))

@@ -802,7 +802,11 @@ class LaunchQueue:
                                         continue
                                     real = False
                                     _QUEUE_LOG.warn(f"模拟器 #{_ac['emu_instance_index']} 已崩溃（{_ac.get('name','?')}）")
-                                    self._recover_account(aid, emu_idx, cli, _flag,
+                                    # 2026-08-14 修复：_flag NameError（未定义变量
+                                    # 被 except 静默吞掉）→「模拟器已崩溃」恢复链
+                                    # 从未执行过（24h 审查发现，复核确认）
+                                    self._recover_account(aid, emu_idx, cli,
+                                                          self._recover_flag(),
                                                           f"模拟器崩溃（{_ac.get('name','?')}）")
                 except Exception:
                     pass
