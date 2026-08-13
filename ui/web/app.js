@@ -3824,9 +3824,14 @@ function renderAIInsights() {
 
 // ── SSE (Server-Sent Events) — replace polling ──
 function startSSE() {
-  const evtSource = new EventSource(API + '/sse');
+  // EventSource 无法带 header → token 走 query（后端中间件同源校验，
+  // 2026-08-14 安全加固：SSE 不再是开放端点）。
+  const token = getApiToken();
+  const evtSource = new EventSource(API + '/sse' + (token ? '?token=' + encodeURIComponent(token) : ''));
   let _notifIds = new Set();
+  let _sseErr = 0;
   evtSource.onmessage = (e) => {
+    _sseErr = 0; // 收到消息 = 连接健康，重置失败计数
     try {
       const data = JSON.parse(e.data);
       if (data.ok && data.accounts) {
@@ -3859,7 +3864,14 @@ function startSSE() {
     } catch(ex) { /* ignore parse errors */ }
   };
   evtSource.onerror = () => {
-    // SSE will auto-reconnect
+    // SSE will auto-reconnect — 401（token 无效/过期）也会触发 error 并
+    // 无限重连 → 连续失败 N 次后主动关闭，避免刷服务器审计日志
+    // （2026-08-14 鉴权加固配套）。
+    _sseErr = (_sseErr || 0) + 1;
+    if (_sseErr >= 8) {
+      evtSource.close();
+      console.warn('[SSE] 连续失败已停止重连（检查 API Token 配置）');
+    }
   };
 }
 

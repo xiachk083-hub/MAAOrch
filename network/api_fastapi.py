@@ -195,14 +195,18 @@ def create_app(mw: Any) -> FastAPI:
         # rate limiter; all other APIs keep the limit.
         if not path.endswith("/screenshot") and not _check_rate(ip):
             return JSONResponse({"error": "rate_limited"}, 429)
-        # Static files and SSE don't need auth. api_token 配置后强制校验：
-        # 不带 token 或带错 token 一律 401（弱鉴权"仅拦错误 token"会放行
-        # 所有无 token 请求 — 2026-08-10 安全加固）。留空=不鉴权（兼容本地）。
+        # Static files don't need auth. api_token 配置后强制校验（含 SSE —
+        # 2026-08-14 安全加固：SSE 是唯一开放端点，EventSource 无法带
+        # header → token 走 query 参数）：不带 token 或带错 token 一律
+        # 401（弱鉴权"仅拦错误 token"会放行所有无 token 请求 —
+        # 2026-08-10 安全加固）。留空=不鉴权（兼容本地）。
         # MAA 远程控制轮询（本地进程每秒 POST — 无 token，127.0.0.1 豁免）
         if path.startswith("/api/maa_remote") and ip in ("127.0.0.1", "::1", "localhost"):
             return await call_next(request)
-        if path.startswith("/api/") and path != "/api/sse" and token:
+        if path.startswith("/api/") and token:
             h = request.headers.get("x-agent-token", "")
+            if not h:
+                h = request.query_params.get("token", "")  # SSE: EventSource 无 header
             if not h or not hmac.compare_digest(h, token):
                 # 安全审计：未授权访问来源留痕（IP + 路径 + token 前缀）
                 try:
