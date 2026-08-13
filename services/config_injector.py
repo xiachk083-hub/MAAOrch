@@ -313,14 +313,7 @@ class ConfigService:
         if ac.get("adb_path"):
             cs["AdbPath"] = ac["adb_path"]
         emu_idx = str(ac.get("emu_instance_index", "") or "")
-        cli = find_mumu_cli()
-        if cli is None and ac.get("adb_path"):
-            try:
-                cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
-                if cand.exists():
-                    cli = str(cand)
-            except Exception:
-                pass
+        cli = find_mumu_cli()  # 单点：盘扫兜底已内建（2026-08-14 收敛）
         if emu_idx and str(emu_idx).isdigit():
             extras = cs.setdefault("Extras", {}).setdefault("MuMuEmulator12", {})
             extras["InstanceIndex"] = int(emu_idx)
@@ -456,17 +449,9 @@ class ConfigService:
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
-                cli = find_mumu_cli()
-                # MuMu 12 has no mumu-cli — use MuMuManager.exe instead.
+                cli = find_mumu_cli()  # 单点：盘扫兜底已内建（2026-08-14 收敛）
                 # Start.EmulatorPath must exist or MAA's RunDirectly flow
                 # (TryToStartEmulator → LinkStart) stalls and tasks never start.
-                if cli is None:
-                    try:
-                        adb = c.get("Connect.AdbPath", "")
-                        if adb and Path(adb).parent.joinpath("MuMuManager.exe").exists():
-                            cli = str(Path(adb).parent / "MuMuManager.exe")
-                    except Exception:
-                        pass
                 if cli:
                     c["Start.EmulatorPath"] = str(cli)
                     c["Start.EmulatorAddCommand"] = f'control --vmindex {emu_idx} launch'
