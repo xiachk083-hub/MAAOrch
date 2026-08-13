@@ -1146,6 +1146,15 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             return {"ok": False, "error": "sorter 未启动"}
         return {"ok": True, **(_SORTER.snapshot())}
 
+    @app.get("/api/events_bus")
+    def handle_events_bus(limit: int = 100):
+        """事件总线最近事件（单点收敛 Step 1 — 排障一查到底）。"""
+        try:
+            from services.event_bus import recent
+            return {"ok": True, "events": recent(max(1, min(500, limit)))}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     @app.get("/api/debug/state")
     def handle_debug_state():
         """内部状态快照（排障用）— 全部运行状态一眼可见，aid 脱敏前缀。

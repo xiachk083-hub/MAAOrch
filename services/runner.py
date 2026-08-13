@@ -1264,6 +1264,11 @@ class AccountRunner:
                     _sp.run(["taskkill", "/F", "/T", "/PID", str(_pid)],
                             capture_output=True, timeout=10)
                     self._log.warn(f"[MAA窗口] {name} 已杀掉异常窗口进程 PID={_pid}")
+                    try:
+                        from services.event_bus import emit as _eb_emit
+                        _eb_emit("maa.zombie_killed", {"name": name, "pid": _pid})
+                    except Exception:
+                        pass
                 except Exception:
                     pass
         except Exception:
@@ -1378,6 +1383,11 @@ class AccountRunner:
         except Exception:
             pass
         self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+        try:
+            from services.event_bus import emit as _eb_emit
+            _eb_emit("queue.completed", {"name": ac.get("name", aid)})
+        except Exception:
+            pass
         # 肉鸽主题推进（l-4/l-6 — 满级停止后换下一主题，2026-08-13 用户:
         # MAA 自己刷到满级就停止，停止后我们切下一个主题继续）。
         try:
@@ -2679,6 +2689,12 @@ class AccountRunner:
         # 且 reboot 后端口漂移而 adb_address 缓存未清（审查记录）。模拟器
         # 关闭统一交给回收/优雅关闭链，MAA 完成关游戏（PostActions）。
 
+        try:
+            from services.event_bus import emit as _eb_emit
+            _eb_emit("queue.completed" if exit_code == 0 else "queue.failed",
+                     {"name": name, "exit": exit_code})
+        except Exception:
+            pass
         self.emit_finished((aid, exit_code, tasks))
         if ac:
             ac.pop("_persist_plan", None)
@@ -2714,6 +2730,11 @@ class AccountRunner:
                     from models.config_manager import save_config
                     save_config(self.ctx.config)
                     self.emit_log(f"🚫 {name} 反复启动失败 {retries} 次，已挂起（需人工检查模拟器）")
+                    try:
+                        from services.event_bus import emit as _eb_emit
+                        _eb_emit("queue.suspended", {"name": name, "reason": f"启动失败{retries}次"})
+                    except Exception:
+                        pass
                 except Exception:
                     pass
         elif ac and exit_code == 0:
