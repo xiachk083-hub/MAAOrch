@@ -75,6 +75,46 @@ def extract_announcements(html: str) -> list[dict]:
     return out
 
 
+_TIME_PAT = {
+    "stage_open": re.compile(r"(?:活动关卡开启时间|活动关卡开放时间|关卡开启时间)[：:]\s*([^\n<]{0,40})"),
+    "open": re.compile(r"(?:活动开启时间|活动开始时间)[：:]\s*([^\n<]{0,40})"),
+    "end": re.compile(r"活动结束时间[：:]\s*([^\n<]{0,40})"),
+    "exchange_end": re.compile(r"(?:兑换结束时间|兑换开启时间)[：:]\s*([^\n<]{0,40})"),
+}
+# 常见格式: 活动时间：08月01日 12:00 - 08月29日 03:59（无年份范围）
+_TIME_RANGE = re.compile(
+    r"活动时间[：:]\s*(\d{1,2})月(\d{1,2})日\s*(\d{1,2}:\d{2})\s*-\s*"
+    r"(\d{1,2})月(\d{1,2})日\s*(\d{1,2}:\d{2})")
+_STAGE_OPEN_RANGE = re.compile(
+    r"(?:活动)?关卡(?:开启|开放)时间[：:]\s*(\d{1,2})月(\d{1,2})日\s*(\d{1,2}:\d{2})")
+
+
+def parse_activity_times(cid: str) -> dict:
+    """公告详情页 → 活动时间字段（2026-08-13 用户: 公告里写有活动为期
+    与关卡开启时间，两者不同 — 刷取窗口以关卡开启时间为起点）。"""
+    out: dict = {}
+    try:
+        html = _fetch(f"https://ak.hypergryph.com/news/{cid}.html", timeout=20)
+        text = re.sub(r"<[^>]+>", " ", html)
+        text = text.replace("\\u003c", "<")
+        # 无年份范围格式（当前官网主流）
+        m = _TIME_RANGE.search(text)
+        if m:
+            out["open"] = f"{m.group(1)}月{m.group(2)}日 {m.group(3)}"
+            out["end"] = f"{m.group(4)}月{m.group(5)}日 {m.group(6)}"
+        m2 = _STAGE_OPEN_RANGE.search(text)
+        if m2:
+            out["stage_open"] = f"{m2.group(1)}月{m2.group(2)}日 {m2.group(3)}"
+        if not out:  # 旧格式兜底（含年份）
+            for key, pat in _TIME_PAT.items():
+                mm = pat.search(text)
+                if mm:
+                    out[key] = mm.group(1).strip().rstrip("。；;")
+    except Exception:
+        pass
+    return out
+
+
 def collect_once() -> dict:
     """抓取 → 新公告检测（cid 对比）→ 存储。返回本次结果。"""
     ANNOUNCE_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,6 +146,14 @@ def collect_once() -> dict:
             merged.insert(0, it)
             known.add(key)
             new_items.append(it)
+        # 活动公告解析时间字段（活动预告/开启，排除创作征集类 — 2026-08-13）
+        cid = it.get("cid", "")
+        title = it.get("title", "")
+        if (cid and ("活动" in title) and ("创作征集" not in title)
+                and ("开启" in title or "预告" in title)):
+            times = parse_activity_times(cid)
+            if times:
+                it["times"] = times
     merged = merged[:200]  # 保留最近 200 条
 
     try:

@@ -46,15 +46,23 @@ def fetch_event_list() -> list[dict]:
 
 
 def fetch_event_times(name: str) -> dict:
-    """活动详情页 wikitext → 开始/结束/兑换结束时间。"""
+    """活动详情页 wikitext → 开始/结束/兑换结束时间。
+
+    2026-08-13 用户点出: 活动为期时间 ≠ 活动关卡开启时间（部分活动
+    关卡晚于活动开启）— 关卡开启时间才是刷取窗口的起点。
+    """
     page = urllib.parse.quote(name)
     txt = _get(f"https://prts.wiki/index.php?title={page}&action=raw")
     def _pick(pat):
         m = re.search(pat, txt)
         return m.group(1).strip() if m else ""
+    stage_open = (_pick(r"关卡开启时间\s*=\s*([^\n|]+)")
+                  or _pick(r"关卡开放时间\s*=\s*([^\n|]+)")
+                  or _pick(r"活动关卡开启时间\s*=\s*([^\n|]+)"))
     return {
         "name": name,
         "start": _pick(r"开始时间\s*=\s*([^\n|]+)") or _pick(r"活动开始时间\s*=\s*([^\n|]+)"),
+        "stage_open": stage_open,  # 刷取窗口起点（无则=start）
         "end": _pick(r"活动结束时间\s*=\s*([^\n|]+)"),
         "exchange_end": _pick(r"兑换结束时间\s*=\s*([^\n|]+)"),
     }
