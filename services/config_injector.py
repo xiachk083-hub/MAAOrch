@@ -374,12 +374,13 @@ class ConfigService:
                 rs = gui.setdefault("RuntimeSettings", {})
                 rs["ClientType"] = client_enum
                 rs["StartGame"] = True
-        # MAAOrch owns the rotation — disable MAA's internal auto-restart on
-        # drop. When enabled, MAA starts a 2nd round after the first completes
-        # (no sanity left → Fight errors "理智作战: 理智作战" and keeps looping
-        # through daily tasks), which defeats the queue's per-account flow.
+        # 掉线重连（2026-08-14 用户：账号可能在别处登录被顶号）— 交给
+        # MAA 原生机制：任务中游戏掉线 → MAA 自己重启游戏重连继续刷，
+        # 不退出（MAAOrch 无感知、不触发恢复链）。历史关闭原因（开启后
+        # 任务完成又跑第二轮）已被完成判定改造化解：PostActions=None +
+        # AllTasksCompleted 主动检测 + 杀 MAA，第二轮没有机会跑。
         rs = gui.setdefault("RuntimeSettings", {})
-        rs["AutoRestartOnDrop"] = False
+        rs["AutoRestartOnDrop"] = True
         # PostActions=None: MAA 任务做完不退出（GUI 挂着）— 我们检测
         # asst.log 的 AllTasksCompleted（完成判定明确、无退出时序竞争）→
         # 主动杀 MAA → 判定完成。之前用 ExitSelf（完成=退出事件）在 MAA

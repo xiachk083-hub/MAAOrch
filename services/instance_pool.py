@@ -39,12 +39,23 @@ def _create_instance(inst: Path, source: Path) -> bool:
                 if item.name in (".pid", ".meta"):
                     continue
                 shutil.copy2(str(item), str(inst / item.name))
-        for sub in ("resource", "externals", "Python"):
+        for sub in ("externals", "Python"):
             src_sub = source / sub
             dst_sub = inst / sub
             if src_sub.exists() and not dst_sub.exists():
                 _sp.run(["cmd", "/c", "mklink", "/J", str(dst_sub), str(src_sub)],
                         capture_output=True, timeout=5, creationflags=_sp.CREATE_NO_WINDOW)
+        # resource 物理复制（不用 junction — 2026-08-14 凌晨根因）：
+        # MAA 6.16 启动时把 cache 里 ETag 下载的新资源「移动」到 resource/
+        # （Moved cache\resource\tasks.json → resource\tasks.json）。junction
+        # 共享 source/resource 时多个实例并发启动互踩同一批文件 → 半移动
+        # 状态 → ErrorCongratulations 间歇崩（日服清日常风暴）。每实例独立
+        # 复制后 MAA 只搬自己的目录，零竞态。resource 244MB×实例数 ≈ 2.7GB
+        # 磁盘代价可接受（externals/Python 不变动，保持 junction 省空间）。
+        src_res = source / "resource"
+        dst_res = inst / "resource"
+        if src_res.exists() and not dst_res.exists():
+            shutil.copytree(str(src_res), str(dst_res))
         # Copy config from source (MAA must have been opened at least once to generate defaults)
         src_config = source / "config"
         dst_config = inst / "config"
@@ -102,7 +113,10 @@ def _init_maa_source(source: Path) -> bool:
     exe = source / "MAA.exe"
     if not exe.exists():
         return False
-    # Write minimze config before launching to prevent window flash
+    # Write minimize config before launching to prevent window flash.
+    # MAA 6.16 reads gui.new.json top-level Gui.* (nested bools); the old
+    # flat "GUI.*"/"Start.*" keys under Global/GUI are 6.11-only and are
+    # ignored here (instance gui.new.json has no flat-key reader).
     gj = source / "config" / "gui.new.json"
     try:
         if gj.exists():
@@ -110,9 +124,10 @@ def _init_maa_source(source: Path) -> bool:
         else:
             d = {}
         gj.parent.mkdir(parents=True, exist_ok=True)
-        d.setdefault("GUI", {})["MinimizeToTray"] = "True"
-        d.setdefault("GUI", {})["UseTray"] = "True"
-        d.setdefault("Global", {})["Start.MinimizeDirectly"] = "True"
+        g = d.setdefault("Gui", {})
+        g["MinimizeToTray"] = True
+        g["MinimizeOnStartup"] = True
+        g["UseTray"] = True
         # Disable MAA self-update: MAAOrch manages MAA versions itself. If left on,
         # MAA.exe starts downloading OTA components and gets killed mid-update by
         # our $type wait loop → source files end up missing.
