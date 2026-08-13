@@ -788,19 +788,29 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     @app.post("/api/depot/scan")
     def handle_depot_scan(body: dict):
         """扫描指定账号仓库并生成材料规划（异步）。
-        Body: {account_ids: [...]} — 状态轮询 GET /api/depot/status。"""
+        Body: {account_ids: [...], activity_only: bool, parallel: int}
+        activity_only=true 只预检活动关（外服跳过），可并行（默认 4 路）。
+        状态轮询 GET /api/depot/status。"""
         from services.depot_scheduler import DepotScanner
         ids = [str(x) for x in (body.get("account_ids") or [])]
         acs = [a for a in mw.accounts if a.get("id") in ids]
         if not acs:
             raise HTTPException(400, "no valid account_ids")
+        activity_only = bool(body.get("activity_only"))
+        parallel = max(1, min(8, int(body.get("parallel", 4) or 4)))
         def _run():
             try:
-                DepotScanner(mw).scan_accounts([a.get("id") for a in acs])
+                sc = DepotScanner(mw)
+                if activity_only:
+                    sc.scan_activity_many([a.get("id") for a in acs],
+                                          parallel=parallel)
+                else:
+                    sc.scan_accounts([a.get("id") for a in acs])
             except Exception as e:
                 mw._log(f"[材料规划] 扫描异常: {e}")
         threading.Thread(target=_run, daemon=True).start()
-        return {"ok": True, "count": len(acs), "status": "running"}
+        return {"ok": True, "count": len(acs), "status": "running",
+                "activity_only": activity_only, "parallel": parallel}
 
     @app.get("/api/depot/status")
     def handle_depot_status():
@@ -839,6 +849,19 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             return json.loads(p.read_text(encoding="utf-8"))
         except Exception as e:
             raise HTTPException(500, f"计划文件损坏: {e}")
+
+    @app.get("/api/depot/probe")
+    def handle_depot_probe(account_id: str = ""):
+        """该账号的关卡预检缓存（farm_probe.json: stage → {verdict, detail, ts}）。"""
+        if not account_id:
+            raise HTTPException(400, "account_id required")
+        p = Path(__file__).parent.parent / "models" / "accounts" / account_id / "farm_probe.json"
+        if not p.exists():
+            return {"ok": True, "probe": {}}
+        try:
+            return {"ok": True, "probe": json.loads(p.read_text(encoding="utf-8"))}
+        except Exception as e:
+            raise HTTPException(500, f"预检缓存损坏: {e}")
 
     @app.get("/api/depot/config")
     def handle_depot_config():

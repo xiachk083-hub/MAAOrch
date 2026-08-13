@@ -21,6 +21,17 @@ CONFIG_PATH = ROOT / "config" / "material_water_levels.json"
 _SCAN_STATUS: dict = {}
 _SCAN_LOCK = threading.Lock()
 
+# 实例占用声明（并行扫描防两个线程拿同一实例 — 2026-08-13 活动关并行预检）
+# RLock: _claim_instance 持锁后 _pick_free_instance 内部会再次检查声明集
+# （threading.Lock 不可重入 → 自锁死 — 18:30 生产扫描全部挂起根因）
+_INST_CLAIMS: set = set()
+_INST_CLAIM_LOCK = threading.RLock()
+
+
+def _release_instance(inst) -> None:
+    with _INST_CLAIM_LOCK:
+        _INST_CLAIMS.discard(inst)
+
 
 def _set_status(aid: str, **kw) -> None:
     with _SCAN_LOCK:
@@ -74,7 +85,7 @@ class DepotScanner:
 
     # ── 实例/模拟器准备 ──
     def _pick_free_instance(self) -> int | None:
-        """找 .pid 已死且未被 runner 预留的空闲实例号。"""
+        """找 .pid 已死且未被 runner 预留、未被并行扫描占用的空闲实例号。"""
         base = ROOT / "services" / "maa" / "instances"
         if not base.exists():
             return None
@@ -93,6 +104,9 @@ class DepotScanner:
         for i in idxs:
             if str((base / str(i)).resolve()) in reserved:
                 continue
+            with _INST_CLAIM_LOCK:
+                if i in _INST_CLAIMS:
+                    continue
             pid_f = base / str(i) / ".pid"
             if pid_f.exists():
                 try:
@@ -254,7 +268,12 @@ class DepotScanner:
         return probe_fn
 
     def _probe_activity_stages(self, ac, probe_fn) -> None:
-        """当前活动的材料/搓玉/资源关逐个预检（复用 farm_probe.json 缓存）。"""
+        """当前活动的材料/搓玉/资源关逐个预检（复用 farm_probe.json 缓存）。
+
+        外服（YoStarJP/EN 等）活动日程与国服不同 → 跳过（2026-08-13）。
+        """
+        if ac.get("game_client", "Official") not in ("Official", "Bilibili"):
+            return
         try:
             act_p = ROOT / "config" / "activity_stages.json"
             act = json.loads(act_p.read_text(encoding="utf-8"))
@@ -277,6 +296,100 @@ class DepotScanner:
                     self._log(f"活动关预检异常 {st}: {e}")
 
     # ── 扫描主流程 ──
+    def scan_activity_only(self, ac) -> bool:
+        """只预检当前活动关（2026-08-13 用户: 清体力前快速确认可刷性）。
+
+        外服（YoStarJP/EN 等）活动日程与国服不同 → 直接跳过。
+        每账号约 10 分钟（4 关 × 导航判定），可并行调用。
+        """
+        from services.material_planner import load_config
+        aid = ac.get("id", "")
+        if ac.get("game_client", "Official") not in ("Official", "Bilibili"):
+            _set_status(aid, state="skipped", reason="外服活动日程不同，跳过")
+            return False
+        reason = self.busy_reason(ac)
+        if reason:
+            _set_status(aid, state="skipped", reason=reason)
+            self._log(f"跳过 {ac.get('name', aid)}: {reason}")
+            return False
+        inst = self._claim_instance()
+        if inst is None:
+            _set_status(aid, state="skipped", reason="无空闲 MAA 实例")
+            return False
+        emu = str(ac.get("emu_instance_index", ""))
+        addr = self._adb_address(ac, emu)
+        if not addr:
+            _release_instance(inst)
+            _set_status(aid, state="error", error="模拟器不可达（无 ADB 地址）")
+            return False
+        client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
+            ac.get("game_client", ""), "Official")
+        self._protect_emu(emu)
+        launched = self._ensure_emu(emu)
+        _set_status(aid, state="running")
+        self._log(f"活动关预检 {ac.get('name', aid)} (#{emu} {addr}, inst {inst})...")
+        try:
+            probe_fn = self._make_probe_fn(ac, emu, client)
+            self._probe_activity_stages(ac, probe_fn)
+            cache = self._load_probe_cache(aid)
+            act = json.loads((ROOT / "config" / "activity_stages.json")
+                             .read_text(encoding="utf-8"))
+            stages = [m.get("stage", "") for m in act.get("material") or []]
+            o = act.get("orundum") or {}
+            if o.get("stage"):
+                stages.append(o["stage"])
+            ok = sum(1 for s in stages if cache.get(s, {}).get("verdict") == "CAN_FARM")
+            bad = sum(1 for s in stages
+                      if cache.get(s, {}).get("verdict") in ("CANNOT", "DONE"))
+            _set_status(aid, state="done",
+                        summary=f"活动关预检 {ok} 可刷 / {bad} 锁定")
+            self._log(f"活动关预检完成 {ac.get('name', aid)}: {ok} 可刷 / {bad} 锁定")
+            return True
+        except Exception as e:
+            _set_status(aid, state="error", error=str(e)[:300])
+            self._log(f"活动关预检异常 {ac.get('name', aid)}: {e}")
+            return False
+        finally:
+            _release_instance(inst)
+            self._close_emu_if_launched(ac, emu, launched)
+
+    _inst_claims: set = set()
+    _claim_lock = threading.Lock()
+
+    def _claim_instance(self) -> int | None:
+        """并行安全地占用一个空闲实例（多线程同时扫不同账号）。"""
+        with _INST_CLAIM_LOCK:
+            inst = self._pick_free_instance()
+            if inst is None:
+                return None
+            _INST_CLAIMS.add(inst)
+            return inst
+
+    def scan_activity_many(self, account_ids: list[str], parallel: int = 4) -> dict:
+        """并行活动关预检（2026-08-13 用户: 清体力前批量快速确认）。"""
+        acs = [a for a in self.mw.accounts if a.get("id") in account_ids]
+        results: dict = {}
+        sem = threading.Semaphore(max(1, parallel))
+
+        def _run(ac):
+            try:
+                results[ac.get("id")] = self.scan_activity_only(ac)
+            except Exception as e:
+                results[ac.get("id")] = False
+                _set_status(ac.get("id"), state="error", error=str(e)[:200])
+            finally:
+                sem.release()
+
+        threads = []
+        for ac in acs:
+            sem.acquire()
+            t = threading.Thread(target=_run, args=(ac,), daemon=True)
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+        return results
+
     def scan_account(self, ac) -> bool:
         """扫一个账号；返回是否成功产出快照+计划。"""
         from services.depot_reader import DepotReader
@@ -287,7 +400,7 @@ class DepotScanner:
             _set_status(aid, state="skipped", reason=reason)
             self._log(f"跳过 {ac.get('name', aid)}: {reason}")
             return False
-        inst = self._pick_free_instance()
+        inst = self._claim_instance()
         if inst is None:
             _set_status(aid, state="skipped", reason="无空闲 MAA 实例")
             self._log(f"跳过 {ac.get('name', aid)}: 无空闲 MAA 实例")
@@ -295,6 +408,7 @@ class DepotScanner:
         emu = str(ac.get("emu_instance_index", ""))
         addr = self._adb_address(ac, emu)
         if not addr:
+            _release_instance(inst)
             _set_status(aid, state="error", error="模拟器不可达（无 ADB 地址）")
             return False
         client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
@@ -361,6 +475,7 @@ class DepotScanner:
             return False
         finally:
             # 扫描收尾：本扫描器拉起的模拟器扫完即关（不等回收期）
+            _release_instance(inst)
             self._close_emu_if_launched(ac, emu, launched)
 
     def scan_accounts(self, account_ids: list[str]) -> dict:
