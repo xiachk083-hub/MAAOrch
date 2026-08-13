@@ -49,7 +49,7 @@ def _restart_hot(root: Path, mw: Any = None) -> None:
     for mod in ("services.config_injector", "services.runner",
                 "services.launch_queue",
                 "services.dispatch_pool", "services.instance_pool",
-                "services.maa_download", "services.log_parser",
+                "services.maa_download",
                 "infrastructure.task_constants", "models.config_manager",
                 "models.account"):
         try:
