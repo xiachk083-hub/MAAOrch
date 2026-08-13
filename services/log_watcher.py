@@ -70,12 +70,12 @@ class LogWatcher(threading.Thread):
         self._gui_path = Path(inst_path) / "debug" / "gui.log"
         self._aid = aid
         self._on_event = on_event  # callable(event_type: str, aid: str, line: str)
-        self._stop = False
+        self._stopped = False
         self._fp = None
         self._gui_fp = None
 
     def stop(self) -> None:
-        self._stop = True
+        self._stopped = True
 
     def _open_tail(self) -> bool:
         """打开文件并 seek 尾部（只读新内容，不重读历史）。"""
@@ -98,41 +98,56 @@ class LogWatcher(threading.Thread):
             return False
 
     def run(self) -> None:
-        if not self._open_tail():
-            # 文件尚未出现（MAA 启动后才有）— 轮询等待
-            while not self._stop:
-                if self._open_tail():
-                    break
-                time.sleep(1)
-        self._open_gui_tail()
-        while not self._stop:
-            try:
-                line = self._fp.readline()
-                if line:
-                    self._dispatch(line)
-                else:
-                    time.sleep(0.2)
-                    # 文件轮转检测：MAA 重启会清空 asst.log，句柄位置超过
-                    # 文件大小 → 重开（重新尾部跟随）
-                    try:
-                        if self._path.exists() and self._fp.tell() > self._path.stat().st_size:
-                            self._fp.close()
-                            self._open_tail()
-                    except Exception:
-                        pass
-                # gui.log 同步读取（降级/配置信号）
-                if self._gui_fp:
-                    gline = self._gui_fp.readline()
-                    if gline:
-                        self._dispatch_gui(gline)
-            except Exception:
-                time.sleep(1)
+        try:
+            if not self._open_tail():
+                # 文件尚未出现（MAA 启动后才有）— 轮询等待
+                while not self._stopped:
+                    if self._open_tail():
+                        break
+                    time.sleep(1)
+            self._open_gui_tail()
+            while not self._stopped:
+                try:
+                    line = self._fp.readline()
+                    if line:
+                        self._dispatch(line)
+                    else:
+                        time.sleep(0.2)
+                        # 文件轮转检测：MAA 重启会清空 asst.log，句柄位置超过
+                        # 文件大小 → 重开（重新尾部跟随）
+                        try:
+                            if self._path.exists() and self._fp.tell() > self._path.stat().st_size:
+                                self._fp.close()
+                                self._open_tail()
+                        except Exception:
+                            pass
+                    # gui.log 同步读取（降级/配置信号）
+                    if self._gui_fp:
+                        gline = self._gui_fp.readline()
+                        if gline:
+                            self._dispatch_gui(gline)
+                except Exception:
+                    time.sleep(1)
                 try:
                     self._fp.close()
                 except Exception:
                     pass
                 if not self._open_tail():
                     time.sleep(2)
+        finally:
+            # 线程退出（stop 置位）→ 释放文件句柄（08-11 审查「句柄泄漏」：
+            # 旧句柄会阻止 MAA 重启时 asst.log 删除重建；daemon 线程 + 句柄
+            # 不关 = 每账号每轮泄漏 2 个句柄，长期积累）。
+            try:
+                if self._fp:
+                    self._fp.close()
+            except Exception:
+                pass
+            try:
+                if self._gui_fp:
+                    self._gui_fp.close()
+            except Exception:
+                pass
 
     def _fire(self, event_type: str, line: str) -> None:
         """事件分发：兼容现有 runner 回调 + 同时进事件总线（单点收敛

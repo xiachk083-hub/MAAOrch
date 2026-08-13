@@ -2530,6 +2530,7 @@ class AccountRunner:
             _w = self._watchers.pop(aid, None)
             if _w:
                 _w.stop()
+                _w.join(2.0)  # 等线程退出释放 asst.log/gui.log 句柄（08-11 审查）
         except Exception:
             pass
         ac = self._active.pop(aid, None)
