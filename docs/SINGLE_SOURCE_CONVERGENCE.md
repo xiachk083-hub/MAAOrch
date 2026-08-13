@@ -101,13 +101,13 @@ log_watcher/runner/launch_queue/stage_probe — 迁移原则：连接建立可�
 
 ## 附录 B：账房收口清单
 
-| 域 | 唯一写者 | 现状散落 |
+| 域 | 唯一写者 | 现状散落（2026-08-14 复核） |
 |---|---|---|
-| 体力 | sanity_tracker | runner._update_status 重复读 asst.log 解析 |
+| 体力 | sanity_tracker | ✅ 已收口：bus 订阅写快照（Step 3a，575ee0e）+ sanity_after 补快照（97f9ea2）；剩余=log_watcher 直调删除（白天验证后） |
 | 事件 | event_bus | ✅ 骨架+runner+LogWatcher 已接（a9d9872/17a7b79） |
-| 仓库扫描 | depot_scheduler | material_planner CLI 自建 DepotReader |
-| 材料关表 | farm_dispatch | smart_scheduler._get_material_stage 需手工同步 |
-| 根日志 | logger 单点 | debug.log/events.log/oplog.json 硬编码根目录（EventBus 统一时收口 logs/） |
+| 仓库扫描 | depot_scheduler | ✅ 单一实现 `depot_reader.py`（material_planner CLI 与 scheduler 同用一类，非自建） |
+| 材料关表 | farm_dispatch | ✅ smart_scheduler 整文件删除（bc3e84a） |
+| 根日志 | logger 单点 | ⏳ 待收口：logger.py:7 `_LOG_DIR`=项目根（debug.log/events.log/crash.log）、api_fastapi.py:18 oplog.json+553/1277 debug.log、runtime_health.py:16+backfill_stats.py:18 events.log 读路径 — **logger.py 为并行会话活跃文件，白天协调后统一改 logs/** |
 
 ## 附录 C：runner 自读 asst.log 影子功能盘点（2026-08-14 摸底，Step 3b 输入）
 
