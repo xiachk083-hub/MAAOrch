@@ -15,7 +15,10 @@ import uvicorn
 # ── Shared state ──
 
 _OPLOG: list[dict] = []
-_OPLOG_FILE = Path(__file__).parent.parent / "oplog.json"
+# 根日志收口（2026-08-14 Step 5）：oplog 写者=本文件 → 直接迁 logs/；
+# 读兼容旧根目录文件（历史审计）
+_OPLOG_FILE = Path(__file__).parent.parent / "logs" / "oplog.json"
+_OPLOG_LEGACY = Path(__file__).parent.parent / "oplog.json"
 
 def _load_oplog() -> list[dict]:
     try:
@@ -23,11 +26,20 @@ def _load_oplog() -> list[dict]:
             return json.loads(_OPLOG_FILE.read_text(encoding="utf-8"))[-200:]
     except Exception:
         pass
+    try:
+        if _OPLOG_LEGACY.exists():  # 旧路径兜底（历史审计）
+            return json.loads(_OPLOG_LEGACY.read_text(encoding="utf-8"))[-200:]
+    except Exception:
+        pass
     return []
 
 def _save_oplog() -> None:
     try:
         from infrastructure.utils import atomic_write
+        try:
+            _OPLOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
         atomic_write(_OPLOG_FILE, json.dumps(_OPLOG[-200:], ensure_ascii=False))
     except Exception:
         pass
@@ -554,7 +566,9 @@ def create_app(mw: Any) -> FastAPI:
         _proj = Path(__file__).parent.parent
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            dl = _proj / "debug.log"
+            dl = _proj / "logs" / "debug.log"
+            if not dl.exists():
+                dl = _proj / "debug.log"  # 根日志收口前兼容（Step 5）
             if dl.exists():
                 zf.write(str(dl), "debug.log")
             cf = _proj / "models" / "config.json"
@@ -1278,7 +1292,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
     @app.get("/api/logs")
     def handle_logs(lines: int = 50):
-        lp = Path(__file__).parent.parent / "debug.log"
+        lp = Path(__file__).parent.parent / "logs" / "debug.log"
+        if not lp.exists():
+            lp = Path(__file__).parent.parent / "debug.log"  # 收口前兼容
         if lp.exists():
             try:
                 content = lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]

@@ -12,8 +12,12 @@ import subprocess
 from pathlib import Path
 
 PROJ = Path(__file__).parent.parent
+# 根日志收口（2026-08-14 Step 5）：logs/ 优先，根目录兜底 —
+# logger.py 迁 logs/ 后自动跟随（写者迁移前读根目录）
+def _events_path() -> Path:
+    _p = PROJ / "logs" / "events.log"
+    return _p if _p.exists() else PROJ / "events.log"
 INSTANCES = PROJ / "services" / "maa" / "instances"
-EVENTS_LOG = PROJ / "events.log"
 # 模拟器 CLI 走单点（单点收敛 Step 4 — 2026-08-14）：不再硬编码路径，
 # 复用 task_constants.find_mumu_cli（MuMuManager 优先/索引防错的统一入口）
 MM = None  # 惰性解析（health 端点可能先于模拟器环境就绪调用）
@@ -283,8 +287,8 @@ def check_health(mw) -> dict:
 
     # ── 5. connect failures in recent events.log ──
     try:
-        if EVENTS_LOG.exists():
-            tail = EVENTS_LOG.read_text(encoding="utf-8", errors="replace").splitlines()[-300:]
+        if _events_path().exists():
+            tail = _events_path().read_text(encoding="utf-8", errors="replace").splitlines()[-300:]
             recent = [ln for ln in tail if "连接失败" in ln or "ADB 连接超时" in ln]
             counts["connect_fail"] = len(recent)
             if recent:

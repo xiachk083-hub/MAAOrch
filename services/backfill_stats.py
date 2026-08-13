@@ -15,7 +15,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 PROJ = Path(__file__).parent.parent
-EVENTS = PROJ / "events.log"
+_LOGS_EVENTS = PROJ / "logs" / "events.log"
+EVENTS = _LOGS_EVENTS if _LOGS_EVENTS.exists() else PROJ / "events.log"
 CONFIG = PROJ / "models" / "config.json"
 STATS_DIR = PROJ / "models" / "accounts"
 
