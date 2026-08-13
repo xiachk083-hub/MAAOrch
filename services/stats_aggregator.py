@@ -45,7 +45,11 @@ def period_range(period: str, ref: datetime | None = None) -> tuple[datetime, da
     """
     ref = ref or datetime.now()
     if period == "day":
-        start = ref.replace(hour=0, minute=0, second=0, microsecond=0)
+        # 游戏日 04:00 界（方舟每日 04:00 刷新 — 2026-08-14 对齐，与周锚点
+        # 一致；01:00 刷的属于前一日游戏日）
+        start = ref.replace(hour=4, minute=0, second=0, microsecond=0)
+        if ref < start:
+            start -= timedelta(days=1)
         return start, start + timedelta(days=1)
     if period == "week":
         # Monday 04:00 anchor

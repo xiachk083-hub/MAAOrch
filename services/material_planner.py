@@ -164,6 +164,11 @@ def observed_daily_ap(aid: str) -> float | None:
                 d = int(b["current"]) - int(a["current"])
                 if d >= 0:  # 负数=吃药补体力（已按 medicine_used 排除，兜底）
                     day = ts[:10]
+                    if ts[11:16] < "04:00":
+                        # 游戏日 04:00 界（2026-08-14 对齐）：凌晨跑归前一游戏日
+                        import datetime as _dt
+                        day = (_dt.datetime.strptime(ts[:10], "%Y-%m-%d")
+                               - _dt.timedelta(days=1)).strftime("%Y-%m-%d")
                     daily[day] = daily.get(day, 0.0) + d
         if not daily:
             return None

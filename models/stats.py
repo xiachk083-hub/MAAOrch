@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re as _re
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class RunStats:
@@ -111,10 +111,20 @@ class RunStats:
         self._save()
 
     def get_daily(self, date_str: str | None = None) -> dict:
-        """Get stats for a specific date (YYYY-MM-DD)."""
+        """Get stats for a specific game day (YYYY-MM-DD, 04:00 boundary).
+
+        方舟游戏日 04:00 刷新（2026-08-14 对齐）：date_str 的游戏日窗口 =
+        [date_str-1 04:00, date_str 04:00)。None = 当前游戏日。
+        """
         if date_str is None:
-            date_str = datetime.now().strftime("%Y-%m-%d")
-        runs = [r for r in self._data.get("runs", []) if r.get("ts", "").startswith(date_str)]
+            date_str = (datetime.now() - timedelta(hours=4)).strftime("%Y-%m-%d")
+        _d0 = datetime.strptime(date_str, "%Y-%m-%d")
+        _start = (_d0 - timedelta(days=1)).replace(hour=4, minute=0, second=0)
+        _end = _start + timedelta(days=1)
+        _s = _start.strftime("%Y-%m-%d %H:%M:%S")
+        _e = _end.strftime("%Y-%m-%d %H:%M:%S")
+        runs = [r for r in self._data.get("runs", [])
+                if _s <= str(r.get("ts", "")) < _e]
         task_counts: dict[str, int] = {}
         drop_totals: dict[str, int] = {}
         for r in runs:
