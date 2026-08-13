@@ -58,7 +58,8 @@ class RunStats:
                  exit_code: int | None = None, elapsed: float = 0.0,
                  status: str = "", stages: list | None = None,
                  dispatch: str = "", sanity_before: dict | None = None,
-                 sanity_after: dict | None = None) -> None:
+                 sanity_after: dict | None = None,
+                 medicine_used: bool = False) -> None:
         """Record a run — called on every cleanup (success, failure or timeout).
 
         tasks:      [{name, status}] — task list with per-task outcome.
@@ -88,6 +89,8 @@ class RunStats:
                 t_map[t["name"]] = str(t.get("status", ""))
         run["tasks"] = t_map
         run["drops"] = dict(drops or {})
+        if medicine_used:
+            run["medicine_used"] = True
         if stages:
             run["stages"] = [str(s) for s in stages]
         for key, src in (("sanity_before", sanity_before),

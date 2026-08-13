@@ -118,39 +118,44 @@ def load_snapshot(path: pathlib.Path) -> dict:
 
 
 def observed_daily_ap(aid: str) -> float | None:
-    """近 24h 实际体力消耗（2026-08-13 用户: 号是自己刷的，用实测预测）。
+    """实测每日体力消耗（2026-08-13 用户: 号是自己刷的，用实测预测）。
 
-    统计每次运行的首末体力差求和（runner 记录 sanity_before/after，
-    每次进关卡前/结束时的体力），即真实刷关消耗；运行中的自然回复
-    会使其略微低估（每 30 分钟约 5 点），可忽略。
-    无近 24h 有效记录（旧数据无首末字段/当天没刷）→ None，调用方回退
-    配置默认预算（ap_budget_per_day）。
+    - 统计每次运行的首末体力差求和（runner 记录 sanity_before/after）
+    - 排除吃了理智药的运行：我们策略普通药关、只有 48h 过期药自动吃，
+      过期药会挤一天刷完导致当天消耗虚高（用户点出）
+    - 窗口 7 天（24h 太短会撞上突击日），按有数据的自然日取平均
+    无有效数据 → None（调用方回退配置默认预算 ap_budget_per_day）。
     """
     import time as _t
     try:
         from models.stats import RunStats
         now_ts = _t.time()
         runs = RunStats(aid).runs
-        total = 0.0
-        has = False
+        daily: dict = {}
         for r in runs:
+            ts = str(r.get("ts", ""))
             try:
-                t = _t.mktime(_t.strptime(str(r.get("ts", "")), "%Y-%m-%d %H:%M:%S"))
+                t = _t.mktime(_t.strptime(ts, "%Y-%m-%d %H:%M:%S"))
             except Exception:
                 continue
-            if t <= now_ts - 86400:
+            if t <= now_ts - 7 * 86400:
                 continue
+            if r.get("medicine_used"):
+                continue  # 过期药突击日不计入常态
             b = r.get("sanity_before")
             a = r.get("sanity_after")
             if (isinstance(b, dict) and isinstance(a, dict)
                     and b.get("current") is not None and a.get("current") is not None):
                 d = int(b["current"]) - int(a["current"])
-                if d >= 0:  # 负数=运行中吃药补体力，跳过（药量另行不可见）
-                    total += d
-                    has = True
-        if not has or total < 60:  # 当天基本没刷 → 不算数
+                if d >= 0:  # 负数=吃药补体力（已按 medicine_used 排除，兜底）
+                    day = ts[:10]
+                    daily[day] = daily.get(day, 0.0) + d
+        if not daily:
             return None
-        return total
+        avg = sum(daily.values()) / len(daily)
+        if avg < 60:  # 平均日消耗异常低（基本没刷）→ 不算数
+            return None
+        return round(avg, 1)
     except Exception:
         return None
 

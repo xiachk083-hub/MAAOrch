@@ -213,6 +213,7 @@ class AccountRunner:
         self._emu_lost_suspect: dict[str, float] = {}  # aid -> ts（失联嫌疑，连续 2 轮确认才杀）
         self._adb_connected: dict[str, bool] = {}  # aid -> MAA 首次成功 adb（连接信号，启动节流用）
         self._run_sanity_first: dict[str, dict] = {}  # aid -> 本次运行首体力快照（统计真实消耗 — 2026-08-13）
+        self._run_medicine_used: dict[str, bool] = {}  # aid -> 本次运行是否吃了理智药（过期药突击识别）
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
@@ -1435,6 +1436,10 @@ class AccountRunner:
                         self._run_sanity_first[aid] = dict(_snap)
                 except Exception:
                     pass
+        elif event == "medicine_used":
+            # 理智药使用标记（过期药突击识别 — 2026-08-13 用户: 48h 药
+            # 挤一天刷完导致当天消耗虚高，预测时排除这类运行）
+            self._run_medicine_used[aid] = True
         elif event == "subtask_error":
             # Probe 检测进行中（MAA 挂着等 StageProbe 子进程）— 跳过错误
             # 窗口检测，防误杀（2026-08-12 关卡检测调度）。
@@ -2644,6 +2649,7 @@ class AccountRunner:
                         elapsed=duration,
                         sanity_before=self._run_sanity_first.pop(aid, None),
                         sanity_after=sanity,
+                        medicine_used=self._run_medicine_used.pop(aid, False),
                         status=("完成" if exit_code == 0 else "失败"))
         except Exception as e:
             self._log.warn(f"[统计] {name} save_run 失败: {e}")

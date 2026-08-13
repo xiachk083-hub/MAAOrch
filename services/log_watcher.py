@@ -239,6 +239,15 @@ class LogWatcher(threading.Thread):
                         self._on_event("sanity_before", self._aid, line)
                 except Exception:
                     pass
+            elif ("MedicineConfirmed" in line or '"task":"UseMedicine"' in line):
+                # 理智药使用（我们策略普通药关，只有过期药自动吃 → 吃了
+                # 就是 48h 过期药突击 — 2026-08-13 用户: 挤一天刷会虚高）
+                _record_event(self._aid, "medicine_used", line)
+                try:
+                    if self._on_event:
+                        self._on_event("medicine_used", self._aid, line)
+                except Exception:
+                    pass
             elif "StageDrops" in line:
                 _record_event(self._aid, "stage_drops", line)   # 掉落
             elif "RecruitResult" in line:
