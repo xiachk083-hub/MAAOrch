@@ -34,12 +34,13 @@ main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.
 
 | 未来目录 | 模块 | 职责 |
 |---|---|---|
-| `queue/` | launch_queue, runner, dispatch_pool, dynamic_params, smart_scheduler | 入队/调度/单账号运行编排 |
+| `queue/` | launch_queue, runner, dispatch_pool, dynamic_params, smart_scheduler, farm_dispatch | 入队/调度/单账号运行编排/每日刷取分派 |
 | `emulator/` | emu_state, emu_service, emu_service_v2 | 模拟器状态机 + 操作单点（EmulatorService 收口后迁入） |
 | `maa/` | config_injector, maa_download, instance_pool, update_service | MAA 安装/实例池/配置注入（注意：`services/maa/` 目录本身是 MAA 运行时数据，不是代码域） |
-| `monitor/` | log_watcher, log_parser, log_sorter, stage_probe, event_analyzer | 日志事件流/样本/关卡探测；Go 三件套（adb_monitor/health_monitor/log_monitor）独立 module 保持原位 |
-| `stats/` | stats_aggregator, runtime_health, health_check, backfill_stats, backfill_account_state | 统计聚合/运行期健康 |
-| `ai/` | ai_assistant, task_explainer, announce_collector | LLM 辅助/公告收集 |
+| `monitor/` | log_watcher, log_sorter, stage_probe, event_analyzer, sanity_tracker | 日志事件流/样本/关卡探测/体力快照；Go 三件套（adb_monitor/health_monitor/log_monitor）独立 module 保持原位 |
+| `depot/` | depot_reader, depot_scheduler, material_planner, penguin_data, activity_tracker | 仓库识别/扫描调度/水位规划/企鹅物流数据/活动识别 |
+| `stats/` | stats_aggregator, runtime_health, backfill_stats, backfill_account_state | 统计聚合/运行期健康 |
+| `ai/` | ai_assistant, task_explainer, announce_collector, vision | LLM 辅助/公告收集/视觉大模型 |
 
 **迁移触发条件**（不主动拆，随重构联动）：
 - `emulator/`：EmulatorService 状态机收口（Phase 2+）时迁入
@@ -68,7 +69,11 @@ main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.
 `tools/deploy.py` 的 `DEFAULT_FILES` 是**显式文件清单**（逐文件 base64 分块传输）：
 - 移动/重命名/新增任何被部署的文件 → 必须同步清单
 - 删除文件 → 从清单移除（目标机旧文件不会自动删，无引用即无影响）
-- 目前清单覆盖：models/stats、queue_entry，services/runner、launch_queue、stats_aggregator、instance_pool、config_injector、stage_probe、backfill_stats，network/api_fastapi，ui/web/app.js、index.html，manager/manager.py
+- 2026-08-14 已补全为 54 项（此前约半数运行时模块不在清单，目标机靠存量文件
+  运行）：覆盖 models/config_manager+account_state、services 全部主链路模块
+  （含 emu_service 系/log_watcher/sanity_tracker/depot 系/penguin/activity/
+  farm_dispatch/maa_download/vision 等）、app/*、infrastructure 全部、
+  ui/web/style.css、config 三个 JSON。**新增 services 模块必须同时加清单**。
 
 ## 6. 迁移路线图（随重构联动，不单独安排）
 
