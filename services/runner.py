@@ -2750,13 +2750,23 @@ class AccountRunner:
         # Save run stats — record EVERY run (success, failure, timeout, startup
         # failure) so daily/weekly/monthly/yearly stats are complete. tasks may
         # be [] on early exits; status comes from exit_code.
+        # sanity_after: 原 _parse_log 恒 None（影子功能，见收敛附录 C）→
+        # 从 sanity_tracker 快照补「清完剩余」（MAA 最后一次 SanityBeforeStage
+        # 即最接近的完成时体力）— 2026-08-14 修复「余 N」恒显示 ?。
+        _sa = sanity or None
+        if _sa is None:
+            try:
+                from services.sanity_tracker import get as _sg
+                _sa = _sg(aid)
+            except Exception:
+                _sa = None
         try:
             st = RunStats(aid)
             st.save_run(tasks, sanity, drops,
                         exit_code=exit_code,
                         elapsed=duration,
                         sanity_before=self._run_sanity_first.pop(aid, None),
-                        sanity_after=sanity,
+                        sanity_after=_sa,
                         medicine_used=self._run_medicine_used.pop(aid, False),
                         status=("完成" if exit_code == 0 else "失败"))
         except Exception as e:
