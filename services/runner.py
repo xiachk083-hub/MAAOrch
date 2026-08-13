@@ -2288,19 +2288,32 @@ class AccountRunner:
         return ""
 
     def _parse_log(self, aid: str) -> tuple[list[dict], dict | None, dict | None]:
-        """Parse asst.log for task results, sanity, drops."""
+        """真实数据源查询（2026-08-14 Step 3b — 替代影子功能）。
+
+        原实现读 asst.log（ctx.logs 全仓库无赋值 + parse_log 无定义 → 恒
+        返回空值，见收敛附录 C）：-13 未完成退出重试、-11 失败检测、
+        续跑判定（_done_pct）、前端任务列表全部依赖它 → 全部失效。
+        现改为查询真实数据源：
+          tasks  本次注入任务列表（_core_tasks 优先 — direct drive 模式
+                 有真状态；普通模式注入即"运行中"，cleanup 收尾转"完成"）
+          sanity sanity_tracker 快照（sanity_live.json，bus 订阅写 — Step 3a）
+          drops  无独立源，暂 None（StageDrops 事件未结构化，后续收口）
+        """
         ac = self._active.get(aid)
         if not ac:
             return [], None, None
-        p = self._procs.get(aid)
-        inst_path = getattr(p, '_inst_path', None) if p and not isinstance(p, str) else None
-        if inst_path and self.ctx.logs:
-            w = {"path": str(Path(inst_path) / "MAA.exe")}
-            return self.ctx.logs.parse_log(w)
-        progs = self._progs.get(aid, [])
-        if not progs or not self.ctx.logs:
-            return [], None, None
-        return self.ctx.logs.parse_log(progs[0])
+        tasks = list(self._core_tasks.get(aid) or [])
+        if not tasks:
+            _inj = ac.get("_injected_tasks") or []
+            # TaskType 字段兼容 _maybe_downgrade 的 startup/fight 判定
+            tasks = [{"name": n, "TaskType": n, "status": "运行中"} for n in _inj]
+        sanity = None
+        try:
+            from services.sanity_tracker import get as _sg
+            sanity = _sg(aid)
+        except Exception:
+            pass
+        return tasks, sanity, None
 
     # ── Completion ──
 
