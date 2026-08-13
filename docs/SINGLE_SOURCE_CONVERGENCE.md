@@ -88,11 +88,11 @@ MuMuManager/adb 直接调用点（emu_service / task_constants 单点之外）�
 |---|---|---|
 | runtime_health.py:17 | 硬编码 CLI 路径 | ✅ 已迁 find_mumu_cli（65968bb） |
 | launch_queue.py:32-52 | _mumu_manager_cli 单点实现（CLI 查找） | 保留（收口目标本身） |
-| launch_queue.py:771/913 | 回收 shutdown/info 执行 | 迁 emu_service.shutdown/is_alive |
-| runner.py:301-330/673 | 端口探测 fallback | 迁 emu_service.get_adb_port |
-| config_injector.py:319/460-467 | 注入时找 CLI 写 EmulatorPath | 迁 find_mumu_cli 统一入口 |
-| api_fastapi.py | 健康/连接批量操作 | 迁 emu_service 批量接口 |
-| depot_scheduler.py | 扫描起停模拟器 | 迁 emu_service.launch/shutdown |
+| launch_queue.py:903+ `_reclaim_idle_emus` | 回收 shutdown/info 执行 | **行为切换**：`emu_v2_reclaim` 开关翻转 → v2 `reclaim_tick` 接管（框架已在，旧逻辑已互斥跳过） |
+| runner.py:301-330/673 | 端口探测 fallback | ✅ 已收口 `task_constants.detect_emu_adb`（单点，2026-08-10 部署） |
+| config_injector.py:319/460-467 | 注入时找 CLI 写 EmulatorPath | ✅ 已收口 `find_mumu_cli`（2026-08-14，注释"单点：盘扫兜底已内建"） |
+| api_fastapi.py:494/1071/1176/1195 | 健康/连接批量操作 | 部分已迁（diagnose_emulator/get_health_snapshot/emu_service 状态）；494 启动模拟器可迁 v2 `prewarm`；probe 段已有 v2 保护标记（708） |
+| depot_scheduler.py:123-152/161-172 | 扫描起停模拟器 | 已用 `find_mumu_cli` 单点 + `launch_queue.graceful_emu_shutdown`；launch 段（_ensure_emu）可迁 v2 `prewarm`+`close` |
 | stage_probe.py | 检测独占 ADB | 并行会话活跃文件，放最后协调 |
 
 adb 直接调用（绕过 emu_service）：depot_reader/depot_scheduler/config_injector/
