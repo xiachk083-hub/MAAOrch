@@ -954,6 +954,10 @@ class AccountRunner:
             plan_txt = ",".join(task_list)
             self.emit_log(f"🧠 智能调度: {plan_txt}" + (" (+Probe 关卡检测)" if _probe_mode else ""))
             self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list} params={params}")
+            # 每次启动重置错误计数 — 2026-08-14 凌晨：_err_count 跨启动粘滞，
+            # 风暴期累积 ≥3 后每次健康启动 3 秒被「连续异常」误杀（日-1/日-2
+            # 挂起根因，模拟器无损伤）。计数只应衡量本次运行。
+            ac["_err_count"] = 0
             self.ctx.cfg.inject_smart(task_list, ac, str(config_dir), params=params)
             self.emit_log(f"注入配置: {config_dir}/")
             if _probe_mode:
@@ -1212,13 +1216,20 @@ class AccountRunner:
         self.emit_started(aid)
 
     def _check_startup_window(self, aid: str, name: str) -> None:
-        """MAA 启动 5s 后枚举窗口标题，找异常窗口（错误/异常/崩溃）并记录。"""
+        """MAA 启动 5s 后枚举窗口标题，找异常窗口（错误/异常/崩溃）并处理。
+
+        2026-08-14 凌晨：只记日志不够 — ErrorCongratulations 崩掉的 MAA 进程
+        不退（僵尸弹窗），占住实例目录文件锁 → 下一个分到该实例的账号必崩
+        （实例 3 连环崩 3 次：日-3→日-1→日-2）。此处找到异常窗口后直接杀
+        掉对应进程：窗口属于本次启动的 MAA=它已崩，杀了让退出检测走清理
+        重试；窗口属于别的进程=僵尸，照样杀（错误弹窗的 MAA 都是死重）。
+        """
         try:
             import time as _tt
             _tt.sleep(5)
             import ctypes
             user32 = ctypes.windll.user32
-            found = []
+            found: list[tuple[int, str]] = []  # (pid, title)
 
             def _cb(hwnd, _):
                 try:
@@ -1228,17 +1239,30 @@ class AccountRunner:
                         user32.GetWindowTextW(hwnd, buf, ln + 1)
                         t = buf.value
                         if t and any(k in t for k in ("Error", "Exception", "错误", "异常", "崩溃")):
-                            found.append(t)
+                            _pid = ctypes.c_ulong()
+                            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(_pid))
+                            found.append((int(_pid.value), t))
                 except Exception:
                     pass
                 return True
 
             PROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
             user32.EnumWindows(PROC(_cb), 0)
-            for t in found:
-                self._log.warn(f"[MAA窗口] {name} 启动后异常窗口: {t[:100]}")
-            if found:
-                self._log.warn(f"[MAA窗口] {name} 共 {len(found)} 个异常窗口 — 启动/配置异常，asst.log 可能为空")
+            if not found:
+                return
+            _seen: set[int] = set()
+            for _pid, t in found:
+                if _pid in _seen:
+                    continue
+                _seen.add(_pid)
+                self._log.warn(f"[MAA窗口] {name} 启动后异常窗口: {t[:100]} (PID={_pid})")
+                try:
+                    import subprocess as _sp
+                    _sp.run(["taskkill", "/F", "/T", "/PID", str(_pid)],
+                            capture_output=True, timeout=10)
+                    self._log.warn(f"[MAA窗口] {name} 已杀掉异常窗口进程 PID={_pid}")
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -1307,6 +1331,23 @@ class AccountRunner:
                         save_config(mw.config)
                         self.emit_log(f"🔬 {name} 检测完成: " +
                                       ", ".join(f"{k}={v}" for k, v in results.items()))
+                    # 桥接 farm_probe.json — farm_dispatch 分派只读这个缓存
+                    # （2026-08-14 凌晨：走队列预检活动关后分派认不出结果，
+                    # stage_ability 与 farm_probe 两套存储不互通）。
+                    try:
+                        import json as _json
+                        _bp = Path(__file__).parent.parent / "models" / "accounts" / aid / "farm_probe.json"
+                        _cache = {}
+                        if _bp.exists():
+                            _cache = _json.loads(_bp.read_text(encoding="utf-8"))
+                        for _st, _v in results.items():
+                            _cache[_st] = {"verdict": _v,
+                                           "ts": time.strftime("%Y-%m-%d %H:%M:%S")}
+                        _bp.parent.mkdir(parents=True, exist_ok=True)
+                        _bp.write_text(_json.dumps(_cache, ensure_ascii=False, indent=2),
+                                       encoding="utf-8")
+                    except Exception:
+                        pass
                 except Exception as e:
                     self.emit_log(f"🔬 {name} 结果持久化失败: {e}")
             except Exception as e:
@@ -1920,9 +1961,19 @@ class AccountRunner:
                     self._cleanup(aid, -3, tasks, sanity, drops)
                     return
             # Error threshold: ≥3 consecutive errors → kill MAA + restart emulator
+            # 启动宽限 2 分钟（2026-08-14 凌晨：_err_count 跨启动粘滞 + 启动期
+            # asst.log 正常重试 [ERR] 累积 → 健康启动 3 秒就被「连续异常」误杀
+            # → 关模拟器 → 重试 → 循环挂起（日-1/日-2 模拟器无损伤，纯计数
+            # bug）。运行满 2 分钟才启用阈值判定，启动期崩溃由异常窗口杀进程
+            # 闭环 + 进程退出检测覆盖。
             if ac and aid not in self._stopping:
                 err_count = ac.get("_err_count", 0)
-                if err_count >= 3:
+                _err_ok = True
+                try:
+                    _err_ok = time.time() - float(self._start_times.get(aid, 0) or 0) > 120
+                except Exception:
+                    pass
+                if err_count >= 3 and _err_ok:
                     self.emit_log(f"[错误] {ac.get('name', aid)} 连续 {err_count} 次异常，清理")
                     emu_idx = ac.get("emu_instance_index", "")
                     if emu_idx:

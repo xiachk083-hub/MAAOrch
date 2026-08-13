@@ -93,13 +93,17 @@ def main():
 
     from infrastructure.maa_core import preload, get_version
     source_path = Path(__file__).parent / "services" / "maa" / "source"
-    if source_path.exists() and (source_path / "MaaCore.dll").exists():
+    # 进程内 MaaCore 预加载默认关（2026-08-14 凌晨：与实例 MAA.exe 共享
+    # junction 的 resource 目录 → 新启 MAA 批量 ErrorCongratulations 崩溃，
+    # 关掉后崩溃消失）。需要调试进程内模式时设环境变量 MAAORCH_INPROC_MAACORE=1。
+    _want_preload = os.environ.get("MAAORCH_INPROC_MAACORE", "") == "1"
+    if _want_preload and source_path.exists() and (source_path / "MaaCore.dll").exists():
         if preload(source_path):
             _LOG.info(f"MaaCore 已加载 (版本: {get_version()})")
         else:
             _LOG.warn("MaaCore 加载失败，回退到子进程模式")
     else:
-        _LOG.info("MaaCore.dll 未找到，使用子进程模式")
+        _LOG.info("MaaCore 进程内模式未启用（默认关，MAAORCH_INPROC_MAACORE=1 开启），使用子进程模式")
 
     desktop_bat = Path(os.environ.get("USERPROFILE", ".")) / "Desktop" / "MAAOrch.bat"
     if not desktop_bat.exists():
