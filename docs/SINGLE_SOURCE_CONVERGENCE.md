@@ -108,3 +108,33 @@ log_watcher/runner/launch_queue/stage_probe — 迁移原则：连接建立可�
 | 仓库扫描 | depot_scheduler | material_planner CLI 自建 DepotReader |
 | 材料关表 | farm_dispatch | smart_scheduler._get_material_stage 需手工同步 |
 | 根日志 | logger 单点 | debug.log/events.log/oplog.json 硬编码根目录（EventBus 统一时收口 logs/） |
+
+## 附录 C：runner 自读 asst.log 影子功能盘点（2026-08-14 摸底，Step 3b 输入）
+
+**关键发现：`_parse_log()` 是影子功能 — 永远返回 `([], None, None)`。**
+
+- `ctx.logs` 全仓库无任何赋值（`app/service_context.py:41` 默认 None；main_web.pyw 实例化不传）
+- `parse_log` 方法全仓库无定义 → 即使 ctx.logs 非 None 也 AttributeError
+- 14 个 `_parse_log(aid)` 调用点（runner.py:1417/1430/1552/1592/1621/1775/1803/1825/1939/1977/1994/2002/2056/2431）全部拿到空值
+
+| 调用点场景 | 空值下的实际行为 | 性质 |
+|---|---|---|
+| `_finish_completed` 体力判定 `_done_pct = (sanity.current/max)*100` | sanity=None → `_done_pct=0` → `_final=True` → **自动续跑分支永不触发**（除肉鸽） | 功能已死 |
+| `_cleanup` 失败任务检测（exit==0 且 tasks 有"失败"→ -11） | tasks=[] → 永不判 -11 | 功能已死 |
+| `_cleanup` "任务完成→不是真错误"豁免 | tasks=[] → 豁免永不生效 | 功能已死 |
+| `_on_process_exit` 60s 内 rc=0 判启动失败（`not tasks`） | tasks=[] → 条件恒真，退化为"60s 内退出=失败" | 碰巧正确 |
+| `_cleanup`/`emit_finished` 任务列表透传 | 前端/统计永远看到空任务列表 | 数据缺失 |
+| `_cleanup` 的 sanity/drops 参数 | **签名里有但函数体从未使用** | 死参数 |
+
+**真实数据源现状**（无需再读 asst.log）：
+- 体力：`sanity_tracker.get(aid)`（sanity_live.json，bus 订阅写 — Step 3a 已收口）
+- 任务状态：`_core_tasks`（MaaCore direct drive）+ log_watcher `task_start`/`maa_stopped` 事件
+- 完成：AllTasksCompleted 事件（`_finish_completed` 触发点，正确）
+- 掉落：log_watcher `stage_drops` 事件（`_record_event` 有记，未 emit — 待收口）
+
+**Step 3b 改造方案（白天实施，需生产验证 — 行为改变不是等价重构）**：
+1. `_parse_log` 改为查询真实数据源：sanity → `sanity_tracker.get(aid)`；tasks → `_core_tasks` 累积快照；drops → StageDrops 事件累积（先 emit 结构化 payload，同 Step 3a 双写过渡）
+2. 顺带清 `_cleanup` 死参数 sanity/drops
+3. 验收：`_finish_completed` 续跑判定复活（`_done_pct` 真值）、-11 失败检测复活、前端任务列表有数据
+4. 风险护栏：改完先小批账号生产观察一轮（体力续跑行为变化最大），异常回退到空值路径（一行 `return [], None, None`）
+
