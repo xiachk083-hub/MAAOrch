@@ -235,6 +235,19 @@ class EmulatorService:
                     if st.account_id:
                         if st.account_id in pending_ids or st.account_id in active_ids:
                             continue
+                        # MAA 进程还活着（降级优雅关闭中/账号过渡期/连接页
+                        # 手动操作）→ 保留模拟器 — 否则关掉模拟器后 MAA 失联
+                        # 卡住，且进程活着不触发自动重启（2026-08-11 用户:
+                        # "MAA 还开着，模拟器自己关掉了，之后也没有重启" —
+                        # 与旧回收 _has_real_process 保护对齐，2026-08-14
+                        # Step 4 补全，翻转 emu_v2_reclaim 前必须）。
+                        try:
+                            _runner = getattr(getattr(self.ctx, "_mw", None),
+                                              "runner", None)
+                            if _runner and _runner._has_real_process(st.account_id):
+                                continue
+                        except Exception:
+                            pass
                     # 闲置超时（READY/IDLE — 60s）
                     if time.time() - st.state_since < 60:
                         continue
