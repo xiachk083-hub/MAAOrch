@@ -1065,7 +1065,7 @@ class LaunchQueue:
                         try:
                             if _p.info["name"] != "MuMuVMMHeadless.exe":
                                 continue
-                            if not _re.search(r"MuMuPlayer-12\.0-" + str(idx) + r"",
+                            if not _re.search(r"MuMuPlayer-12\.0-" + str(idx) + r"\b",
                                               " ".join(_p.info["cmdline"] or [])):
                                 continue
                             _age = time.time() - _p.info["create_time"]

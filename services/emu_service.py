@@ -42,7 +42,7 @@ def _headless_alive(emu_idx) -> bool:
         import re as _re
         for p in _ps.process_iter(["name", "cmdline"]):
             try:
-                if p.info["name"] == "MuMuVMMHeadless.exe" and                         _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"",
+                if p.info["name"] == "MuMuVMMHeadless.exe" and                         _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"\b",
                                    " ".join(p.info["cmdline"] or [])):
                     return True
             except Exception:
@@ -209,7 +209,7 @@ def _body(cli: str, emu_idx, adb_path: str, addr: str, wait: int, flag: str, log
             import psutil as _ps
             for p in _ps.process_iter(["name", "cmdline"]):
                 try:
-                    if p.info["name"] == "MuMuVMMHeadless.exe" and                        _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"",
+                    if p.info["name"] == "MuMuVMMHeadless.exe" and                        _re.search(r"MuMuPlayer-12\.0-" + str(emu_idx) + r"\b",
                                   " ".join(p.info["cmdline"] or [])):
                         pid = p.pid
                         break
