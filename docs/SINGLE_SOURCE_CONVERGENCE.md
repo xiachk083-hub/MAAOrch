@@ -79,3 +79,32 @@
 - 迁移期双写（旧路径+新路径并存）→ 行为等价后切换（沿用 STRUCTURE.md 原则）
 - 每步小步提交，可单独回退；不搞一次性大重构
 - 与并行会话活跃文件（stage_probe/instance_pool）重叠的步骤放最后，先协调
+
+## 附录 A：模拟器操作收口清单（2026-08-14 盘点，逐处迁）
+
+MuMuManager/adb 直接调用点（emu_service / task_constants 单点之外），按迁移顺序：
+
+| 文件:行 | 性质 | 迁移动作 |
+|---|---|---|
+| runtime_health.py:17 | 硬编码 CLI 路径 | ✅ 已迁 find_mumu_cli（65968bb） |
+| launch_queue.py:32-52 | _mumu_manager_cli 单点实现（CLI 查找） | 保留（收口目标本身） |
+| launch_queue.py:771/913 | 回收 shutdown/info 执行 | 迁 emu_service.shutdown/is_alive |
+| runner.py:301-330/673 | 端口探测 fallback | 迁 emu_service.get_adb_port |
+| config_injector.py:319/460-467 | 注入时找 CLI 写 EmulatorPath | 迁 find_mumu_cli 统一入口 |
+| api_fastapi.py | 健康/连接批量操作 | 迁 emu_service 批量接口 |
+| depot_scheduler.py | 扫描起停模拟器 | 迁 emu_service.launch/shutdown |
+| stage_probe.py | 检测独占 ADB | 并行会话活跃文件，放最后协调 |
+
+adb 直接调用（绕过 emu_service）：depot_reader/depot_scheduler/config_injector/
+log_watcher/runner/launch_queue/stage_probe — 迁移原则：连接建立可保留
+（MAA 自己连），管理动作（重启/强停/端口判定）一律收口 emu_service。
+
+## 附录 B：账房收口清单
+
+| 域 | 唯一写者 | 现状散落 |
+|---|---|---|
+| 体力 | sanity_tracker | runner._update_status 重复读 asst.log 解析 |
+| 事件 | event_bus | ✅ 骨架+runner+LogWatcher 已接（a9d9872/17a7b79） |
+| 仓库扫描 | depot_scheduler | material_planner CLI 自建 DepotReader |
+| 材料关表 | farm_dispatch | smart_scheduler._get_material_stage 需手工同步 |
+| 根日志 | logger 单点 | debug.log/events.log/oplog.json 硬编码根目录（EventBus 统一时收口 logs/） |
