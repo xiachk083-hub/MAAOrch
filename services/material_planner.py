@@ -23,6 +23,21 @@ import pathlib
 # ── 内置兜底表（config/farm_stages.json 缺失时用）──
 # 每个材料可掉落关卡不只一个 — farm_stages.json 是全量常驻备选表
 # (tools/material_stages.py --dump-farm 生成, 企鹅物流掉率, 按掉率降序)。
+
+# ── 合成兜底配方（官方 ArknightsGameData building_data.json，2026-08-13）──
+# 刷不了高级材料时刷低级去合（用户拍板）。17 材料中只有这 6 个可合成，
+# 其余（扭转醇/轻锰矿/研磨石/RMA/凝胶/炽合金/晶体元件/半自然溶剂/
+# 化合切削液/环烃聚质/转质盐组）无加工站配方，仅掉落/兑换。
+# t1 刷取点 = 固定可刷资源关/1-7（无锁风险）。
+CRAFT_RECIPES = {
+    "固源岩组": {"t1": "固源岩", "ratio": 5, "stage": "1-7", "gold": 200},
+    "糖组":    {"t1": "糖",     "ratio": 4, "stage": "S3-1", "gold": 200},
+    "聚酸酯组": {"t1": "聚酸酯",  "ratio": 4, "stage": "S3-3", "gold": 200},
+    "异铁组":   {"t1": "异铁",   "ratio": 4, "stage": "S3-2", "gold": 200},
+    "酮凝集组": {"t1": "酮凝集",  "ratio": 4, "stage": "S3-5", "gold": 200},
+    "装置":    {"t1": "破损装置", "ratio": 3, "stage": "S3-4", "gold": 100},
+}
+
 FARM_TABLE = {
     "固源岩组":  [{"stage": "10-6", "ap": 21, "rate": 0.76}],
     "糖组":     [{"stage": "2-5", "ap": 12, "rate": 0.37}],
@@ -206,6 +221,14 @@ def plan(snapshot: dict, config: dict, budget: int | None = None,
             locked.append(r)
             r.update({"locked": True, "best": stages[0]["stage"],
                       "lock_reason": reason})
+            # 合成兜底（2026-08-13 用户: 都刷不了 → 刷低级去合）
+            if r["name"] in CRAFT_RECIPES:
+                rc = CRAFT_RECIPES[r["name"]]
+                r["craft"] = {"t1": rc["t1"], "ratio": rc["ratio"],
+                              "stage": rc["stage"], "gold": rc["gold"],
+                              "need": r["gap"] * rc["ratio"]}
+            else:
+                r["craft"] = None  # 无加工站配方，仅掉落/兑换
             continue
         if st.get("probe"):
             probe_log[st["stage"]] = {k: st["probe"].get(k)
@@ -367,8 +390,14 @@ def render_report(p: dict) -> str:
         lines.append("")
         lines.append("── 无法刷取 ──")
         for r in p["locked"]:
-            lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '章节超出')}，"
-                         f"最优 {r['best']} 起)")
+            if r.get("craft"):
+                c = r["craft"]
+                lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '锁定')}，"
+                             f"最优 {r['best']} 起) → 🔧 合成兜底: 刷 {c['t1']}({c['stage']}) "
+                             f"{c['need']} 个 → 合成 {r['gap']} 个 ({c['gold']} 龙门币/个)")
+            else:
+                lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '锁定')}，"
+                             f"最优 {r['best']} 起) → 无合成配方（仅掉落/兑换）")
 
     # ── 代理预检结果 ──
     if p.get("probe"):

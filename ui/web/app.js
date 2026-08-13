@@ -4278,7 +4278,10 @@ async function depotShowPlan(aid) {
         h += `→ 共 ${p.days.length} 天</div>`;
       }
     }
-    if (p.locked && p.locked.length) h += `<div style="font-size:10px;color:var(--danger);margin-top:4px">🔒 无法刷取: ${p.locked.map(r=>`${r.name}缺${r.gap}(${r.lock_reason||'锁定'})`).join('、')}</div>`;
+    if (p.locked && p.locked.length) h += `<div style="font-size:10px;color:var(--danger);margin-top:4px">🔒 无法刷取: ${p.locked.map(r=>{
+      if (r.craft) return `${r.name}缺${r.gap}→合成兜底:刷${r.craft.t1}(${r.craft.stage})${r.craft.need}个`;
+      return `${r.name}缺${r.gap}(无合成配方)`;
+    }).join('、')}</div>`;
     if (p.skipped && p.skipped.length) h += `<div style="font-size:10px;color:var(--text3);margin-top:4px">⏭ 无推荐关: ${p.skipped.map(r=>r.name).join('、')}</div>`;
     if (p.probe && Object.keys(p.probe).length) {
       h += `<div style="font-size:10px;color:var(--text2);margin-top:4px;line-height:1.6">🔎 代理预检: `;
