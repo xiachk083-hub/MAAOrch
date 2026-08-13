@@ -27,6 +27,7 @@ CONFIG_PATH = ROOT / "config" / "activity_stages.json"
 MAA_RES = ROOT / "services" / "maa" / "source" / "resource"
 
 ZONES_API = "https://penguin-stats.io/PenguinStats/api/v2/zones"
+STAGES_API = "https://penguin-stats.io/PenguinStats/api/v2/stages"
 ACTIVE_THRESHOLD = 5000      # 近 30 天样本量下限（低于视为无活动）
 RECENT_WINDOW_MS = 30 * 86400 * 1000
 
@@ -106,25 +107,30 @@ def detect() -> dict:
         active_zone_id = max(zone_times, key=zone_times.get)
         azone = next(z for z in act_zones if z["zoneId"] == active_zone_id)
 
-        # 3) 该 zone 关卡 → code + 主掉落 + 掉率
+        # 3) 该 zone 关卡 → code + 主掉落（企鹅 stages API — 2026-08-13 修复:
+        #    生产 MAA 资源是旧版，stages.json 无新活动关，分类不可依赖
+        #    MAA 资源版本；企鹅 stages API 自带 code/dropInfos）
+        stage_api = {s["stageId"]: s for s in _fetch_json(STAGES_API)}
         stage_map = {}
-        for st in stages:
-            if st["stageId"] in azone.get("stages", []):
-                stage_map[st["stageId"]] = (st["code"], st["apCost"])
+        stage_drops: dict = {}
+        for sid in azone.get("stages", []):
+            st = stage_api.get(sid)
+            if not st:
+                continue
+            code = st.get("code", "")
+            if code:
+                stage_map[sid] = (code, st.get("apCost", 0))
+            drops = [(d.get("itemId"), d.get("dropType"))
+                     for d in st.get("dropInfos", [])
+                     if d.get("dropType") == "NORMAL_DROP" and d.get("itemId")]
+            if drops:
+                stage_drops[sid] = drops
         agg: dict = {}  # (stageId, itemId) -> [q, t]
         for r in rows:
             if r.get("stageId") in stage_map:
                 a = agg.setdefault((r["stageId"], r["itemId"]), [0, 0])
                 a[0] += r.get("quantity", 0)
                 a[1] += r.get("times", 0)
-        stage_drops: dict = {}  # stageId -> [(item, dropType)]
-        for st in stages:
-            if st["stageId"] not in stage_map:
-                continue
-            stage_drops[st["stageId"]] = [
-                (d.get("itemId"), d.get("dropType"))
-                for d in st.get("dropInfos", [])
-                if d.get("dropType") == "NORMAL_DROP"]
 
         # 4) 分类
         material_cand = []

@@ -31,6 +31,7 @@ G_PROJECT_URL = ""
 G_API_TOKEN = ""
 
 DEFAULT_FILES = [
+    "main_web.pyw",
     "models/stats.py",
     "models/queue_entry.py",
     "services/runner.py",
