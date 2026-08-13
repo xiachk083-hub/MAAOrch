@@ -213,6 +213,7 @@ class AccountRunner:
         self._emu_lost_suspect: dict[str, float] = {}  # aid -> ts（失联嫌疑，连续 2 轮确认才杀）
         self._adb_connected: dict[str, bool] = {}  # aid -> MAA 首次成功 adb（连接信号，启动节流用）
         self._run_sanity_first: dict[str, dict] = {}  # aid -> 本次运行首体力快照（统计真实消耗 — 2026-08-13）
+        self._fight_times: dict[str, int] = {}  # aid -> FightTimesTaskPlugin times_finished（0=刷关空转假完成 — 2026-08-14）
         self._run_medicine_used: dict[str, bool] = {}  # aid -> 本次运行是否吃了理智药（过期药突击识别）
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
@@ -958,6 +959,8 @@ class AccountRunner:
             # 风暴期累积 ≥3 后每次健康启动 3 秒被「连续异常」误杀（日-1/日-2
             # 挂起根因，模拟器无损伤）。计数只应衡量本次运行。
             ac["_err_count"] = 0
+            self._fight_times[aid] = -1  # -1=未收到 FightTimesTaskPlugin 信号
+            ac["_injected_tasks"] = list(task_list)
             self.ctx.cfg.inject_smart(task_list, ac, str(config_dir), params=params)
             self.emit_log(f"注入配置: {config_dir}/")
             if _probe_mode:
@@ -1397,6 +1400,19 @@ class AccountRunner:
         tasks, sanity, drops = self._parse_log(aid)
         _cur = (sanity or {}).get("current")
         _mx = (sanity or {}).get("max") or 1
+        # 刷关空转复核（2026-08-14 凌晨教训：MAA 连战失效/关卡不可用时
+        # Fight 任务 0 把也报 AllTasksCompleted，任务链"假完成"骗过判定 —
+        # 日服 4 号全部 times_finished=0、体力 172/172 原封不动）。条件：
+        # 本次注入含 Fight 且收到 FightTimesTaskPlugin 信号且 0 把 → 判
+        # 失败重试（-13 不关模拟器，走未完成退出重试链）。
+        _inj = list(ac.get("_injected_tasks") or [])
+        _ft = self._fight_times.get(aid, -1)
+        if "Fight" in _inj and _ft == 0:
+            self.emit_log(f"⚠ {ac.get('name', aid)} 刷关空转（Fight 0 把，体力未消耗），按失败重试")
+            self._done_flags.pop(aid, None)
+            tasks, sanity, drops = self._parse_log(aid)
+            self._cleanup(aid, -13, tasks, sanity, drops)
+            return
         _stop_threshold = int(ac.get("stop_sanity_pct", 30) or 30)
         _done_pct = (_cur / _mx * 100) if _cur is not None else 0
         _final = _done_pct <= _stop_threshold
@@ -2143,6 +2159,19 @@ class AccountRunner:
                                 try: p.kill()
                                 except: pass
                             return
+                    elif "FightTimesTaskPlugin" in line and "times_finished" in line:
+                        # 刷关次数信号（2026-08-14：MAA 任务链"假完成"——连战
+                        # 失效/关卡不可用时 Fight 0 把也报 AllTasksCompleted，
+                        # 体力满着骗过完成判定。提取 times_finished 供完成判定
+                        # 复核）。
+                        jm = re.search(r"\{.*\}", line)
+                        if jm:
+                            try:
+                                _d = json.loads(jm.group(0)).get("details") or {}
+                                if "times_finished" in _d:
+                                    self._fight_times[aid] = int(_d.get("times_finished") or 0)
+                            except Exception:
+                                pass
             except: pass
 
     def is_task_running(self, aid: str) -> bool:
