@@ -66,6 +66,12 @@ class StageProbe:
         self.maa_instance = maa_instance
         self.timeout = timeout
         self._log_lines: list[str] = []
+        # 视觉模型兜底开关（2026-08-13 用户: 弱信号/异常画面裁决）。
+        # 2026-08-14 审查 #2b: 恒真 = 每步截图外呼 LLM（120s 超时 × 遍历
+        # 12 位置）→ 默认关，仅「详情页但 OCR 未确认关卡名」或「锁模板
+        # 弱匹配」时触发，且每关最多 2 次（_vision_used 计数）。
+        self._vision_fallback = False
+        self._vision_used = 0
 
     # ── logging ──
     def _log(self, msg: str) -> None:
@@ -313,6 +319,7 @@ class StageProbe:
         titles = self._load_stage_titles()
         expected_title = titles.get(base, "")
         num = base.rsplit("-", 1)[-1] if "-" in base else base  # "6"
+        self._vision_used = 0  # 本轮探测视觉外呼计数（上限 2 — 120s 超时兜底）
 
         def _tpl(name: str, thresh: float) -> tuple[bool, float]:
             """全图模板匹配（模板小、位置随关卡布局变化 → 全图扫）。"""
@@ -367,10 +374,67 @@ class StageProbe:
                 if on_detail and expected_title and expected_title[:3] in text:
                     return {"verdict": VERDICT_CAN_FARM, "score": round(score, 3),
                             "detail": f"详情页标题匹配 {expected_title}（OCR: {text}）"}
+            # 4) 视觉裁决（2026-08-13 用户: 模板/OCR 信号弱或画面异常时，
+            #    直接问视觉模型 — 详情页确认 + 代理可用性一眼看出。
+            #    2026-08-14 审查 #2b: 恒真=每步外呼 LLM（120s 超时×12
+            #    位置）→ 收紧: 仅详情页且（本轮首次 / 锁模板弱匹配 /
+            #    显式强制兜底）才触发，每关最多 2 次。走到这里说明 OCR
+            #    关卡名/标题未匹配 — 视觉负责确认「是不是目标关的详情页」）
+            if (on_detail and (self._vision_used == 0
+                               or 0.35 < lval < 0.6 or self._vision_fallback)
+                    and self._vision_used < 2):
+                self._vision_used += 1
+                vr = _judge_vision(shot, base, diff)
+                if vr:
+                    return vr
             if on_detail:
                 return {"verdict": VERDICT_CANNOT, "score": 0.0,
                         "detail": f"在详情页但关卡名不匹配 {base}（可能点了别的关）"}
             return None
+
+        def _judge_vision(self, img: np.ndarray, base: str, diff: str | None) -> dict | None:
+            """视觉模型裁决: 详情页确认 + 代理可用性（弱信号兜底）。
+
+            2026-08-14 审查 #2b 修正: 必须核验「界面=详情页 + 关卡名对上
+            目标」才采信 — 否则遍历时点在别的关的详情页，也会被
+            "代理=可用" 误判 CAN_FARM。关卡名对不上 → 返回 None 继续遍历。
+            """
+            try:
+                import cv2
+                from services.vision import understand_image
+                ok, buf = cv2.imencode(".png", img)
+                if not ok:
+                    return None
+                q = (f"这是明日方舟游戏横屏截图。目标关卡: {base}"
+                     f"{'（磨难模式）' if diff else ''}。\n"
+                     f"1. 当前是什么界面？\n"
+                     f"2. 若是关卡详情页：关卡名是什么？右下角「开始行动」按钮上方"
+                     f"的「全权委托/代理作战」是金色可用、还是灰色带锁不可用？\n"
+                     f"按格式回答: 界面=...；关卡名=...；代理=可用|不可用|不适用")
+                r = understand_image(buf.tobytes(), q)
+                if not r.get("ok"):
+                    self._log(f"  视觉裁决失败: {r.get('error', '')[:80]}")
+                    return None
+                ans = r["answer"]
+                self._log(f"  视觉: {ans[:100]}")
+                # 核验关卡名（"TO-9" 或数字 "9" 出现在回答里）— 防点在
+                # 别的关的详情页被"代理=可用"误判可刷
+                _in_detail = ("界面=关卡详情页" in ans) or ("详情页" in ans)
+                _name_ok = (base in ans) or (num in ans)
+                if "代理=可用" in ans and _in_detail and _name_ok:
+                    return {"verdict": VERDICT_CAN_FARM, "score": 0.99,
+                            "detail": f"视觉判定可刷（{ans[:60]}）"}
+                if ("代理=不可用" in ans or "代理=不适用" in ans) and _in_detail and _name_ok:
+                    return {"verdict": VERDICT_CANNOT, "score": 0.99,
+                            "detail": f"视觉判定锁定（{ans[:60]}）"}
+                # 详情页 + 关卡名对上，但代理状态不明 → 详情页即可刷（兜底）
+                if _in_detail and _name_ok:
+                    return {"verdict": VERDICT_CAN_FARM, "score": 0.8,
+                            "detail": f"视觉确认详情页（{ans[:60]}）"}
+                return None  # 界面不对/关卡名不对 → 继续遍历
+            except Exception as e:
+                self._log(f"  视觉裁决异常: {e}")
+                return None
 
         def _detail_gold(shot) -> float:
             x0, y0, w, h = START_BTN_ROI

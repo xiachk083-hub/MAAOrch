@@ -92,6 +92,10 @@ def aggregate(period: str, ref: str = "", accounts: list[dict] | None = None) ->
                 break
             except ValueError:
                 continue
+        # 纯日期 ref 对齐游戏日 04:00（08-14 审查 #3）: 选 "08-14" 应看到
+        # [08-14 04:00, 08-15 04:00) — 否则 00:00 解析会退回前一天游戏日
+        # （用户选当天却拿到前一天的尾巴）。week/month/year 界不依赖 hour。
+        ref_dt = ref_dt.replace(hour=4, minute=0, second=0, microsecond=0)
     start, end = period_range(period, ref_dt)
 
     summary = {"runs": 0, "accounts": 0, "success_runs": 0, "fail_runs": 0,
@@ -175,7 +179,15 @@ def aggregate(period: str, ref: str = "", accounts: list[dict] | None = None) ->
                   sorted(drops_top.items(), key=lambda kv: -kv[1])[:15]]
     task_list = [{"task": k, **v} for k, v in task_stats.items()]
 
-    trend_list = [{"key": k, **v} for k, v in sorted(trend.items())]
+    if period == "day":
+        # 游戏日 04:00 界（08-14 审查 #3）: 桶键是墙钟小时，但 00:00-03:59
+        # 属前一日游戏日末尾 — 按游戏日偏移 (hour-4)%24 排序，序列从
+        # 04:00 起，避免时间倒流（02:00 排到 23:00 前面）。
+        trend_list = sorted(
+            ({"key": k, **v} for k, v in trend.items()),
+            key=lambda kv: (int(kv["key"][:2]) - 4) % 24)
+    else:
+        trend_list = [{"key": k, **v} for k, v in sorted(trend.items())]
     return {
         "ok": True,
         "period": period,

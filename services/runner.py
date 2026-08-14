@@ -220,6 +220,7 @@ class AccountRunner:
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
         self._probe_pending: dict[str, dict] = {}  # aid -> {ac, inst_dir, ts, probe_stages}（关卡检测待跑）
         self._probe_running: dict[str, bool] = {}  # aid -> 关卡检测进行中（抑制 stall/error 误杀）
+        self._probe_origin: dict[str, object] = {}  # aid -> probe 让位时的 MAA Popen（finally 身份校验，08-14 审查 #1）
         from infrastructure.logger import Logger
         self._log = Logger("runner")
         # 单点收敛 Step 3a: 体力写入者收口 — sanity_tracker 订阅 bus
@@ -493,16 +494,12 @@ class AccountRunner:
                 AccountState(account_id).on_stopped("手动停止")
             except Exception:
                 pass
-            self._graceful_close(p)
-            try:
-                p.wait(5)  # MAA usually exits <1s after WM_CLOSE
-            except Exception:
-                pass
-            if p.poll() is None:  # still alive → fall back to hard kill
-                try: p.terminate(); p.wait(2)
-                except: pass
-                try: p.kill()
-                except: pass
+            # 2026-08-14 审查 #4: 任务运行中（如肉鸽）WM_CLOSE 会弹"确认
+            # 退出"→ 不点则不退 → 走 terminate 硬杀 → minitouch 残留 +
+            # ADB 端口占用 → 让位后新任务启动撞"双连/运行异常"窗口。
+            # 复用完整优雅关闭（WM_CLOSE + 点弹窗 + 等退出 + 兜底），
+            # 确保返回时进程已死、ADB 连接已释放（同步语义）。
+            self._kill_maa_graceful(p)
         self._active.pop(account_id, None)
         self.ctx.proc_status.discard(account_id)
         self._release_emu_mark(account_id)
@@ -1303,6 +1300,10 @@ class AccountRunner:
 
         # MAA GUI 的 StartUp 已完成（游戏已登录）— 先优雅杀掉 MAA，让
         # StageProbe 子进程独占 ADB（双连接会抢端口/冲突 — 2026-08-12）。
+        # 2026-08-14 审查 #1: 记录让位时的进程引用 — _on_process_exit 见
+        # _probe_running 会跳过退出清理（防关模拟器/失败重入队 → 孤儿探针
+        # 与新 MAA 双连 ADB 循环），probe finally 用此身份校验防误伤新运行。
+        self._probe_origin[aid] = self._procs.get(aid)
         try:
             _p0 = self._procs.get(aid)
             if isinstance(_p0, subprocess.Popen) and _p0.poll() is None:
@@ -1369,14 +1370,22 @@ class AccountRunner:
                 self.emit_log(f"🔬 {name} 检测异常: {e}")
             finally:
                 self._probe_running.pop(aid, None)  # 检测结束，恢复 stall/error 检测
-                # 完成收尾（复用正常完成路径 — 关闭游戏 + cleanup + 出队）
+                # 完成收尾（复用正常完成路径 — 关闭游戏 + cleanup + 出队）。
+                # 2026-08-14 审查 #1: 身份校验 — 仅当 _procs[aid] 仍是 probe
+                # 让位时那个进程（或 None=让位前无进程）才收尾；probe 期间
+                # 账号被外部 stop/重入队 → 新 MAA 已接管 → 不得误伤。
                 try:
+                    _origin = self._probe_origin.get(aid)
                     _ac = self._active.get(aid)
                     _p = self._procs.get(aid)
-                    if _ac and isinstance(_p, subprocess.Popen):
+                    if _ac and isinstance(_p, subprocess.Popen) and _p is _origin:
                         self._finish_completed(aid, _ac, _p)
+                    elif _ac and isinstance(_p, subprocess.Popen):
+                        self.emit_log(f"🔬 {name} 检测完成但进程已被接管，跳过收尾"
+                                      f"（防误伤新运行）")
                 except Exception:
                     pass
+                self._probe_origin.pop(aid, None)
 
         threading.Thread(target=_do_probe, daemon=True).start()
 
@@ -1617,6 +1626,14 @@ class AccountRunner:
         # mark released while the new process is still farming).
         if self._procs.get(aid) is not p:
             return
+        # Probe 让位（2026-08-14 审查 #1）: StageProbe 检测前主动优雅杀 MAA —
+        # 退出是预期行为。若走正常退出判定：rc=1 + StartUp"完成" → 按完成
+        # 处理关模拟器（probe 子进程还在用！）; rc=1 + 任务"运行中" → 未完成
+        # 退出 -13 重入队（新 MAA 与孤儿探针双连 ADB 循环）。两者都错 →
+        # 跳过，清理统一由 probe finally 收尾。
+        if self._probe_running.get(aid):
+            self._log.info(f"[probe] {aid} MAA 已退出（StageProbe 让位），跳过退出清理")
+            return
         rc = p.poll()
         tasks, sanity, drops = self._parse_log(aid) if aid in self._active else ([], None, None)
         # MAA exiting within 60s of launch with no completed tasks = startup
@@ -1725,7 +1742,7 @@ class AccountRunner:
         # 监听进程，模拟器死后残留的 ADB 端口会误判"模拟器还在" → MAA 在
         # 假画面空转、无人处理（2026-08-10 官-33: MAA 活着 + 模拟器4进程没了
         # + asst.log 活跃（残留端口截图）→ 卡死到永远）。
-        if ac and aid not in self._stopping:
+        if ac and aid not in self._stopping and not self._probe_running.get(aid):
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
                 cli = find_mumu_cli()
@@ -1792,7 +1809,10 @@ class AccountRunner:
         try:
             _hb = getattr(getattr(self.ctx, "_mw", None), "_maa_heartbeat", {}) or {}
             _last = _hb.get(aid, 0)
-            if _last and aid not in self._stopping and not self._done_flags.get(aid):
+            # 心跳检查在 probe 期间跳过 — StageProbe 让位时 MAA 已死，
+            # 心跳断是预期（probe 期间模拟器/游戏归 StageProbe 全权管理）
+            if (_last and aid not in self._stopping and not self._done_flags.get(aid)
+                    and not self._probe_running.get(aid)):
                 if time.time() - _last > 10:
                     name = ac.get("name", aid) if ac else aid
                     self._log.warn(f"[MAA心跳] {name} 心跳断 {int(time.time()-_last)}s（MAA 停止/假死），杀 MAA 恢复")
@@ -1805,7 +1825,7 @@ class AccountRunner:
                     return
         except Exception:
             pass
-        if ac and emu_pid and aid not in self._stopping:
+        if ac and emu_pid and aid not in self._stopping and not self._probe_running.get(aid):
             name = ac.get("name", aid)
             try:
                 import psutil as _pu
