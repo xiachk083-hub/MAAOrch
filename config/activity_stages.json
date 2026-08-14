@@ -1,0 +1,33 @@
+{
+  "active": true,
+  "zone": "act53side_zone1",
+  "zone_name": "直到大地变成一颗酸橙",
+  "until": "2026-08-22 03:59",
+  "window_source": "PRTS日历",
+  "material": [
+    {
+      "stage": "TO-7",
+      "item": "糖组",
+      "rate": 0.972
+    },
+    {
+      "stage": "TO-9",
+      "item": "晶体元件",
+      "rate": 0.875
+    },
+    {
+      "stage": "TO-8",
+      "item": "凝胶",
+      "rate": 0.702
+    }
+  ],
+  "orundum": {
+    "stage": "TO-4",
+    "item": "固源岩",
+    "rate": 0.832
+  },
+  "resource": [],
+  "recent_times": 41580722,
+  "ts": 1786614353.2500474,
+  "detected": true
+}

@@ -81,3 +81,7 @@ debug/
 # Playwright MCP 调试日志与临时产物归档（2026-08-14）
 .playwright-mcp/
 debug/scratch_*/
+
+# 运行时数据与编译产物（2026-08-14）
+data/
+tools/vision_cli/vision_cli.exe
