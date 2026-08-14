@@ -650,42 +650,29 @@ class AccountRunner:
 
     def _guard_kill(self, aid: str, action: str, reason: str,
                     evidence: str = "") -> bool:
-        """守护审计钩子（2026-08-14 用户: 杀/关前先确认，留痕可回看）。
+        """守护审计（2026-08-15 用户: 「打个报告，我们事后再回来看」）。
 
-        破坏性动作前调用：写入 kill_audit 待确认队列 → 观察窗口内若有
-        pending 未决 → 返回 False（暂缓执行，等守护方确认）；无 pending
-        或已确认放行 → 返回 True（可以执行）。
+        审计是**事后报告**不是事前拦截：破坏性动作（杀/关/回收）照常执行，
+        同时写入 kill_audit 报告（Web 审计页回看 — d704eb1）。timeout_s=0
+        = 报告即完成，不留 pending，不挡任何流程。
 
         判据以实际状态为准（用户铁律）— 调用方必须传真实证据摘录
         （asst.log 尾部 taskchain / 心跳年龄 / 进程状态），禁止只传
         "任务列表硬编码状态"这类推断值。
 
-        返回 True 表示"已获准执行"；调用方拿到 True 后执行杀/关动作。
+        返回 True（永远放行）— 正常完成的动作不需要审（用户: 什么东西
+        都做完了为什么要审）；可疑判定由报告留痕，事后人工复盘。
         """
         try:
             from models.kill_audit import request as _ka_request
-            from models.kill_audit import pending as _ka_pending
             from models.kill_audit import expire_all as _ka_expire
-            _ka_expire()  # 先清算超时项（超时未确认=默认放行，防 pending 卡死流程）
-            # 查重: 同账号同动作已有 pending 不重复写（每 tick 检查都会走到
-            # 这里 — 不查重会无限膨胀，杀动作永久暂缓。2026-08-14 实测
-            # 回收每 30s 写一条 → 28 条 pending → 所有闲置模拟器不回收）
-            _pend = _ka_pending()
-            _mine = [e for e in _pend if e.get("aid") == aid and e.get("action") == action]
-            if not _mine:
-                _ka_request(aid, self._ac_name(aid), action, reason, evidence)
-                _pend = _ka_pending()
-            # ⚠️ 2026-08-15 修复: 原 `e.get("aid") == aid` 只筛账号不筛动作 —
-            # 同账号其他动作的 pending（如启动失败写 kill_maa）会挡住后续
-            # 杀/关 → 恢复链卡死 → 启动失败循环。改为按 (aid, action) 独立。
-            _mine = [e for e in _pend if e.get("aid") == aid
-                     and e.get("action") == action]
-            if _mine:
-                return False
-            return True
+            _ka_expire()
+            _ka_request(aid, self._ac_name(aid), action, reason, evidence,
+                        timeout_s=0)
         except Exception:
             # 审计系统异常时不影响主流程 — 默认放行（宁可多记录不能卡死调度）
-            return True
+            pass
+        return True
 
     def _ac_name(self, aid: str) -> str:
         try:
