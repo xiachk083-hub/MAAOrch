@@ -147,7 +147,10 @@ def save_config(data: dict) -> None:
             _caller = f"{_st[-3].filename.split(chr(92))[-1]}:{_st[-3].lineno} {_st[-3].name}" if len(_st) >= 3 else "?"
         except Exception:
             pass
-        with (Path(__file__).parent.parent / "debug.log").open("a", encoding="utf-8") as _af:
+        # 日志收口：与 infrastructure.logger 同一 logs/debug.log（根日志迁移 Step 5）
+        _logs_dir = Path(__file__).parent.parent / "logs"
+        _logs_dir.mkdir(parents=True, exist_ok=True)
+        with (_logs_dir / "debug.log").open("a", encoding="utf-8") as _af:
             _af.write(f"[SAVE-AUDIT] suspended={_sus} accounts={len(out.get('accounts', []))} caller={_caller}\n")
     except Exception:
         pass

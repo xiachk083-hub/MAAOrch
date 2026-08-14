@@ -4,9 +4,12 @@ import os, json, threading, inspect
 from pathlib import Path
 from datetime import datetime
 
-_LOG_DIR = Path(__file__).parent.parent
+# 日志收口：统一写入项目根 logs/ 子目录（根日志迁移 Step 5）
+_LOG_DIR = Path(__file__).parent.parent / "logs"
 _LOGGER_LOCK = threading.Lock()
 _START_TIME = datetime.now()
+
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 _LEVELS = {"TRACE": -1, "DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
 
