@@ -75,8 +75,12 @@ def parse_line(line: str) -> dict | None:
     返回 {current, max, report_time} 或 None（未命中）。
 
     双格式兼容（2026-08-13 生产 MAA 换成 6.16.0，回调字段变了）:
-      - 6.16.6/8: SubTaskExtraInfo what="SanityBeforeStage"
+      - 6.16.6/8: SubTaskExtraInfo what="SanityBeforeStage"（带 current_sanity）
       - 6.16.0:   SubTaskExtraInfo class="asst::FightTimesTaskPlugin"
+      ⚠️ 2026-08-15 现场: 日服 MAA 的 FightTimesTaskPlugin 行只有
+      sanity_cost（每轮消耗）没有 current_sanity → 快照停更（日-4
+      mtime 停在昨天，stats 显示旧值 172/172）。sanity_cost 路径:
+      用旧快照 current 减消耗推算（近似 — MAA 不报当前值时的兜底）。
     """
     try:
         m = _JSON_RE.search(line)
@@ -90,12 +94,24 @@ def parse_line(line: str) -> dict | None:
         else:
             return None
         cur = det.get("current_sanity")
+        max_s = det.get("max_sanity", 0)
+        rt = det.get("report_time", "")
         if cur is None:
-            return None
+            # 无 current_sanity → 由 update_from_line 结合旧快照按
+            # sanity_cost 推算（此格式缺当前值）
+            cost = det.get("sanity_cost")
+            if cost is None:
+                return None
+            return {
+                "current": None,          # 标记：需推算
+                "sanity_cost": int(cost),
+                "max": max_s,
+                "report_time": rt,
+            }
         return {
             "current": cur,
-            "max": det.get("max_sanity", 0),
-            "report_time": det.get("report_time", ""),
+            "max": max_s,
+            "report_time": rt,
         }
     except Exception:
         return None
@@ -108,6 +124,16 @@ def update_from_line(aid: str, line: str, inst_dir=None) -> bool:
     det = parse_line(line)
     if not det:
         return False
+    if det.get("current") is None and det.get("sanity_cost") is not None:
+        # sanity_cost 路径：旧快照 - 消耗（2026-08-15 日服 MAA 缺 current_sanity）
+        old = get(_resolve_aid(aid, inst_dir))
+        base = (old or {}).get("current")
+        mx = det.get("max") or (old or {}).get("max") or 0
+        if base is None:
+            return False  # 无旧值无法推算（首条）
+        cur = max(0, int(base) - int(det["sanity_cost"]))
+        update(_resolve_aid(aid, inst_dir), cur, mx, det.get("report_time", ""))
+        return True
     update(_resolve_aid(aid, inst_dir), det["current"], det["max"],
            det["report_time"])
     return True
