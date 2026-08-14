@@ -213,11 +213,87 @@ class EmulatorService:
         try:
             if not self.ctx.config.get("emu_v2_reclaim", False):
                 return
-            lq = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
+            mw = getattr(self.ctx, "_mw", None)
+            lq = getattr(mw, "launch_queue", None)
+            runner = getattr(mw, "runner", None)
+            _accounts = (getattr(mw, "accounts", None)
+                         or getattr(self.ctx, "accounts", None) or [])
+            _conn = getattr(mw, "connect_accounts", None) or []
             pending_ids = ({e.account_id for e in lq._pending}
                            if lq is not None else set())
             active_ids = (set(lq._active_emus.values())
                           if lq is not None else set())
+            # 内存压力强制回收（#8 — 对齐旧回收 2026-08-14 内存耗尽事故修复）:
+            # 可用内存低于 reclaim_force_mem_gb 时跳过「排队保留窗口」软保护
+            try:
+                import psutil as _psu
+                _free_gb = _psu.virtual_memory().available / 1024 / 1024 / 1024
+                _force = _free_gb < float(self.ctx.config.get("reclaim_force_mem_gb", 2.0) or 2.0)
+            except Exception:
+                _free_gb = 99.0
+                _force = False
+            # 排队保留窗口（#8）— 只保护 keep_min 内会轮到（含已到期等槽位）的
+            # 队列前部账号；远期回排/长队尾一律回收（轮到启动时 runner 自动拉
+            # 起 — 串行启动门保证不启动风暴）。
+            try:
+                from services.dynamic_params import get_pending_keep_min
+                _keep_min = get_pending_keep_min(self.ctx.config, 10)
+            except Exception:
+                _keep_min = float(self.ctx.config.get("emu_pending_keep_min", 10) or 10)
+            try:
+                import datetime as _dtmod
+                _front_keep = max(int(self.ctx.config.get("parallel_max", 1) or 1) + 4, 6)
+                _pending_list = list(lq._pending) if lq is not None else []
+                _front_ids = {e.account_id for e in
+                              sorted(_pending_list, key=lambda e: e.sort_key)[:_front_keep]}
+                _now = _dtmod.datetime.now()
+                _due_ids = {aid for aid in pending_ids
+                            if aid in _front_ids and any(
+                                (e.not_before - _now).total_seconds() <= _keep_min * 60
+                                for e in _pending_list if e.account_id == aid)}
+            except Exception:
+                _front_keep, _front_ids, _due_ids = 6, set(), set()
+                _now = None
+            # #3 实例池活 MAA 独立防线（2026-08-14 — 对齐旧回收 L1114-1166）:
+            # 不依赖 _procs/active 映射 — 自动重启/残留清理竞态下映射可能丢失，
+            # 若只查映射会把正在跑 MAA 的模拟器当闲置回收 → 失联 → 杀 MAA →
+            # 启动失败循环（19:58 b-5 事故）。直接扫实例池 .pid/.meta。
+            _active_maa_emus: set[str] = set()
+            try:
+                import psutil as _psu2
+                _inst_root = Path(__file__).parent / "maa" / "instances"
+                for _idir2 in _inst_root.glob("*"):
+                    _pfile = _idir2 / ".pid"
+                    if not _pfile.exists():
+                        continue
+                    try:
+                        _pid2 = int(_pfile.read_text().strip())
+                        if not _psu2.pid_exists(_pid2):
+                            continue
+                        try:
+                            if "MAA" not in (_psu2.Process(_pid2).name() or "").upper():
+                                continue
+                        except Exception:
+                            pass
+                        _mfile = _idir2 / ".meta"
+                        if not _mfile.exists():
+                            continue
+                        _maid = _mfile.read_text(encoding="utf-8").split("|")[0]
+                        if not _maid:
+                            continue
+                        for _a2 in (_accounts + _conn):
+                            if _a2.get("id") == _maid and _a2.get("emu_instance_index"):
+                                _active_maa_emus.add(str(_a2["emu_instance_index"]))
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            # 靠近共享关闭服务（只读引用 — 跨路径一致）
+            try:
+                from services.emu_service import (recently_closed as _rc_fn,
+                                                  lock_busy as _lb_fn)
+            except Exception:
+                _rc_fn = _lb_fn = None
             for idx, st in list(self.states.items()):
                 try:
                     if st.state not in (READY, IDLE, EXTERNAL):
@@ -227,24 +303,46 @@ class EmulatorService:
                         _ext_min = int(self.ctx.config.get("emu_external_reclaim_min", 30) or 30)
                         if time.time() - st.state_since < _ext_min * 60:
                             continue
-                    # 关闭冷却（5 分钟 — 刚关过的进程可能还在退出）
-                    _t = self._closed_at.get(idx, 0)
-                    if _t and time.time() - _t < 300:
+                    # #5 关闭冷却（5 分钟 — 刚关过的进程可能还在退出）。读共享
+                    # recently_closed（旧回收/即时回收 direct_shutdown + v2 的
+                    # graceful_shutdown 都经 mark_closed 写入 → 跨回收路径一致；
+                    # 本机 _closed_at 兜底，防关闭走到非 mark_closed 路径）
+                    _cooling = bool(_rc_fn and _rc_fn(idx))
+                    if not _cooling:
+                        _t = self._closed_at.get(idx, 0)
+                        _cooling = bool(_t and time.time() - _t < 300)
+                    if _cooling:
                         continue
-                    # 排位决策: 账号在 pending/active → 保留（30 分钟内轮到）
-                    if st.account_id:
-                        if st.account_id in pending_ids or st.account_id in active_ids:
+                    # #7 手动/API 启动保护期（10 分钟）— 用户手动开的/API 启动的
+                    # 模拟器不立刻回收，否则手动操作被反复打断（2026-08-10 实测）。
+                    _mts = getattr(mw, "manual_emu_started", None)
+                    if _mts:
+                        _t7 = _mts.get(str(idx))
+                        if _t7 and time.time() - _t7 < 600:
                             continue
-                        # MAA 进程还活着（降级优雅关闭中/账号过渡期/连接页
+                    # #6 优雅关闭进行中 → 跳过（回收的直接 shutdown 绕过 graceful
+                    # 锁，会与进行中的优雅关闭并发 → 二次关闭。2026-08-11 实测）。
+                    if _lb_fn and _lb_fn(idx):
+                        continue
+                    # #3 实例池活 MAA 保护（独立防线 — 不再查映射）
+                    if str(idx) in _active_maa_emus:
+                        continue
+                    # 排位决策: active → 无条件保留；pending → 仅在保留窗口内
+                    # 保留（#8）
+                    if st.account_id:
+                        if st.account_id in active_ids:
+                            continue
+                        if st.account_id in pending_ids:
+                            if st.account_id in _due_ids and not _force:
+                                continue
+                            # 远期回排/长队尾/内存压力 → 不保留，落到回收下方
+                        # #2 MAA 进程还活着（降级优雅关闭中/账号过渡期/连接页
                         # 手动操作）→ 保留模拟器 — 否则关掉模拟器后 MAA 失联
                         # 卡住，且进程活着不触发自动重启（2026-08-11 用户:
                         # "MAA 还开着，模拟器自己关掉了，之后也没有重启" —
-                        # 与旧回收 _has_real_process 保护对齐，2026-08-14
-                        # Step 4 补全，翻转 emu_v2_reclaim 前必须）。
+                        # 与旧回收 _has_real_process 保护对齐，已全迁）。
                         try:
-                            _runner = getattr(getattr(self.ctx, "_mw", None),
-                                              "runner", None)
-                            if _runner and _runner._has_real_process(st.account_id):
+                            if runner and runner._has_real_process(st.account_id):
                                 continue
                         except Exception:
                             pass
