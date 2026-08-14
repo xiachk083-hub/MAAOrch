@@ -77,3 +77,7 @@ debug/
 
 # ZCode 工具目录（2026-08-12）
 .zcode/
+
+# Playwright MCP 调试日志与临时产物归档（2026-08-14）
+.playwright-mcp/
+debug/scratch_*/
