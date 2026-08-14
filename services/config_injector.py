@@ -79,12 +79,12 @@ class ConfigService:
             else:
                 d.setdefault("Global", {})["GUI.MinimizeToTray"] = "True" if ac.get("start_minimized") else "False"
             if ac.get("start_directly"): c["Start.RunDirectly"]="True"
-            # PostActions: MAA 的方式关闭（2026-08-12 用户: MAA 怎么用我们
-            # 就怎么用 — MAA 完成任务自己关游戏+关模拟器（ExitEmulator+ExitSelf，
-            # MuMuManager shutdown），MAAOrch 不干预、不抢 ADB 端口）。
-            # connect-only（手动连接）不关模拟器（用户手动用的）。
+            # PostActions: 完成后只退出 MAA，**不关游戏**（2026-08-15 用户:
+            # 不要关闭游戏 — 关游戏动画/黑屏影响最后识别；游戏保持画面稳定，
+            # 模拟器空闲回收由 MAAOrch 统一处理）。8 = ExitSelf（只退 MAA），
+            # 12 = ExitEmulator+ExitSelf（会连带关游戏，不再使用）。
             if ac.get("post_action"):
-                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
+                c["MainFunction.PostActions"] = "8"
             c["Connect.RetryOnDisconnected"]="True"
             c["Connect.AllowADBRestart"]="False"
             c["Connect.AllowADBHardRestart"]="False"
