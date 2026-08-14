@@ -10,6 +10,19 @@ _START_TIME = datetime.now()
 
 _LEVELS = {"TRACE": -1, "DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
 
+# 终端模式（main_web.pyw --console）：日志同时输出到终端
+# _CONSOLE_DASH 非 None 时走仪表盘（状态区+日志区），否则直接 print
+_CONSOLE_ENABLED = False
+_CONSOLE_DASH: object | None = None
+
+
+def enable_console(dash: object | None = None) -> None:
+    """终端模式开关 — 日志行额外输出到 stdout（含 TRACE/DEBUG）。
+    dash: infrastructure.console_dash.ConsoleDash 实例（可选，激活时日志进仪表盘）。"""
+    global _CONSOLE_ENABLED, _CONSOLE_DASH
+    _CONSOLE_ENABLED = True
+    _CONSOLE_DASH = dash
+
 
 def _rotate(path: Path, max_bytes: int = 512 * 1024, backup_count: int = 3) -> None:
     try:
@@ -85,6 +98,14 @@ class Logger:
                 try:
                     with ep.open("a", encoding="utf-8") as f:
                         f.write(json.dumps(event, ensure_ascii=False) + "\n")
+                except Exception:
+                    pass
+            if _CONSOLE_ENABLED:
+                try:
+                    if _CONSOLE_DASH is not None:
+                        _CONSOLE_DASH.append(line)
+                    else:
+                        print(line, flush=True)
                 except Exception:
                     pass
         if ui and self._ui_callback:

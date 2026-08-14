@@ -200,15 +200,25 @@ def detect_emu_adb(emu_idx) -> str:
 
 # 他人业务模拟器名前缀 — 从 MAAOrch 管理范围隔离（如 fz-maa 的 l-1/l-3-青吟巷滑翔花椒 等），
 # 防止批量关模拟器/关卡检测/连接列表误操作到对方正在使用的实例。
+# 2026-08-13 用户: l-4/l-6 纳入 MAAOrch 管理（肉鸽业务机，像正常账号一样
+# 但不清日常）→ 加入白名单可被探测；其余 l- 仍隔离。
 EMU_EXCLUDE_NAME_PREFIXES = ("l-",)
+EMU_INCLUDE_NAME_PREFIXES = ("l-4-", "l-6-")  # 白名单（前缀精确到名称段，防 l-40 误放行）
 
 
 def _strip_excluded_emus(instances: list) -> list:
-    """Remove emulators whose name starts with EMU_EXCLUDE_NAME_PREFIXES."""
+    """Remove emulators whose name starts with EMU_EXCLUDE_NAME_PREFIXES,
+    except those matching EMU_INCLUDE_NAME_PREFIXES (white-listed)."""
     if not EMU_EXCLUDE_NAME_PREFIXES:
         return instances
-    return [e for e in instances
-            if not str(e.get("name", "")).startswith(EMU_EXCLUDE_NAME_PREFIXES)]
+    out = []
+    for e in instances:
+        name = str(e.get("name", ""))
+        if not name.startswith(EMU_EXCLUDE_NAME_PREFIXES):
+            out.append(e)
+        elif any(name.startswith(p) for p in EMU_INCLUDE_NAME_PREFIXES):
+            out.append(e)  # 白名单（l-4/l-6 纳管）
+    return out
 
 
 def detect_emu_instances() -> list[dict]:
