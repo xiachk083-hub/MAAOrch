@@ -1290,6 +1290,42 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "pending_count": len(pending), "active_count": len(active),
                 "paused": lq._paused, "avg_duration_min": avg_sec // 60}
 
+    # ── 截图视图（2026-08-15 用户: 收集每一次截图，单独视图事后查看）──
+    # 来源: 完成截图 logs/shots/*.png + 收集器拷贝的 MAA 界面/掉落图
+    # logs/shots/<aid>/*.png
+
+    @app.get("/api/shots/list")
+    def handle_shots_list():
+        _sd = Path(__file__).parent.parent / "logs" / "shots"
+        out = []
+        if _sd.is_dir():
+            try:
+                for f in sorted(_sd.rglob("*.png"), reverse=True)[-500:]:
+                    rel = f.relative_to(_sd).as_posix()
+                    # 文件名形如 <aid>_<ts>.png（完成图）或 <aid>/<prefix><ts>.png（收集图）
+                    try:
+                        ts = f.stat().st_mtime
+                    except Exception:
+                        ts = 0
+                    out.append({"path": rel, "ts": ts,
+                                "size": f.stat().st_size if f.exists() else 0})
+            except Exception:
+                pass
+        return {"ok": True, "shots": out}
+
+    @app.get("/api/shots/file")
+    def handle_shots_file(path: str = ""):
+        _sd = Path(__file__).parent.parent / "logs" / "shots"
+        try:
+            _p = (_sd / path).resolve()
+            if not str(_p).startswith(str(_sd.resolve())) or not _p.exists():
+                raise HTTPException(404, "not found")
+            return FileResponse(_p, media_type="image/png")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(404, "not found")
+
     @app.get("/api/logs")
     def handle_logs(lines: int = 50):
         lp = Path(__file__).parent.parent / "logs" / "debug.log"

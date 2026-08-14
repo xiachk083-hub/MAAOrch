@@ -301,6 +301,14 @@ pause
     except Exception:
         pass
 
+    # MAA 截图收集线程（60s 扫描实例 debug/interface + drops → logs/shots/，
+    # 前端「截图」视图事后查看 — 2026-08-15 用户）
+    try:
+        from services.shot_collector import ShotCollector
+        ShotCollector(ctx._mw).start()
+    except Exception:
+        pass
+
     # 活动关识别线程（每小时 — 2026-08-13 用户: 活动当天晚上数据出来后自动切换）
     try:
         from services.activity_tracker import ActivityScheduler

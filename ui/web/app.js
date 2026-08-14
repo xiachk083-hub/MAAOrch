@@ -134,7 +134,7 @@ function renderPage() {
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
                 emus: renderEmus, connect: renderConnect, events: renderEvents,
-                depot: renderDepot, audit: renderAudit };
+                depot: renderDepot, audit: renderAudit, shots: renderShots };
   if (fns[state.page]) fns[state.page](c);
   else { c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">页面未找到，请 Ctrl+F5 强刷更新前端</div>`; }
 }
@@ -4429,6 +4429,58 @@ const AUDIT_STATUS_LABEL = {
   pending: '⏳ 待确认', approved: '✅ 已放行', rejected: '🛑 已拦截',
   expired: '⏱ 超时放行', executed: '⚡ 已执行'
 };
+
+// ── 📸 截图视图（2026-08-15 用户: 收集每一次的截图单独视图事后查看）──
+async function renderShots(container) {
+  container.innerHTML = `<div>
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="color:var(--text2);font-size:12px;font-weight:bold">📸 MAA 截图</span>
+      <select id="shots-account" onchange="loadShots()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+        <option value="">全部账号</option>
+      </select>
+      <button class="small" onclick="loadShots()">刷新</button>
+      <span style="color:var(--text3);font-size:9px">完成截图 + MAA 界面/掉落原始图（收集器 60s 同步）</span>
+    </div>
+    <div id="shots-content" style="color:var(--text3);font-size:11px;padding:10px">加载中...</div>
+  </div>`;
+  try {
+    const accts = state.accounts.length ? state.accounts : ((await apiGet('/accounts')).ok ? (await apiGet('/accounts')).accounts : []);
+    const sel = document.getElementById('shots-account');
+    accts.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.id; o.textContent = a.name;
+      sel.appendChild(o);
+    });
+  } catch(e) {}
+  loadShots();
+}
+
+async function loadShots() {
+  const el = document.getElementById('shots-content');
+  if (!el) return;
+  const aid = document.getElementById('shots-account')?.value || '';
+  try {
+    const r = await apiGet('/shots/list');
+    if (!r.ok || !r.shots || !r.shots.length) {
+      el.innerHTML = '<div style="text-align:center;padding:30px">暂无截图（跑完任务后自动收集）</div>';
+      return;
+    }
+    let shots = r.shots;
+    if (aid) shots = shots.filter(s => s.path.startsWith(aid + '/') || s.path.startsWith(aid + '_'));
+    let html = `<div style="display:flex;flex-wrap:wrap;gap:8px">`;
+    for (const s of shots.slice(0, 200)) {
+      const ts = s.ts ? new Date(s.ts * 1000).toLocaleString().slice(5, 19) : '';
+      const nm = s.path.split('/').pop().replace(/\.png$/, '');
+      html += `<div style="cursor:pointer;border:1px solid var(--border);border-radius:4px;padding:3px;background:var(--bg3)" onclick="window.open('${API}/shots/file?path='+encodeURIComponent('${s.path}'),'_blank')">
+        <img src="${API}/shots/file?path=${encodeURIComponent(s.path)}" style="width:120px;height:68px;object-fit:cover;border-radius:3px" loading="lazy">
+        <div style="font-size:8px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ts} ${nm}</div>
+      </div>`;
+    }
+    el.innerHTML = html + `</div><div style="color:var(--text3);font-size:9px;margin-top:6px">共 ${shots.length} 张（显示最近 200）</div>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--text3);text-align:center;padding:20px">加载失败: ${e}</div>`;
+  }
+}
 
 async function renderAudit(container) {
   container.innerHTML = `<div style="padding:20px;color:var(--text3)">加载中...</div>`;
