@@ -1556,6 +1556,31 @@ class AccountRunner:
 
         threading.Thread(target=_do_probe, daemon=True).start()
 
+    def _save_completion_shot(self, aid: str, ac: dict) -> None:
+        """完成截图留档（2026-08-15 用户）: MAA 跑完时截 1 张模拟器画面，
+        存 logs/shots/<aid>_<ts>.png（目标机本地）。低频单张，不走轮询。
+        adb exec-out screencap 直出 PNG（PowerShell > 会 UTF-16 损坏，用
+        subprocess 二进制）。失败静默（截图不影响主流程）。
+        """
+        try:
+            import subprocess as _sp
+            _adb = ac.get("adb_path", "") or "adb"
+            _addr = ac.get("adb_address", "")
+            if not _addr:
+                return
+            r = _sp.run([_adb, "-s", _addr, "exec-out", "screencap", "-p"],
+                        capture_output=True, timeout=15,
+                        creationflags=getattr(_sp, "CREATE_NO_WINDOW", 0))
+            if r.returncode != 0 or len(r.stdout) < 1000:
+                return
+            _d = Path(__file__).parent.parent / "logs" / "shots"
+            _d.mkdir(parents=True, exist_ok=True)
+            _ts = time.strftime("%Y%m%d_%H%M%S")
+            (_d / f"{aid}_{_ts}.png").write_bytes(r.stdout)
+            self.emit_log(f"📸 {ac.get('name', aid)} 完成截图已存 logs/shots/")
+        except Exception:
+            pass
+
     def _finish_completed(self, aid: str, ac: dict, p) -> None:
         """完成收尾（AllTasksCompleted）— 轮询检测与 LogWatcher 事件共用。
         完成标记 _done_flags 防 _wait_exit 抢先 cleanup 的竞态（2026-08-11）。
@@ -1566,6 +1591,13 @@ class AccountRunner:
         except Exception:
             pass
         self.emit_log(f"[完成后] {ac.get('name', aid)} 任务全部完成")
+        # 完成截图留档（2026-08-15 用户: MAA 做完了给模拟器截个图存本地）—
+        # 每个账号跑完截 1 张（低频，无高频截图崩溃风险），保存到
+        # logs/shots/<aid>_<ts>.png，回看「跑完的画面」验证现场。
+        try:
+            self._save_completion_shot(aid, ac)
+        except Exception:
+            pass
         try:
             from services.event_bus import emit as _eb_emit
             _eb_emit("queue.completed", {"name": ac.get("name", aid)})

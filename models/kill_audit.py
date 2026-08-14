@@ -74,7 +74,8 @@ def request(aid: str, name: str, action: str, reason: str,
     """申请一个破坏性动作（杀/关/回收）。返回条目（status=pending）。"""
     with _LOCK:
         entries = _load()
-        timeout = timeout_s or DEFAULT_TIMEOUT.get(action, 300)
+        # timeout_s=0 = 立即完成不留 pending（留痕不暂缓 — 正常回收路径）
+        timeout = DEFAULT_TIMEOUT.get(action, 300) if timeout_s is None else timeout_s
         entry = {
             "id": _next_id(entries),
             "ts": time.time(),

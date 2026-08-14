@@ -1354,27 +1354,20 @@ class LaunchQueue:
                 # （原实现每 tick 写一条 → pending 无限膨胀 → 回收永久卡死）；
                 # ②查 pending 前先 expire_all 清算超时项（超时未确认=默认
                 # 放行 — 回收判据已有 adb/活MAA/异常退出保护，误杀面已小）。
+                # ⚠️ 2026-08-15 用户拍板: 「正常的为什么要审」— 回收闲置模拟器
+                # 是确定性正常流程（无账号/无 MAA/无任务 + 9 道保护），审计
+                # 只审可疑判定（失联/心跳断/连续异常 — runner _guard_kill）。
+                # 回收改「留痕不暂缓」：写审计记录可回看，但不再等确认窗口。
                 try:
                     from models.kill_audit import request as _ka_req
-                    from models.kill_audit import pending as _ka_pend
                     from models.kill_audit import expire_all as _ka_expire
                     _ka_expire()
-                    _existing = [e for e in _ka_pend() if e.get("aid") == aid
-                                 and e.get("action") == "reclaim_emu"]
-                    if not _existing:
-                        _ka_req(aid, f"模拟器#{idx}", "reclaim_emu",
-                                f"回收闲置模拟器#{idx}",
-                                evidence=f"emu_idx={idx} free_mem={_free_gb:.1f}GB force={_force}")
-                        _existing = [e for e in _ka_pend() if e.get("aid") == aid
-                                     and e.get("action") == "reclaim_emu"]
-                    # ⚠️ 2026-08-15 修复: 原 `if _ka_pend()` 检查全局 pending —
-                    # 任何账号一条待确认（如启动失败写的 kill_maa）→ 所有
-                    # 回收永久暂缓 → 空转模拟器堆积（00:27-00:31 实测 #1/#2/
-                    # #4/#6/#19 全部卡住）。改为只被**本账号本动作**的 pending
-                    # 挡住（每账号每动作独立，互不牵连）。
-                    if _existing:
-                        _QUEUE_LOG.info(f"回收暂缓 模拟器#{idx} (守护审计待确认)")
-                        continue
+                    _ka_req(aid, f"模拟器#{idx}", "reclaim_emu",
+                            f"回收闲置模拟器#{idx}",
+                            evidence=f"emu_idx={idx} free_mem={_free_gb:.1f}GB force={_force}",
+                            timeout_s=0)  # 0 = 立即完成，不留 pending
+                except Exception:
+                    pass
                 except Exception:
                     pass
                 _to_close.append((idx, aid))
