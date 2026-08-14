@@ -98,11 +98,18 @@ class ConfigService:
                     else:
                         c["Start.OpenEmulatorAfterLaunch"]="True"
                     if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
-            # Account switch in TaskQueue
+            # Account switch in TaskQueue（显式关切换防残留 — 同 896 行逻辑）
             sw=ac.get("account_switch","")
-            if sw and "TaskQueue" in c:
+            if "TaskQueue" in c:
                 for item in c["TaskQueue"]:
-                    if item.get("TaskType","").lower()=="startup": item["AccountName"]=sw; break
+                    if item.get("TaskType","").lower()=="startup":
+                        if sw:
+                            item["AccountName"]=sw
+                            item["AccountSwitchEnabled"]=True
+                        else:
+                            item.pop("AccountName", None)
+                            item["AccountSwitchEnabled"]=False
+                        break
             if ac.get("sync_tasks",False):
                 ts_raw=ac.get("task_settings",{})
                 ts={k.lower():v for k,v in ts_raw.items()}
@@ -894,11 +901,22 @@ class ConfigService:
                             item["IsStageManually"] = True
                             break
             # Inject account_switch (账号切换)
+            # ⚠️ 2026-08-15 现场: MAA 6.16 的 TaskQueue 会残留上次运行的
+            # AccountName + AccountSwitchEnabled=true（实例池复用/换账号后
+            # 未清）→ 下次启动 MAA 按残留配置切换账号 → 差点登录别人的号
+            # （实测 TaskQueue[0].AccountName="197****9196"）。注入时**显式
+            # 关切换**：只有本账号显式配了 account_switch 才启用（用户:
+            # 不勾选就不切）。
             sw = ac.get("account_switch", "")
-            if sw and "TaskQueue" in c:
+            if "TaskQueue" in c:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType", "").lower() == "startup":
-                        item["AccountName"] = sw
+                        if sw:
+                            item["AccountName"] = sw
+                            item["AccountSwitchEnabled"] = True
+                        else:
+                            item.pop("AccountName", None)
+                            item["AccountSwitchEnabled"] = False
                         break
             # Reorder: Annihilation Fight before Regular Fight
             tq = c.get("TaskQueue", [])
