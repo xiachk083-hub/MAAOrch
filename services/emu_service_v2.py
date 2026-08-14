@@ -449,14 +449,30 @@ class EmulatorService:
         无 .pid → EXTERNAL（用户手动开的 — 不回收）。"""
         try:
             from services.emu_service import _running_headless_idx
+            from infrastructure.task_constants import detect_emu_instances
             running = _running_headless_idx()
             inst_root = Path(__file__).parent / "maa" / "instances"
+            # 管理范围判定（#1 — 复用 launch_queue/task_constants 既有判定）:
+            # detect_emu_instances 已叠加 _strip_excluded_emus 过滤（EMU_EXCLUDE
+            # "l-*" 排除、EMU_INCLUDE 白名单 l-4/l-6 放行）→ 返回的即本仓库管理
+            # 范围内的模拟器（含 index/name）。范围外（他人 l- workspace、未纳管
+            # l-）不在返回集 → 视为不受本回收管理，永不标 EXTERNAL（永不进回收
+            # 路径）— 对齐旧回收 aid=None 永不回收（launch_queue L1153-1159，
+            # 防 2026-08-10 l-系列误关事故）。
+            try:
+                _managed_idx = {str(e.get("index", "")) for e in detect_emu_instances()}
+            except Exception:
+                _managed_idx = set(running)
             for idx in running:
                 st = self.ensure(idx)
                 if st.state == OFF:
+                    # 范围外模拟器 → 不标 EXTERNAL（不回收；保留手动模式无人动）
+                    if str(idx) not in _managed_idx:
+                        continue
                     has_pid = (inst_root / str(idx) / ".pid").exists()
                     if not has_pid:
-                        # 无 .pid 的进程 = 用户手动开的（EXTERNAL — 不回收）
+                        # 管理范围内且无 .pid 的进程 = 用户手动开的（EXTERNAL —
+                        # 闲置超时才回收，且活 MAA 仍被 #3 防线保护）
                         self._move(idx, EV_MANUAL, "scan found (no pid)")
         except Exception:
             pass
