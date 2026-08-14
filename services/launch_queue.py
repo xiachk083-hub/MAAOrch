@@ -1365,7 +1365,14 @@ class LaunchQueue:
                         _ka_req(aid, f"模拟器#{idx}", "reclaim_emu",
                                 f"回收闲置模拟器#{idx}",
                                 evidence=f"emu_idx={idx} free_mem={_free_gb:.1f}GB force={_force}")
-                    if _ka_pend():
+                        _existing = [e for e in _ka_pend() if e.get("aid") == aid
+                                     and e.get("action") == "reclaim_emu"]
+                    # ⚠️ 2026-08-15 修复: 原 `if _ka_pend()` 检查全局 pending —
+                    # 任何账号一条待确认（如启动失败写的 kill_maa）→ 所有
+                    # 回收永久暂缓 → 空转模拟器堆积（00:27-00:31 实测 #1/#2/
+                    # #4/#6/#19 全部卡住）。改为只被**本账号本动作**的 pending
+                    # 挡住（每账号每动作独立，互不牵连）。
+                    if _existing:
                         _QUEUE_LOG.info(f"回收暂缓 模拟器#{idx} (守护审计待确认)")
                         continue
                 except Exception:

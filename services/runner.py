@@ -675,7 +675,11 @@ class AccountRunner:
             if not _mine:
                 _ka_request(aid, self._ac_name(aid), action, reason, evidence)
                 _pend = _ka_pending()
-            _mine = [e for e in _pend if e.get("aid") == aid]
+            # ⚠️ 2026-08-15 修复: 原 `e.get("aid") == aid` 只筛账号不筛动作 —
+            # 同账号其他动作的 pending（如启动失败写 kill_maa）会挡住后续
+            # 杀/关 → 恢复链卡死 → 启动失败循环。改为按 (aid, action) 独立。
+            _mine = [e for e in _pend if e.get("aid") == aid
+                     and e.get("action") == action]
             if _mine:
                 return False
             return True
