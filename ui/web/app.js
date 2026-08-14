@@ -4489,8 +4489,11 @@ async function renderMaaLog(container) {
   container.innerHTML = `<div style="display:flex;flex-direction:column;height:100%">
     <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="color:var(--text2);font-size:12px;font-weight:bold">📜 MAA 运行日志</span>
-      <select id="maalog-account" onchange="loadMaaLog()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+      <select id="maalog-account" onchange="maaLogAccChange()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
         <option value="">选择账号</option>
+      </select>
+      <select id="maalog-hist" onchange="loadMaaLog()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+        <option value="">实时日志</option>
       </select>
       <select id="maalog-lines" onchange="loadMaaLog()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
         <option value="100">100 行</option>
@@ -4501,7 +4504,7 @@ async function renderMaaLog(container) {
         <input type="checkbox" id="maalog-auto" checked onchange="toggleMaaLogAuto()"> 自动刷新
       </label>
       <button class="small" onclick="loadMaaLog()">刷新</button>
-      <span style="color:var(--text3);font-size:9px">与 MAA 界面右侧日志同源（asst.log）</span>
+      <span style="color:var(--text3);font-size:9px">与 MAA 界面右侧日志同源（asst.log）；历史=该账号归档</span>
     </div>
     <div id="maalog-content" style="flex:1;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--text3)">加载中...</div>
   </div>`;
@@ -4528,6 +4531,26 @@ function toggleMaaLogAuto() {
   else if (_maalogTimer) { clearInterval(_maalogTimer); _maalogTimer = null; }
 }
 
+async function maaLogAccChange() {
+  // 切换账号 → 加载该账号的历史归档列表
+  const aid = document.getElementById('maalog-account')?.value;
+  const sel = document.getElementById('maalog-hist');
+  sel.innerHTML = '<option value="">实时日志</option>';
+  if (!aid) { loadMaaLog(); return; }
+  try {
+    const r = await apiGet('/maa/logs_history?aid=' + aid);
+    if (r.ok && r.files && r.files.length) {
+      r.files.forEach(f => {
+        const o = document.createElement('option');
+        o.value = f.name;
+        o.textContent = new Date(f.mtime * 1000).toLocaleString().slice(5, 19) + ' (' + Math.round(f.size / 1024) + 'KB)';
+        sel.appendChild(o);
+      });
+    }
+  } catch(e) {}
+  loadMaaLog();
+}
+
 function _hlMaaLog(line) {
   // 任务状态高亮（仿 MAA GUI 日志配色）
   let cls = 'var(--text3)';
@@ -4543,14 +4566,22 @@ async function loadMaaLog() {
   if (!el) return;
   const aid = document.getElementById('maalog-account')?.value;
   const lines = document.getElementById('maalog-lines')?.value || 200;
+  const hfile = document.getElementById('maalog-hist')?.value || '';
   if (!aid) { el.textContent = '请选择账号'; return; }
   try {
-    const r = await apiGet(`/maa/log?aid=${aid}&lines=${lines}`);
-    const ls = r.lines || [];
+    let ls;
+    if (hfile) {
+      // 历史归档（该账号的旧日志）
+      const r = await apiGet(`/maa/logs_history?aid=${aid}&file=${encodeURIComponent(hfile)}&lines=${lines}`);
+      ls = (r.ok && r.lines) ? r.lines : [];
+    } else {
+      const r = await apiGet(`/maa/log?aid=${aid}&lines=${lines}`);
+      ls = r.lines || [];
+    }
     el.innerHTML = ls.map(_hlMaaLog).join('\n');
     el.scrollTop = el.scrollHeight;  // 滚到底（最新）
-    // 自动刷新（2s）
-    if (document.getElementById('maalog-auto')?.checked && !_maalogTimer) {
+    // 自动刷新（2s）— 历史模式不自动刷新
+    if (!hfile && document.getElementById('maalog-auto')?.checked && !_maalogTimer) {
       _maalogTimer = setInterval(() => {
         if (state.page !== 'maalog') { clearInterval(_maalogTimer); _maalogTimer = null; return; }
         loadMaaLog();
