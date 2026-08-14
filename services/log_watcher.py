@@ -213,6 +213,15 @@ class LogWatcher(threading.Thread):
                     self._fire("subtask_error", line)
                 except Exception:
                     pass
+            # 任务链错误（2026-08-15 日-4 实锤: TaskChainError 也会触发
+            # AllTasksCompleted = 假完成 — 识别界面失败→报错→被当"完成"→
+            # 体力不刷还续跑循环）。单独事件，runner 用来判假完成。
+            if "TaskChainError" in line:
+                _record_event(self._aid, "taskchain_error", line)
+                try:
+                    self._fire("taskchain_error", line)
+                except Exception:
+                    pass
             # MAA 成功执行 adb（截图） = 已连接模拟器开始干活 — 启动节流
             # 就绪信号（2026-08-12: 等上一台 boot + MAA 连上再启动下一台）。
             # runner 侧只在首次处理（后续截图行不再通知）。

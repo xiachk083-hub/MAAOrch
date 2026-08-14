@@ -59,7 +59,8 @@ class RunStats:
                  status: str = "", stages: list | None = None,
                  dispatch: str = "", sanity_before: dict | None = None,
                  sanity_after: dict | None = None,
-                 medicine_used: bool = False) -> None:
+                 medicine_used: bool = False,
+                 chain_error: bool = False) -> None:
         """Record a run — called on every cleanup (success, failure or timeout).
 
         tasks:      [{name, status}] — task list with per-task outcome.
@@ -71,6 +72,7 @@ class RunStats:
         status:     human summary: 完成 / 失败 / 超时 / 启动失败 / 已停止.
         stages:     stage ids touched this run (daily + annihilation).
         dispatch:   where the run came from (manual/schedule/smart/retry).
+        chain_error: MAA 任务链报错后假完成（TaskChainError → AllTasksCompleted）。
         """
         now = datetime.now()
         run: dict = {
@@ -91,6 +93,8 @@ class RunStats:
         run["drops"] = dict(drops or {})
         if medicine_used:
             run["medicine_used"] = True
+        if chain_error:
+            run["chain_error"] = True
         if stages:
             run["stages"] = [str(s) for s in stages]
         for key, src in (("sanity_before", sanity_before),

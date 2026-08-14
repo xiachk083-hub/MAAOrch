@@ -216,6 +216,7 @@ class AccountRunner:
         self._run_sanity_first: dict[str, dict] = {}  # aid -> 本次运行首体力快照（统计真实消耗 — 2026-08-13）
         self._fight_times: dict[str, int] = {}  # aid -> FightTimesTaskPlugin times_finished（0=刷关空转假完成 — 2026-08-14）
         self._run_medicine_used: dict[str, bool] = {}  # aid -> 本次运行是否吃了理智药（过期药突击识别）
+        self._run_chain_error: dict[str, bool] = {}  # aid -> 本次运行出现过 TaskChainError（假完成判定 — 2026-08-15）
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
@@ -1081,6 +1082,7 @@ class AccountRunner:
             # 挂起根因，模拟器无损伤）。计数只应衡量本次运行。
             ac["_err_count"] = 0
             self._fight_times[aid] = -1  # -1=未收到 FightTimesTaskPlugin 信号
+            self._run_chain_error[aid] = False  # 任务链错误标记重置（本次运行）
             ac["_injected_tasks"] = list(task_list)
             self.ctx.cfg.inject_smart(task_list, ac, str(config_dir), params=params)
             self.emit_log(f"注入配置: {config_dir}/")
@@ -1612,6 +1614,16 @@ class AccountRunner:
         tasks, sanity, drops = self._parse_log(aid)
         _cur = (sanity or {}).get("current")
         _mx = (sanity or {}).get("max") or 1
+        # 假完成拦截（2026-08-15 日-4 实锤第二机制）: TaskChainError 也会
+        # 触发 AllTasksCompleted — MAA 识别界面失败→报错→被当"完成"→体力
+        # 不刷还续跑循环（StartUpBegin 50 次重试失败 + AwardBegin 失败）。
+        # 与下方 Fight 空转复核互补（那个只管 times_finished=0）。
+        if self._run_chain_error.get(aid):
+            self.emit_log(f"⚠ {ac.get('name', aid)} 任务链报错后假完成，按失败重试")
+            self._run_chain_error.pop(aid, None)
+            self._done_flags.pop(aid, None)
+            self._cleanup(aid, -13, tasks, sanity, drops)
+            return
         # 刷关空转复核（2026-08-14 凌晨教训：MAA 连战失效/关卡不可用时
         # Fight 任务 0 把也报 AllTasksCompleted，任务链"假完成"骗过判定 —
         # 日服 4 号全部 times_finished=0、体力 172/172 原封不动）。条件：
@@ -1709,6 +1721,12 @@ class AccountRunner:
             # 理智药使用标记（过期药突击识别 — 2026-08-13 用户: 48h 药
             # 挤一天刷完导致当天消耗虚高，预测时排除这类运行）
             self._run_medicine_used[aid] = True
+        elif event == "taskchain_error":
+            # 任务链错误（2026-08-15 日-4 实锤: MAA 识别界面失败 → 报错 →
+            # TaskChainError 仍触发 AllTasksCompleted = 假完成 → 体力不刷还
+            # 续跑循环）。标记本次运行，完成判定时拦截转 -13 重试。
+            if not self._probe_running.get(aid):
+                self._run_chain_error[aid] = True
         elif event == "subtask_error":
             # Probe 检测进行中（MAA 挂着等 StageProbe 子进程）— 跳过错误
             # 窗口检测，防误杀（2026-08-12 关卡检测调度）。
@@ -3101,6 +3119,7 @@ class AccountRunner:
                         sanity_before=self._run_sanity_first.pop(aid, None),
                         sanity_after=_sa,
                         medicine_used=self._run_medicine_used.pop(aid, False),
+                        chain_error=self._run_chain_error.pop(aid, False),
                         status=("完成" if exit_code == 0 else "失败"))
         except Exception as e:
             self._log.warn(f"[统计] {name} save_run 失败: {e}")
