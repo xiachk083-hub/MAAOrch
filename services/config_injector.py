@@ -548,21 +548,33 @@ class ConfigService:
                         day_stage = default
                 day_stage = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff_\-]', '', day_stage) if day_stage else ""
 
-                existing_tq = c.get("TaskQueue", [])
-                has_fight = "fight" in task_set
-                anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
-                # If no TaskQueue, try loading from source MAA config as template
+                # ⚠️ 2026-08-15 用户: 「恢复成默认的样子然后再注入」— 不再
+                # 使用实例现有 TaskQueue（MAA 运行会保存/残留上次账号的
+                # AccountName/关卡/切换开关 → 实测残留 197****9196 差点登录
+                # 别人的号）。每次注入从 source 模板加载干净基线，只带当前
+                # 账号的参数。
+                existing_tq = []
+                try:
+                    src_gj = Path(__file__).parent / "maa" / "source" / "config" / "gui.new.json"
+                    if src_gj.exists():
+                        src_d = json.loads(src_gj.read_text(encoding="utf-8"))
+                        existing_tq = src_d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
+                except Exception:
+                    pass
+                # 模板缺失兜底：maa/<ver>/ 或实例现有（尽量不用 — 残留）
                 if not existing_tq:
                     try:
                         ver = self.ctx.config.get("maa_version", "")
                         src_gj = Path(__file__).parent / "maa" / ver / "config" / "gui.new.json" if ver else None
                         if src_gj and src_gj.exists():
                             src_d = json.loads(src_gj.read_text(encoding="utf-8"))
-                            src_tq = src_d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
-                            if src_tq:
-                                existing_tq = list(src_tq)
+                            existing_tq = src_d.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
                     except Exception:
                         pass
+                if not existing_tq:
+                    existing_tq = c.get("TaskQueue", [])
+                has_fight = "fight" in task_set
+                anni = (ac.get("smart_annihilation", "") or "Annihilation") if run_annihilation else ""
                 if existing_tq:
                     anni_appended = False
                     # Don't use _smart_inserted (causes MAA v6 WPF crash).
