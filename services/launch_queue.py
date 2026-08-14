@@ -1350,15 +1350,22 @@ class LaunchQueue:
                 # 守护审计钩子（2026-08-14 用户: 杀/关前先确认）— 回收是
                 # 误杀高发区（模拟器被误关 → MAA 失联 → 重启风暴）。先写入
                 # kill_audit 留痕 + 检查待确认：观察窗口内未放行 → 暂缓回收。
+                # ⚠️ 2026-08-14 修复: ①同账号同动作已有 pending 不重复写
+                # （原实现每 tick 写一条 → pending 无限膨胀 → 回收永久卡死）；
+                # ②查 pending 前先 expire_all 清算超时项（超时未确认=默认
+                # 放行 — 回收判据已有 adb/活MAA/异常退出保护，误杀面已小）。
                 try:
                     from models.kill_audit import request as _ka_req
                     from models.kill_audit import pending as _ka_pend
-                    _ka_req(aid, f"模拟器#{idx}", "reclaim_emu",
-                            f"回收闲置模拟器#{idx}",
-                            evidence=f"emu_idx={idx} free_mem={_free_gb:.1f}GB force={_force}")
-                    _mine = [e for e in _ka_pend() if e.get("aid") == aid
-                             and e.get("action") == "reclaim_emu"]
-                    if _mine:
+                    from models.kill_audit import expire_all as _ka_expire
+                    _ka_expire()
+                    _existing = [e for e in _ka_pend() if e.get("aid") == aid
+                                 and e.get("action") == "reclaim_emu"]
+                    if not _existing:
+                        _ka_req(aid, f"模拟器#{idx}", "reclaim_emu",
+                                f"回收闲置模拟器#{idx}",
+                                evidence=f"emu_idx={idx} free_mem={_free_gb:.1f}GB force={_force}")
+                    if _ka_pend():
                         _QUEUE_LOG.info(f"回收暂缓 模拟器#{idx} (守护审计待确认)")
                         continue
                 except Exception:

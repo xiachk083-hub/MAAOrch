@@ -665,10 +665,16 @@ class AccountRunner:
         try:
             from models.kill_audit import request as _ka_request
             from models.kill_audit import pending as _ka_pending
-            _ka_request(aid, self._ac_name(aid), action, reason, evidence)
-            # 观察窗口: 有 pending 未决 → 暂缓。守护方（agent 监控循环/
-            # 人工）在窗口内 decide() 放行后，下一轮检查这里放行。
+            from models.kill_audit import expire_all as _ka_expire
+            _ka_expire()  # 先清算超时项（超时未确认=默认放行，防 pending 卡死流程）
+            # 查重: 同账号同动作已有 pending 不重复写（每 tick 检查都会走到
+            # 这里 — 不查重会无限膨胀，杀动作永久暂缓。2026-08-14 实测
+            # 回收每 30s 写一条 → 28 条 pending → 所有闲置模拟器不回收）
             _pend = _ka_pending()
+            _mine = [e for e in _pend if e.get("aid") == aid and e.get("action") == action]
+            if not _mine:
+                _ka_request(aid, self._ac_name(aid), action, reason, evidence)
+                _pend = _ka_pending()
             _mine = [e for e in _pend if e.get("aid") == aid]
             if _mine:
                 return False
