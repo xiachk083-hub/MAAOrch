@@ -134,7 +134,8 @@ function renderPage() {
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
                 emus: renderEmus, connect: renderConnect, events: renderEvents,
-                depot: renderDepot, audit: renderAudit, shots: renderShots };
+                depot: renderDepot, audit: renderAudit, shots: renderShots,
+                maalog: renderMaaLog };
   if (fns[state.page]) fns[state.page](c);
   else { c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">页面未找到，请 Ctrl+F5 强刷更新前端</div>`; }
 }
@@ -4479,6 +4480,84 @@ async function loadShots() {
     el.innerHTML = html + `</div><div style="color:var(--text3);font-size:9px;margin-top:6px">共 ${shots.length} 张（显示最近 200）</div>`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--text3);text-align:center;padding:20px">加载失败: ${e}</div>`;
+  }
+}
+
+// ── 📜 MAA 日志视图（2026-08-15 用户: MAA GUI 右边会显示日志，搬过来）
+// 数据源 = 实例 debug/asst.log（与 MAA GUI 右侧同一个文件），2s 轮询尾部
+async function renderMaaLog(container) {
+  container.innerHTML = `<div style="display:flex;flex-direction:column;height:100%">
+    <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="color:var(--text2);font-size:12px;font-weight:bold">📜 MAA 运行日志</span>
+      <select id="maalog-account" onchange="loadMaaLog()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+        <option value="">选择账号</option>
+      </select>
+      <select id="maalog-lines" onchange="loadMaaLog()" style="font-size:10px;padding:2px 4px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+        <option value="100">100 行</option>
+        <option value="200" selected>200 行</option>
+        <option value="400">400 行</option>
+      </select>
+      <label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px">
+        <input type="checkbox" id="maalog-auto" checked onchange="toggleMaaLogAuto()"> 自动刷新
+      </label>
+      <button class="small" onclick="loadMaaLog()">刷新</button>
+      <span style="color:var(--text3);font-size:9px">与 MAA 界面右侧日志同源（asst.log）</span>
+    </div>
+    <div id="maalog-content" style="flex:1;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px;font-family:Consolas,'Courier New',monospace;font-size:10px;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--text3)">加载中...</div>
+  </div>`;
+  try {
+    const accts = state.accounts.length ? state.accounts : ((await apiGet('/accounts')).ok ? (await apiGet('/accounts')).accounts : []);
+    const sel = document.getElementById('maalog-account');
+    const running = accts.filter(a => a.running).map(a => a.id);
+    accts.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.id; o.textContent = a.name + (running.includes(a.id) ? ' ●' : '');
+      sel.appendChild(o);
+    });
+    // 默认选第一个运行中的
+    if (running.length) sel.value = running[0];
+    else if (accts.length) sel.value = accts[0].id;
+  } catch(e) {}
+  loadMaaLog();
+}
+
+let _maalogTimer = null;
+function toggleMaaLogAuto() {
+  const on = document.getElementById('maalog-auto')?.checked;
+  if (on) { loadMaaLog(); }
+  else if (_maalogTimer) { clearInterval(_maalogTimer); _maalogTimer = null; }
+}
+
+function _hlMaaLog(line) {
+  // 任务状态高亮（仿 MAA GUI 日志配色）
+  let cls = 'var(--text3)';
+  if (/\[ERR\]|Error|失败|Failed/.test(line)) cls = '#ff6b6b';
+  else if (/AllTasksCompleted|全部任务完成|TaskChainCompleted/.test(line)) cls = '#51cf66';
+  else if (/SubTaskStart/.test(line)) cls = 'var(--accent)';
+  else if (/\[WRN\]|Warning/.test(line)) cls = '#fcc419';
+  return `<span style="color:${cls}">${line}</span>`;
+}
+
+async function loadMaaLog() {
+  const el = document.getElementById('maalog-content');
+  if (!el) return;
+  const aid = document.getElementById('maalog-account')?.value;
+  const lines = document.getElementById('maalog-lines')?.value || 200;
+  if (!aid) { el.textContent = '请选择账号'; return; }
+  try {
+    const r = await apiGet(`/maa/log?aid=${aid}&lines=${lines}`);
+    const ls = r.lines || [];
+    el.innerHTML = ls.map(_hlMaaLog).join('\n');
+    el.scrollTop = el.scrollHeight;  // 滚到底（最新）
+    // 自动刷新（2s）
+    if (document.getElementById('maalog-auto')?.checked && !_maalogTimer) {
+      _maalogTimer = setInterval(() => {
+        if (state.page !== 'maalog') { clearInterval(_maalogTimer); _maalogTimer = null; return; }
+        loadMaaLog();
+      }, 2000);
+    }
+  } catch(e) {
+    el.textContent = '加载失败: ' + e;
   }
 }
 
