@@ -134,7 +134,7 @@ function renderPage() {
                 health: renderHealth, onboarding: renderOnboarding, dashboard: renderDashboard,
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
                 emus: renderEmus, connect: renderConnect, events: renderEvents,
-                depot: renderDepot };
+                depot: renderDepot, audit: renderAudit };
   if (fns[state.page]) fns[state.page](c);
   else { c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">页面未找到，请 Ctrl+F5 强刷更新前端</div>`; }
 }
@@ -4415,4 +4415,108 @@ async function depotSaveCfg() {
   const r = await apiPost('/depot/config', { materials: mats, ap_budget_per_day: budget, daily_scan_time: time, scan_enabled: enabled });
   if (r.ok) { toast('配置已保存'); window._depotState.cfg = { ...cfg, materials: mats, ap_budget_per_day: budget, daily_scan_time: time, scan_enabled: enabled }; renderDepotConfig(); }
   else toast('保存失败: ' + (r.detail || ''));
+}
+
+// ── 守护审计页（2026-08-14 用户: 杀/关动作先确认再执行，留痕可回看）──
+const AUDIT_STATUS_COLOR = {
+  pending: 'var(--warn)', approved: '#4caf50', rejected: 'var(--danger)',
+  expired: 'var(--text3)', executed: 'var(--accent)'
+};
+const AUDIT_ACTION_LABEL = {
+  kill_maa: '杀 MAA', close_emu: '关模拟器', reclaim_emu: '回收模拟器', restart_emu: '重启模拟器'
+};
+const AUDIT_STATUS_LABEL = {
+  pending: '⏳ 待确认', approved: '✅ 已放行', rejected: '🛑 已拦截',
+  expired: '⏱ 超时放行', executed: '⚡ 已执行'
+};
+
+async function renderAudit(container) {
+  container.innerHTML = `<div style="padding:20px;color:var(--text3)">加载中...</div>`;
+  const r = await apiGet('/kill_audit?limit=200');
+  if (!r.ok) { container.innerHTML = `<div style="padding:20px;color:var(--danger)">❌ 加载失败: ${r.error||''}</div>`; return; }
+  const sm = r.summary || {};
+  const entries = r.entries || [];
+  const fmt = t => t ? new Date(t * 1000).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+  const esc = s => String(s ?? '').replace(/</g, '&lt;');
+  // 顶部状态卡
+  const st = sm.by_status || {};
+  let html = `
+  <div style="padding:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    <span style="font-size:14px;font-weight:bold">🛡 守护审计</span>
+    <span style="flex:1"></span>
+    <span style="font-size:10px;color:var(--text3)">总 ${sm.total||0}</span>
+    <span style="font-size:10px;color:var(--warn)">待确认 ${sm.pending||0}</span>
+    <span style="font-size:10px;color:var(--danger)">已拦截 ${st.rejected||0}</span>
+    <span style="font-size:10px;color:#4caf50">已放行 ${st.approved||0}</span>
+    <span style="font-size:10px;color:var(--accent)">已执行 ${st.executed||0}</span>
+    <button class="small" onclick="renderPage()">🔄 刷新</button>
+  </div>
+  <div style="font-size:10px;color:var(--text3);margin-bottom:10px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2)">
+    原则（2026-08-14）: 一切判定以实际状态为准 — MAAOrch 配合 MAA，不是反过来。所有杀/关/回收动作先记录判据快照，观察窗口内由守护方（agent/人工）交叉验证后放行或拦截；超时未确认默认放行并标记。误杀代价=重启风暴连锁，漏杀代价=多等几分钟。
+  </div>`;
+  // 待确认区块
+  const pend = entries.filter(e => e.status === 'pending');
+  if (pend.length) {
+    html += `<div style="font-size:12px;font-weight:bold;margin:8px 0 6px;color:var(--warn)">⏳ 待确认 (${pend.length})</div>
+    <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px">
+      <thead><tr style="background:var(--bg2)">
+        <th style="padding:4px;border:1px solid var(--border);text-align:left">时间</th>
+        <th style="padding:4px;border:1px solid var(--border);text-align:left">账号</th>
+        <th style="padding:4px;border:1px solid var(--border)">动作</th>
+        <th style="padding:4px;border:1px solid var(--border);text-align:left">原因</th>
+        <th style="padding:4px;border:1px solid var(--border);text-align:left">判据快照</th>
+        <th style="padding:4px;border:1px solid var(--border)">窗口剩余</th>
+        <th style="padding:4px;border:1px solid var(--border)">操作</th>
+      </tr></thead><tbody>`;
+    for (const e of pend) {
+      const remain = Math.max(0, Math.round((e.expire_ts - Date.now()/1000) / 60));
+      html += `<tr>
+        <td style="padding:2px 4px;border:1px solid var(--border)">${fmt(e.ts)}</td>
+        <td style="padding:2px 4px;border:1px solid var(--border)">${esc(e.name)}</td>
+        <td style="padding:2px 4px;border:1px solid var(--border)">${AUDIT_ACTION_LABEL[e.action]||esc(e.action)}</td>
+        <td style="padding:2px 4px;border:1px solid var(--border)">${esc(e.reason)}</td>
+        <td style="padding:2px 4px;border:1px solid var(--border);max-width:260px;word-break:break-all;color:var(--text3)">${esc(e.evidence)}</td>
+        <td style="padding:2px 4px;border:1px solid var(--border);text-align:center">${remain}m</td>
+        <td style="padding:2px 4px;border:1px solid var(--border);text-align:center">
+          <button class="small" style="color:#4caf50" onclick="auditDecide('${e.id}',true)">✅ 放行</button>
+          <button class="small" style="color:var(--danger)" onclick="auditDecide('${e.id}',false)">🛑 拦截</button>
+        </td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+  }
+  // 历史区块
+  const hist = entries.filter(e => e.status !== 'pending');
+  html += `<div style="font-size:12px;font-weight:bold;margin:8px 0 6px">📜 历史记录 (${hist.length})</div>
+  <table style="width:100%;border-collapse:collapse;font-size:10px">
+    <thead><tr style="background:var(--bg2)">
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">时间</th>
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">账号</th>
+      <th style="padding:4px;border:1px solid var(--border)">动作</th>
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">原因</th>
+      <th style="padding:4px;border:1px solid var(--border)">结果</th>
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">备注</th>
+      <th style="padding:4px;border:1px solid var(--border);text-align:left">解决方式</th>
+    </tr></thead><tbody>`;
+  for (const e of hist) {
+    const color = AUDIT_STATUS_COLOR[e.status] || 'var(--text3)';
+    html += `<tr>
+      <td style="padding:2px 4px;border:1px solid var(--border)">${fmt(e.ts)}</td>
+      <td style="padding:2px 4px;border:1px solid var(--border)">${esc(e.name)}</td>
+      <td style="padding:2px 4px;border:1px solid var(--border)">${AUDIT_ACTION_LABEL[e.action]||esc(e.action)}</td>
+      <td style="padding:2px 4px;border:1px solid var(--border);max-width:200px;word-break:break-all">${esc(e.reason)}</td>
+      <td style="padding:2px 4px;border:1px solid var(--border);text-align:center;color:${color}">${AUDIT_STATUS_LABEL[e.status]||esc(e.status)}</td>
+      <td style="padding:2px 4px;border:1px solid var(--border);max-width:220px;word-break:break-all;color:var(--text3)">${esc(e.note)}</td>
+      <td style="padding:2px 4px;border:1px solid var(--border);max-width:220px;word-break:break-all;color:var(--text3)">${esc(e.fix)}</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+async function auditDecide(id, approve) {
+  const note = prompt(approve ? '放行备注（确认依据）' : '拦截备注（为什么是误判）', '');
+  const r = await apiPost('/kill_audit/decide', { id, approve, by: 'manual', note: note || '' });
+  if (r.ok) { toast(approve ? '已放行' : '已拦截'); renderPage(); }
+  else toast('操作失败: ' + (r.error || r.detail || ''));
 }

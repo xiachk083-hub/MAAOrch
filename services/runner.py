@@ -192,6 +192,7 @@ class AccountRunner:
         self._progs: dict[str, list[dict]] = {}
         self._procs: dict[str, Any] = {}
         self._inst_reserved: dict[str, str] = {}  # aid -> inst_path（分配即预留，防并发同实例）
+        self._inst_alloc_lock = threading.Lock()  # 2026-08-14: 实例分配原子化（防并发同实例竞态）
         self._start_times: dict[str, float] = {}
         self._task_start_times: dict[str, float] = {}
         self._stopping: set = set()
@@ -218,6 +219,7 @@ class AccountRunner:
         self._core_instances: dict[str, Any] = {}  # aid -> MaaCore instance (direct drive)
         self._core_tasks: dict[str, list[dict]] = {}  # aid -> [{name,status}]
         self._downgrading: dict[str, bool] = {}  # aid -> downgrade in progress
+        self._recent_exit: dict[str, float] = {}  # aid -> ts（异常退出时间 — 回收保护期，2026-08-14）
         self._probe_pending: dict[str, dict] = {}  # aid -> {ac, inst_dir, ts, probe_stages}（关卡检测待跑）
         self._probe_running: dict[str, bool] = {}  # aid -> 关卡检测进行中（抑制 stall/error 误杀）
         self._probe_origin: dict[str, object] = {}  # aid -> probe 让位时的 MAA Popen（finally 身份校验，08-14 审查 #1）
@@ -341,62 +343,66 @@ class AccountRunner:
 
     def _get_free_instance(self, aid: str) -> tuple[int, str] | None:
         """Get a free MAA instance directory."""
-        try:
-            import psutil as _psutil
-            _pid_exists = _psutil.pid_exists
-        except ImportError:
-            def _pid_exists(pid: int) -> bool:
-                try:
-                    r = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
-                                      capture_output=True, text=True, timeout=2,
-                                      creationflags=subprocess.CREATE_NO_WINDOW)
-                    return str(pid) in r.stdout
-                except Exception:
-                    return True
-        max_n = max(self.ctx.config.get("maa_instances", 9), self.ctx.config.get("parallel_max", 1))
-        pool = Path(__file__).parent / "maa" / "instances"
-        for i in range(1, max_n + 1):
-            inst_dir = pool / str(i)
-            exe = inst_dir / "MAA.exe"
-            if not exe.exists():
-                continue
-            inst_path = str(inst_dir)
-            already_used = any(
-                p is not None and (
-                    (isinstance(p, str) and p == inst_path) or
-                    (getattr(p, "_inst_path", None) == inst_path)
-                )
-                for p in self._procs.values()
-            )
-            if already_used:
-                continue
-            # 并发预留: _procs[aid] 要到 _spawn_instance（MAA 启动后）才写入，
-            # 中间有 30-60s（模拟器启动）窗口 — 两个并发启动会拿到同一实例，
-            # 后启动的 _launch_for_instance 会把先启动的 MAA taskkill（5s 退出，
-            # 2026-08-10 反复"启动失败 MAA 5s 退出"）。分配即预留。
-            if inst_path in self._inst_reserved.values():
-                continue
-            pid_file = inst_dir / ".pid"
-            running = False
+        # 2026-08-14: 分配原子化 — 检查-预留非原子导致两个并发启动（队列 tick
+        # 与自动重启线程）同时拿到同一实例 → 后启动者杀掉先启动者的 MAA
+        # （实测官-12 清理官-15 的 MAA PID=50640 → 互相杀 → 启动失败循环）。
+        with self._inst_alloc_lock:
             try:
-                pid = int(pid_file.read_text().strip())
-                running = _pid_exists(pid)
-            except Exception:
-                pid_file.unlink(missing_ok=True)
-            if not running:
-                # 僵尸残留防线: .pid 缺失/进程已死，但实例目录仍有活动（旧 MAA
-                # 被杀未死透 / 刚启动）→ 视为占用。否则新账号分配该实例 →
-                # MAA 启动撞 "Existing instance" → 2s 退出 → asst.log 停滞 →
-                # "日志停滞"判定 → 误关模拟器（2026-08-10 连锁根因）。
+                import psutil as _psutil
+                _pid_exists = _psutil.pid_exists
+            except ImportError:
+                def _pid_exists(pid: int) -> bool:
+                    try:
+                        r = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                                          capture_output=True, text=True, timeout=2,
+                                          creationflags=subprocess.CREATE_NO_WINDOW)
+                        return str(pid) in r.stdout
+                    except Exception:
+                        return True
+            max_n = max(self.ctx.config.get("maa_instances", 9), self.ctx.config.get("parallel_max", 1))
+            pool = Path(__file__).parent / "maa" / "instances"
+            for i in range(1, max_n + 1):
+                inst_dir = pool / str(i)
+                exe = inst_dir / "MAA.exe"
+                if not exe.exists():
+                    continue
+                inst_path = str(inst_dir)
+                already_used = any(
+                    p is not None and (
+                        (isinstance(p, str) and p == inst_path) or
+                        (getattr(p, "_inst_path", None) == inst_path)
+                    )
+                    for p in self._procs.values()
+                )
+                if already_used:
+                    continue
+                # 并发预留: _procs[aid] 要到 _spawn_instance（MAA 启动后）才写入，
+                # 中间有 30-60s（模拟器启动）窗口 — 两个并发启动会拿到同一实例，
+                # 后启动的 _launch_for_instance 会把先启动的 MAA taskkill（5s 退出，
+                # 2026-08-10 反复"启动失败 MAA 5s 退出"）。分配即预留。
+                if inst_path in self._inst_reserved.values():
+                    continue
+                pid_file = inst_dir / ".pid"
+                running = False
                 try:
-                    _al = inst_dir / "debug" / "asst.log"
-                    if _al.exists() and time.time() - _al.stat().st_mtime < 120:
-                        continue
+                    pid = int(pid_file.read_text().strip())
+                    running = _pid_exists(pid)
                 except Exception:
-                    pass
-                self._inst_reserved[aid] = inst_path
-                return (i, str(inst_dir))
-        return None
+                    pid_file.unlink(missing_ok=True)
+                if not running:
+                    # 僵尸残留防线: .pid 缺失/进程已死，但实例目录仍有活动（旧 MAA
+                    # 被杀未死透 / 刚启动）→ 视为占用。否则新账号分配该实例 →
+                    # MAA 启动撞 "Existing instance" → 2s 退出 → asst.log 停滞 →
+                    # "日志停滞"判定 → 误关模拟器（2026-08-10 连锁根因）。
+                    try:
+                        _al = inst_dir / "debug" / "asst.log"
+                        if _al.exists() and time.time() - _al.stat().st_mtime < 120:
+                            continue
+                    except Exception:
+                        pass
+                    self._inst_reserved[aid] = inst_path
+                    return (i, str(inst_dir))
+            return None
 
     def launch(self, row: int) -> bool:
         if row < 0 or row >= len(self.ctx.accounts):
@@ -406,6 +412,55 @@ class AccountRunner:
 
     def _launch_account(self, ac: dict) -> bool:
         aid = ac["id"]
+        # 防双启动（2026-08-14）: 实例池里该账号的 .meta 指向活 MAA → 已在
+        # 跑 → 拒绝。不依赖 _active/_procs 映射 — 误杀 cleanup 会清映射但
+        # MAA 进程可能没死透 → 同一账号两个 MAA 实例抢 ADB → 互扰失败循环
+        # （实测官-37 占实例 2+9、官-38 占实例 4+5）。
+        # v2（2026-08-14 21:0x）: 只看 pid 会漏掉"启动中"的账号 — meta 在
+        # spawn 前 30-120s 就写入（boot 模拟器期间），慢 boot（>150s 启动
+        # 超时）触发残留释放 → 二次启动 → 双 MAA（实测日-4 占 3+5、官-7 占
+        # 6+8）。meta 写入 180s 内视为启动中，同样拒绝。
+        try:
+            import psutil as _psu3
+            _inst_root2 = Path(__file__).parent / "maa" / "instances"
+            for _idir3 in _inst_root2.glob("*"):
+                _mfile3 = _idir3 / ".meta"
+                if not _mfile3.exists():
+                    continue
+                try:
+                    if _mfile3.read_text(encoding="utf-8").split("|")[0] != aid:
+                        continue
+                except Exception:
+                    continue
+                try:
+                    _mfresh = time.time() - _mfile3.stat().st_mtime < 180
+                except Exception:
+                    _mfresh = False
+                _pid_alive3 = False
+                _pfile3 = _idir3 / ".pid"
+                if _pfile3.exists():
+                    try:
+                        _pid3 = int(_pfile3.read_text().strip())
+                        _pid_alive3 = _psu3.pid_exists(_pid3)
+                    except Exception:
+                        pass
+                if _pid_alive3 or _mfresh:
+                    self.emit_log(f"{ac.get('name', aid)} 实例 {_idir3.name} 已有该账号 MAA (pid活={_pid_alive3} meta新={_mfresh})，拒绝重复启动")
+                    # 恢复队列一致性（2026-08-14）: active 标记丢失但 MAA 实际
+                    # 活着 → 把账号补回 active_emus → 队列视为运行中 → 条目
+                    # 弹出不再每 5s 空转重试（实测官-41 连续拒绝 1 分钟）。
+                    try:
+                        _lq2 = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
+                        if _lq2 is not None and ac.get("emu_instance_index"):
+                            _ei = str(ac["emu_instance_index"])
+                            if _lq2._active_emus.get(_ei) != aid:
+                                _lq2._active_emus[_ei] = aid
+                                _lq2._active_emus_ts[_ei] = time.time()
+                    except Exception:
+                        pass
+                    return False
+        except Exception:
+            pass
         if aid in self._active:
             # Stale mark: MAA process may have died without _cleanup (crash/kill
             # raced the exit handler). If the process is really gone, clear the
@@ -592,6 +647,43 @@ class AccountRunner:
                                capture_output=True, timeout=5, creationflags=CF)
         except Exception:
             pass
+
+    def _guard_kill(self, aid: str, action: str, reason: str,
+                    evidence: str = "") -> bool:
+        """守护审计钩子（2026-08-14 用户: 杀/关前先确认，留痕可回看）。
+
+        破坏性动作前调用：写入 kill_audit 待确认队列 → 观察窗口内若有
+        pending 未决 → 返回 False（暂缓执行，等守护方确认）；无 pending
+        或已确认放行 → 返回 True（可以执行）。
+
+        判据以实际状态为准（用户铁律）— 调用方必须传真实证据摘录
+        （asst.log 尾部 taskchain / 心跳年龄 / 进程状态），禁止只传
+        "任务列表硬编码状态"这类推断值。
+
+        返回 True 表示"已获准执行"；调用方拿到 True 后执行杀/关动作。
+        """
+        try:
+            from models.kill_audit import request as _ka_request
+            from models.kill_audit import pending as _ka_pending
+            _ka_request(aid, self._ac_name(aid), action, reason, evidence)
+            # 观察窗口: 有 pending 未决 → 暂缓。守护方（agent 监控循环/
+            # 人工）在窗口内 decide() 放行后，下一轮检查这里放行。
+            _pend = _ka_pending()
+            _mine = [e for e in _pend if e.get("aid") == aid]
+            if _mine:
+                return False
+            return True
+        except Exception:
+            # 审计系统异常时不影响主流程 — 默认放行（宁可多记录不能卡死调度）
+            return True
+
+    def _ac_name(self, aid: str) -> str:
+        try:
+            ac = self._active.get(aid) or next(
+                (a for a in (self.ctx.accounts or []) if a.get("id") == aid), None)
+            return ac.get("name", aid) if ac else aid
+        except Exception:
+            return aid
 
     def _find_emu_pid(self, addr: str) -> int | None:
         if not addr:
@@ -814,7 +906,11 @@ class AccountRunner:
                 # 在 Android 完全启动后 spawn，否则连半启动系统 → 连接失败/
                 # 失联/假画面空转（2026-08-11 用户指出: MAA 应在模拟器完全
                 # 启动后再启动）。
-                _boot_dl = time.time() + int(ac.get("boot_wait", 90))
+                # 2026-08-14: 默认 90s → 180s — 回收修复后模拟器全部冷启动
+                # （用完即关），冷启动 boot 常超 90s（实测 21:22 b-1 开机
+                # 超时 90s 放弃 → exit=-2 快速失败 → 半小时 111 次失败
+                # 风暴）。180s 覆盖慢冷启动；账号级 boot_wait 可覆盖。
+                _boot_dl = time.time() + int(ac.get("boot_wait", 180))
                 _booted = False
                 while time.time() < _boot_dl:
                     try:
@@ -847,7 +943,7 @@ class AccountRunner:
                             self.emit_log(f"🔄 Android 开机超时，已重启模拟器 #{emu_idx}")
                     except Exception:
                         pass
-                    self.emit_log(f"⚠️ Android 开机超时（{int(ac.get('boot_wait', 90))}s），放弃本次启动")
+                    self.emit_log(f"⚠️ Android 开机超时（{int(ac.get('boot_wait', 180))}s），放弃本次启动")
                     self._cleanup(aid, -2, [])
                     return
 
@@ -887,6 +983,30 @@ class AccountRunner:
                                     capture_output=True, text=True, timeout=3,
                                     creationflags=CF)
                 if str(_pid) in _r.stdout:
+                    # 2026-08-14: 若是其他活跃账号的 MAA（并发启动/重启竞态
+                    # 实例串用 — 分配预留被清理后另一账号已 spawn），不能杀 —
+                    # 杀了对方失联 + 产生无主 MAA。放弃本次启动让队列重试
+                    # （_clean_stale_emus 150s 兜底释放标记）。
+                    _other = next((pp for pp in self._procs.values()
+                                   if getattr(pp, "pid", None) == _pid), None)
+                    if _other is not None:
+                        self.emit_log(f"↩ {ac.get('name', aid)} 实例 {Path(inst_dir).name} 已被其他账号占用 (PID={_pid})，放弃本次启动")
+                        self._inst_reserved.pop(aid, None)
+                        return
+                    # 2026-08-14 v2: .meta 归属检查 — _procs 映射可能已丢
+                    # （误杀 cleanup 清映射但进程没死透），此时 _other 保护
+                    # 失效 → 用 .meta 判定归属：.pid 活进程属于**另一个账号**
+                    # → 不杀（那是对方正在跑的 MAA），放弃本次启动。
+                    try:
+                        _mf = Path(inst_dir) / ".meta"
+                        if _mf.exists():
+                            _owner = _mf.read_text(encoding="utf-8").split("|")[0]
+                            if _owner and _owner != aid:
+                                self.emit_log(f"↩ {ac.get('name', aid)} 实例 {Path(inst_dir).name} 的 .pid 属于 {_owner[:8]}（他账号 MAA 存活），放弃本次启动避免误杀")
+                                self._inst_reserved.pop(aid, None)
+                                return
+                    except Exception:
+                        pass
                     self._log.warn(f"[注入] {ac.get('name', aid)} 清理实例残留 MAA PID={_pid}")
                     subprocess.run(["taskkill", "/F", "/PID", str(_pid)],
                                    capture_output=True, timeout=5, creationflags=CF)
@@ -999,6 +1119,24 @@ class AccountRunner:
                 self.emit_log(f"↩ {ac.get('name', aid)} 启动已被清理（占位移除），放弃 spawn")
                 self._inst_reserved.pop(aid, None)  # 释放预留，防泄漏
                 return
+            # 注入验证（2026-08-14）: MAA 6.16 读 gui.new.json 的
+            # ConnectSettings.Address — 注入写失败/残留会让 MAA 连到错误的
+            # 模拟器（inst_addr_drift 实锤: 实例 6 残留 16768 vs 官-6 实际
+            # 17024 → MAA 10-40s 快速失败循环）。spawn 前读回校验，不一致
+            # → 放弃本次启动（队列重试会重新注入），绝不 spawn 必失败的 MAA。
+            try:
+                _gj = Path(inst_dir) / "config" / "gui.new.json"
+                if _gj.exists():
+                    _d = json.loads(_gj.read_text(encoding="utf-8", errors="replace"))
+                    _addr = (((_d.get("Configurations") or {}).get("Default") or {})
+                             .get("Gui", {}).get("ConnectSettings", {})).get("Address", "")
+                    _want = ac.get("adb_address", "")
+                    if _want and _addr and _addr != _want:
+                        self.emit_log(f"↩ {ac.get('name', aid)} 注入验证失败: gui.new.json Address={_addr} ≠ 期望 {_want}（写入失败/残留），放弃本次启动")
+                        self._inst_reserved.pop(aid, None)
+                        return
+            except Exception:
+                pass
             self._spawn_instance(exe, ac, inst_dir)
             try:
                 from models.account_state import AccountState
@@ -1192,11 +1330,30 @@ class AccountRunner:
         # (RunDirectly=False → never auto-starts). Use resolved real path —
         # junction (unresolved) cwd crashed MAA.exe with E_FAIL.
         real_dir = str(Path(inst_dir).resolve())
-        p = subprocess.Popen([str(exe)], shell=False, cwd=real_dir)
+        # 2026-08-14: 每实例独立 adb server 端口 — 多 MAA 共享全局 adb server
+        # (5037) 时并发连接互相干扰 → 约 1/4 启动连接失败（asst.log 断在
+        # "retry when connect" → TimerCanceled 快速退出）。adb 客户端原生读
+        # ANDROID_ADB_SERVER_PORT 环境变量：给每个实例独立的 server 端口
+        # （5037+实例号），连接彻底隔离。MAA 的 adb 子进程继承本环境。
+        try:
+            _inst_n = int(Path(inst_dir).name)
+            _env = dict(os.environ)
+            _env["ANDROID_ADB_SERVER_PORT"] = str(5037 + _inst_n)
+        except Exception:
+            _env = None
+        p = subprocess.Popen([str(exe)], shell=False, cwd=real_dir, env=_env)
         p._inst_path = str(Path(inst_dir).resolve())
         self._procs[aid] = p
         self._start_times[aid] = time.time()
         self.ctx.proc_status.add(aid)
+        # .meta 与 .pid 成对写（2026-08-14）: 防"pid 活 + meta 空"的幽灵 MAA
+        # （并发启动/重启竞态下 _do_launch 写的 meta 可能被清理/覆盖，而
+        # spawn 又写入了 pid → 无主 MAA 占实例 → dashboard 显示 MAA-xxxx）。
+        # meta 先写：任何时刻 .pid 存在则 .meta 必存在。
+        try:
+            (Path(inst_dir) / ".meta").write_text(f"{aid}|{ac.get('name', aid)}", encoding="utf-8")
+        except Exception:
+            pass
         try: pid_file.write_text(str(p.pid))
         except: pass
         self.emit_log(f"✓ 启动 MAA PID={p.pid}")
@@ -1715,9 +1872,15 @@ class AccountRunner:
                 else:
                     info["emu"] = {}
         was = self._overloaded
-        self._overloaded = free_gb < 1.0
+        # 过载阈值（可配 overload_mem_gb，默认 4GB）— 2026-08-14 事故修复：
+        # 原 1.0GB 阈值太低 — 等内存只剩 1GB 才停新任务，此时模拟器堆积已把
+        # 系统拖垮（StartUp 卡加载/MuMuManager 超时）。提前到 4GB 停新启动，
+        # 配合回收器内存强制回收（reclaim_force_mem_gb，2GB）留出恢复空间：
+        # 4GB 止血 → 2GB 清闲置模拟器 → 内存回升 → 自动恢复轮转。
+        _thr = float(self.ctx.config.get("overload_mem_gb", 4.0) or 4.0)
+        self._overloaded = free_gb < _thr
         if self._overloaded != was:
-            self.emit_log(f"[资源] 内存 {'不足' if self._overloaded else '已恢复'} ({free_gb:.1f}GB)")
+            self.emit_log(f"[资源] 内存 {'不足' if self._overloaded else '已恢复'} ({free_gb:.1f}GB，阈值 {_thr:.0f}GB)")
 
     def _check_one(self, aid: str) -> None:
         p = self._procs.get(aid)
@@ -1770,6 +1933,25 @@ class AccountRunner:
                             # 不住）：2026-08-12 b-2 完成关模拟器时 6 台在跑账号
                             # 同时被误判"失联"→ 杀 MAA → 集体 -8 → 自动重启循环。
                             if isinstance(_pa, bool) and isinstance(_pp, bool) and not (_pa or _pp):
+                                # 2026-08-14: MAA 刚 spawn 的宽限（60s）— 模拟器
+                                # 可能在 MAA spawn 前被回收（启动失败→回排→
+                                # 回收→自动重启时序），刚 spawn 的 MAA 尚在
+                                # 尝试连接，此刻判失联=必杀（日-2 循环 exit=-8）。
+                                if time.time() - self._start_times.get(aid, 0) < 60:
+                                    self._emu_lost_suspect.pop(aid, None)
+                                    return
+                                # 2026-08-14: 有模拟器关闭进行中 → MuMuManager
+                                # 忙碌，info 对其他 VM 可能误报 false/false
+                                # （v3 并发回收实测 b-5/官-12 被误杀 → 自动重启
+                                # 风暴）→ 本轮豁免判定并清嫌疑，关闭窗口过后
+                                # 再查。
+                                try:
+                                    from services.emu_service import closing_in_progress as _cip
+                                    if _cip():
+                                        self._emu_lost_suspect.pop(aid, None)
+                                        return
+                                except Exception:
+                                    pass
                                 if aid in self._emu_lost_suspect:
                                     # 第 2 轮仍失联 → 确认，杀 MAA 恢复
                                     # 2026-08-14 修复：此前不读时间戳 — 嫌疑标记
@@ -1784,14 +1966,21 @@ class AccountRunner:
                                     self._emu_lost_suspect.pop(aid, None)
                                     name = ac.get("name", aid)
                                     self._log.warn(f"[模拟器失联] {name} 模拟器#{emu_idx} 进程不在（连续 2 轮确认），杀 MAA 恢复")
-                                    try:
-                                        p.terminate()
-                                        p.wait(3)
-                                    except Exception:
-                                        pass
-                                    tasks, sanity, drops = self._parse_log(aid)
-                                    self._cleanup(aid, -8, tasks, sanity, drops)
-                                    return
+                                    # 守护审计钩子: 失联是误杀高发区 —
+                                    # 先留痕待确认（判据=真实进程状态快照）
+                                    if self._guard_kill(aid, "kill_maa",
+                                                        f"模拟器#{emu_idx} 进程不在(连续2轮)",
+                                                        evidence=f"emu_idx={emu_idx} emu_pid={emu_pid} lost_confirm=2"):
+                                        try:
+                                            p.terminate()
+                                            p.wait(3)
+                                        except Exception:
+                                            pass
+                                        tasks, sanity, drops = self._parse_log(aid)
+                                        self._cleanup(aid, -8, tasks, sanity, drops)
+                                        return
+                                    else:
+                                        self._log.info(f"[守护审计] {name} 模拟器失联杀暂缓（待确认）")
                                 # 第 1 次失联 → 只记嫌疑，下一轮确认（5s 后）
                                 self._emu_lost_suspect[aid] = time.time()
                                 name = ac.get("name", aid)
@@ -1813,16 +2002,29 @@ class AccountRunner:
             # 心跳断是预期（probe 期间模拟器/游戏归 StageProbe 全权管理）
             if (_last and aid not in self._stopping and not self._done_flags.get(aid)
                     and not self._probe_running.get(aid)):
-                if time.time() - _last > 10:
+                # 2026-08-14: spawn 宽限（与模拟器失联检查对齐）— MAA 刚
+                # spawn 时 _hb[aid] 还是**上一次运行**的旧心跳，新 MAA 首次
+                # POST 心跳前（约 1-5s）检查轮次会看到"断 >10s"→ 误杀刚
+                # 启动的 MAA（官-38 型: spawn 后 8-60s 即死的候选窗口）。
+                if time.time() - self._start_times.get(aid, 0) < 60:
+                    pass
+                elif time.time() - _last > 10:
                     name = ac.get("name", aid) if ac else aid
                     self._log.warn(f"[MAA心跳] {name} 心跳断 {int(time.time()-_last)}s（MAA 停止/假死），杀 MAA 恢复")
-                    try:
-                        self._kill_maa_graceful(p, name)
-                    except Exception:
-                        pass
-                    tasks, sanity, drops = self._parse_log(aid)
-                    self._cleanup(aid, -8, tasks, sanity, drops)
-                    return
+                    # 守护审计钩子（2026-08-14）: 心跳断属于"疑似假死"—
+                    # 先留痕待确认，观察窗口内未放行则暂缓（宁可多等不可错杀）
+                    if self._guard_kill(aid, "kill_maa",
+                                        f"心跳断 {int(time.time()-_last)}s",
+                                        evidence=f"heartbeat_age={int(time.time()-_last)}s"):
+                        try:
+                            self._kill_maa_graceful(p, name)
+                        except Exception:
+                            pass
+                        tasks, sanity, drops = self._parse_log(aid)
+                        self._cleanup(aid, -8, tasks, sanity, drops)
+                        return
+                    else:
+                        self._log.info(f"[守护审计] {name} 心跳断杀暂缓（待确认）")
         except Exception:
             pass
         if ac and emu_pid and aid not in self._stopping and not self._probe_running.get(aid):
@@ -1992,11 +2194,16 @@ class AccountRunner:
                                     self.emit_log(f"⚠ {ac.get('name', aid)} 代理作战卡死（PRTS1 超 {_prts_min} 分钟且日志停滞），终止")
                                     self._log.warn(f"[代理卡死] {ac.get('name', aid)} PRTS1 卡死")
                                     ac.pop("_prts_stall_since", None)
-                                    try: p.terminate(); p.wait(5)
-                                    except: pass
-                                    tasks, sanity, drops = self._parse_log(aid)
-                                    self._cleanup(aid, -9, tasks, sanity, drops)
-                                    return
+                                    if self._guard_kill(aid, "kill_maa",
+                                                        f"PRTS1 卡死 {_prts_min}min 日志停滞",
+                                                        evidence=f"asst_stall={int(time.time()-_p.stat().st_mtime)}s"):
+                                        try: p.terminate(); p.wait(5)
+                                        except: pass
+                                        tasks, sanity, drops = self._parse_log(aid)
+                                        self._cleanup(aid, -9, tasks, sanity, drops)
+                                        return
+                                    else:
+                                        self._log.info(f"[守护审计] {ac.get('name', aid)} PRTS 卡死终止暂缓（待确认）")
                             else:
                                 ac.pop("_prts_stall_since", None)  # 日志活跃 = 正常刷关，重置
                         else:
@@ -2009,19 +2216,29 @@ class AccountRunner:
                     if elapsed > timeout * 60:
                         self.emit_log(f"⚠ {ac.get('name', aid)} 任务卡死 ({int(elapsed/60)}分钟)")
                         self._task_start_times.pop(aid, None)
-                        try: p.terminate(); p.wait(5)
-                        except: pass
-                        tasks, sanity, drops = self._parse_log(aid)
-                        self._cleanup(aid, -9, tasks, sanity, drops)
-                        return
+                        if self._guard_kill(aid, "kill_maa",
+                                            f"任务卡死 {int(elapsed/60)}min",
+                                            evidence=f"task_elapsed={int(elapsed)}s"):
+                            try: p.terminate(); p.wait(5)
+                            except: pass
+                            tasks, sanity, drops = self._parse_log(aid)
+                            self._cleanup(aid, -9, tasks, sanity, drops)
+                            return
+                        else:
+                            self._log.info(f"[守护审计] {ac.get('name', aid)} 任务卡死终止暂缓（待确认）")
                 started = self._start_times.get(aid, 0)
                 if started and time.time() - started > 3600:
                     self.emit_log(f"⏱ {ac.get('name', aid)} 运行超时")
-                    try: p.terminate(); p.wait(5)
-                    except: pass
-                    tasks, sanity, drops = self._parse_log(aid)
-                    self._cleanup(aid, -3, tasks, sanity, drops)
-                    return
+                    if self._guard_kill(aid, "kill_maa",
+                                        "运行超时 60min",
+                                        evidence=f"started={int(time.time()-started)}s"):
+                        try: p.terminate(); p.wait(5)
+                        except: pass
+                        tasks, sanity, drops = self._parse_log(aid)
+                        self._cleanup(aid, -3, tasks, sanity, drops)
+                        return
+                    else:
+                        self._log.info(f"[守护审计] {ac.get('name', aid)} 运行超时终止暂缓（待确认）")
             # Error threshold: ≥3 consecutive errors → kill MAA + restart emulator
             # 启动宽限 2 分钟（2026-08-14 凌晨：_err_count 跨启动粘滞 + 启动期
             # asst.log 正常重试 [ERR] 累积 → 健康启动 3 秒就被「连续异常」误杀
@@ -2037,29 +2254,35 @@ class AccountRunner:
                     pass
                 if err_count >= 3 and _err_ok:
                     self.emit_log(f"[错误] {ac.get('name', aid)} 连续 {err_count} 次异常，清理")
-                    emu_idx = ac.get("emu_instance_index", "")
-                    if emu_idx:
-                        cli = find_mumu_cli()
-                        if cli is None and ac.get("adb_path"):
-                            try:
-                                cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
-                                if cand.exists():
-                                    cli = str(cand)
-                            except Exception:
-                                pass
-                        if cli:
-                            idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
-                            # 统一优雅关闭（直接 shutdown 留 VMM 残留）
-                            try:
-                                from services.launch_queue import graceful_emu_shutdown
-                                graceful_emu_shutdown(cli, emu_idx, ac.get("adb_path", ""), ac.get("adb_address", ""))
-                            except Exception:
-                                subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
-                                              timeout=10, capture_output=True, creationflags=CF)
-                    try: p.terminate(); p.wait(3)
-                    except: pass
-                    self._cleanup(aid, -8, [])
-                    return
+                    # 守护审计钩子: 错误计数误杀有前科（日-1/日-2 挂起根因）
+                    if self._guard_kill(aid, "kill_maa",
+                                        f"连续 {err_count} 次异常",
+                                        evidence=f"err_count={err_count} started={int(time.time()-self._start_times.get(aid,0))}s"):
+                        emu_idx = ac.get("emu_instance_index", "")
+                        if emu_idx:
+                            cli = find_mumu_cli()
+                            if cli is None and ac.get("adb_path"):
+                                try:
+                                    cand = Path(ac["adb_path"]).parent / "MuMuManager.exe"
+                                    if cand.exists():
+                                        cli = str(cand)
+                                except Exception:
+                                    pass
+                            if cli:
+                                idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
+                                # 统一优雅关闭（直接 shutdown 留 VMM 残留）
+                                try:
+                                    from services.launch_queue import graceful_emu_shutdown
+                                    graceful_emu_shutdown(cli, emu_idx, ac.get("adb_path", ""), ac.get("adb_address", ""))
+                                except Exception:
+                                    subprocess.run([cli, "control", idx_flag, str(emu_idx), "shutdown"],
+                                                  timeout=10, capture_output=True, creationflags=CF)
+                        try: p.terminate(); p.wait(3)
+                        except: pass
+                        self._cleanup(aid, -8, [])
+                        return
+                    else:
+                        self._log.info(f"[守护审计] {ac.get('name', aid)} 连续异常清理暂缓（待确认）")
             # Stuck at startup / idle hang cleanup:
             # - daily/schedule: no tasks 120s after launch → stuck, kill
             # - daily/schedule: tasks done but MAA hangs (asst.log silent 5min) → release instance
@@ -2086,10 +2309,15 @@ class AccountRunner:
                         if not _fresh:
                             self.emit_log(f"⏱ {ac.get('name', aid)} 启动后无任务 ({int(time.time()-started)}s)，清理实例")
                             self._log.warn(f"[卡死] {ac.get('name', aid)} 启动 {int(time.time()-started)}s 无任务")
-                            try: p.terminate(); p.wait(3)
-                            except: pass
-                            self._cleanup(aid, -3, [])
-                            return
+                            if self._guard_kill(aid, "kill_maa",
+                                                f"启动后无任务 {int(time.time()-started)}s",
+                                                evidence=f"asst_mtime_age={int(time.time()-(Path(_inst_path)/'debug'/'asst.log').stat().st_mtime) if _inst_path else '?'}s"):
+                                try: p.terminate(); p.wait(3)
+                                except: pass
+                                self._cleanup(aid, -3, [])
+                                return
+                            else:
+                                self._log.info(f"[守护审计] {ac.get('name', aid)} 无任务清理暂缓（待确认）")
                     # Tasks exist → MAA likely finished and is idling. asst.log keeps
                     # getting written while tasks run; 5min silence = done/hung.
                     _inst_path = getattr(p, '_inst_path', None)
@@ -2101,21 +2329,57 @@ class AccountRunner:
                             pass
                     if _idle > 300:
                         self.emit_log(f"⏱ {ac.get('name', aid)} 任务完成挂起 (日志静止 {int(_idle)}s)，清理实例")
-                        try: p.terminate(); p.wait(3)
-                        except: pass
-                        self._cleanup(aid, 0, tasks)
+                        if self._guard_kill(aid, "kill_maa",
+                                            f"任务完成挂起 日志静止 {int(_idle)}s",
+                                            evidence=f"asst_idle={int(_idle)}s"):
+                            try: p.terminate(); p.wait(3)
+                            except: pass
+                            self._cleanup(aid, 0, tasks)
                         return
                     # StartUp stuck: game loading hangs (LoadingIcon loop) — asst.log
                     # keeps being written so the silence check never fires. If StartUp
                     # is still "运行中" 10min after launch → kill + release instance.
+                    # 2026-08-14 修复: _parse_log 回退路径把注入任务 status 硬编码
+                    # "运行中"（_core_tasks 仅 direct-drive 有真状态，GUI 模式恒空）
+                    # → StartUp 完成后 status 仍是"运行中" → 任何跑超 600s 的账号
+                    # 都被误杀（实测官-8: 22:57 StartUp 成功、23:05 正在跑 Infrast，
+                    # 23:05:20 被"StartUp 卡加载"误杀）。以 asst.log 尾部真实
+                    # taskchain 为准: 最新任务链已离开 StartUp → StartUp 已完成 →
+                    # 不判卡死。
                     startup = next((t for t in tasks if t.get("TaskType", "").lower() == "startup"), None)
+                    _startup_done = False
                     if startup and startup.get("status") == "运行中" and time.time() - started > 600:
-                        self.emit_log(f"⏱ {ac.get('name', aid)} StartUp 卡加载超时 ({int(time.time()-started)}s)，清理实例")
-                        self._log.warn(f"[卡死] {ac.get('name', aid)} StartUp 卡加载 {int(time.time()-started)}s")
-                        try: p.terminate(); p.wait(3)
-                        except: pass
-                        self._cleanup(aid, -3, tasks)
-                        return
+                        try:
+                            import re as _re
+                            _sp = Path(getattr(p, '_inst_path', "")) / "debug" / "asst.log"
+                            if _sp.exists():
+                                _sz2 = _sp.stat().st_size
+                                with _sp.open("r", encoding="utf-8", errors="replace") as _f2:
+                                    _f2.seek(max(0, _sz2 - 100000))
+                                    _tail2 = _f2.read()
+                                _chains = _re.findall(r'"taskchain":"([^"]+)"', _tail2)
+                                if _chains:
+                                    _last_chain = _chains[-1]
+                                    # StartUp 完成后 taskchain 会切到 Fight/Infrast/
+                                    # Recruit 等 — 仅当最新链仍是 StartUp 才可能卡加载
+                                    if _last_chain != "StartUp":
+                                        _startup_done = True
+                        except Exception:
+                            pass
+                        if not _startup_done:
+                            self.emit_log(f"⏱ {ac.get('name', aid)} StartUp 卡加载超时 ({int(time.time()-started)}s)，清理实例")
+                            self._log.warn(f"[卡死] {ac.get('name', aid)} StartUp 卡加载 {int(time.time()-started)}s")
+                            # 守护审计钩子: StartUp 判定是误杀重灾区（已修复
+                            # 判据 + 钩子双保险）— 先留痕待确认
+                            if self._guard_kill(aid, "kill_maa",
+                                                f"StartUp 卡加载 {int(time.time()-started)}s",
+                                                evidence=f"asst_tail_taskchain={_last_chain if '_last_chain' in dir() else '?'} started={int(time.time()-started)}s"):
+                                try: p.terminate(); p.wait(3)
+                                except: pass
+                                self._cleanup(aid, -3, tasks)
+                                return
+                            else:
+                                self._log.info(f"[守护审计] {ac.get('name', aid)} StartUp 卡加载杀暂缓（待确认）")
             # ADB keepalive — log only, don't kill MAA。
             # ⚠️ 原实现每 5s 逐账号 `adb -s <addr> shell echo ping` — adb server
             # 是串行的，10 台并发 ping + MAA 自身操作 → server 排队超时（3s）
@@ -2744,6 +3008,12 @@ class AccountRunner:
         # re-enqueue to continue the run. Not for user stops (stop() pops _active
         # first, so ac is None here), connect-only, or normal completes.
         if ac and exit_code != 0 and not ac.get("_connect_only") and not self._done_flags.get(aid):
+            # 2026-08-14: 记录异常退出时间戳 — 回收逻辑据此给该账号模拟器
+            # 保留窗口（异常退出 → 自动重启马上要再拉起模拟器，若回收在
+            # 间隙把模拟器当闲置关了 → 重启 MAA 失联 → 连环失败挂起。
+            # 实测官-8: 23:05:20 被 StartUp 误杀 → 23:05:22 自动重启 →
+            # 模拟器#18 已被回收关闭 → 23:06:30 失联确认杀 → 挂起）。
+            self._recent_exit[aid] = time.time()
             # _done_flags: 完成收尾（AllTasksCompleted）terminate 的 MAA 会以
             # exit=-3 退出 — 若无此检查会被判"异常退出"→ 自动重启 → 已刷完
             # 的账号重刷一遍（2026-08-11 官-41 刷完 14m49s 又被重入队）

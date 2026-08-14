@@ -68,6 +68,32 @@ def graceful_emu_shutdown(cli: str, emu_idx, adb_path: str = "", addr: str = "",
                              log=log or (lambda m: _QUEUE_LOG.info(m)))
 
 
+def _running_emus_by_psutil() -> dict[str, dict]:
+    """在线模拟器枚举 — psutil VMM 进程扫描（2026-08-14 v3）。
+
+    MuMuManager `info -v all` 在 21 台负载下 8-25s 超时 → 回收瘫痪
+    （2026-08-14 死循环根因）；本扫描 <1s 且不依赖 MuMuManager。
+    只回答"哪些模拟器的 VMM 进程活着" — 回收判定足够（残留壳也算活着，
+    反正要关）。MuMuManager 仅用于关闭动作。失败返回 {}（调用方安全跳过）。
+    """
+    out: dict[str, dict] = {}
+    try:
+        import psutil as _ps
+        import re as _re
+        for _p in _ps.process_iter(["name", "cmdline"]):
+            try:
+                if _p.info["name"] != "MuMuVMMHeadless.exe":
+                    continue
+                _m = _re.search(r"MuMuPlayer-12\.0-(\d+)\b", " ".join(_p.info["cmdline"] or []))
+                if _m:
+                    out[_m.group(1)] = {}
+            except Exception:
+                continue
+    except Exception:
+        return {}
+    return out
+
+
 class LaunchQueue:
     """Manages a priority queue of launch requests. Drives the entire account lifecycle."""
 
@@ -398,7 +424,61 @@ class LaunchQueue:
                     next_at = datetime.now() + timedelta(minutes=mins)
                     self.enqueue(account_id, "sanity", priority=2, not_before=next_at)
 
+        # 即时回收（2026-08-14 v3）: 任务正常完成且账号近期不会重跑 →
+        # 不等 30s 回收 tick + 枚举，立即评估并后台关闭闲置模拟器。
+        self._maybe_close_idle_emu(emu_idx, account_id)
         self._tick()
+
+    def _maybe_close_idle_emu(self, emu_idx: str, account_id: str) -> None:
+        """槽位释放后的即时回收（2026-08-14 v3）— 与回收器同规则（位置门 +
+        keep_min 时间窗），但不等回收 tick，立即评估；命中则后台关闭。
+        安全: 每模拟器锁防二次关闭 + 关闭冷却 + MAA 存活保护 + psutil 确认在线。
+        """
+        if not emu_idx:
+            return
+        try:
+            if account_id in self._active_emus.values():
+                return  # 模拟器仍在用
+            _cfg = self.ctx.config or {}
+            try:
+                from services.dynamic_params import get_pending_keep_min
+                _keep_min = get_pending_keep_min(_cfg, 10)
+            except Exception:
+                _keep_min = int(_cfg.get("emu_pending_keep_min", 10) or 10)
+            _front_keep = max(int(_cfg.get("parallel_max", 1) or 1) + 4, 6)
+            _front_ids = {e.account_id for e in
+                          sorted(self._pending, key=lambda e: e.sort_key)[:_front_keep]}
+            if account_id in _front_ids and any(
+                    (e.not_before - datetime.now()).total_seconds() <= _keep_min * 60
+                    for e in self._pending if e.account_id == account_id):
+                return  # 近期会重跑 → 保留
+            _runner = getattr(getattr(self.ctx, "_mw", None), "runner", None)
+            if _runner and _runner._has_real_process(account_id):
+                return  # MAA 还活着
+            from services.emu_service import recently_closed as _rc_fn, lock_busy as _lb_fn
+            if _rc_fn(emu_idx) or _lb_fn(emu_idx):
+                return  # 关闭冷却期 / 已有关闭进行中
+            if not _running_emus_by_psutil().get(str(emu_idx)):
+                return  # 模拟器已不在线
+            cli = _mumu_manager_cli(self.ctx.accounts)
+            if not cli:
+                return
+            try:
+                _ac = next((a for a in self.ctx.accounts if a.get("id") == account_id), None)
+                if _ac:
+                    from services.emu_service import set_direct_adb
+                    set_direct_adb(emu_idx, _ac.get("adb_path", ""), _ac.get("adb_address", ""))
+            except Exception:
+                pass
+            _QUEUE_LOG.info(f"[即时回收] 模拟器#{emu_idx} 任务完成且近期无重跑，后台关闭")
+            from services.emu_service import direct_shutdown
+            import threading as _th
+            _th.Thread(target=direct_shutdown,
+                       args=(cli, emu_idx, "-v"),
+                       kwargs={"log": lambda m: _QUEUE_LOG.info(f"[即时回收#{emu_idx}] {m}")},
+                       daemon=True).start()
+        except Exception:
+            pass
 
     def on_maa_task_finished(self, account_id: str, status: str) -> None:
         """Called when MAA reports task completion via reportStatus.
@@ -878,7 +958,17 @@ class LaunchQueue:
                 else:
                     self._active_emus_ts[emu_idx] = now  # 补时间戳，交给 150s 超时逻辑
                 continue
-            if now - ts > 150 and not real:
+            # 释放阈值用启动超时（launch_ready_timeout，动态）+ 30s 缓冲 —
+            # 2026-08-14: 原硬编码 150s，慢 boot（模拟器开机 >150s）时标记
+            # 被提前释放 → 二次启动 → 双 MAA（日-4/官-7 实测各占两个实例）。
+            # 启动中的账号（_launching_aid）永不提前释放。
+            _rel_thr = 180.0
+            try:
+                from services.dynamic_params import get_launch_ready_timeout
+                _rel_thr = get_launch_ready_timeout(self.ctx.config, 150) + 30
+            except Exception:
+                pass
+            if now - ts > _rel_thr and not real and self._launching_aid != aid:
                 _QUEUE_LOG.warn(f"释放残留 _active_emus[{emu_idx}]={aid[:8]} (挂起 {int(now-ts)}s)")
                 with self._lock:
                     self._active_emus.pop(emu_idx, None)
@@ -900,12 +990,72 @@ class LaunchQueue:
         # from pinning N emulators while only a few accounts are active.
         self._reclaim_idle_emus()
 
+    def _close_idle_vmm_by_psutil(self, emu2aid: dict, active_ids: set) -> int:
+        """内存紧急兜底（2026-08-14 v2）: MuMuManager 枚举失败时用 psutil 扫
+        VMM 进程直接 taskkill 闲置模拟器，立即释放内存（不依赖 MuMuManager）。
+
+        判闲置 = 有账号映射 + 不在运行中 + 无活 MAA。闲置模拟器无游戏在跑，
+        强杀不会弹崩溃报告（与僵尸 VMM 清理同一 taskkill 模式）。"""
+        try:
+            import psutil as _ps
+            import re as _re
+        except ImportError:
+            return 0
+        runner = getattr(getattr(self.ctx, "_mw", None), "runner", None)
+        closed = 0
+        for _p in _ps.process_iter(["name", "cmdline", "pid"]):
+            try:
+                if _p.info["name"] != "MuMuVMMHeadless.exe":
+                    continue
+                _m = _re.search(r"MuMuPlayer-12\.0-(\d+)\b", " ".join(_p.info["cmdline"] or []))
+                if not _m:
+                    continue
+                _idx = _m.group(1)
+                _aid = emu2aid.get(_idx)
+                if _aid is None:
+                    continue  # 无账号映射（手动开的 / l- 系列）不碰
+                if _aid in active_ids:
+                    continue
+                if runner and runner._has_real_process(_aid):
+                    continue  # MAA 还活着 — 不能关
+                _QUEUE_LOG.warn(f"内存紧急: taskkill 闲置模拟器 #{_idx} ({_aid[:8]})")
+                subprocess.run(["taskkill", "/F", "/PID", str(_p.info["pid"])],
+                               capture_output=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                closed += 1
+            except Exception:
+                continue
+        return closed
+
     def _reclaim_idle_emus(self) -> None:
         """Shutdown emulators whose accounts are neither running nor queued."""
         # v2 状态机回收接管后旧逻辑跳过（防双重回收 — Phase 1 并存开关）
         try:
             if self.ctx.config.get("emu_v2_reclaim", False):
                 return
+        except Exception:
+            pass
+        # 内存压力强制回收（2026-08-14 内存耗尽事故修复）: 可用内存低于阈值
+        # 时跳过「排队保留/闲置宽限」等软保护，关闭闲置模拟器换内存。运行中
+        # /有活 MAA/手动操作中的仍受保护（下方各自判断）。阈值可配
+        # reclaim_force_mem_gb（默认 2GB）— 与 runner 过载阈值
+        # overload_mem_gb（默认 4GB）配合：4GB 停新启动 → 2GB 强制清闲置 →
+        # 内存回升 → 自动恢复。
+        try:
+            import psutil as _psu
+            _free_gb = _psu.virtual_memory().available / 1024 / 1024 / 1024
+            _force = _free_gb < float(self.ctx.config.get("reclaim_force_mem_gb", 2.0) or 2.0)
+        except Exception:
+            _free_gb = 99.0
+            _force = False
+        # 回收节流（2026-08-14 v2）: 每 5s tick 都跑一次 MuMuManager 全量枚举，
+        # 是 21 台负载下 MuMuManager 变慢（→ 回收超时 → 事故死循环）的推手
+        # 之一。30s 一次足够 — 关闭有冷却/保护，晚 30s 无害。内存紧急时
+        # 不节流（要尽快清闲置恢复）。
+        try:
+            if not _force and time.time() - getattr(self, "_last_reclaim_ts", 0.0) < 30:
+                return
+            self._last_reclaim_ts = time.time()
         except Exception:
             pass
         try:
@@ -936,11 +1086,18 @@ class LaunchQueue:
                 ei = a.get("emu_instance_index", "")
                 if ei:
                     emu2aid.setdefault(str(ei), a["id"])
-            r = subprocess.run([cli, "info", idx_flag, "all"],
-                               capture_output=True, text=True, timeout=8,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                               encoding="utf-8", errors="replace")
-            data = _json.loads(r.stdout.lstrip("\ufeff").strip())
+            # 枚举在线模拟器 — psutil VMM 进程扫描（2026-08-14 v3 改造）:
+            # MuMuManager info all 在 21 台负载下 8-25s 超时 → 回收瘫痪
+            # （2026-08-14 死循环根因）；psutil 扫描 <1s 且不依赖 MuMuManager，
+            # MuMuManager 只用于关闭动作。枚举失败概率归零。
+            data = _running_emus_by_psutil()
+            # 队列前部账号集（位置门 — 2026-08-14 v2）: 只有排在前 _front_keep
+            # 位的账号才可能在保留窗口内真实拉起（串行启动门 ~2 分钟一台）。
+            # 重启恢复/长队尾的"已到期"条目轮到时已远超 keep_min，模拟器
+            # 不该白留 — 重启后遗症（全部条目过期 → 全 due → 全保留）封死。
+            _front_keep = max(int(self.ctx.config.get("parallel_max", 1) or 1) + 4, 6)
+            _front_ids = {e.account_id for e in
+                          sorted(self._pending, key=lambda e: e.sort_key)[:_front_keep]}
             # 补系统启动标记（重启/入队后模拟器归属恢复 — 2026-08-11 堆积
             # 根因: main_web 启动时补一次，但那次重启队列为空 → 后来入队的
             # 账号对应模拟器无标记 → 回收永不关 → 8 台空闲堆积）。
@@ -954,22 +1111,107 @@ class LaunchQueue:
                         _mss(str(_idx))
             except Exception:
                 pass
+            # 有活 MAA 的模拟器保护（2026-08-14）: 不依赖 _procs/active 映射 —
+            # 自动重启/残留清理竞态下映射可能丢失（账号在 pending 但 MAA 还在
+            # 跑），若只查映射会把正在跑 MAA 的模拟器当闲置回收 → 失联 →
+            # 杀 MAA → exit=1 → 启动失败循环（19:58 实测 b-5: 模拟器#16 被
+            # 回收后 MAA 失联被杀）。直接扫实例池 .pid/.meta: 活 MAA 进程的
+            # 账号 → 其模拟器索引 → 一律不回收。
+            _active_maa_emus: set[str] = set()
+            try:
+                import psutil as _psu2
+                _inst_root = Path(__file__).parent / "maa" / "instances"
+                for _idir2 in _inst_root.glob("*"):
+                    _pfile = _idir2 / ".pid"
+                    if not _pfile.exists():
+                        continue
+                    try:
+                        _pid2 = int(_pfile.read_text().strip())
+                        if not _psu2.pid_exists(_pid2):
+                            continue
+                        try:
+                            if "MAA" not in (_psu2.Process(_pid2).name() or "").upper():
+                                continue
+                        except Exception:
+                            pass
+                        _mfile = _pfile.parent / ".meta"
+                        if not _mfile.exists():
+                            continue
+                        _maid = _mfile.read_text(encoding="utf-8").split("|")[0]
+                        if not _maid:
+                            continue
+                        for _a2 in self.ctx.accounts:
+                            if _a2.get("id") == _maid and _a2.get("emu_instance_index"):
+                                _active_maa_emus.add(str(_a2["emu_instance_index"]))
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            # 终极保险（2026-08-14）: adb 连接探测 — 扫 adb.exe 进程命令行，
+            # 任何连接 127.0.0.1:<port> 的 adb 客户端（MAA 正在连接该模拟器）
+            # → 对应模拟器一律不回收。完全不依赖队列/实例映射（映射丢失时
+            # 依然有效），堵死"运行中账号的模拟器被误关 → MAA 失联 → 做一半
+            # 关掉"（21:53 四个账号同一秒 exit=1 = 批量误关实锤）。
+            _busy_emus: set[str] = set()
+            try:
+                import psutil as _psu3
+                import re as _re3
+                for _p in _psu3.process_iter(["name", "cmdline"]):
+                    try:
+                        if (_p.info["name"] or "").lower() != "adb.exe":
+                            continue
+                        _cl = " ".join(_p.info["cmdline"] or [])
+                        _m = _re3.search(r"127\.0\.0\.1:(\d+)", _cl)
+                        if not _m:
+                            continue
+                        _port = _m.group(1)
+                        for _a3 in self.ctx.accounts:
+                            _ad = _a3.get("adb_address", "")
+                            if _ad.endswith(":" + _port) and _a3.get("emu_instance_index"):
+                                _busy_emus.add(str(_a3["emu_instance_index"]))
+                                break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            _to_close: list[tuple] = []
             for idx, info in data.items():
-                if not info.get("is_process_started"):
-                    continue
                 aid = emu2aid.get(str(idx))
                 if aid is None:
                     # 无账号映射 = 用户手动开的 / 别人的工作区（l- 系列）—
                     # 一律不回收。此前无条件回收导致: 手动开的模拟器 30 秒后
                     # 被关（2026-08-10 实测）、l- 系列（fz-maa）被误关（隔离
                     # 只在 detect_emu_instances 过滤，回收用 info all 不过滤）。
-                    nm = str(info.get("name", ""))
-                    if any(nm.startswith(p) for p in ("l-", "碧蓝航线")):
-                        continue
                     _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (无账号映射，保留)")
                     continue
                 if aid in active_ids:
                     continue  # 在跑/排队/启动中 — 保留
+                # adb 连接终极保险（2026-08-14）: 有 adb 客户端连着该模拟器
+                # 端口（MAA 在用）→ 不关。不依赖任何映射，映射丢失仍有效。
+                if str(idx) in _busy_emus:
+                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (adb 有连接，MAA 在用)")
+                    continue
+                # 活 MAA 保护（2026-08-14）: 实例池 .pid 指向活 MAA 且其账号
+                # 绑定本模拟器 → 即使队列映射丢失也保留（防误回收 → 失联循环）。
+                if str(idx) in _active_maa_emus:
+                    _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (实例池检测到活 MAA，保留)")
+                    continue
+                # 异常退出保护期（2026-08-14）: MAA 刚被杀/崩（cleanup 清掉
+                # .pid/.meta + adb 连接消失 → 上方保护全失效）→ 自动重启马上
+                # 要再拉起同一模拟器。此窗口回收=把重启的 MAA 关进失联死循环
+                # （实测官-8: StartUp 误杀 → 重启 → 模拟器#18 已被回收 → 失联
+                # 确认杀 → 挂起）。异常退出后 _recent_exit[aid] 记录时间戳，
+                # 10 分钟内不回收该账号模拟器（覆盖自动重启窗口）。
+                if aid:
+                    try:
+                        _runner = getattr(getattr(self.ctx, '_mw', None), 'runner', None)
+                        _recent = getattr(_runner, '_recent_exit', None) or {}
+                        _ret = _recent.get(aid, 0)
+                        if _ret and time.time() - _ret < 600:
+                            _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (账号异常退出保护期 {int(time.time()-_ret)}s，自动重启中)")
+                            continue
+                    except Exception:
+                        pass
                 # 关闭冷却（5 分钟）— 刚被优雅关闭/回收关闭过的模拟器进程可能
                 # 还在退出，再次关闭=二次关闭（2026-08-11 用户观察: 正常关闭
                 # 后一段时间又关一次）。
@@ -1014,12 +1256,23 @@ class LaunchQueue:
                         _keep_min = get_pending_keep_min(self.ctx.config, 10)
                     except Exception:
                         _keep_min = int(self.ctx.config.get("emu_pending_keep_min", 10) or 10)
-                    _recent = any(
-                        (datetime.now() - e.not_before).total_seconds() < _keep_min * 60
+                    # 排队保留（限时）— 2026-08-14 内存耗尽事故根因修复：
+                    # 原条件 (now - not_before) < keep_min 对未来条目恒成立 →
+                    # 理智轮转回排（not_before 数小时后）的账号模拟器被无限期
+                    # 保留 → 批量轮转时模拟器只进不出 → 21 台常驻 → 内存耗尽
+                    # → 卡加载/MuMuManager 超时/暂停关停连锁（17:50 事故）。
+                    # 新条件: 只保护 keep_min 内会轮到（含已到期等槽位）的账号
+                    # （覆盖失败重试窗口），远期回排一律回收 — 轮到启动时
+                    # runner 自动拉起模拟器（串行启动门保证不会启动风暴）。
+                    # 内存压力（_force）下连保留窗口内的也回收。
+                    _due_soon = aid in _front_ids and any(
+                        (e.not_before - datetime.now()).total_seconds() <= _keep_min * 60
                         for e in self._pending if e.account_id == aid)
-                    if _recent:
+                    if _due_soon and not _force:
                         continue
-                    _QUEUE_LOG.info(f"回收跳过转回收 模拟器#{idx} (排队超 {_keep_min} 分钟，回收省资源)")
+                    _why = f"内存压力 {_free_gb:.1f}GB 强制回收" if _force else \
+                           f"下次启动超 {_keep_min:.0f} 分钟"
+                    _QUEUE_LOG.info(f"回收关闭 模拟器#{idx} ({_why}，回收省资源)")
                 # 非系统启动的模拟器 = 用户在 MuMu 管理器手动开的 → 永不回收
                 # （系统只回收自己拉起的。2026-08-11 用户: 手动启动的模拟器
                 # 也被关掉 — 回收把用户手动开的当闲置关了）。
@@ -1039,7 +1292,7 @@ class LaunchQueue:
                                 _st_since = _es.state_since
                     except Exception:
                         pass
-                    if time.time() - _st_since < _ext_min * 60:
+                    if time.time() - _st_since < _ext_min * 60 and not _force:
                         _QUEUE_LOG.info(f"回收跳过 模拟器#{idx} (非系统启动，闲置不足 {_ext_min} 分钟)")
                         continue
                     _QUEUE_LOG.info(f"回收关闭 模拟器#{idx} (非系统启动但闲置超 {_ext_min} 分钟)")
@@ -1084,21 +1337,48 @@ class LaunchQueue:
                 # 闲置模拟器 = 无 MAA/无任务 = 无游戏在跑 → 直接 MuMuManager
                 # shutdown 是正常关闭（用户手动关闭模拟器就是它），不会弹
                 # MuMu 崩溃报告（崩溃报告只在"游戏运行中被关"时出现）。
-                # 此前用 adb reboot 流程：闲置模拟器不在 adb server 设备列表
-                # （adb -s 无 connect 直接失败，未检查返回值）→ 90s 超时 →
-                # shutdown 兜底强关 → 反而弹"运行异常"（2026-08-10 实测
-                # #13/#21/#28 100% 失败）。闲置场景直接关，不绕道。
-                from services.emu_service import direct_shutdown as _ds_fn, set_direct_adb
-                # 注册 ADB（force-stop 游戏用 — MAA 完成后的前台游戏强关会出错）
+                # 2026-08-14 v3: 不再逐个串行关（10 台串行要几分钟阻塞 tick），
+                # 收集后并发后台关闭（每模拟器独立锁防二次关闭；信号量限 3
+                # 路防 MuMuManager 过载）。
                 try:
                     _ac3 = next((a for a in self.ctx.accounts if a.get("id") == aid), None)
                     if _ac3:
+                        from services.emu_service import set_direct_adb
                         set_direct_adb(idx, _ac3.get("adb_path", ""), _ac3.get("adb_address", ""))
                 except Exception:
                     pass
-                _ds_fn(cli, idx, idx_flag, log=lambda m: _QUEUE_LOG.info(m))
+                # 守护审计钩子（2026-08-14 用户: 杀/关前先确认）— 回收是
+                # 误杀高发区（模拟器被误关 → MAA 失联 → 重启风暴）。先写入
+                # kill_audit 留痕 + 检查待确认：观察窗口内未放行 → 暂缓回收。
+                try:
+                    from models.kill_audit import request as _ka_req
+                    from models.kill_audit import pending as _ka_pend
+                    _ka_req(aid, f"模拟器#{idx}", "reclaim_emu",
+                            f"回收闲置模拟器#{idx}",
+                            evidence=f"emu_idx={idx} free_mem={_free_gb:.1f}GB force={_force}")
+                    _mine = [e for e in _ka_pend() if e.get("aid") == aid
+                             and e.get("action") == "reclaim_emu"]
+                    if _mine:
+                        _QUEUE_LOG.info(f"回收暂缓 模拟器#{idx} (守护审计待确认)")
+                        continue
+                except Exception:
+                    pass
+                _to_close.append((idx, aid))
+            # 并发后台关闭（2026-08-14 v3）— 不阻塞 tick；每模拟器独立锁 +
+            # 关闭冷却保证安全。
+            if _to_close:
+                from services.emu_service import direct_shutdown as _ds_fn
+                import threading as _th
+                _sem = _th.Semaphore(3)
+                for _i, _a in _to_close:
+                    def _closer(_i=_i):
+                        with _sem:
+                            _ds_fn(cli, _i, idx_flag,
+                                   log=lambda m, j=_i: _QUEUE_LOG.info(f"[回收关闭#{j}] {m}"))
+                    _th.Thread(target=_closer, daemon=True).start()
+                _QUEUE_LOG.info(f"回收完成: 在线 {len(data)} 台, 后台关闭闲置 {len(_to_close)} 台")
         except Exception as ex:
-            _QUEUE_LOG.debug(f"空闲模拟器回收跳过: {ex}")
+            _QUEUE_LOG.warn(f"空闲模拟器回收异常: {ex}")
 
     def _recover_cli(self) -> str:
         """Find emulator CLI — MuMuManager.exe ONLY (mumu-cli misindexes on MuMu 12)."""

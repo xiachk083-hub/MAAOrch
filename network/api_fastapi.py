@@ -1992,6 +1992,44 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         count = lq.stop_all()
         return {"ok": True, "stopped": count}
 
+    # ── 守护审计（Kill Audit）— 2026-08-14 用户: 杀/关动作先确认再执行，
+    # 全程留痕，页面展示原因与解决方式。判据以实际状态为准（铁律）。──
+    @app.get("/api/kill_audit")
+    def handle_kill_audit(limit: int = 100):
+        try:
+            from models.kill_audit import history, summary
+            return {"ok": True, "summary": summary(), "entries": history(limit)}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    @app.get("/api/kill_audit/pending")
+    def handle_kill_audit_pending():
+        try:
+            from models.kill_audit import expire_all, pending
+            expire_all()  # 先清算超时项
+            return {"ok": True, "pending": pending()}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    @app.post("/api/kill_audit/decide")
+    def handle_kill_audit_decide(body: dict = {}):
+        # body: {id, approve: bool, by?, note?, fix?}
+        try:
+            from models.kill_audit import decide
+            eid = (body or {}).get("id", "")
+            approve = bool((body or {}).get("approve", False))
+            if not eid:
+                return {"ok": False, "error": "missing id"}
+            entry = decide(eid, approve,
+                           by=(body or {}).get("by", "manual"),
+                           note=(body or {}).get("note", ""),
+                           fix=(body or {}).get("fix", ""))
+            if not entry:
+                return {"ok": False, "error": "entry not found"}
+            return {"ok": True, "entry": entry}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ── MAA 远程控制（6.16 — MAA 每秒轮询 GetTask = 心跳；ReportStatus =
     # 任务结果上报。检测 MAA 是否在运行的权威信号 — 2026-08-12 用户）──
     @app.post("/api/maa_remote/task")
@@ -3352,6 +3390,28 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         from models.config_manager import save_config
         save_config(mw.config)
         return {"ok": True, "imported": imported}
+
+    # ── MCP 挂载（2026-08-14：DSH Agent 工具插件 — 必须在静态 catch-all 之前）──
+    # streamable-http，挂载点自身校验 x-agent-token（api_token 配置时）。
+    # FastAPI mount 子 app 不传播 lifespan → 显式组合 MCP 的 lifespan。
+    try:
+        from network.mcp_server import build_mcp_app
+        _mcp_mounted = build_mcp_app(mw)
+        app.mount("/mcp", _mcp_mounted)
+        if getattr(_mcp_mounted, "lifespan", None):
+            from contextlib import asynccontextmanager as _actx
+
+            @_actx
+            async def _combined_lifespan(_app):
+                async with _mcp_mounted.lifespan(_app):
+                    yield
+
+            app.router.lifespan_context = _combined_lifespan
+    except Exception as _mcp_err:
+        try:
+            mw._log(f"⚠️ MCP 挂载失败: {_mcp_err}")
+        except Exception:
+            pass
 
     # Catch-all: serve static files (must be last route)
     @app.get("/{full_path:path}")
