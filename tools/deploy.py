@@ -79,6 +79,7 @@ DEFAULT_FILES = [
     "infrastructure/task_constants.py",
     "infrastructure/utils.py",
     "network/api_fastapi.py",
+    "network/mcp_server.py",
     "ui/web/app.js",
     "ui/web/index.html",
     "ui/web/style.css",
