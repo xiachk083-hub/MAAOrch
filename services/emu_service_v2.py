@@ -412,7 +412,12 @@ class EmulatorService:
                                      daemon=True).start()
                 except Exception:
                     pass
-            # 壳识别（A 型崩溃残留 — <200MB + 启动 >5 分钟 → 直接 taskkill）
+            # 壳识别（A 型崩溃残留 — 低内存 + 启动 >5 分钟 → 直接 taskkill）
+            # 2026-08-15 修复: IDLE 状态豁免 — 任务完成+游戏已关（force-stop）
+            # 后模拟器内存会掉到 150-200MB（游戏是内存大头），这是正常空闲
+            # 不是崩溃壳（实测 b-4/b-5: 完成后面临"任务完成挂起"→ 壳识别
+            # 169MB 误杀 → 模拟器终止 → MAA 重连失败连环）。真崩溃的模拟器
+            # ADB 会失联，由失联恢复链（reclaim 的进程检查）处理。
             try:
                 from services.emu_service import _running_headless_idx
                 import psutil as _ps
@@ -421,7 +426,7 @@ class EmulatorService:
                     try:
                         if idx not in running:
                             continue
-                        if st.state in (BUSY, PREWARMING):
+                        if st.state in (BUSY, PREWARMING, IDLE):
                             continue
                         for _p in _ps.process_iter(["name", "cmdline", "create_time", "memory_info"]):
                             try:
@@ -433,7 +438,7 @@ class EmulatorService:
                                     continue
                                 _age = time.time() - _p.info["create_time"]
                                 _mb = (_p.info["memory_info"].rss if _p.info["memory_info"] else 0) / 1e6
-                                if _age > 300 and _mb < 200:
+                                if _age > 300 and _mb < 120:
                                     self._log(f"[状态机] 壳识别 #{idx} ({int(_mb)}MB 残留) — taskkill")
                                     import subprocess
                                     subprocess.run(["taskkill", "/F", "/PID", str(_p.pid)],
