@@ -241,8 +241,7 @@ async function renderAccounts(container) {
         <option value="paused">⏸ 暂停</option>
       </select>
     </div>
-    <div class="card-list">`;
-    html += `<div id="card-list" class="card-list">` + accountCardsHtml(filtered) + `</div>`;
+    <div id="card-list" class="card-list">` + accountCardsHtml(filtered) + `</div>`;
 
     // Batch action bar (always visible)
     html += `<div id="batch-bar" style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:11px">
