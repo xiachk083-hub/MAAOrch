@@ -718,7 +718,16 @@ class LaunchQueue:
                     except Exception:
                         return self._launch_ready_timeout
                 _launching = self._launching_aid
-                if _launching:
+                # 并行启动开关（2026-08-15 用户: 模拟器都开着我电脑扛得住 3 个
+                # 为什么一个个来）— launch_serial_gate=False 时跳过串行 gate：
+                # 模拟器已在运行（热复用）直接并行 launch；冷启动场景仍建议
+                # 串行（VAddress 并发 boot 崩溃教训 — 08-11 全量 60 帧 8 并发）。
+                _serial_gate = True
+                try:
+                    _serial_gate = bool(self.ctx.config.get("launch_serial_gate", True))
+                except Exception:
+                    pass
+                if _launching and _serial_gate:
                     # 启动已结束（完成/失败释放）→ 放行。2026-08-14 修复：
                     # 原条件还要求"不在 pending"——启动失败的账号被自动重试
                     # re-enqueue 后必在 pending → 释放条件永不成立 → 后续
