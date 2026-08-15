@@ -202,7 +202,6 @@ class AccountRunner:
         self._log_buffers: dict[str, list[str]] = {}
         self._log_positions: dict[str, int] = {}
         self._gui_log_positions: dict[str, int] = {}
-        self._log_handles: dict[str, Any] = {}
         self._adb_fail_count: dict[str, int] = {}
         self._adb_restart_count: dict[str, int] = {}
         self._adb_check_ts: float = 0.0
@@ -1728,6 +1727,18 @@ class AccountRunner:
                         self._run_sanity_first[aid] = dict(_snap)
                 except Exception:
                     pass
+        elif event == "fight_times":
+            # 刷关次数信号（2026-08-15 收敛: 原 _update_status 自读日志解析，
+            # 改 LogWatcher 单点解析发事件）— 假完成复核（Fight 0 把也报
+            # AllTasksCompleted → 体力满着骗过完成判定）。
+            try:
+                _jm = json.loads(line[line.index("{"):line.rindex("}") + 1]) if "{" in line else None
+                if _jm:
+                    _det = _jm.get("details") or {}
+                    if "times_finished" in _det:
+                        self._fight_times[aid] = int(_det.get("times_finished") or 0)
+            except Exception:
+                pass
         elif event == "medicine_used":
             # 理智药使用标记（过期药突击识别 — 2026-08-13 用户: 48h 药
             # 挤一天刷完导致当天消耗虚高，预测时排除这类运行）
@@ -1743,6 +1754,16 @@ class AccountRunner:
             # 窗口检测，防误杀（2026-08-12 关卡检测调度）。
             if self._probe_running.get(aid):
                 return
+            # 2026-08-15 收敛: _err_count 原在 _update_status 自读日志递增
+            # （已被移除）— 改在此事件源递增（LogWatcher 解析出 SubTaskError
+            # 即发事件，同一信号更可靠）。错误阈值判定（_check_one 中
+            # err_count>=3）依赖它。
+            try:
+                ac = self._active.get(aid)
+                if ac:
+                    ac["_err_count"] = ac.get("_err_count", 0) + 1
+            except Exception:
+                pass
             # 连续子任务错误（游戏崩溃/流程异常 → MAA 反复报错，2026-08-11
             # 用户: MAA 日志会报任务错误）— 2 分钟内 ≥3 次 + asst.log 停滞
             # （MAA 无进展）才判定异常。启动早期（游戏加载）的正常识别
@@ -2490,68 +2511,27 @@ class AccountRunner:
                             self.emit_log(f"[ADB] {(_ac or {}).get('name', _aid)} 不在 adb devices（仅观察，心跳管恢复）")
 
     def _update_status(self, aid: str) -> None:
-        """Read asst.log tail for current task name."""
+        """当前任务名 — 单点收敛（2026-08-15）: 原自读 asst.log 尾部解析，
+        改查 LogWatcher.cur_task（LogWatcher 是 asst.log 唯一读者）。"""
         ac = self._active.get(aid)
         if not ac:
             return
-        p = self._procs.get(aid)
-        inst_path = getattr(p, '_inst_path', None) if p and not isinstance(p, str) else None
-        if not inst_path:
-            return
-        lp = Path(inst_path) / "debug" / "asst.log"
         name = ac.get("name", aid)
-        if lp and lp.exists():
-            try:
-                fh = self._log_handles.get(aid)
-                if fh is None or fh.closed:
-                    fh = lp.open("rb")
-                    self._log_handles[aid] = fh
-                fh.seek(0, 2)
-                size = fh.tell()
-                read_size = min(400, size)
-                fh.seek(size - read_size)
-                tail = fh.read(read_size).decode("utf-8", errors="replace")
-                for line in tail.split("\n"):
-                    if "append_callback" in line and "SubTaskStart" in line:
-                        jm = re.search(r"\{.*\}", line)
-                        if jm:
-                            try:
-                                data = json.loads(jm.group(0))
-                                tc = data.get("taskchain", "")
-                                st_map = {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招", "Infrast": "基建", "Mall": "信用", "Award": "奖励", "Roguelike": "肉鸽", "Reclamation": "生息"}
-                                if tc in st_map:
-                                    task_name = st_map[tc]
-                                    prev = ac.get("_last_task", "")
-                                    if task_name != prev:
-                                        ac["_last_task"] = task_name
-                                        self.emit_log(f"[MAA] {name} 当前任务: {task_name}")
-                                    self._task_start_times[aid] = time.time()
-                                    return
-                            except: pass
-                    elif "[ERR]" in line:
-                        err = line.split("[ERR]")[-1].strip()[:80]
-                        self.emit_log(f"[MAA] {name} 错误: {err}")
-                        ac["_err_count"] = ac.get("_err_count", 0) + 1
-                        if "运行终止" in err or ("重启" in err and "安卓" in err):
-                            p = self._procs.get(aid)
-                            if p and not isinstance(p, str):
-                                try: p.kill()
-                                except: pass
-                            return
-                    elif "FightTimesTaskPlugin" in line and "times_finished" in line:
-                        # 刷关次数信号（2026-08-14：MAA 任务链"假完成"——连战
-                        # 失效/关卡不可用时 Fight 0 把也报 AllTasksCompleted，
-                        # 体力满着骗过完成判定。提取 times_finished 供完成判定
-                        # 复核）。
-                        jm = re.search(r"\{.*\}", line)
-                        if jm:
-                            try:
-                                _d = json.loads(jm.group(0)).get("details") or {}
-                                if "times_finished" in _d:
-                                    self._fight_times[aid] = int(_d.get("times_finished") or 0)
-                            except Exception:
-                                pass
-            except: pass
+        try:
+            _w = self._watchers.get(aid)
+            _tc = _w.cur_task() if _w else ""
+        except Exception:
+            _tc = ""
+        if _tc:
+            st_map = {"StartUp": "唤醒", "Fight": "刷关", "Recruit": "公招",
+                      "Infrast": "基建", "Mall": "信用", "Award": "奖励",
+                      "Roguelike": "肉鸽", "Reclamation": "生息"}
+            task_name = st_map.get(_tc, _tc)
+            prev = ac.get("_last_task", "")
+            if task_name != prev:
+                ac["_last_task"] = task_name
+                self.emit_log(f"[MAA] {name} 当前任务: {task_name}")
+            self._task_start_times[aid] = time.time()
 
     def is_task_running(self, aid: str) -> bool:
         """MAA 当前是否有任务在运行 — asst.log 生命周期推断（2026-08-11 用户:
@@ -2665,32 +2645,21 @@ class AccountRunner:
             # 硬编码"运行中"让 StartUp 卡加载判定误杀正常账号（官-8 实证）、
             # 让 _maybe_downgrade 永远不触发（GUI 模式降级失效）。读真实
             # TaskChainStart/TaskCompleted/TaskChainError 事件更新状态。
+            # 2026-08-15 收敛: 解析逻辑在 LogWatcher.tail_tasks 单点，此处
+            # 只消费（消除 runner 自读 asst.log）。
             try:
-                _p = self._procs.get(aid)
-                _inst_path = getattr(_p, '_inst_path', None) if not isinstance(_p, str) else _p
-                if not _inst_path:
-                    _inst_path = ""
-                _al = Path(_inst_path) / "debug" / "asst.log" if _inst_path else None
-                if _al and _al.exists():
-                    _sz = _al.stat().st_size
-                    with _al.open("r", encoding="utf-8", errors="replace") as _f:
-                        _f.seek(max(0, _sz - 200000))
-                        _tail = _f.read()
-                    import re as _re3
-                    # TaskChainStart/Completed/Error 的 taskchain 字段
-                    for _mm in _re3.finditer(
-                            r'(TaskChainStart|TaskCompleted|TaskChainError).*?"taskchain":"([^"]+)"',
-                            _tail):
-                        _ev, _chain = _mm.group(1), _mm.group(2)
-                        for _t in tasks:
-                            if _t.get("name", "").lower() == _chain.lower():
-                                if _ev == "TaskChainStart":
-                                    _t["status"] = "运行中"
-                                elif _ev == "TaskCompleted":
-                                    _t["status"] = "完成"
-                                elif _ev == "TaskChainError":
-                                    _t["status"] = "失败"
-                                break
+                _w = self._watchers.get(aid)
+                _chain_events = _w.tail_tasks() if _w else []
+                for _ev, _chain in _chain_events:
+                    for _t in tasks:
+                        if _t.get("name", "").lower() == _chain.lower():
+                            if _ev == "TaskChainStart":
+                                _t["status"] = "运行中"
+                            elif _ev == "TaskCompleted":
+                                _t["status"] = "完成"
+                            elif _ev == "TaskChainError":
+                                _t["status"] = "失败"
+                            break
             except Exception:
                 pass
         sanity = None
@@ -2989,10 +2958,6 @@ class AccountRunner:
                 except Exception:
                     pass
         old_progs = self._progs.pop(aid, None)
-        fh = self._log_handles.pop(aid, None)
-        if fh and not fh.closed:
-            try: fh.close()
-            except: pass
         started = self._start_times.pop(aid, None)
         duration = int(time.time() - started) if started else 0
         self._stopping.discard(aid)

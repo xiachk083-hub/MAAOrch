@@ -77,6 +77,41 @@ class LogWatcher(threading.Thread):
     def stop(self) -> None:
         self._stopped = True
 
+    def cur_task(self) -> str:
+        """当前任务名（asst.log 最新 cur_task — 单点解析，2026-08-15 收敛：
+        runner._update_status 原自读文件解析，改查这里）。"""
+        return getattr(self, "_cur_task", "") or ""
+
+    def mtime_age(self) -> float:
+        """asst.log 最后修改距今秒数（单点 mtime 缓存 — runner 各停滞检测
+        原自读文件 stat，改查这里）。文件不存在返回极大值。"""
+        try:
+            if self._path.exists():
+                return time.time() - self._path.stat().st_mtime
+        except Exception:
+            pass
+        return 99999.0
+
+    def tail_tasks(self) -> list[str]:
+        """asst.log 尾部 taskchain 序列（TaskChainStart/Completed/Error —
+        单点解析，runner._parse_log 原自读文件，改查这里）。"""
+        try:
+            if not self._path.exists():
+                return []
+            import re as _re
+            _sz = self._path.stat().st_size
+            with self._path.open("r", encoding="utf-8", errors="replace") as _f:
+                _f.seek(max(0, _sz - 200000))
+                _tail = _f.read()
+            out = []
+            for _mm in _re.finditer(
+                    r'(TaskChainStart|TaskCompleted|TaskChainError).*?"taskchain":"([^"]+)"',
+                    _tail):
+                out.append((_mm.group(1), _mm.group(2)))
+            return out
+        except Exception:
+            return []
+
     def _open_tail(self) -> bool:
         """打开文件并 seek 尾部（只读新内容，不重读历史）。"""
         try:
@@ -278,6 +313,22 @@ class LogWatcher(threading.Thread):
                 _record_event(self._aid, "task_start", line)
             elif "FightTimes" in line and "sanity" in line.lower():
                 _record_event(self._aid, "fight_sanity", line)  # 刷次数+体力
+                # 2026-08-15 收敛: times_finished 信号（刷关次数 — 假完成
+                # 复核用）原由 runner 自读日志解析，改由 LogWatcher 单点
+                # 解析发事件（runner._on_log_event 订阅）。
+                try:
+                    import json as _json2
+                    _jm = _json2.loads(line[line.index("{"):line.rindex("}") + 1]) if "{" in line else None
+                    if _jm:
+                        _det = _jm.get("details") or {}
+                        if "times_finished" in _det:
+                            _record_event(self._aid, "fight_times", line)
+                            try:
+                                self._fire("fight_times", line)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
                 # 体力实时快照（2026-08-12 用户: 以最后实时的结果为准）—
                 # SanityBeforeStage 每次进关卡都报 → 快照即最新体力，
                 # 消费方（sanity 门/界面）读它而不是运行结束的死值。
