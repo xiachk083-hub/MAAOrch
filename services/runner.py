@@ -1107,6 +1107,11 @@ class AccountRunner:
                     if _occ != aid:
                         self.emit_log(f"↩ {ac.get('name', aid)} 启动被队列取消（标记已释放），放弃 spawn")
                         self._inst_reserved.pop(aid, None)  # 释放预留，防泄漏
+                        # ⚠️ 2026-08-15: 队列侧标记已释放但 runner 的 _procs
+                        # 占位还在 → 队列不再跟踪 → active 残留卡住该模拟器
+                        # 循环「入队→注入→取消→重试」。同步清 runner 占位，
+                        # 让重试走完整启动路径。
+                        self._procs.pop(aid, None)
                         return
             except Exception:
                 pass
