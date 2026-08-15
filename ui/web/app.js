@@ -319,6 +319,12 @@ async function renderAccounts(container) {
     </div>`;
 
     container.innerHTML = html;
+    // 2026-08-15 修复: 搜索输入触发 renderPage 重建后恢复焦点（否则每次
+    // 按键光标丢失 — 用户反馈）。仅当搜索框有内容（说明用户在搜索）时恢复。
+    try {
+      const _si = document.getElementById('search-input');
+      if (_si && _si.value) restoreSearchFocus();
+    } catch(e) {}
   } catch(e) { showError(container, e.message); }
 }
 
@@ -3686,12 +3692,31 @@ async function pipelineAction(action) {
 }
 
 // ── Filter & Search ──
+// 2026-08-15 修复: searchAccounts 原直接 renderPage() → 整页 DOM 重建 →
+// 搜索框被替换 → 每次按键光标丢失（用户反馈"点一下搜索栏刷新一下光标
+// 就不在搜索栏里"）。改为记录光标位置 + 重建后恢复焦点/光标。
+let _searchCaret = 0;
 function setFilter(key) {
   filterKey = key;
   if (state.page === 'accounts') renderPage();
 }
 function searchAccounts(value) {
-  if (state.page === 'accounts') renderPage();
+  if (state.page === 'accounts') {
+    const inp = document.getElementById('search-input');
+    if (inp) _searchCaret = inp.selectionStart || 0;
+    renderPage();
+  }
+}
+// renderAccounts 渲染完成后调用 — 恢复搜索框焦点和光标位置
+function restoreSearchFocus() {
+  try {
+    const inp = document.getElementById('search-input');
+    if (inp) {
+      inp.focus();
+      const pos = Math.min(_searchCaret, (inp.value || '').length);
+      inp.setSelectionRange(pos, pos);
+    }
+  } catch(e) { /* 焦点恢复失败不影响使用 */ }
 }
 
 // ── Queue Pause ──
