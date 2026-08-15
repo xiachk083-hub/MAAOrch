@@ -75,7 +75,26 @@ class LogWatcher(threading.Thread):
         self._gui_fp = None
 
     def stop(self) -> None:
+        """停止监控。2026-08-16 修复：置标志 + **立即关闭句柄**。
+
+        原实现只置 _stopped 标志，线程若阻塞在 readline()（MAA 空闲时的
+        常态），要等 MAA 写下一行才走到 finally 关句柄；runner cleanup 的
+        join(2.0) 超时后继续 → 句柄残留 → 下一轮 MAA 启动 Bootstrapper
+        MoveFile（旋转 gui.log/asst.log）被占 → IOException →
+        ErrorCongratulations 启动崩溃（2026-08-16 实测 15+ 账号连环崩）。
+        关闭后 readline() 立即返回 → 循环自然退出，finally 幂等再关一次。
+        """
         self._stopped = True
+        try:
+            if self._fp:
+                self._fp.close()
+        except Exception:
+            pass
+        try:
+            if self._gui_fp:
+                self._gui_fp.close()
+        except Exception:
+            pass
 
     def cur_task(self) -> str:
         """当前任务名（asst.log 最新 cur_task — 单点解析，2026-08-15 收敛：
@@ -174,7 +193,11 @@ class LogWatcher(threading.Thread):
                             self._dispatch_gui(gline)
                 except Exception:
                     # 句柄失效（文件被删/重开失败）→ 尝试重开尾部跟随，
-                    # 失败则稍后重试（防空转）。
+                    # 失败则稍后重试（防空转）。stop() 后的关闭不重开
+                    # （2026-08-16: stop 立即关句柄防 MoveFile 锁，重开
+                    # 会抵消 → 句柄残留 → 下轮 MAA 启动崩溃）。
+                    if self._stopped:
+                        break
                     time.sleep(1)
                     try:
                         if self._fp and self._fp.closed:
