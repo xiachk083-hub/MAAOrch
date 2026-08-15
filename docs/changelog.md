@@ -47,6 +47,42 @@ port = 16384 + int(emu_instance_index) * 32
 - 调度系统、队列、前端
 - 已有账号的 `adb_address` 值
 
+## 2026-08-16 — LogWatcher FILE_SHARE_DELETE（MoveFile 崩溃最终根因，2487256）
+
+### 背景
+
+647a0a9（stop 立即关句柄）部署后崩溃**依旧**（04:05 官-23/官-6/官-10
+连环崩，又挂 4 个）。再次截取错误对话框确认：**同一 MoveFile IOException**。
+说明句柄持有者不是旧 watcher 残留，而是**新 watcher 本身**。
+
+### 根因
+
+fc2674b 后 watcher 用普通 `open()` 持续持有 asst.log/gui.log（防丢行）。
+Windows 普通 open 默认共享不含 FILE_SHARE_DELETE → MAA 启动时 Bootstrapper
+MoveFile 轮转日志被**正在运行的 watcher 句柄**挡住 → IOException 崩溃。
+647a0a9 只修了旧 watcher 的释放时机，没修新 watcher 的共享模式。
+
+### 实锤
+
+生产实测：对正在被 watcher 持有的 gui.log 重命名 → `WinError 32`（文件被
+另一进程使用）；用 CreateFileW + FILE_SHARE_DELETE 打开后重命名成功。
+
+### 修复（2487256）
+
+`_open_tail`/`_open_gui_tail` 改用 CreateFileW + FILE_SHARE_READ|WRITE|DELETE
++ `msvcrt.open_osfhandle`（Python 3.12 无 `os.O_SHARE_DELETE`）。watcher
+可安全持续持有（不丢行），MAA 日志轮转不再被锁。新增 `_open_shared`
+静态方法统一实现。
+
+### 教训
+
+1. **"持句柄"与"锁文件"是两回事**：读句柄默认也阻止删除/重命名。
+   尾随日志的 watcher 必须显式 FILE_SHARE_DELETE。
+2. **修复验证要区分"代码在"与"机制生效"**：647a0a9 代码部署了但没解决
+   机制本身（新句柄仍锁）——必须从根上改共享模式。
+3. 错误对话框截图是排障利器：连续两次抓到同一 MoveFile 错误，快速排除
+   "修复无效是代码没部署"的猜测。
+
 ## 2026-08-16 — LogWatcher 句柄锁（ErrorCongratulations 崩溃真正根因，647a0a9）
 
 ### 背景
