@@ -105,6 +105,18 @@ def lock_busy(emu_idx) -> bool:
     return _lk is not None and _lk.locked()
 
 
+def closing_in_progress() -> bool:
+    """是否有任何模拟器关闭进行中（2026-08-14）: MuMuManager shutdown 执行
+    窗口会对**其他** VM 的 info 查询短暂返回合法的 false/false → 失联检测
+    会把运行中账号误判"失联"→ 杀 MAA → 自动重启风暴（v3 并发回收后实测
+    b-5/官-12 被杀循环）。失联判定应在关闭窗口内豁免。"""
+    with _glock:
+        try:
+            return any(lk.locked() for lk in _locks.values())
+        except Exception:
+            return False
+
+
 def mark_system_started(emu_idx) -> None:
     """记录 MAAOrch 拉起的模拟器（回收只关这些；用户在 MuMu 管理器手动
     开的没有记录 → 永不回收 — 2026-08-11 用户: 手动启动的模拟器也被关掉）。"""

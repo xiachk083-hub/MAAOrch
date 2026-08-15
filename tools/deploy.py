@@ -217,8 +217,15 @@ def main() -> None:
             allok = False
     print("ALL DEPLOYED" if allok else "SOME FAILED")
     if allok and not args.no_restart:
-        print("重启项目...")
-        restart()
+        # 前端文件（ui/ 静态）无需重启 — 浏览器刷新即生效；只对后端文件重启
+        # （2026-08-15 用户: 部署中断运行中任务很难评 → 静态文件零中断）。
+        _backend = [f for f in files if not f.startswith(("ui/", "docs/"))]
+        _frontend = [f for f in files if f.startswith("ui/")]
+        if _frontend:
+            print(f"前端静态文件 {len(_frontend)} 个：浏览器刷新即生效，无需重启")
+        if _backend:
+            print(f"后端文件 {len(_backend)} 个，重启项目...")
+            restart()
 
 
 if __name__ == "__main__":
