@@ -1580,6 +1580,61 @@ class AccountRunner:
         except Exception:
             pass
 
+    def _save_failure_shot(self, aid: str, ac: dict, exit_code: int, inst_dir) -> None:
+        """失败截图留档（2026-08-15 用户: 日常失败也要收集日志和图片）—
+        异常退出时截 1 张模拟器画面，存两处:
+          logs/shots/<aid>_fail_<ts>.png          平铺视图（截图页可见）
+          logs/maa_history/<aid>/<ts>_fail.png    账号历史目录（与文字日志同处）
+        必须在杀 MAA 进程**之前**调用（ADB 还通、画面还是失败现场）。
+        失败静默（截图不影响主流程）。"""
+        try:
+            import subprocess as _sp
+            _adb = ac.get("adb_path", "") or "adb"
+            _addr = ac.get("adb_address", "")
+            if not _addr:
+                return
+            r = _sp.run([_adb, "-s", _addr, "exec-out", "screencap", "-p"],
+                        capture_output=True, timeout=15,
+                        creationflags=getattr(_sp, "CREATE_NO_WINDOW", 0))
+            if r.returncode != 0 or len(r.stdout) < 1000:
+                return
+            _ts = time.strftime("%Y%m%d_%H%M%S")
+            _d = Path(__file__).parent.parent / "logs" / "shots"
+            _d.mkdir(parents=True, exist_ok=True)
+            (_d / f"{aid}_fail_{_ts}.png").write_bytes(r.stdout)
+            # 历史目录归档（与 asst/gui 日志同处 — 用户: 失败要能连图带文一起看）
+            if inst_dir:
+                try:
+                    _hist = Path(__file__).parent.parent / "logs" / "maa_history" / aid
+                    _hist.mkdir(parents=True, exist_ok=True)
+                    (_hist / f"{_ts}_fail_{exit_code}.png").write_bytes(r.stdout)
+                except Exception:
+                    pass
+            # MAA 界面识别截图顺带归档（失败前的画面证据 — 收集器 60s 才扫，
+            # 失败瞬间的最新图可能还没被拷贝）
+            if inst_dir:
+                try:
+                    _inst = Path(inst_dir)
+                    _hist = Path(__file__).parent.parent / "logs" / "maa_history" / aid
+                    _hist.mkdir(parents=True, exist_ok=True)
+                    for _sub, _pre in (("debug/interface", "i_"), ("debug/drops", "d_")):
+                        _sdir = _inst / _sub
+                        if _sdir.is_dir():
+                            _pngs = sorted(_sdir.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+                            for _png in _pngs[:3]:  # 每类最新 3 张
+                                try:
+                                    _dest = _hist / f"{_ts}_{_pre}{_png.name}"
+                                    if not _dest.exists():
+                                        import shutil as _su
+                                        _su.copy2(_png, _dest)
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+            self.emit_log(f"📸 {ac.get('name', aid)} 失败截图已存 logs/shots/ (exit={exit_code})")
+        except Exception:
+            pass
+
     def _finish_completed(self, aid: str, ac: dict, p) -> None:
         """完成收尾（AllTasksCompleted）— 轮询检测与 LogWatcher 事件共用。
         完成标记 _done_flags 防 _wait_exit 抢先 cleanup 的竞态（2026-08-11）。
@@ -2909,6 +2964,14 @@ class AccountRunner:
         inst_dir = old_procs if isinstance(old_procs, str) else getattr(old_procs, '_inst_path', None)
         if old_procs:
             self._archive_maa_logs(aid, inst_dir)
+            # 失败截图（2026-08-15 用户: 日常失败也要收集日志和图片）—
+            # 必须在杀 MAA 进程前截（ADB 还通、画面还是失败现场）。
+            # 失败 = exit_code 非 0（排除用户手动停止 -999 和正常完成）。
+            try:
+                if exit_code not in (0, -999) and ac:
+                    self._save_failure_shot(aid, ac, exit_code, inst_dir)
+            except Exception:
+                pass
             # 确保 MAA 进程真的死了才删 .pid/.meta — 否则僵尸 MAA 占着实例
             # （无 .pid 但进程活着）→ 后续账号分配到该实例 → MAA 启动撞
             # "Existing instance window activated by a secondary launch" →
