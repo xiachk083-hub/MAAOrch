@@ -1054,6 +1054,11 @@ class AccountRunner:
                     task_list = ["StartUp", "Roguelike"]
                 elif mode == "reclamation":
                     task_list = ["StartUp", "Reclamation"]
+                elif ac.get("fight_only"):
+                    # 只刷体力（2026-08-15 用户: 日服清日常但保留体力）—
+                    # 任务链只有 StartUp 登录 + Fight 刷关，基建/公招/
+                    # 信用/领奖全不跑。
+                    task_list = ["StartUp", "Fight"]
                 elif ac.get("skip_daily"):
                     # Skip farming AND daily tasks — sanity already exhausted,
                     # just claim awards (Award/Mail/Orundum/Mining/SpecialAccess).

@@ -1891,7 +1891,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         a = _account_by_idx(idx)
         for field in ("name", "game_client", "emu_instance_index", "account_switch",
                       "uid", "suspended", "note", "expire_date", "stages",
-                      "skip_daily", "skip_award", "roguelike_only", "maa_instance_dir",
+                      "skip_daily", "skip_award", "fight_only", "roguelike_only", "maa_instance_dir",
                       "adb_address", "adb_path", "roguelike_themes",
                       "roguelike_theme_idx"):
             if field in body:
