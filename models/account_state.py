@@ -114,7 +114,14 @@ class AccountState:
     # ── 读取 ──
     @property
     def data(self) -> dict:
-        return dict(self._data)
+        """返回状态副本。挂起/闲置账号的 _day 可能停在旧日期（无写入触发
+        _roll_day）→ 归一化 today_runs：非今天一律按 0 返回，避免界面把
+        旧日期的运行次数当"今日"（2026-08-16 用户: 官-4 显示今日11 实为
+        08-13 数据）。不写回文件（下次生命周期写入时 _roll_day 重置）。"""
+        d = dict(self._data)
+        if d.get("_day") != datetime.now().strftime("%Y-%m-%d"):
+            d["today_runs"] = 0
+        return d
 
     @property
     def sanity(self) -> dict | None:
@@ -126,4 +133,6 @@ class AccountState:
 
     @property
     def today_runs(self) -> int:
+        if self._data.get("_day") != datetime.now().strftime("%Y-%m-%d"):
+            return 0
         return int(self._data.get("today_runs", 0))
