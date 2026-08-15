@@ -132,6 +132,66 @@ def check_health(mw) -> dict:
             except Exception:
                 issues.append({"severity": "error", "category": "zombie_maa",
                                "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
+        elif not aid:
+            # 幽灵 MAA（2026-08-14）: .pid 存活但 .meta 缺失/为空。正常流程
+            # meta 先于 pid 写入（_do_launch → _spawn_instance），meta 缺失 =
+            # 实例引用已错乱（并发启动/自动重启竞态覆盖 .pid、cleanup 误删
+            # meta 等）→ 该 MAA 无主（不属任何账号），dashboard 会显示成
+            # "MAA-xxxx" 占位。无主进程不清理会永久占实例 → 模拟器少 MAA 多。
+            counts["ghost_maa"] = counts.get("ghost_maa", 0) + 1
+            try:
+                subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                               capture_output=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                pid_file.unlink(missing_ok=True)
+                meta_file.unlink(missing_ok=True)
+                counts["ghost_maa_killed"] = counts.get("ghost_maa_killed", 0) + 1
+                issues.append({"severity": "error", "category": "ghost_maa",
+                               "detail": f"幽灵 MAA: 实例 {inst_dir.name} PID={pid} 无账号归属，已清理"})
+            except Exception:
+                issues.append({"severity": "error", "category": "ghost_maa",
+                               "detail": f"幽灵 MAA: 实例 {inst_dir.name} PID={pid} 无账号归属"})
+
+    # ── 1a2. 无主 MAA 系统级扫描（2026-08-15）──
+    # 上面只扫实例池 .pid 文件 — 若 cleanup 已删 .pid 但 MAA 进程仍活着
+    # （08:43 批量启动卡资源更新后 .pid 被清、进程残留），health 完全看
+    # 不见 → 僵尸占实例窗口 → 新 MAA 单实例保护启动即退 → 队列死锁
+    # （实测: 7 个无主 MAA 卡死队列 6 分钟）。这里扫系统进程表: 所有
+    # MAA.exe，凡不属于任何实例 .pid 的一律判无主 → taskkill。
+    try:
+        _known_pids = set()
+        for _id in _inst_dirs:
+            _pf = _id / ".pid"
+            if _pf.exists():
+                try:
+                    _known_pids.add(int(_pf.read_text().strip()))
+                except Exception:
+                    pass
+        _rp = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe", "/FO", "CSV"],
+                             capture_output=True, text=True, timeout=5,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        import re as _re2
+        for _line in _rp.stdout.splitlines():
+            _m2 = _re2.search(r'"MAA\.exe","(\d+)"', _line)
+            if not _m2:
+                continue
+            _mpid = int(_m2.group(1))
+            if _mpid in _known_pids:
+                continue  # 有 .pid 归属 — 由 zombie/ghost 分支管
+            # 无 .pid 归属 = 无主 MAA（正常流程 .pid 与进程同生共死）
+            counts["ghost_maa"] = counts.get("ghost_maa", 0) + 1
+            try:
+                subprocess.run(["taskkill", "/F", "/PID", str(_mpid)],
+                               capture_output=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                counts["ghost_maa_killed"] = counts.get("ghost_maa_killed", 0) + 1
+                issues.append({"severity": "error", "category": "ghost_maa",
+                               "detail": f"无主 MAA: PID={_mpid} 无实例 .pid 归属，已清理"})
+            except Exception:
+                issues.append({"severity": "error", "category": "ghost_maa",
+                               "detail": f"无主 MAA: PID={_mpid} 无实例 .pid 归属"})
+    except Exception:
+        pass
 
     # ── 1b. MuMu 崩溃弹窗（MuMuNxCrashReporter）— 模拟器运行异常/崩溃的
     # 信号。检测到即自动关闭弹窗（崩溃的模拟器由失联恢复链处理；弹窗只是
@@ -207,6 +267,28 @@ def check_health(mw) -> dict:
         aid = emu2aid.get(str(idx))
         if aid and aid in active_ids:
             continue
+        # 排队保留窗口（与回收器 _reclaim_idle_emus 对齐 — 2026-08-14）:
+        # 账号有 keep_min 内会轮到（含已到期等槽位）的排队条目时，模拟器
+        # 按设计保留（防关/开颠簸 + 批量轮转防冷启动风暴），不算 stale。
+        # 条目过期超 keep_min 仍未轮到 → 回收器会关，这里照常报警。
+        if aid and lq is not None:
+            try:
+                _cfg2 = getattr(getattr(lq, "ctx", None), "config", None) or {}
+                from services.dynamic_params import get_pending_keep_min
+                _keep_min2 = get_pending_keep_min(_cfg2, 10)
+            except Exception:
+                _keep_min2 = 10
+            # 与回收器位置门对齐（2026-08-14 v2）: 只认可「排前部 + keep_min
+            # 内会轮到」的保留，其余照常报 stale（回收器会关它们）。
+            _front_keep2 = max(int(_cfg2.get("parallel_max", 1) or 1) + 4, 6)
+            _front_ids2 = {e.account_id for e in
+                           sorted(lq._pending, key=lambda e: e.sort_key)[:_front_keep2]}
+            from datetime import datetime as _dt2
+            _due2 = aid in _front_ids2 and any(
+                (e.not_before - _dt2.now()).total_seconds() <= _keep_min2 * 60
+                for e in lq._pending if e.account_id == aid)
+            if _due2:
+                continue
         counts["stale_emulators"] += 1
         name = "未绑定"
         if aid:
