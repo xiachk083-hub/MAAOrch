@@ -261,12 +261,15 @@ async function renderAccounts(container) {
 }
 
 // 2026-08-15 重构: 账号过滤逻辑独立（搜索/筛选共用，不重建页面）
+// 注意: state.accounts 可能被 SSE 推送覆盖（精简字段用 client 而非
+// game_client — _gather_sse_state）→ 两字段都兼容。
+function _clientOf(a) { return a.game_client || a.client || ''; }
 function filterAccounts(accounts, searchText, serverFilter, statusFilter) {
   searchText = (searchText || '').toLowerCase();
   return accounts.filter(a => {
     const nameMatch = !searchText || a.name.toLowerCase().includes(searchText) || (a.note||'').toLowerCase().includes(searchText);
     if (serverFilter && serverFilter !== 'all') {
-      const client = a.game_client || '';
+      const client = _clientOf(a);
       if (serverFilter === 'official' && client !== 'Official') return false;
       else if (serverFilter === 'bilibili' && client !== 'Bilibili') return false;
       else if (serverFilter === 'yostar' && !['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
@@ -290,7 +293,7 @@ function accountCardsHtml(accounts) {
     const isPaused = failCount >= 6;
     const dotColor = isRunning ? 'var(--accent)' : isError ? 'var(--danger)' : isPaused ? 'var(--text3)' : 'var(--border)';
     const dotLabel = isRunning ? '运行中' : isError ? '错误' : isPaused ? '暂停' : '空闲';
-    const clientLabel = {'Official':'官服','Bilibili':'B服','YoStarEN':'美服','YoStarJP':'日服','YoStarKR':'韩服','txwy':'繁中服'}[a.game_client] || a.game_client || '?';
+    const clientLabel = {'Official':'官服','Bilibili':'B服','YoStarEN':'美服','YoStarJP':'日服','YoStarKR':'韩服','txwy':'繁中服'}[_clientOf(a)] || _clientOf(a) || '?';
     // Expiry warning
     let expireStr = '';
     if (a.expire_date) {
@@ -3702,34 +3705,41 @@ async function pipelineAction(action) {
 // 搜索框被替换 → 每次按键光标丢失 + 中文输入法被打断（用户反馈"选择之后
 // 按键盘也刷新不能输入"）。改为只更新 #card-list 内容 — 搜索框/过滤器
 // DOM 不动，焦点与输入法完全保留。
+// 2026-08-15 v2: 选外服无账号排查 — 若轻量过滤结果异常为空（数据源明明
+// 有匹配账号），回退 renderPage() 整页重拉 API，并 console 诊断。
+function _applyAccountFilter() {
+  const inp = document.getElementById('search-input');
+  const srv = document.getElementById('server-filter');
+  const stt = document.getElementById('status-filter');
+  const list = document.getElementById('card-list');
+  const srvVal = srv?.value || 'all';
+  const sttVal = stt?.value || 'all';
+  const searchVal = inp?.value || '';
+  if (!list || !state.accounts) { renderPage(); return; }
+  const result = filterAccounts(state.accounts, searchVal, srvVal, sttVal);
+  // 诊断: 过滤结果空但数据源明明有匹配 → 快照/逻辑异常 → 整页重拉兜底
+  if (result.length === 0 && state.accounts.length > 0) {
+    const srcCount = state.accounts.filter(a => {
+      const c = a.game_client || '';
+      if (srvVal === 'yostar') return ['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(c);
+      if (srvVal === 'official') return c === 'Official';
+      if (srvVal === 'bilibili') return c === 'Bilibili';
+      return true;
+    }).length;
+    if (srcCount > 0) {
+      console.warn('[filter] 结果空但数据源有匹配:', {srvVal, sttVal, searchVal, srcCount, total: state.accounts.length});
+      renderPage();  // 整页重拉（state.accounts 快照可能过时/异常）
+      return;
+    }
+  }
+  list.innerHTML = accountCardsHtml(result);
+}
 function setFilter(key) {
   filterKey = key;
-  if (state.page === 'accounts') {
-    // 筛选下拉变化时也走轻量更新（不重建整页）
-    const inp = document.getElementById('search-input');
-    const srv = document.getElementById('server-filter');
-    const stt = document.getElementById('status-filter');
-    const list = document.getElementById('card-list');
-    if (list && state.accounts) {
-      list.innerHTML = accountCardsHtml(filterAccounts(
-        state.accounts, inp?.value || '', srv?.value || 'all', stt?.value || 'all'));
-      return;
-    }
-    renderPage();
-  }
+  if (state.page === 'accounts') _applyAccountFilter();
 }
 function searchAccounts(value) {
-  if (state.page === 'accounts') {
-    const list = document.getElementById('card-list');
-    if (list && state.accounts) {
-      const srv = document.getElementById('server-filter');
-      const stt = document.getElementById('status-filter');
-      list.innerHTML = accountCardsHtml(filterAccounts(
-        state.accounts, value, srv?.value || 'all', stt?.value || 'all'));
-      return;
-    }
-    renderPage();
-  }
+  if (state.page === 'accounts') _applyAccountFilter();
 }
 
 // ── Queue Pause ──
