@@ -1332,6 +1332,27 @@ class AccountRunner:
 
     def _spawn_instance(self, exe: Path, ac: dict, inst_dir: str) -> None:
         aid = ac["id"]
+        # 2026-08-16: spawn 前清本实例残留 MAA 进程（单实例锁防崩）。
+        # 崩溃/被杀后 MAA 可能留 60-170MB 僵尸（窗口无标题或不可见 →
+        # _check_startup_window 枚举不到 → 不杀），占住实例目录 → 新 MAA
+        # 启动检测到实例被占用 → ErrorCongratulations 对话框 → exit=1
+        # 快速失败循环（实测实例 5: 66MB 僵尸卡死官-10 连续崩溃）。
+        # 按 CommandLine 精确匹配本实例路径，绝不误杀他实例健康进程。
+        try:
+            import psutil as _psz
+            _real = str(Path(inst_dir).resolve()).lower()
+            for _pz in _psz.process_iter(["name", "cmdline", "pid"]):
+                try:
+                    if (_pz.info["name"] or "").lower() != "maa.exe":
+                        continue
+                    _cl = " ".join(_pz.info["cmdline"] or []).lower()
+                    if _real in _cl:
+                        _pz.kill()
+                        self.emit_log(f"🧹 清理实例残留 MAA PID={_pz.info['pid']}（{_real}）")
+                except Exception:
+                    pass
+        except Exception:
+            pass
         pid_file = Path(inst_dir) / ".pid"
         # asst.log 清空（MAA 句柄占用可能失败 → 失败则记录当前位置，只解析
         # 本次启动后的新日志 — 否则读到上个账号的残留 → 误判降级/完成）

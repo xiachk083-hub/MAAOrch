@@ -1005,3 +1005,27 @@ class ConfigService:
 
         _write("gui.json", use_v6=False)
         _write("gui.new.json", use_v6=True)
+        # 2026-08-16 事故续: 实例根目录 gui.new.json（MAA 自身状态保存路径，
+        # 非注入路径）残留旧 TaskQueue AccountName + AccountSwitchEnabled=True
+        # （脱敏手机号）→ MAA 6.16.8 启动读根配置 → SwitchAccount 崩溃 →
+        # ErrorCongratulations（实测实例 1 上 官-37/b-8 连环崩，config/ 已
+        # 干净仍崩；清根目录后停止）。MAA 每次退出会把当前任务队列写回
+        # 根 gui.new.json，注入时必须同步清理（幂等，无则跳过）。
+        try:
+            _root_gj = md / "gui.new.json"
+            if _root_gj.exists():
+                _rd = json.loads(_root_gj.read_text(encoding="utf-8"))
+                _rtq = _rd.get("Configurations", {}).get("Default", {}).get("TaskQueue", [])
+                _rchg = False
+                for _ritem in _rtq:
+                    if _ritem.get("TaskType", "") == "StartUp" and (
+                            _ritem.get("AccountName") or _ritem.get("AccountSwitchEnabled")):
+                        _ritem.pop("AccountName", None)
+                        _ritem["AccountSwitchEnabled"] = False
+                        _rchg = True
+                if _rchg:
+                    _root_gj.write_text(json.dumps(_rd, ensure_ascii=False, indent=2),
+                                        encoding="utf-8")
+                    _CONFIG_LOG.info(f"清理根目录 {_root_gj.name} 残留切换标识")
+        except Exception:
+            pass
