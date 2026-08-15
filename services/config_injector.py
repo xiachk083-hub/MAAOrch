@@ -9,6 +9,25 @@ from infrastructure.logger import Logger
 _CONFIG_LOG = Logger("injector")
 
 
+def _valid_switch(sw) -> str:
+    """账号切换标识有效性校验（2026-08-16 事故修复）。
+
+    现场：32 个账号的 account_switch 全是脱敏手机号（186****6119，字面带
+    星号）→ 注入 MAA TaskQueue AccountName → SwitchAccount 匹配不到真实
+    账号 → ErrorCongratulations 启动崩溃 → 100% 失败率（0 成功 / 39 失败）。
+    带 '*' 的值一律视为无效 → 返回 ""（不注入 AccountName、不启用切换），
+    账号按"当前已登录账号"直接跑（原本就靠这个在跑）。真实切换标识可含
+    任意非 '*' 字符（MAA 账号管理器里的账号名/标识）。
+    """
+    sw = (sw or "").strip()
+    if not sw:
+        return ""
+    if "*" in sw:
+        _CONFIG_LOG.warn(f"account_switch 含脱敏星号，视为无效: {sw[:16]}…")
+        return ""
+    return sw
+
+
 class ConfigService:
     """MAA config injection — writes gui.json / gui.new.json / TOML task configs."""
 
@@ -65,7 +84,7 @@ class ConfigService:
             if to: c["Connect.TouchMode"]=TOUCH_MODE_MAP.get(to,"minitouch")
             c["Connect.AdbReplaced"]="True"; c["Connect.AutoDetect"]="False"; c["Connect.AlwaysAutoDetect"]="False"
             if ac.get("game_client"): c["Start.ClientType"]=ac["game_client"]
-            sw=ac.get("account_switch","")
+            sw=_valid_switch(ac.get("account_switch",""))
             if sw: c["Start.RunDirectly"]="False"; c["Start.StartGame"]="True"
             else: c["Start.RunDirectly"]="True"; c["Start.StartGame"]="True"
             # Start options. MAA 6.16 reads gui.new.json top-level Gui.* (nested
@@ -99,7 +118,7 @@ class ConfigService:
                         c["Start.OpenEmulatorAfterLaunch"]="True"
                     if ac.get("emu_wait"): c["Start.EmulatorWaitSeconds"]=str(ac["emu_wait"])
             # Account switch in TaskQueue（显式关切换防残留 — 同 896 行逻辑）
-            sw=ac.get("account_switch","")
+            sw=_valid_switch(ac.get("account_switch",""))
             if "TaskQueue" in c:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType","").lower()=="startup":
@@ -436,7 +455,11 @@ class ConfigService:
                     for _gk in ("WindowPlacement",):
                         _top_gui.pop(_gk, None)
                     _hk = _top_gui.get("HotKeys")
-                    if isinstance(_hk, dict) and not _hk:
+                    if isinstance(_hk, dict):
+                        # 2026-08-16 修复: 非空 HotKeys 同样删（原条件 not _hk
+                        # 只删空 {} — 实测实例残留 {'ShowGui': {...}} 对象键 →
+                        # SetKvOrMigrate JsonReaderException → ErrorCongratulations
+                        # 启动即崩，官-2/官-7/官-24/官-47 连续快速失败根因）。
                         _top_gui.pop("HotKeys", None)
             # MAA v6 reads GUI settings from gui.json Global section (v5/6.11
             # flat keys); 6.16 reads gui.new.json top-level Gui.* nested bools.
@@ -933,7 +956,7 @@ class ConfigService:
             # （实测 TaskQueue[0].AccountName="197****9196"）。注入时**显式
             # 关切换**：只有本账号显式配了 account_switch 才启用（用户:
             # 不勾选就不切）。
-            sw = ac.get("account_switch", "")
+            sw = _valid_switch(ac.get("account_switch", ""))
             if "TaskQueue" in c:
                 for item in c["TaskQueue"]:
                     if item.get("TaskType", "").lower() == "startup":
