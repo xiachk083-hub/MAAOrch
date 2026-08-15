@@ -1955,6 +1955,17 @@ class AccountRunner:
             return
         self._update_status(aid)
         # Process pair health check
+        # ── _check_one 段落导航（2026-08-15 整理，538 行拆分标记）──
+        #   ① 进程存活检查       L1949  poll 非 None → _on_process_exit
+        #   ② 模拟器失联判定     L1962  MuMuManager 两轮确认（60s spawn 宽限）
+        #   ③ MAA 心跳检查       L2053  10s 断 → 杀（60s spawn 宽限 + 审计钩子）
+        #   ④ 模拟器进程消失     L2110  psutil 3 次 → 重启模拟器
+        #   ⑤ 任务完成检测       L2130  AllTasksCompleted 增量 + 尾部扫描
+        #   ⑥ 关卡降级           L2133  Fight 无效/战败 → 降级链
+        #   ⑦ 卡死检测           L2226  PRTS 停滞 / stuck_timeout / 运行超时
+        #   ⑧ 错误阈值           L2300  err_count≥3 → 杀+重启模拟器
+        #   ⑨ 启动/空闲挂起     L2344  无任务 / 日志静默 / StartUp 卡加载
+        #   ⑩ ADB keepalive     L2441  30s 批量检查（仅日志不杀）
         info = self._proc_info.get(aid, {})
         emu = info.get("emu", {})
         emu_pid = emu.get("pid")

@@ -272,6 +272,28 @@ def create_app(mw: Any) -> FastAPI:
     # ═══════════════════════════════════════════
     # GET endpoints
     # ═══════════════════════════════════════════
+    # ── 域分区导航（2026-08-15 整理）──
+    #   status/node   L276 系统状态/节点
+    #   account       L479 账号状态/截图/详情
+    #   stats/export  L564 统计/导出
+    #   probe         L701 关卡检测
+    #   depot         L806 仓库/企鹅/活动
+    #   health/events L1079 健康/事件/公告
+    #   queue/shots   L1223 队列/截图视图
+    #   maa_log       L1342 MAA 日志
+    #   accounts      L1452 账号管理
+    #   sse/node      L1673 事件流/节点注册
+    #   queue_action  L1782 队列操作
+    #   account_edit  L1848 账号编辑
+    #   kill_audit    L2033 守护审计
+    #   maa_remote    L2071 MAA 远程控制
+    #   emulator      L2194 模拟器操作
+    #   system        L2309 系统管理
+    #   smart_action  L2484 智能调度
+    #   connect       L2642 连接页
+    #   maa_manage    L2948 MAA 版本/实例管理
+    #   orch          L3184 项目自更新
+    #   config        L3408 配置导入导出
 
     @app.get("/api/status")
     def handle_status():

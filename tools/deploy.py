@@ -63,11 +63,14 @@ DEFAULT_FILES = [
     "services/event_analyzer.py",
     "services/announce_collector.py",
     "services/ai_assistant.py",
-    "services/update_service.py",
     "services/maa_download.py",
-    "services/log_parser.py",
     "services/vision.py",
-    "services/backfill_stats.py",
+    # 2026-08-15 整理: 补运行时缺失模块（event_bus/shot_collector/
+    # daily_batch_scheduler 在 main_web/api 使用但不在清单 → 部署后靠
+    # 存量文件运行，缺失即崩）；移除僵尸项 log_parser（文件不存在）
+    "services/event_bus.py",
+    "services/shot_collector.py",
+    "services/daily_batch_scheduler.py",
     "app/service_context.py",
     "app/web_context.py",
     "infrastructure/__init__.py",

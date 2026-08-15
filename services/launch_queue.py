@@ -517,6 +517,13 @@ class LaunchQueue:
 
     def _tick(self) -> None:
         """Check queue and launch all eligible accounts (parallel across different emus)."""
+        # ── _tick 段落导航（2026-08-15 整理，263 行）──
+        #   ① 暂停语义         L520  暂停只停新启动，运行中监控继续
+        #   ② 挑选待启动       L531  pop pending → 过滤（在跑/已到期/并行上限）
+        #   ③ 串行就绪 gate    L710  等上一台 boot+ADB（launch_serial_gate）
+        #   ④ 启动分发         L760  线程延迟启动 _do_launch
+        #   ⑤ 状态落盘         L773  30s 节流 _save_queue
+        #   ⑥ 残留清理         L779  _clean_stale_emus
         # 暂停只停止"启动新任务"— 运行中账号的监控/完成收尾必须继续。
         # 暂停直接 return 会导致 check_processes 停摆：MAA 刷完（AllTasksCompleted）
         # 检测不到 → 不退出不释放实例/模拟器（2026-08-10 实测：队列暂停后
@@ -829,6 +836,13 @@ class LaunchQueue:
 
     def _clean_stale_emus(self) -> None:
         """Release _active_emus entries whose launcher threads died without cleanup."""
+        # ── _clean_stale_emus 段落导航（2026-08-15 整理，172 行）──
+        #   ① 启动宽限         L853  100s 内不判残留（MAA 未 spawn 是正常）
+        #   ② 模拟器崩溃检测   L864  VMM 崩溃 → recover（60s 内不重复）
+        #   ③ 运行超时         L910  MAA 活着但超时 → 重置
+        #   ④ 日志停滞         L919  asst.log 10min 无更新 → 重置
+        #   ⑤ 重试卡死         L935  cur_retry 无限增长 → 重置
+        #   ⑥ 残留释放         L950  ts==0 / 超阈值且非启动中 → 释放+重排
         runner = getattr(getattr(self.ctx, '_mw', None), 'runner', None)
         if not runner:
             _QUEUE_LOG.warn(f"清洁跳过: runner={runner}")
@@ -1038,6 +1052,14 @@ class LaunchQueue:
 
     def _reclaim_idle_emus(self) -> None:
         """Shutdown emulators whose accounts are neither running nor queued."""
+        # ── _reclaim_idle_emus 段落导航（2026-08-15 整理，360 行）──
+        #   ① v2 并存开关      L1057 emu_v2_reclaim=True 时跳过（Phase 1）
+        #   ② 枚举在线模拟器   L1093 psutil VMM 扫描（MuMuManager 超时兜底）
+        #   ③ 位置门           L1098 队列前部账号保留（_front_keep）
+        #   ④ 活 MAA 保护     L1120 实例池 .pid 扫描 → 不回收
+        #   ⑤ adb 连接保护    L1150 扫 adb.exe cmdline → 不回收
+        #   ⑥ 逐个判定关闭     L1177 11 道保护链（无映射/在跑/冷却/手动/优雅关闭…）
+        #   ⑦ 并发后台关闭     L1372 Semaphore(3) 并行 shutdown
         # v2 状态机回收接管后旧逻辑跳过（防双重回收 — Phase 1 并存开关）
         try:
             if self.ctx.config.get("emu_v2_reclaim", False):
