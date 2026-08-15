@@ -1362,38 +1362,76 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         return {"lines": []}
 
     @app.get("/api/maa/log")
-    def handle_maa_log(aid: str = "", lines: int = 100):
+    def handle_maa_log(aid: str = "", lines: int = 100, source: str = ""):
+        """单账号日志。source 为空=精炼(GUI 日志过滤心跳，人可读)；source=asst=原始 asst.log。
+
+        2026-08-16: 默认改为精炼——读 gui.log（MAA GUI 面板同源日志），过滤
+        maa_remote/task 心跳（每秒一条刷屏）只保留人类可读的关键行（任务链
+        开始/完成、完成任务、理智、RunningState、WRN/ERR）。采集不受影响
+        （asst.log 照常归档追查）。"""
         if not aid:
             raise HTTPException(400, "missing aid")
         a = next((x for x in mw.accounts if x["id"] == aid), None)
         if not a:
             raise HTTPException(404, "account not found")
-        for w in mw.warehouse:
-            if w.get("account_ref") == aid:
-                lp = Path(w.get("path", "")).parent / "debug" / "asst.log"
-                if lp.exists():
+
+        def _find_inst_dir() -> Path | None:
+            for w in mw.warehouse:
+                if w.get("account_ref") == aid:
+                    p = Path(w.get("path", "")).parent
+                    if p.exists():
+                        return p
+            _root = Path(__file__).parent.parent / "services" / "maa" / "instances"
+            for _inst_dir in _root.glob("*/"):
+                _meta = _inst_dir / ".meta"
+                if _meta.exists():
                     try:
-                        content = lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
-                        return {"lines": content, "name": a.get("name", "")}
-                    except:
-                        raise HTTPException(500, "read failed")
-                return {"lines": [], "name": a.get("name", "")}
-        # Fallback: search instance directories via .meta file
-        _inst_root = Path(__file__).parent.parent / "services" / "maa" / "instances"
-        for _inst_dir in _inst_root.glob("*/"):
-            _meta = _inst_dir / ".meta"
-            if _meta.exists():
-                _meta_content = _meta.read_text(encoding="utf-8", errors="replace").strip()
-                if "|" in _meta_content and _meta_content.split("|", 1)[0] == aid:
-                    _lp = _inst_dir / "debug" / "asst.log"
-                    if _lp.exists():
-                        try:
-                            _content = _lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
-                            return {"lines": _content, "name": a.get("name", "")}
-                        except:
-                            raise HTTPException(500, "read failed")
-                    return {"lines": [], "name": a.get("name", "")}
-        return {"lines": [], "name": a.get("name", ""), "error": "no .meta file found, launch MAA first"}
+                        if _meta.read_text(encoding="utf-8", errors="replace").strip().split("|", 1)[0] == aid:
+                            return _inst_dir
+                    except Exception:
+                        pass
+            return None
+
+        _inst = _find_inst_dir()
+        if _inst is None:
+            return {"lines": [], "name": a.get("name", ""), "error": "no instance dir found, launch MAA first"}
+        # 原始 asst.log（采集层照旧——完整追查用）
+        if source == "asst":
+            _al = _inst / "debug" / "asst.log"
+            if _al.exists():
+                try:
+                    _c = _al.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
+                    return {"lines": _c, "name": a.get("name", ""), "source": "asst"}
+                except Exception:
+                    pass
+            return {"lines": [], "name": a.get("name", ""), "source": "asst"}
+        # 默认精炼：gui.log 过滤心跳，只留人可读关键行
+        _gl = _inst / "debug" / "gui.log"
+        if _gl.exists():
+            try:
+                _raw = _gl.read_text(encoding="utf-8", errors="replace").strip().split("\n")
+            except Exception:
+                _raw = []
+            _keep = []
+            for _rl in _raw:
+                if "maa_remote/task" in _rl or "HttpResponseLoggingExtension" in _rl:
+                    continue  # 心跳刷屏 → 滤掉
+                if any(_k in _rl for _k in (
+                        "TaskChain", "完成任务", "理智", "Start Task", "Completed Task",
+                        "RunningState", "ExecutionState", "TaskQueueViewModel",
+                        "WRN", "ERR", "Error", "错误", "异常", "截图用时较长",
+                        "ConnectionInfo", "AsstProxy", "更新")):
+                    _keep.append(_rl)
+            return {"lines": _keep[-lines:], "name": a.get("name", ""), "source": "gui"}
+        # 兜底 asst.log
+        _al = _inst / "debug" / "asst.log"
+        if _al.exists():
+            try:
+                _c = _al.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
+                return {"lines": _c, "name": a.get("name", ""), "source": "asst"}
+            except Exception:
+                pass
+        return {"lines": [], "name": a.get("name", "")}
 
     @app.get("/api/maa/logs_history")
     def handle_maa_logs_history(aid: str = "", file: str = "", lines: int = 200):
