@@ -145,6 +145,17 @@ class LogWatcher(threading.Thread):
                 try:
                     line = self._fp.readline()
                     if line:
+                        # 2026-08-15: MAA 6.16.8 长 JSON 折行（SubTaskExtraInfo
+                        # 的 uuid 字段被拆成两行）→ 单行 `{.*\}` 永远解析失败
+                        # （体力快照全停更根因）。`{` 未配平时拼接后续行，
+                        # 最多拼 3 行（防异常行死循环）。
+                        _joins = 0
+                        while line.count("{") > line.count("}") and _joins < 3:
+                            _nxt = self._fp.readline()
+                            if not _nxt:
+                                break
+                            line = line.rstrip("\r\n") + _nxt
+                            _joins += 1
                         self._dispatch(line)
                     else:
                         time.sleep(0.2)
