@@ -193,6 +193,42 @@ def check_health(mw) -> dict:
     except Exception:
         pass
 
+    # ── 1a3. adb 僵尸命令进程（2026-08-15 用户: 模拟器运行终止）──
+    # MAA 每次连接失败会留 disconnect/connect 僵尸命令进程（卡在跟 adb
+    # server 通信）→ 长期堆积（实测 23→46 个）→ 阻塞 adb server 串行
+    # 处理 → 新连接全部超时 → MAA 连不上模拟器 → 模拟器无 MAA 驱动可能
+    # 被误判/崩溃。这里检测 disconnect/connect 命令进程，超过阈值即清理。
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "(Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | Measure-Object).Count"],
+            capture_output=True, text=True, timeout=10,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        try:
+            n_adb_stuck = int((r.stdout or "").strip() or 0)
+        except Exception:
+            n_adb_stuck = 0
+        if n_adb_stuck >= 5:
+            counts["adb_stuck"] = n_adb_stuck
+            # 自动清理（卡死的 connect/disconnect 命令进程 — 非 server，杀了
+            # 不影响已建立连接；server 进程（fork-server）保留）
+            try:
+                subprocess.run(
+                    ["powershell", "-NoProfile", "-Command",
+                     "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+                    capture_output=True, text=True, timeout=15,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                counts["adb_stuck_killed"] = n_adb_stuck
+                issues.append({"severity": "warn", "category": "adb_stuck",
+                               "detail": f"清理 adb 僵尸命令进程 ×{n_adb_stuck}（连接超时堆积，已自动清理）"})
+            except Exception:
+                issues.append({"severity": "error", "category": "adb_stuck",
+                               "detail": f"adb 僵尸命令进程 {n_adb_stuck} 个（清理失败）"})
+        elif n_adb_stuck:
+            counts["adb_stuck"] = n_adb_stuck
+    except Exception:
+        pass
+
     # ── 1b. MuMu 崩溃弹窗（MuMuNxCrashReporter）— 模拟器运行异常/崩溃的
     # 信号。检测到即自动关闭弹窗（崩溃的模拟器由失联恢复链处理；弹窗只是
     # 挂着碍眼 + 挡住模拟器画面 — 2026-08-11 用户: "一直莫名其妙运行异常，

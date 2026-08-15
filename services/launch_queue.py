@@ -148,6 +148,7 @@ class LaunchQueue:
         self._launch_ready.clear()
         self._tick_lock = threading.Lock()
         self._last_save_ts: float = 0.0  # 队列落盘节流
+        self._last_adb_clean_ts: float = 0.0  # adb 僵尸清理节流（5min，2026-08-15）
         # Guard against duplicate _bg_tick threads
         if self._bg_tick_started:
             return
@@ -787,6 +788,31 @@ class LaunchQueue:
         except Exception:
             pass
         self._clean_stale_emus()
+        # adb 僵尸命令进程自动清理（2026-08-15 用户: 模拟器运行终止）—
+        # MAA 连接失败留 disconnect/connect 僵尸（实测 23→46 个）→ 阻塞
+        # adb server → 新连接超时 → MAA 连不上 → 模拟器无驱动。5 分钟
+        # 一次低频清理（与 runtime_health 的 /api/health 检查互补）。
+        try:
+            if time.time() - self._last_adb_clean_ts > 300:
+                self._last_adb_clean_ts = time.time()
+                _r = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command",
+                     "(Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | Measure-Object).Count"],
+                    capture_output=True, text=True, timeout=10,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                try:
+                    _n_stuck = int((_r.stdout or "").strip() or 0)
+                except Exception:
+                    _n_stuck = 0
+                if _n_stuck >= 5:
+                    subprocess.run(
+                        ["powershell", "-NoProfile", "-Command",
+                         "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+                        capture_output=True, text=True, timeout=15,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    _QUEUE_LOG.warn(f"[adb] 清理僵尸命令进程 ×{_n_stuck}（连接超时堆积）")
+        except Exception:
+            pass
 
     def _mark_launch_ready(self, aid: str) -> None:
         """runner 通知: 该账号 MAA 已连上模拟器（第一次成功 adb）— 放行下一台。
