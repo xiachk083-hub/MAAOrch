@@ -132,24 +132,64 @@ class LogWatcher(threading.Thread):
             return []
 
     def _open_tail(self) -> bool:
-        """打开文件并 seek 尾部（只读新内容，不重读历史）。"""
+        """打开文件并 seek 尾部（只读新内容，不重读历史）。
+
+        2026-08-16 关键修复: CreateFileW + FILE_SHARE_DELETE 代替普通
+        open()。普通 open() 默认共享不含 FILE_SHARE_DELETE → watcher 持续
+        持有句柄阻止 MAA 启动时 Bootstrapper MoveFile（轮转 asst.log/
+        gui.log）→ IOException → ErrorCongratulations 崩溃（实测连环崩，
+        句柄锁根因）。FILE_SHARE_DELETE 允许其他进程删除/重命名本文件，
+        watcher 可安全持续持有（fc2674b 防丢行）。Python 3.12 无
+        os.O_SHARE_DELETE，用 CreateFileW + msvcrt.open_osfhandle。
+        """
         try:
-            self._fp = open(self._path, "r", encoding="utf-8", errors="replace")
-            self._fp.seek(0, 2)
-            return True
+            self._fp = self._open_shared(self._path)
+            if self._fp:
+                self._fp.seek(0, 2)
+                return True
         except Exception:
-            self._fp = None
-            return False
+            pass
+        self._fp = None
+        return False
 
     def _open_gui_tail(self) -> bool:
-        """gui.log 尾部跟随（降级/配置信号在 gui.log — 2026-08-11 补全）。"""
+        """gui.log 尾部跟随（降级/配置信号在 gui.log — 2026-08-11 补全）。
+        同 _open_tail: FILE_SHARE_DELETE 防阻塞 MAA 日志轮转（2026-08-16）。"""
         try:
-            self._gui_fp = open(self._gui_path, "r", encoding="utf-8", errors="replace")
-            self._gui_fp.seek(0, 2)
-            return True
+            self._gui_fp = self._open_shared(self._gui_path)
+            if self._gui_fp:
+                self._gui_fp.seek(0, 2)
+                return True
         except Exception:
-            self._gui_fp = None
-            return False
+            pass
+        self._gui_fp = None
+        return False
+
+    @staticmethod
+    def _open_shared(path) -> object | None:
+        """CreateFileW 带 FILE_SHARE_READ|WRITE|DELETE 打开（Windows）。
+        返回文本文件对象（utf-8, errors=replace）；失败返回 None。"""
+        try:
+            import ctypes as _ct
+            import msvcrt as _ms
+            import os as _os
+            _k32 = _ct.windll.kernel32
+            GENERIC_READ = 0x80000000
+            FILE_SHARE_READ = 1
+            FILE_SHARE_WRITE = 2
+            FILE_SHARE_DELETE = 4
+            OPEN_EXISTING = 3
+            _k32.CreateFileW.restype = _ct.c_void_p
+            h = _k32.CreateFileW(
+                str(path), GENERIC_READ,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                None, OPEN_EXISTING, 0, None)
+            if not h or h == _ct.c_void_p(-1).value:
+                return None
+            fd = _ms.open_osfhandle(h, 0)  # 0 = os.O_RDONLY
+            return _os.fdopen(fd, "r", encoding="utf-8", errors="replace")
+        except Exception:
+            return None
 
     def run(self) -> None:
         try:
