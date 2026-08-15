@@ -59,6 +59,11 @@
 ### Step 3：runner/sanity_tracker 停止自读 asst.log
 - runner._update_status/_parse_log 的任务名/体力解析改消费 bus 事件
 - sanity_tracker 成为体力唯一写者（写 sanity_live.json）
+- **2026-08-15 进度**：`_update_status` 改查 LogWatcher.cur_task()（单点解析）；
+  `_parse_log` 改消费 LogWatcher.tail_tasks()；`_err_count`/`_fight_times`
+  递增点从自读日志迁移到 subtask_error/fight_times 事件（收敛中补齐，防计数丢失）；
+  清理死代码 `_log_handles`。剩余：_check_one 中 mtime 活性检测（无内容解析，
+  属文件活性非重复解析，保留直读）
 
 ### Step 4：模拟器操作收口
 - grep 所有 MuMuManager/adb 直接调用点 → 逐处迁 emu_service 单点
