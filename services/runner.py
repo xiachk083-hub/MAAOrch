@@ -2648,7 +2648,8 @@ class AccountRunner:
         续跑判定（_done_pct）、前端任务列表全部依赖它 → 全部失效。
         现改为查询真实数据源：
           tasks  本次注入任务列表（_core_tasks 优先 — direct drive 模式
-                 有真状态；普通模式注入即"运行中"，cleanup 收尾转"完成"）
+                 有真状态；GUI 模式从 asst.log 尾部解析真实 taskchain
+                 状态 — 2026-08-15 整理，替代硬编码"运行中"假状态）
           sanity sanity_tracker 快照（sanity_live.json，bus 订阅写 — Step 3a）
           drops  无独立源，暂 None（StageDrops 事件未结构化，后续收口）
         """
@@ -2660,6 +2661,38 @@ class AccountRunner:
             _inj = ac.get("_injected_tasks") or []
             # TaskType 字段兼容 _maybe_downgrade 的 startup/fight 判定
             tasks = [{"name": n, "TaskType": n, "status": "运行中"} for n in _inj]
+            # 2026-08-15 整理: 从 asst.log 尾部解析真实 taskchain 状态 —
+            # 硬编码"运行中"让 StartUp 卡加载判定误杀正常账号（官-8 实证）、
+            # 让 _maybe_downgrade 永远不触发（GUI 模式降级失效）。读真实
+            # TaskChainStart/TaskCompleted/TaskChainError 事件更新状态。
+            try:
+                _p = self._procs.get(aid)
+                _inst_path = getattr(_p, '_inst_path', None) if not isinstance(_p, str) else _p
+                if not _inst_path:
+                    _inst_path = ""
+                _al = Path(_inst_path) / "debug" / "asst.log" if _inst_path else None
+                if _al and _al.exists():
+                    _sz = _al.stat().st_size
+                    with _al.open("r", encoding="utf-8", errors="replace") as _f:
+                        _f.seek(max(0, _sz - 200000))
+                        _tail = _f.read()
+                    import re as _re3
+                    # TaskChainStart/Completed/Error 的 taskchain 字段
+                    for _mm in _re3.finditer(
+                            r'(TaskChainStart|TaskCompleted|TaskChainError).*?"taskchain":"([^"]+)"',
+                            _tail):
+                        _ev, _chain = _mm.group(1), _mm.group(2)
+                        for _t in tasks:
+                            if _t.get("name", "").lower() == _chain.lower():
+                                if _ev == "TaskChainStart":
+                                    _t["status"] = "运行中"
+                                elif _ev == "TaskCompleted":
+                                    _t["status"] = "完成"
+                                elif _ev == "TaskChainError":
+                                    _t["status"] = "失败"
+                                break
+            except Exception:
+                pass
         sanity = None
         try:
             from services.sanity_tracker import get as _sg
