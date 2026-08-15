@@ -211,20 +211,7 @@ async function renderAccounts(container) {
     let serverFilter = document.getElementById('server-filter')?.value || 'all';
     let statusFilter = document.getElementById('status-filter')?.value || 'all';
 
-    let filtered = r.accounts.filter(a => {
-      const nameMatch = !searchText || a.name.toLowerCase().includes(searchText) || (a.note||'').toLowerCase().includes(searchText);
-      if (serverFilter !== 'all') {
-        const client = a.game_client || '';
-        if (serverFilter === 'official' && client !== 'Official') return false;
-        else if (serverFilter === 'bilibili' && client !== 'Bilibili') return false;
-        else if (serverFilter === 'yostar' && !['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
-        else if (serverFilter === 'other' && ['Official','Bilibili','YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
-      }
-      if (statusFilter === 'running' && !a.running) return false;
-      if (statusFilter === 'error' && !(!a.running && a.failures > 0 && a.failures < 6)) return false;
-      if (statusFilter === 'paused' && !(a.failures >= 6)) return false;
-      return true;
-    });
+    const filtered = filterAccounts(r.accounts, searchText, serverFilter, statusFilter);
 
     const batchCount = selectedIds.size;
     const total = r.accounts.length;
@@ -241,13 +228,13 @@ async function renderAccounts(container) {
       <button onclick="toggleTableMode()" style="white-space:nowrap;font-size:11px">📊 表格</button>
     </div>
     <div style="display:flex;gap:3px;margin-bottom:4px;flex-wrap:wrap">
-      <select id="server-filter" onchange="renderPage()" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+      <select id="server-filter" onchange="setFilter('server')" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
         <option value="all">全部 (${total})</option>
         <option value="official">官服 (${countOfficial})</option>
         <option value="bilibili">B服 (${countBili})</option>
         <option value="yostar">外服 (${countYoStar})</option>
       </select>
-      <select id="status-filter" onchange="renderPage()" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
+      <select id="status-filter" onchange="setFilter('status')" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:3px">
         <option value="all">全部状态</option>
         <option value="running">🟢 运行中</option>
         <option value="error">❌ 错误</option>
@@ -255,25 +242,67 @@ async function renderAccounts(container) {
       </select>
     </div>
     <div class="card-list">`;
-    filtered.forEach(a => {
-      const isRunning = a.running;
-      const failCount = a.failures || 0;
-      const isError = !isRunning && failCount > 0 && failCount < 6;
-      const isPaused = failCount >= 6;
-      const dotColor = isRunning ? 'var(--accent)' : isError ? 'var(--danger)' : isPaused ? 'var(--text3)' : 'var(--border)';
-      const dotLabel = isRunning ? '运行中' : isError ? '错误' : isPaused ? '暂停' : '空闲';
-      const clientLabel = {'Official':'官服','Bilibili':'B服','YoStarEN':'美服','YoStarJP':'日服','YoStarKR':'韩服','txwy':'繁中服'}[a.game_client] || a.game_client || '?';
-      // Expiry warning
-      let expireStr = '';
-      if (a.expire_date) {
-        const d = new Date(a.expire_date), n = new Date();
-        const diff = Math.ceil((d - n) / 86400000);
-        if (diff < 0) expireStr = `<span style="color:var(--danger);font-size:9px">⚠ 过期${Math.abs(diff)}天</span>`;
-        else if (diff <= 3) expireStr = `<span style="color:var(--warn);font-size:9px">⏰ ${diff}天</span>`;
-      }
-      const checked = selectedIds.has(a.id) ? 'checked' : '';
+    html += `<div id="card-list" class="card-list">` + accountCardsHtml(filtered) + `</div>`;
 
-      html += `<div class="card" style="padding:4px 8px;gap:6px">
+    // Batch action bar (always visible)
+    html += `<div id="batch-bar" style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:11px">
+      <span id="batch-count">已选 ${batchCount}</span>
+      <span style="flex:1"></span>
+      <button class="small" onclick="batchSmart()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">▶ 调度</button>
+      <button class="small" onclick="batchEnqueue()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">入队</button>
+      <button class="small" onclick="batchStop()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">⏹ 停止</button>
+      <button class="small" onclick="batchAssignStage()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🎯 关卡</button>
+      <button class="small" onclick="batchDelete()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🗑 删除</button>
+      <span style="width:1px;height:18px;background:var(--border);display:inline-block"></span>
+      <button class="small" onclick="openCsvEdit()">📋 CSV 编辑</button>
+    </div>`;
+
+    container.innerHTML = html;
+  } catch(e) { showError(container, e.message); }
+}
+
+// 2026-08-15 重构: 账号过滤逻辑独立（搜索/筛选共用，不重建页面）
+function filterAccounts(accounts, searchText, serverFilter, statusFilter) {
+  searchText = (searchText || '').toLowerCase();
+  return accounts.filter(a => {
+    const nameMatch = !searchText || a.name.toLowerCase().includes(searchText) || (a.note||'').toLowerCase().includes(searchText);
+    if (serverFilter && serverFilter !== 'all') {
+      const client = a.game_client || '';
+      if (serverFilter === 'official' && client !== 'Official') return false;
+      else if (serverFilter === 'bilibili' && client !== 'Bilibili') return false;
+      else if (serverFilter === 'yostar' && !['YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
+      else if (serverFilter === 'other' && ['Official','Bilibili','YoStarEN','YoStarJP','YoStarKR','txwy'].includes(client)) return false;
+    }
+    if (statusFilter === 'running' && !a.running) return false;
+    if (statusFilter === 'error' && !(!a.running && a.failures > 0 && a.failures < 6)) return false;
+    if (statusFilter === 'paused' && !(a.failures >= 6)) return false;
+    return nameMatch;
+  });
+}
+
+// 账号卡片 HTML 生成（2026-08-15 重构: 从 renderAccounts 抽出，搜索时只重渲
+// 此部分，不重建整页 → 搜索框焦点/输入法不被打断）
+function accountCardsHtml(accounts) {
+  let out = '';
+  accounts.forEach(a => {
+    const isRunning = a.running;
+    const failCount = a.failures || 0;
+    const isError = !isRunning && failCount > 0 && failCount < 6;
+    const isPaused = failCount >= 6;
+    const dotColor = isRunning ? 'var(--accent)' : isError ? 'var(--danger)' : isPaused ? 'var(--text3)' : 'var(--border)';
+    const dotLabel = isRunning ? '运行中' : isError ? '错误' : isPaused ? '暂停' : '空闲';
+    const clientLabel = {'Official':'官服','Bilibili':'B服','YoStarEN':'美服','YoStarJP':'日服','YoStarKR':'韩服','txwy':'繁中服'}[a.game_client] || a.game_client || '?';
+    // Expiry warning
+    let expireStr = '';
+    if (a.expire_date) {
+      const d = new Date(a.expire_date), n = new Date();
+      const diff = Math.ceil((d - n) / 86400000);
+      if (diff < 0) expireStr = `<span style="color:var(--danger);font-size:9px">⚠ 过期${Math.abs(diff)}天</span>`;
+      else if (diff <= 3) expireStr = `<span style="color:var(--warn);font-size:9px">⏰ ${diff}天</span>`;
+    }
+    const checked = selectedIds.has(a.id) ? 'checked' : '';
+
+    out += `<div class="card" style="padding:4px 8px;gap:6px">
   <input type="checkbox" class="cb" ${checked} onchange="event.stopPropagation();toggleSelect('${a.id}')">
   <div style="flex:1;min-width:0;cursor:pointer" onclick="showAccountDetail('${a.id}')">
     <div style="display:flex;align-items:center;gap:4px">
@@ -302,30 +331,8 @@ async function renderAccounts(container) {
     <button class="small danger" onclick="event.stopPropagation();showConfirm('确认删除 ${a.name}？').then(r=>r&&deleteAccount('${a.id}'))" style="font-size:9px;padding:1px 5px" title="删除">🗑</button>
   </div>
 </div>`;
-    });
-    html += '</div>';
-
-    // Batch action bar (always visible)
-    html += `<div id="batch-bar" style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-top:6px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:11px">
-      <span id="batch-count">已选 ${batchCount}</span>
-      <span style="flex:1"></span>
-      <button class="small" onclick="batchSmart()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">▶ 调度</button>
-      <button class="small" onclick="batchEnqueue()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">入队</button>
-      <button class="small" onclick="batchStop()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">⏹ 停止</button>
-      <button class="small" onclick="batchAssignStage()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🎯 关卡</button>
-      <button class="small" onclick="batchDelete()" ${batchCount===0?'disabled':''} style="${batchCount===0?'opacity:0.4':''}">🗑 删除</button>
-      <span style="width:1px;height:18px;background:var(--border);display:inline-block"></span>
-      <button class="small" onclick="openCsvEdit()">📋 CSV 编辑</button>
-    </div>`;
-
-    container.innerHTML = html;
-    // 2026-08-15 修复: 搜索输入触发 renderPage 重建后恢复焦点（否则每次
-    // 按键光标丢失 — 用户反馈）。仅当搜索框有内容（说明用户在搜索）时恢复。
-    try {
-      const _si = document.getElementById('search-input');
-      if (_si && _si.value) restoreSearchFocus();
-    } catch(e) {}
-  } catch(e) { showError(container, e.message); }
+  });
+  return out;
 }
 
 let _tableData = []; let _tableStages = [];
@@ -3692,31 +3699,38 @@ async function pipelineAction(action) {
 }
 
 // ── Filter & Search ──
-// 2026-08-15 修复: searchAccounts 原直接 renderPage() → 整页 DOM 重建 →
-// 搜索框被替换 → 每次按键光标丢失（用户反馈"点一下搜索栏刷新一下光标
-// 就不在搜索栏里"）。改为记录光标位置 + 重建后恢复焦点/光标。
-let _searchCaret = 0;
+// 2026-08-15 修复: 原 searchAccounts 直接 renderPage() → 整页 DOM 重建 →
+// 搜索框被替换 → 每次按键光标丢失 + 中文输入法被打断（用户反馈"选择之后
+// 按键盘也刷新不能输入"）。改为只更新 #card-list 内容 — 搜索框/过滤器
+// DOM 不动，焦点与输入法完全保留。
 function setFilter(key) {
   filterKey = key;
-  if (state.page === 'accounts') renderPage();
-}
-function searchAccounts(value) {
   if (state.page === 'accounts') {
+    // 筛选下拉变化时也走轻量更新（不重建整页）
     const inp = document.getElementById('search-input');
-    if (inp) _searchCaret = inp.selectionStart || 0;
+    const srv = document.getElementById('server-filter');
+    const stt = document.getElementById('status-filter');
+    const list = document.getElementById('card-list');
+    if (list && state.accounts) {
+      list.innerHTML = accountCardsHtml(filterAccounts(
+        state.accounts, inp?.value || '', srv?.value || 'all', stt?.value || 'all'));
+      return;
+    }
     renderPage();
   }
 }
-// renderAccounts 渲染完成后调用 — 恢复搜索框焦点和光标位置
-function restoreSearchFocus() {
-  try {
-    const inp = document.getElementById('search-input');
-    if (inp) {
-      inp.focus();
-      const pos = Math.min(_searchCaret, (inp.value || '').length);
-      inp.setSelectionRange(pos, pos);
+function searchAccounts(value) {
+  if (state.page === 'accounts') {
+    const list = document.getElementById('card-list');
+    if (list && state.accounts) {
+      const srv = document.getElementById('server-filter');
+      const stt = document.getElementById('status-filter');
+      list.innerHTML = accountCardsHtml(filterAccounts(
+        state.accounts, value, srv?.value || 'all', stt?.value || 'all'));
+      return;
     }
-  } catch(e) { /* 焦点恢复失败不影响使用 */ }
+    renderPage();
+  }
 }
 
 // ── Queue Pause ──
