@@ -68,6 +68,14 @@
 ### Step 4：模拟器操作收口
 - grep 所有 MuMuManager/adb 直接调用点 → 逐处迁 emu_service 单点
 - emu_service_v2 状态机正式接管回收决策
+- **2026-08-16 状态**：开关已翻转（生产 config `emu_v2_reclaim=true`，
+  旧 `_reclaim_idle_emus` L1107 遇 True 互斥跳过，无双回收）；oplog 验证
+  v2 回收全链路工作（acquire/ready/release/reclaim→CLOSING→OFF）。验证中
+  发现缺陷并修复：`release()` 清 account_id 导致 IDLE 态丢失绑定 → active/
+  排队前部保护失效 → 任务间切换被关-重开 churn（80a1ade：保留 account_id，
+  active_ids 命中保留/pending 前部保留/远期回排照常回收）。修复已部署
+  （--no-restart），待队列低谷重启生效。误杀核验：所有回收时刻均无活
+  MAA（procs 占位/挂起账号），无错杀。
 
 ### Step 5：账房收口（体力/仓库/材料关/根数据）
 - depot CLI 复用 depot_scheduler；材料关表合一；根目录日志收口 logs/
