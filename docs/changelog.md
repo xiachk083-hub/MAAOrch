@@ -47,6 +47,51 @@ port = 16384 + int(emu_instance_index) * 32
 - 调度系统、队列、前端
 - 已有账号的 `adb_address` 值
 
+## 2026-08-16 — LogWatcher 句柄锁（ErrorCongratulations 崩溃真正根因，647a0a9）
+
+### 背景
+
+account_switch 守卫（88b88f2）部署后崩溃仍在扩散（15+ 账号、每分钟 1+）。
+逐一排除：HotKeys（正常实例也有）、config 文件（干净）、根目录配置、
+僵尸进程（spawn 时无残留）、MAA 二进制（全实例哈希一致）。
+
+### 实锤（错误对话框截图）
+
+用 System.Drawing 截取 MAA 错误窗口（600x480 PNG）：
+
+```
+System.IO.IOException: The process cannot access the file because it is
+being used by another process.
+at System.IO.FileSystem.MoveFile(...)
+at MaaWpfGui.Main.Bootstrapper.OnStart()
+```
+
+**MAA 启动时 Bootstrapper MoveFile（旋转 gui.log/asst.log）被文件锁挡住。**
+
+### 机制（为什么 fc2674b 引发）
+
+- LogWatcher 用普通 `open()` 持有 asst.log/gui.log 句柄（Windows 默认
+  共享不含 FILE_SHARE_DELETE → 阻止删除/重命名）
+- fc2674b（今晚部署）移除每轮 close+reopen 防丢行 → 句柄**持续持有**
+- 循环阻塞在 `readline()`（MAA 空闲常态）时 `stop()` 只置标志不关句柄
+  → runner cleanup `join(2.0)` 超时 proceed → 句柄残留
+- 同实例下一轮 spawn → MAA Bootstrapper MoveFile 被占 → IOException → 崩
+
+### 修复（647a0a9）
+
+- `LogWatcher.stop()`：置标志 + **立即关闭句柄**（readline 立即返回，
+  循环自然退出；finally 幂等再关）
+- 异常分支加 `_stopped` 检查：stop 后不重开句柄（原逻辑会重开抵消修复）
+
+### 教训
+
+1. **拿不到错误信息时截图错误对话框**：WPF 对话框正文无法 GetWindowText，
+   用 System.Drawing CopyFromScreen 截窗（600x480）→ 异常栈一目了然。
+2. **文件句柄的 DELETE 共享是隐藏坑**：Python open() 默认共享读写但不
+   共享删除 → 持句柄即锁删除/重命名。日志轮转（MoveFile）首当其冲。
+3. **fc2674b 修复丢行的方式引入了锁**：持续持句柄 vs 每轮重开丢行 —
+   正确解法是 stop 立即关句柄 + 轮转检测（tell>size 重开），两者兼得。
+
 ## 2026-08-16 — account_switch 脱敏值守卫（ErrorCongratulations 启动崩溃根治）
 
 ### 背景
