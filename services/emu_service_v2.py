@@ -191,14 +191,19 @@ class EmulatorService:
         return self.acquire(account)
 
     def release(self, account) -> None:
-        """完成（BUSY → IDLE — 调用方负责关游戏）。幂等（§9.3.3）。"""
+        """完成（BUSY → IDLE — 调用方负责关游戏）。幂等（§9.3.3）。
+
+        2026-08-16 修复：不再清 account_id。此前置 None 导致 IDLE 态丢失
+        账号绑定，reclaim_tick 的 `if st.account_id:` 保护块（active 账号 /
+        队列前部保留窗口）对新入队/任务间切换的账号全部失效 → 模拟器被
+        60s 闲置回收，下一任务又得重开（实测 00:44 emu#36 官-27 任务间
+        被关-重开 churn）。保留绑定后：active_ids 命中 → 保留（任务间
+        切换）；pending 前部到期 → 保留；远期回排/真空闲 → 照常回收。
+        acquire() 会覆盖绑定（无跨账号脏绑定风险）。"""
         idx = str(account.get("emu_instance_index", ""))
         if not idx:
             return
         self._move(idx, EV_RELEASE, account.get("name", "")[:16])
-        st = self.states.get(idx)
-        if st:
-            st.account_id = None
 
     def close(self, idx, reason: str = "") -> None:
         """关闭（READY/IDLE → CLOSING → 后台关闭链 → OFF）。幂等。"""
