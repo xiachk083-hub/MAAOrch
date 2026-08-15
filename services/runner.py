@@ -501,6 +501,21 @@ class AccountRunner:
             self.emit_log(f"{ac.get('name', aid)} 无空闲 MAA 实例")
             return False
 
+        # 2026-08-15 修复: 手动启动（launch/launch_by_id）不经队列 _tick，
+        # 需自行设置 _active_emus 标记 — 否则 spawn 前防孤儿检查
+        # （_active_emus[emu] != aid → 取消）误判"标记已释放"→ 放弃 spawn
+        # （实测日-4: 手动启动被"启动被队列取消"打断，MAA 连不上）。
+        # 与队列启动一致: 标记在 spawn 前写入，cleanup/stop 释放。
+        try:
+            _lq0 = getattr(getattr(self.ctx, "_mw", None), "launch_queue", None)
+            _ei0 = str(ac.get("emu_instance_index", "")) if ac.get("emu_instance_index") else ""
+            if _lq0 is not None and _ei0:
+                with _lq0._lock:
+                    _lq0._active_emus[_ei0] = aid
+                    _lq0._active_emus_ts[_ei0] = time.time()
+        except Exception:
+            pass
+
         self.emit_log(f"[启动] ADB({ac.get('adb_address','?')}) Emu({ac.get('emu_instance_index','?')}) 实例#{inst[0]}")
         self._active[aid] = ac
         self._progs[aid] = [w for w in self.ctx.warehouse if w.get("account_ref") == aid]
