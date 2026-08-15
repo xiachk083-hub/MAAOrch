@@ -73,9 +73,11 @@
   v2 回收全链路工作（acquire/ready/release/reclaim→CLOSING→OFF）。验证中
   发现缺陷并修复：`release()` 清 account_id 导致 IDLE 态丢失绑定 → active/
   排队前部保护失效 → 任务间切换被关-重开 churn（80a1ade：保留 account_id，
-  active_ids 命中保留/pending 前部保留/远期回排照常回收）。修复已部署
-  （--no-restart），待队列低谷重启生效。误杀核验：所有回收时刻均无活
-  MAA（procs 占位/挂起账号），无错杀。
+  active_ids 命中保留/pending 前部保留/远期回排照常回收）。**已部署并重启
+  生效（新 PID 57476 持 :19999）**。重启后 10 分钟监控：3 次回收全部正当
+  （末次 release 后 60s+ 空闲、窗口内无重派）、无误杀、reclaim 事件带
+  account 字段（修复生效信号）。旧路径回收行 0 条（互斥跳过确认）。
+  队列已恢复（暂停→排空→重启→恢复流程，零中断）。
 
 ### Step 5：账房收口（体力/仓库/材料关/根数据）
 - depot CLI 复用 depot_scheduler；材料关表合一；根目录日志收口 logs/
