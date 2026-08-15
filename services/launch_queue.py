@@ -129,6 +129,9 @@ class LaunchQueue:
         self._retry_stall: int = int(self.ctx.config.get("retry_stall", 60) or 60)
         # 连续兜底释放计数（防无限重试循环）: 账号连续兜底释放 N 次 → 挂起。
         self._stale_release_count: dict[str, int] = {}
+        # 清洁检查日志降噪（2026-08-15）: emu_idx → 上次打日志时间 / 上次 real
+        self._last_stale_log: dict[str, float] = {}
+        self._last_stale_real: dict[str, bool] = {}
         self._bg_tick_started = False
         self._import_heapq()
 
@@ -917,7 +920,16 @@ class LaunchQueue:
                                                           f"模拟器崩溃（{_ac.get('name','?')}）")
                 except Exception:
                     pass
-            _QUEUE_LOG.debug(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
+            # 2026-08-15 整理: 原每 5s 无条件打 debug（每模拟器一条）→
+            # 刷屏淹没 debug.log。改成变化时才记录: 仅 real 状态翻转
+            # （进程死→活/活→死）或距上次记录 >60s 时打，正常轮次静默。
+            _now_log = time.time()
+            if (self._last_stale_log.get(emu_idx, 0) == 0
+                    or real != self._last_stale_real.get(emu_idx, None)
+                    or _now_log - self._last_stale_log.get(emu_idx, 0) > 60):
+                _QUEUE_LOG.debug(f"清洁检查: {emu_idx}={aid[:8]} ts={int(now-ts)}s ago real={real}")
+                self._last_stale_log[emu_idx] = _now_log
+                self._last_stale_real[emu_idx] = real
             # ── 运行超时: MAA 活着但单次运行超时 ──
             # 任务级死循环（如 PRTS 误匹配卡死）检测不到进程/模拟器异常 —
             # 进程活着、模拟器正常、ADB 通，但任务永远不推进。超时即判定

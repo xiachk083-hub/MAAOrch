@@ -123,10 +123,11 @@ def load_config() -> dict:
     return dict(DEFAULT_CONFIG)
 
 _last_save_hash = 0
+_last_sus_set: frozenset | None = None  # 挂起集合快照（diff 审计用，2026-08-15）
 
 
 def save_config(data: dict) -> None:
-    global _last_save_hash
+    global _last_save_hash, _last_sus_set
     from copy import deepcopy
     out = deepcopy(data)
     if "accounts" in out:
@@ -138,20 +139,28 @@ def save_config(data: dict) -> None:
     _last_save_hash = h
     # 审计: 记录每次保存的挂起账号（定位 suspended 被覆盖的源 — 2026-08-10
     # 官-2/官-25/官-41 挂起反复丢失，保存对象不含挂起状态）
+    # 2026-08-15 整理: 原来每次保存写完整挂起列表 → 每 tick 保存刷屏 →
+    # 淹没诊断日志（查事故原因时被 SAVE-AUDIT 刷掉）。改 diff 式:
+    # 只记录挂起集合**变化**（新增/移除），无变化不写。
     try:
-        import traceback as _tb
-        _sus = [(a.get("name", "?")[:12], a.get("suspended")) for a in out.get("accounts", []) if a.get("suspended")]
-        _caller = ""
-        try:
-            _st = _tb.extract_stack()
-            _caller = f"{_st[-3].filename.split(chr(92))[-1]}:{_st[-3].lineno} {_st[-3].name}" if len(_st) >= 3 else "?"
-        except Exception:
-            pass
-        # 日志收口：与 infrastructure.logger 同一 logs/debug.log（根日志迁移 Step 5）
-        _logs_dir = Path(__file__).parent.parent / "logs"
-        _logs_dir.mkdir(parents=True, exist_ok=True)
-        with (_logs_dir / "debug.log").open("a", encoding="utf-8") as _af:
-            _af.write(f"[SAVE-AUDIT] suspended={_sus} accounts={len(out.get('accounts', []))} caller={_caller}\n")
+        _sus_now = frozenset(a.get("name", "?")[:12] for a in out.get("accounts", []) if a.get("suspended"))
+        if _last_sus_set is None:
+            _last_sus_set = _sus_now
+        elif _sus_now != _last_sus_set:
+            _added = sorted(_sus_now - _last_sus_set)
+            _removed = sorted(_last_sus_set - _sus_now)
+            import traceback as _tb
+            _caller = ""
+            try:
+                _st = _tb.extract_stack()
+                _caller = f"{_st[-3].filename.split(chr(92))[-1]}:{_st[-3].lineno} {_st[-3].name}" if len(_st) >= 3 else "?"
+            except Exception:
+                pass
+            _logs_dir = Path(__file__).parent.parent / "logs"
+            _logs_dir.mkdir(parents=True, exist_ok=True)
+            with (_logs_dir / "debug.log").open("a", encoding="utf-8") as _af:
+                _af.write(f"[SAVE-AUDIT] suspended={len(_sus_now)} +{_added} -{_removed} caller={_caller}\n")
+            _last_sus_set = _sus_now
     except Exception:
         pass
     # Atomic write: write to temp file in same directory then rename
