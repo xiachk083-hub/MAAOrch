@@ -198,10 +198,14 @@ def check_health(mw) -> dict:
     # server 通信）→ 长期堆积（实测 23→46 个）→ 阻塞 adb server 串行
     # 处理 → 新连接全部超时 → MAA 连不上模拟器 → 模拟器无 MAA 驱动可能
     # 被误判/崩溃。这里检测 disconnect/connect 命令进程，超过阈值即清理。
+    # 2026-08-15 晚: 范围扩展至 `devices` 命令僵尸（实测 15 个 `adb devices`
+    # 卡死进程挂 5037 全局 server → 8 账号并发冷启动时 MAA 的 devices/connect
+    # 全部 60s 超时 → ConnectFailed 风暴）。devices 是连接探测命令，卡死 10s+
+    # 即僵尸，与活跃 minitouch/screencap 会话（-s <addr> shell/exec-out）区分。
     try:
         r = subprocess.run(
             ["powershell", "-NoProfile", "-Command",
-             "(Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | Measure-Object).Count"],
+             "(Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect| devices' -and $_.CommandLine -notmatch 'shell|exec-out|screencap' } | Measure-Object).Count"],
             capture_output=True, text=True, timeout=10,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         try:
@@ -210,12 +214,13 @@ def check_health(mw) -> dict:
             n_adb_stuck = 0
         if n_adb_stuck >= 5:
             counts["adb_stuck"] = n_adb_stuck
-            # 自动清理（卡死的 connect/disconnect 命令进程 — 非 server，杀了
-            # 不影响已建立连接；server 进程（fork-server）保留）
+            # 自动清理（卡死的 connect/disconnect/devices 命令进程 — 非 server，
+            # 杀了不影响已建立连接；server 进程（fork-server）和活跃会话
+            # （shell/exec-out/screencap）保留）
             try:
                 subprocess.run(
                     ["powershell", "-NoProfile", "-Command",
-                     "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+                     "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect| devices' -and $_.CommandLine -notmatch 'shell|exec-out|screencap' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
                     capture_output=True, text=True, timeout=15,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 counts["adb_stuck_killed"] = n_adb_stuck

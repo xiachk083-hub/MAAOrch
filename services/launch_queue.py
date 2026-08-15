@@ -792,12 +792,16 @@ class LaunchQueue:
         # MAA 连接失败留 disconnect/connect 僵尸（实测 23→46 个）→ 阻塞
         # adb server → 新连接超时 → MAA 连不上 → 模拟器无驱动。5 分钟
         # 一次低频清理（与 runtime_health 的 /api/health 检查互补）。
+        # 2026-08-15 晚: 范围扩展至 `devices` 命令僵尸（8 账号并发冷启动时
+        # 15 个 `adb devices` 卡死挂 5037 server → MAA devices/connect 全 60s
+        # 超时 → ConnectFailed 风暴）。活跃会话（shell/exec-out/screencap）
+        # 与 server（fork-server）保留。
         try:
             if time.time() - self._last_adb_clean_ts > 300:
                 self._last_adb_clean_ts = time.time()
                 _r = subprocess.run(
                     ["powershell", "-NoProfile", "-Command",
-                     "(Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | Measure-Object).Count"],
+                     "(Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect| devices' -and $_.CommandLine -notmatch 'shell|exec-out|screencap' } | Measure-Object).Count"],
                     capture_output=True, text=True, timeout=10,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 try:
@@ -807,10 +811,10 @@ class LaunchQueue:
                 if _n_stuck >= 5:
                     subprocess.run(
                         ["powershell", "-NoProfile", "-Command",
-                         "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+                         "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect| devices' -and $_.CommandLine -notmatch 'shell|exec-out|screencap' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
                         capture_output=True, text=True, timeout=15,
                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                    _QUEUE_LOG.warn(f"[adb] 清理僵尸命令进程 ×{_n_stuck}（连接超时堆积）")
+                    _QUEUE_LOG.warn(f"[adb] 清理僵尸命令进程 ×{_n_stuck}（连接超时堆积，含 devices）")
         except Exception:
             pass
 

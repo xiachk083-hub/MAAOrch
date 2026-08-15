@@ -424,6 +424,20 @@ class ConfigService:
                         del c[k]
             if use_v6:
                 c.setdefault("InfrastOrder", {})
+                # 2026-08-15: 清理顶层 Gui 里 MAA 自己保存的窗口状态/热键对象键。
+                # MAA 6.16.8 的 ConfigurationHelper SetKvOrMigrate 遇到未知对象键
+                # （对象/空 dict）→ JsonReaderException → 启动即崩，窗口标题
+                # {{ ErrorCongratulations }}（实测官-11: Gui.WindowPlacement 对象 +
+                # 空 Gui.HotKeys {} → 连续 10+ 次启动失败；删除后恢复正常）。
+                # 这些键由 MAA 运行时写入 gui.new.json（窗口位置/热键），注入时
+                # 残留会让下次启动崩溃；注入后 MAA 会按默认值重建。
+                _top_gui = d.get("Gui")
+                if isinstance(_top_gui, dict):
+                    for _gk in ("WindowPlacement",):
+                        _top_gui.pop(_gk, None)
+                    _hk = _top_gui.get("HotKeys")
+                    if isinstance(_hk, dict) and not _hk:
+                        _top_gui.pop("HotKeys", None)
             # MAA v6 reads GUI settings from gui.json Global section (v5/6.11
             # flat keys); 6.16 reads gui.new.json top-level Gui.* nested bools.
             # Direct assignment (not setdefault): template already ships
