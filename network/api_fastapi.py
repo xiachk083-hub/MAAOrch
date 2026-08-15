@@ -1869,7 +1869,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         a = _account_by_idx(idx)
         for field in ("name", "game_client", "emu_instance_index", "account_switch",
                       "uid", "suspended", "note", "expire_date", "stages",
-                      "skip_daily", "roguelike_only", "maa_instance_dir",
+                      "skip_daily", "skip_award", "roguelike_only", "maa_instance_dir",
                       "adb_address", "adb_path", "roguelike_themes",
                       "roguelike_theme_idx"):
             if field in body:
@@ -2471,6 +2471,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         if not a.get("adb_address", "").strip() and not a.get("emu_instance_index", ""):
             return False
         if a.get("suspended", False):
+            return False
+        # 手动专用账号（2026-08-15 用户）: skip_daily 的模拟器归用户手动
+        # 用（手动开模拟器自己玩），不参与自动调度。手动启动不受影响
+        # （连接页/账号详情页的启动走的是独立路径）。
+        if a.get("skip_daily", False):
             return False
         if lq.is_running(a.get("id", "")):
             return False

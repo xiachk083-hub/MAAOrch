@@ -1058,7 +1058,13 @@ class AccountRunner:
                 elif ac.get("skip_daily"):
                     # Skip farming AND daily tasks — sanity already exhausted,
                     # just claim awards (Award/Mail/Orundum/Mining/SpecialAccess).
-                    task_list = ["StartUp", "Award"]
+                    # 2026-08-15 用户: 手动专用模拟器连领奖都不要 —
+                    # skip_daily + skip_award = 纯登录（StartUp only），
+                    # 账号归用户手动操作，MAAOrch 不碰任何日常。
+                    if ac.get("skip_award"):
+                        task_list = ["StartUp"]
+                    else:
+                        task_list = ["StartUp", "Award"]
                 else:
                     task_list = ["StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
             # Per-account annihilation (overrides dispatch template)
