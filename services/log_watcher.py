@@ -173,13 +173,22 @@ class LogWatcher(threading.Thread):
                         if gline:
                             self._dispatch_gui(gline)
                 except Exception:
+                    # 句柄失效（文件被删/重开失败）→ 尝试重开尾部跟随，
+                    # 失败则稍后重试（防空转）。
                     time.sleep(1)
-                try:
-                    self._fp.close()
-                except Exception:
-                    pass
-                if not self._open_tail():
-                    time.sleep(2)
+                    try:
+                        if self._fp and self._fp.closed:
+                            self._open_tail()
+                    except Exception:
+                        pass
+                # ⚠️ 2026-08-16: 不再每轮 close+reopen。原 3c74e39（08-11 句柄
+                # 泄漏修复）每轮循环都 close + _open_tail(seek 尾部) → 每轮
+                # 只读 1 行，MAA 快速输出（启动/Fight 结算）时其余行全被
+                # 跳过 → cb 事件缺失、sanity 行丢失（体力快照停更）。
+                # CPython 的 open() 在 Windows 默认 FILE_SHARE_READ|WRITE|
+                # DELETE — 句柄持续持有不会阻止 MAA 清空/写入 asst.log；
+                # 防泄漏由 finally 关闭 + cleanup join 保证。轮转检测
+                # （tell>size 时重开）在上方分支保留。
         finally:
             # 线程退出（stop 置位）→ 释放文件句柄（08-11 审查「句柄泄漏」：
             # 旧句柄会阻止 MAA 重启时 asst.log 删除重建；daemon 线程 + 句柄
