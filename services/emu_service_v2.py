@@ -165,6 +165,31 @@ class EmulatorService:
             return True
         return False
 
+    def acquire_ready(self, account) -> bool:
+        """账号占用（模拟器已由调用方确认就绪 — 2026-08-15 接入 runner）。
+
+        runner 启动链已有自己的模拟器启动/就绪确认（boot_wait + ADB 探测），
+        此处不再触发状态机自己的 _boot_bg。语义:
+          OFF/未跟踪 → 直接置 BUSY（调用方已确认就绪，跳过状态机启动）
+          READY/IDLE/EXTERNAL → 走 acquire（转移表）
+          BUSY → 拒绝（占用中）
+        """
+        idx = str(account.get("emu_instance_index", ""))
+        if not idx:
+            return False
+        st = self.ensure(idx)
+        if st.state == BUSY:
+            return False
+        if st.state == OFF:
+            # 未跟踪/无状态 — 调用方确认就绪，直接标记占用
+            st.state = BUSY
+            st.state_since = time.time()
+            st.account_id = account.get("id")
+            st.source = "system"
+            self._audit(idx, EV_ACQUIRE, True, account.get("name", "")[:16])
+            return True
+        return self.acquire(account)
+
     def release(self, account) -> None:
         """完成（BUSY → IDLE — 调用方负责关游戏）。幂等（§9.3.3）。"""
         idx = str(account.get("emu_instance_index", ""))
@@ -324,9 +349,41 @@ class EmulatorService:
                     # 锁，会与进行中的优雅关闭并发 → 二次关闭。2026-08-11 实测）。
                     if _lb_fn and _lb_fn(idx):
                         continue
-                    # #3 实例池活 MAA 保护（独立防线 — 不再查映射）
+            # #3 实例池活 MAA 保护（独立防线 — 不再查映射）
                     if str(idx) in _active_maa_emus:
                         continue
+                    # #3b adb 连接保护（2026-08-15 补 — 对齐旧回收终极保险）:
+                    # 扫 adb.exe 进程命令行，任何连接 127.0.0.1:<port> 的 adb
+                    # 客户端（MAA 正在连该模拟器）→ 不回收。完全不依赖队列/
+                    # 实例映射（映射丢失时依然有效），堵死"运行中账号的模拟器
+                    # 被误关 → MAA 失联"（21:53 四账号同秒 exit=1 事故模式）。
+                    try:
+                        import psutil as _psu3
+                        import re as _re3
+                        _busy_port = False
+                        for _p3 in _psu3.process_iter(["name", "cmdline"]):
+                            try:
+                                if (_p3.info["name"] or "").lower() != "adb.exe":
+                                    continue
+                                _cl3 = " ".join(_p3.info["cmdline"] or [])
+                                _m3 = _re3.search(r"127\.0\.0\.1:(\d+)", _cl3)
+                                if not _m3:
+                                    continue
+                                _port3 = _m3.group(1)
+                                for _a3 in (_accounts + _conn):
+                                    _ad3 = _a3.get("adb_address", "")
+                                    if (_ad3.endswith(":" + _port3)
+                                            and str(_a3.get("emu_instance_index", "")) == str(idx)):
+                                        _busy_port = True
+                                        break
+                                if _busy_port:
+                                    break
+                            except Exception:
+                                continue
+                        if _busy_port:
+                            continue
+                    except Exception:
+                        pass
                     # 排位决策: active → 无条件保留；pending → 仅在保留窗口内
                     # 保留（#8）
                     if st.account_id:

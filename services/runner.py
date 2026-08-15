@@ -1772,6 +1772,18 @@ class AccountRunner:
                         lq._mark_launch_ready(aid)
                 except Exception:
                     pass
+                # EmulatorService v2 占用标记（2026-08-15 接入: 模拟器就绪 +
+                # MAA 已连 = 真正占用 → BUSY。此前的 acquire 在模拟器 launch
+                # 前调用（OFF→PREWARMING 冷启动路径），adb_connected 是
+                # 就绪确认点，acquire_ready 保证 BUSY 状态落地（回收判定
+                # 依据）。幂等: 已 BUSY 返回 False 无害。
+                try:
+                    _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
+                    _ac2 = self._active.get(aid)
+                    if _v2 and _ac2:
+                        _v2.acquire_ready(_ac2)
+                except Exception:
+                    pass
         elif event == "sanity_before":
             # 本次运行首次进关卡体力（真实消耗统计的"首"值 — 2026-08-13）
             if aid not in self._run_sanity_first:
@@ -2958,6 +2970,15 @@ class AccountRunner:
             pass
         ac = self._active.pop(aid, None)
         old_procs = self._procs.pop(aid, None)
+        # EmulatorService v2 释放（2026-08-15 接入: 账号结束 → BUSY→IDLE，
+        # 状态机才能对该模拟器做排位回收判定。幂等: IDLE 再 release 忽略）。
+        try:
+            if ac:
+                _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
+                if _v2:
+                    _v2.release(ac)
+        except Exception:
+            pass
         # inst_dir: Popen 的 _inst_path，或占位符路径本身（_do_launch/降级
         # 把 _procs[aid] 设为 inst_dir 字符串防竞态 — 2026-08-11 僵尸根因：
         # 字符串路径下杀逻辑被 isinstance 检查跳过 → MAA 残留占实例）。
