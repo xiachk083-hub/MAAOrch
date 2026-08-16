@@ -735,7 +735,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         emu = ac.get("emu_instance_index", "")
         if not emu:
             raise HTTPException(400, "account has no emulator")
-        client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
+        client = {"Bilibili": "Bilibili", "YoStarJP": "YoStarJP", "YoStarEN": "YoStarEN"}.get(
             ac.get("game_client", ""), "Official")
 
         def _run():
@@ -794,7 +794,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         emu = ac.get("emu_instance_index", "")
         if not emu:
             raise HTTPException(400, "account has no emulator")
-        client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
+        client = {"Bilibili": "Bilibili", "YoStarJP": "YoStarJP", "YoStarEN": "YoStarEN"}.get(
             ac.get("game_client", ""), "Official")
 
         def _run():
