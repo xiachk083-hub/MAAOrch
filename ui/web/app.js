@@ -118,10 +118,11 @@ async function refreshSidebar() {
 
 // ── Theme ──
 function setTheme(theme) {
-  document.documentElement.className = theme === 'Light' ? 'theme-light' : theme === 'Notepaper' ? 'theme-notepaper' : '';
+  const t = theme === 'Dark' ? 'theme-dark' : theme === 'Notepaper' ? 'theme-notepaper' : 'theme-light';
+  document.documentElement.className = t;
   localStorage.setItem('theme', theme);
 }
-const savedTheme = localStorage.getItem('theme') || 'Dark';
+const savedTheme = localStorage.getItem('theme') || 'Light';
 setTheme(savedTheme);
 
 // ── Page renderers ──
@@ -148,7 +149,7 @@ async function loadAccountStatusOverview() {
     // 摘要条
     let head = `<div style="display:flex;align-items:center;gap:8px;font-size:10px;margin-bottom:4px;flex-wrap:wrap">
       <span style="font-weight:bold;color:var(--text2)">体力总览</span>
-      <span style="color:#4caf50">● 已刷完 ${st.done||0}</span>
+      <span style="color:var(--ok)">● 已刷完 ${st.done||0}</span>
       <span style="color:var(--warn)">● 偏低 ${st.low||0}</span>
       <span style="color:var(--accent)">● 充足 ${st.full||0}</span>
       <span style="color:var(--text3)">● 未知 ${st.unknown||0}</span>
@@ -162,7 +163,7 @@ async function loadAccountStatusOverview() {
       const pct = a.sanity_pct;
       let color = 'var(--bg3)', label = '?';
       if (pct === null) { color = 'var(--bg3)'; label = '?'; }
-      else if (pct <= 20) { color = '#4caf50'; label = pct.toFixed(0) + '%'; }
+      else if (pct <= 20) { color = 'var(--ok)'; label = pct.toFixed(0) + '%'; }
       else if (pct <= 60) { color = 'var(--warn)'; label = pct.toFixed(0) + '%'; }
       else { color = 'var(--accent)'; label = pct.toFixed(0) + '%'; }
       const runMark = a.running ? '<span style="color:var(--danger)">▶</span>' : '';
@@ -322,7 +323,7 @@ function accountCardsHtml(accounts) {
       const short = {'LungmenDowntown':'市中心','LungmenOutskirts':'外环','Chernobog':'切尔'};
       return '<div style="font-size:8px;margin-top:1px">' + ents.map(([st, v]) => {
         const sname = short[st.split('@')[0]] || st.split('@')[0];
-        const color = v === 'CAN_FARM' ? '#4caf50' : v === 'CANNOT' ? '#e74c3c' : '#888';
+        const color = v === 'CAN_FARM' ? 'var(--ok)' : v === 'CANNOT' ? 'var(--danger)' : 'var(--text3)';
         const icon = v === 'CAN_FARM' ? '✓' : v === 'CANNOT' ? '✗' : '⚪';
         return `<span style="color:${color};border:1px solid ${color};padding:0 4px;border-radius:2px;margin-right:3px">${sname} ${icon}</span>`;
       }).join('') + '</div>';
@@ -418,7 +419,7 @@ function _renderTable() {
         let pct = null;
         if (has && mx > 0) pct = Math.min(100, Math.max(0, cur / mx * 100));
         let color = 'var(--bg3)';
-        if (pct !== null) color = pct <= 20 ? '#4caf50' : pct <= 60 ? 'var(--warn)' : 'var(--accent)';
+        if (pct !== null) color = pct <= 20 ? 'var(--ok)' : pct <= 60 ? 'var(--warn)' : 'var(--accent)';
         let stale = false;
         if (has && s.time) { try { stale = (Date.now() - new Date(String(s.time).replace(' ', 'T')).getTime()) > 12 * 3600 * 1000; } catch (e) {} }
         const num = has ? `${cur}/${mx || '?'}` : '—';
@@ -973,10 +974,10 @@ async function refreshStats() {
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px">`;
     html += _sc(s.runs||0, '运行次数', 'var(--accent)');
     html += _sc(s.accounts||0, '覆盖账号', 'var(--text)');
-    html += _sc(Math.round((s.success_rate||0)*100)+'%', '成功率', '#4caf50');
+    html += _sc(Math.round((s.success_rate||0)*100)+'%', '成功率', 'var(--ok)');
     html += _sc(s.total_drops||0, '掉落总数', 'var(--warn)');
-    html += _sc(s.sanity_consumed||0, '体力消耗', '#e91e63');
-    html += _sc(s.annihilation_runs||0, '剿灭次数', '#9c27b0');
+    html += _sc(s.sanity_consumed||0, '体力消耗', 'var(--accent3)');
+    html += _sc(s.annihilation_runs||0, '剿灭次数', 'var(--text2)');
     html += `</div>`;
     // Trend chart
     if ((r.trend||[]).length) {
@@ -1004,7 +1005,7 @@ function _statsTrendChart(trend) {
   if (!trend.length) return '<div style="color:var(--text3);font-size:10px">暂无数据</div>';
   const maxR = Math.max(1, ...trend.map(t => t.runs||0));
   const maxD = Math.max(1, ...trend.map(t => t.drops||0));
-  const W = 500, H = 170, pad = {t:10,r:10,b:24,l:30};
+  const W = 500, H = 170, pad = {t:12,r:12,b:24,l:32};
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const xs = iw / Math.max(trend.length - 1, 1);
   let runs = '', drops = '';
@@ -1015,21 +1016,27 @@ function _statsTrendChart(trend) {
     runs += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y1.toFixed(1);
     drops += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y2.toFixed(1);
   });
-  let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:190px;background:transparent">`;
+  let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:200px;background:transparent">`;
   for (let y = 0; y <= 3; y++) {
     const yy = pad.t + ih * (1 - y/3);
-    svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="var(--border)" stroke-width="0.5"/>`;
+    svg += `<line x1="${pad.l}" y1="${yy.toFixed(1)}" x2="${W-pad.r}" y2="${yy.toFixed(1)}" style="stroke:var(--border)" stroke-width="0.5"/>`;
+    const tick = Math.round(maxR * y / 3);
+    svg += `<text x="${pad.l-6}" y="${(yy+3).toFixed(1)}" style="fill:var(--text3)" font-size="8" font-weight="600" text-anchor="end">${tick}</text>`;
   }
-  svg += `<path d="${runs}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>`;
-  svg += `<path d="${drops}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  // 主序列（运行次数）：浅青色面积 + 青瓷蓝发丝
+  const a0 = pad.t + ih;
+  const area = `M${pad.l.toFixed(1)} ${a0.toFixed(1)} L` + runs.slice(1) + ` L${(pad.l+iw).toFixed(1)} ${a0.toFixed(1)} Z`;
+  svg += `<path d="${area}" style="fill:var(--accent-soft);stroke:none"/>`;
+  svg += `<path d="${runs}" fill="none" style="stroke:var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>`;
+  svg += `<path d="${drops}" fill="none" style="stroke:var(--warn)" stroke-width="1.8" stroke-linejoin="round"/>`;
   trend.forEach((t, i) => {
     if (trend.length <= 14 || i % Math.ceil(trend.length / 14) === 0) {
       const x = pad.l + i * xs;
-      svg += `<text x="${x.toFixed(0)}" y="${H-6}" fill="var(--text3)" font-size="8" text-anchor="middle">${t.key}</text>`;
+      svg += `<text x="${x.toFixed(0)}" y="${H-6}" style="fill:var(--text3)" font-size="8" text-anchor="middle">${t.key}</text>`;
     }
   });
   svg += `</svg>`;
-  svg += `<div style="font-size:9px;color:var(--text3);margin-top:4px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--accent);margin-right:3px;vertical-align:middle"></span>运行次数<span style="margin-left:12px;display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--warn);margin-right:3px;vertical-align:middle"></span>掉落</div>`;
+  svg += `<div class="lf-legend"><span><i style="background:var(--accent)"></i>运行次数</span><span><i style="background:var(--warn)"></i>掉落</span></div>`;
   return svg;
 }
 function _statsAccountsTable(accounts, period) {
@@ -1042,7 +1049,7 @@ function _statsAccountsTable(accounts, period) {
   for (const a of accounts) {
     html += `<tr style="border-top:1px solid var(--border)">
       <td style="padding:3px">${a.name}</td>
-      <td>${a.runs}</td><td style="color:#4caf50">${a.success}</td>
+      <td>${a.runs}</td><td style="color:var(--ok)">${a.success}</td>
       <td>${Math.round((a.success_rate||0)*100)}%</td>
       <td>${Object.values(a.drops||{}).reduce((x,y)=>x+y,0)}</td>
       <td>${a.sanity}</td><td>${a.anni_runs}</td>
@@ -1066,7 +1073,7 @@ async function statsAccountHistory(aid, name) {
       const drops = Object.entries(r.drops||{}).map(([k,v]) => `${k}x${v}`).join(' ');
       rows += `<div style="border-bottom:1px solid var(--border);padding:4px 0">
         <span style="color:var(--text2)">${r.ts || ''}</span>
-        <span style="margin-left:8px;color:${r.exit_code === 0 ? '#4caf50' : '#e74c3c'}">${r.status||''}</span>
+        <span style="margin-left:8px;color:${r.exit_code === 0 ? 'var(--ok)' : 'var(--danger)'}">${r.status||''}</span>
         <span style="margin-left:8px;color:var(--text3)">${r.elapsed||0}s</span>
         <div style="color:var(--text3);font-size:9px;margin-top:2px">${tasks}</div>
         ${drops ? `<div style="color:var(--warn);font-size:9px">${drops}</div>` : ''}
@@ -1100,7 +1107,7 @@ function _statsTaskBars(list) {
     html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px">
       <span style="width:70px;color:var(--text2)">${t.task}</span>
       <div style="flex:1;background:var(--bg3);border-radius:3px;height:12px">
-        <div style="width:${pct}%;height:12px;border-radius:3px;background:linear-gradient(90deg,#4caf50 ${okPct}%,#e74c3c ${okPct}%)"></div>
+        <div style="width:${pct}%;height:12px;border-radius:3px;background:linear-gradient(90deg,var(--ok) ${okPct}%,var(--danger) ${okPct}%)"></div>
       </div>
       <span style="width:70px;text-align:right;color:var(--text3)">${t.done}/${total}</span>
     </div>`;
@@ -1134,10 +1141,10 @@ async function loadHealth() {
     const el = document.getElementById('health-bar');
     if (!el) return;
     if (h.healthy) {
-      el.innerHTML = '<span style="color:#4caf50">● 健康</span>';
+      el.innerHTML = '<span style="color:var(--ok)">● 健康</span>';
     } else {
       const cats = (h.issues || []).map(i =>
-        `<span title="${i.detail}" style="color:${i.severity === 'error' ? '#e74c3c' : 'var(--warn)'};cursor:pointer;margin-right:6px">● ${i.category}</span>`).join('');
+        `<span title="${i.detail}" style="color:${i.severity === 'error' ? 'var(--danger)' : 'var(--warn)'};cursor:pointer;margin-right:6px">● ${i.category}</span>`).join('');
       el.innerHTML = cats;
     }
   } catch(e) {}
@@ -1303,7 +1310,7 @@ async function loadDashboard() {
       html += `<details id="dash-trend" style="margin-bottom:6px;font-size:10px" ${samples.length > 5 ? 'open' : ''}><summary style="cursor:pointer;color:var(--text2);font-weight:bold;padding:6px 0">📈 资源趋势</summary>`;
       html += `<div class="card" style="padding:8px;flex-direction:column;align-items:stretch;overflow-x:auto">`;
       html += _trendChart(samples);
-      html += `<div style="font-size:8px;color:var(--text3);margin-top:2px"><span style="color:#e74c3c">─ CPU</span> <span style="color:#3498db;margin-left:6px">─ 内存</span> <span style="color:#2ecc71;margin-left:6px">─ GPU</span></div>`;
+      html += `<div class="lf-legend"><span><i style="background:var(--ink)"></i>CPU</span><span><i style="background:var(--accent)"></i>内存</span><span><i style="background:var(--accent3)"></i>GPU</span></div>`;
       html += `</div></details>`;
     }
 
@@ -1357,21 +1364,20 @@ function _dashStat(val, label, color) {
   return `<div class="card" style="padding:4px 10px;gap:4px;min-width:0"><div style="font-size:15px;font-weight:bold;color:${color};line-height:1.2">${val}</div><div style="font-size:8px;color:var(--text3);line-height:1">${label}</div></div>`;
 }
 function _trendChart(samples) {
-  const W = 800, H = 150, pad = {t:8,r:8,b:20,l:30};
+  const W = 800, H = 150, pad = {t:10,r:10,b:22,l:34};
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const n = samples.length;
   const step = iw / Math.max(n - 1, 1);
   const series = [
-    {key:'cpu', color:'#e74c3c'}, {key:'mem', color:'#3498db'}, {key:'gpu', color:'#2ecc71'}
+    {key:'cpu', stroke:'var(--ink)'}, {key:'mem', stroke:'var(--accent)'}, {key:'gpu', stroke:'var(--accent3)'}
   ];
   let svg = `<svg width="${W}" height="${H}" style="width:100%;height:auto;max-height:160px;background:transparent" viewBox="0 0 ${W} ${H}">`;
-  // grid
+  // 发丝网格 + 刻度
   for (let y = 0; y <= 4; y++) {
     const yy = pad.t + ih * (1 - y/4);
-    svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="var(--border)" stroke-width="0.5"/>`;
-    svg += `<text x="${pad.l-4}" y="${yy+3}" fill="var(--text3)" font-size="8" text-anchor="end">${y*25}</text>`;
+    svg += `<line x1="${pad.l}" y1="${yy.toFixed(1)}" x2="${W-pad.r}" y2="${yy.toFixed(1)}" style="stroke:var(--border)" stroke-width="0.5"/>`;
+    svg += `<text x="${pad.l-5}" y="${(yy+3).toFixed(1)}" style="fill:var(--text3)" font-size="8" font-weight="600" text-anchor="end">${y*25}</text>`;
   }
-  // lines
   for (const s of series) {
     let path = '';
     for (let i = 0; i < n; i++) {
@@ -1380,7 +1386,7 @@ function _trendChart(samples) {
       const y = pad.t + ih * (1 - val / 100);
       path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
     }
-    svg += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    svg += `<path d="${path}" fill="none" style="stroke:${s.stroke}" stroke-width="1.6" stroke-linejoin="round"/>`;
   }
   svg += `</svg>`;
   return svg;
@@ -1413,7 +1419,7 @@ function _chronicleTimeline(events) {
   }
   runs.sort((a, b) => b.start - a.start);
   if (!runs.length) return '<div style="font-size:10px;color:var(--text3);text-align:center;padding:20px">📭 暂无调度记录</div>';
-  const taskColors = {'唤醒':'#3498db','刷关':'#e74c3c','公招':'#f39c12','基建':'#2ecc71','信用':'#9b59b6','奖励':'#1abc9c','肉鸽':'#e67e22','生息':'#34495e'};
+  const taskColors = {'唤醒':'#5B7FC0','刷关':'#C0503D','公招':'#B57B0E','基建':'#4E7A3E','信用':'#7A6FA8','奖励':'#3E8F8A','肉鸽':'#B0753A','生息':'#6E6D66'};
   let lastHour = -1, lastDate = '';
   let html = '<div style="display:flex;flex-direction:column;gap:4px">';
   runs.slice(0, 20).forEach((r) => {
@@ -2008,7 +2014,7 @@ async function emuHealthTick() {
       const l = e.live || {};
       const cpu = l.cpu_pct;
       const mem = l.mem_mb;
-      const color = cpu === undefined ? 'var(--text3)' : (cpu >= 190 ? 'var(--danger)' : (cpu >= 150 ? '#f0a020' : 'var(--accent)'));
+      const color = cpu === undefined ? 'var(--text3)' : (cpu >= 190 ? 'var(--danger)' : (cpu >= 150 ? 'var(--warn)' : 'var(--accent)'));
       const pct = Math.min(100, (cpu === undefined ? 0 : cpu / 2)); // 2核=200% 满
       html += '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'
         + '<span style="width:8px;height:8px;border-radius:50%;background:' + color + '"></span>'
@@ -4108,13 +4114,13 @@ function ganttCalendar(events) {
   for (const e of events) {
     let o = offDay(e.start), dur = e.duration_days;
     if (o + dur <= 0 || o >= days) continue;
-    const col = e.type === '常驻' ? 'var(--accent)' : '#4caf50';
+    const col = e.type === '常驻' ? 'var(--accent)' : 'var(--ok)';
     const active = today.toISOString().slice(0, 10) >= e.start && today.toISOString().slice(0, 10) <= e.end;
     const drawStart = Math.max(0, o), drawEnd = Math.min(days, o + dur) - drawStart;
-    html += '<div style="display:grid;grid-template-columns:' + GRID + ';align-items:center;height:18px;border-top:1px solid var(--border);' + (active ? 'background:rgba(76,175,80,0.08)' : '') + '">';
+    html += '<div style="display:grid;grid-template-columns:' + GRID + ';align-items:center;height:18px;border-top:1px solid var(--border);' + (active ? 'background:var(--ok-soft)' : '') + '">';
     html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px;color:var(--text2);font-weight:' + (active ? 'bold' : 'normal') + '">' + (active ? '▶ ' : '') + e.name + '</div>';
     // 开始竖线：格左边框粗线（表头同日号高亮 = 竖线延伸）
-    html += '<div style="grid-column:' + (drawStart + 1) + ' / span ' + drawEnd + ';background:' + col + ';height:12px;opacity:0.85;border-left:2px solid #1a1a1a;box-sizing:border-box" title="' + e.start + ' ~ ' + e.end + ' (' + e.duration_days + '天)"></div>';
+    html += '<div style="grid-column:' + (drawStart + 1) + ' / span ' + drawEnd + ';background:' + col + ';height:12px;opacity:0.85;border-left:2px solid var(--ink);box-sizing:border-box" title="' + e.start + ' ~ ' + e.end + ' (' + e.duration_days + '天)"></div>';
     html += '</div>';
   }
   html += '</div></div>';
@@ -4155,7 +4161,7 @@ async function renderDepot(container) {
   const fmt = t => t ? new Date(t * 1000).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
   const stateBadge = s => {
     if (s.state === 'running') return `<span style="color:var(--accent)">⏳ 扫描中</span>`;
-    if (s.state === 'done') return `<span style="color:var(--ok,#4caf50)">✅ ${s.summary||''}</span>`;
+    if (s.state === 'done') return `<span style="color:var(--ok)">✅ ${s.summary||''}</span>`;
     if (s.state === 'error') return `<span style="color:var(--danger)">❌ ${(s.error||'').slice(0,60)}</span>`;
     if (s.state === 'skipped') return `<span style="color:var(--text3)">⏭ ${s.reason||''}</span>`;
     return `<span style="color:var(--text3)">—</span>`;
@@ -4340,12 +4346,12 @@ async function depotShowPlan(aid) {
       const remain = p.remaining_days !== undefined ? ` · 预计还需 ${p.remaining_days} 天` : '';
       h += `<div style="font-size:10px;color:var(--text3);margin-bottom:4px">${src}${p.cur_sanity ? ` · 当前体力 ${p.cur_sanity}` : ''}${remain}</div>`;
     }
-    if (p.all_met) h += `<div style="color:var(--ok,#4caf50);font-size:12px">✅ 全部达标 ${p.met_count}/${p.total} — 刷余量最小材料保底</div>`;
+    if (p.all_met) h += `<div style="color:var(--ok);font-size:12px">✅ 全部达标 ${p.met_count}/${p.total} — 刷余量最小材料保底</div>`;
     else {
       const extras = [];
       if (p.skipped && p.skipped.length) extras.push(`${p.skipped.length} 个无推荐关`);
       if (p.locked && p.locked.length) extras.push(`${p.locked.length} 个进度锁定`);
-      h += `<div style="color:#ff9800;font-size:12px">⚠️ ${p.met_count}/${p.total} 达标, ${p.gap_fills.length} 个低于水位${extras.length?'（'+extras.join('、')+'）':''}</div>`;
+      h += `<div style="color:var(--warn);font-size:12px">⚠️ ${p.met_count}/${p.total} 达标, ${p.gap_fills.length} 个低于水位${extras.length?'（'+extras.join('、')+'）':''}</div>`;
     }
     h += `<table style="width:100%;border-collapse:collapse;font-size:10px;margin:8px 0">
       <thead><tr style="background:var(--bg2)">
@@ -4468,7 +4474,7 @@ async function depotSaveCfg() {
 
 // ── 守护审计页（2026-08-14 用户: 杀/关动作先确认再执行，留痕可回看）──
 const AUDIT_STATUS_COLOR = {
-  pending: 'var(--warn)', approved: '#4caf50', rejected: 'var(--danger)',
+  pending: 'var(--warn)', approved: 'var(--ok)', rejected: 'var(--danger)',
   expired: 'var(--text3)', executed: 'var(--accent)'
 };
 const AUDIT_ACTION_LABEL = {
@@ -4602,10 +4608,10 @@ async function maaLogAccChange() {
 function _hlMaaLog(line) {
   // 任务状态高亮（仿 MAA GUI 日志配色）
   let cls = 'var(--text3)';
-  if (/\[ERR\]|Error|失败|Failed/.test(line)) cls = '#ff6b6b';
-  else if (/AllTasksCompleted|全部任务完成|TaskChainCompleted/.test(line)) cls = '#51cf66';
+  if (/\[ERR\]|Error|失败|Failed/.test(line)) cls = 'var(--danger)';
+  else if (/AllTasksCompleted|全部任务完成|TaskChainCompleted/.test(line)) cls = 'var(--ok)';
   else if (/SubTaskStart/.test(line)) cls = 'var(--accent)';
-  else if (/\[WRN\]|Warning/.test(line)) cls = '#fcc419';
+  else if (/\[WRN\]|Warning/.test(line)) cls = 'var(--warn)';
   return `<span style="color:${cls}">${line}</span>`;
 }
 
@@ -4657,7 +4663,7 @@ async function renderAudit(container) {
     <span style="font-size:10px;color:var(--text3)">总 ${sm.total||0}</span>
     <span style="font-size:10px;color:var(--warn)">待确认 ${sm.pending||0}</span>
     <span style="font-size:10px;color:var(--danger)">已拦截 ${st.rejected||0}</span>
-    <span style="font-size:10px;color:#4caf50">已放行 ${st.approved||0}</span>
+    <span style="font-size:10px;color:var(--ok)">已放行 ${st.approved||0}</span>
     <span style="font-size:10px;color:var(--accent)">已执行 ${st.executed||0}</span>
     <button class="small" onclick="renderPage()">🔄 刷新</button>
   </div>
@@ -4688,7 +4694,7 @@ async function renderAudit(container) {
         <td style="padding:2px 4px;border:1px solid var(--border);max-width:260px;word-break:break-all;color:var(--text3)">${esc(e.evidence)}</td>
         <td style="padding:2px 4px;border:1px solid var(--border);text-align:center">${remain}m</td>
         <td style="padding:2px 4px;border:1px solid var(--border);text-align:center">
-          <button class="small" style="color:#4caf50" onclick="auditDecide('${e.id}',true)">✅ 放行</button>
+          <button class="small" style="color:var(--ok)" onclick="auditDecide('${e.id}',true)">✅ 放行</button>
           <button class="small" style="color:var(--danger)" onclick="auditDecide('${e.id}',false)">🛑 拦截</button>
         </td>
       </tr>`;
