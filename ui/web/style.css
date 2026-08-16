@@ -60,6 +60,22 @@
   --info: #6B8F3A;
   color-scheme: light;
 }
+/* ── 跟随系统（Auto）：无主题 class 时按系统深浅自动切换 ── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light):not(.theme-dark):not(.theme-notepaper) {
+    --bg: #161614; --bg2: #1E1D1B; --bg3: #292822; --bg4: #34332C;
+    --ink: #ECEAE2;
+    --text: #E7E5DE; --text2: #A6A49C; --text3: #6E6D66;
+    --border: #33322D; --border2: #4A4942;
+    --accent: #7096D1; --accent2: #9EB3CD; --accent3: #4D6FB4;
+    --accent-soft: rgba(112,150,209,.14);
+    --danger: #E0836F; --danger-soft: rgba(224,131,111,.14);
+    --warn: #E0B64E; --warn-soft: rgba(224,182,78,.14);
+    --ok: #84B26E; --ok-soft: rgba(132,178,110,.14);
+    --info: #7096D1;
+    color-scheme: dark;
+  }
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: var(--font); background: var(--bg); color: var(--text);

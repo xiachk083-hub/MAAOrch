@@ -118,11 +118,12 @@ async function refreshSidebar() {
 
 // ── Theme ──
 function setTheme(theme) {
-  const t = theme === 'Dark' ? 'theme-dark' : theme === 'Notepaper' ? 'theme-notepaper' : 'theme-light';
+  // Auto（默认）= 不设 class，由 CSS prefers-color-scheme 跟随系统深浅
+  const t = theme === 'Dark' ? 'theme-dark' : theme === 'Light' ? 'theme-light' : theme === 'Notepaper' ? 'theme-notepaper' : '';
   document.documentElement.className = t;
   localStorage.setItem('theme', theme);
 }
-const savedTheme = localStorage.getItem('theme') || 'Light';
+const savedTheme = localStorage.getItem('theme') || 'Auto';
 setTheme(savedTheme);
 
 // ── Page renderers ──
@@ -595,7 +596,10 @@ async function renderSettings(container) {
     </div>
     <div class="tab-content active" id="tab-general">
       <div class="form-row"><label>主题</label><select id="sel-theme" onchange="setTheme(this.value)">
-        <option value="Dark">暗色</option><option value="Light">亮色</option><option value="Notepaper">Notepaper</option>
+        <option value="Auto">跟随系统</option>
+        <option value="Light">亮色</option>
+        <option value="Dark">暗色</option>
+        <option value="Notepaper">Notepaper</option>
       </select></div>
       <div class="form-row"><label>并行上限</label>
   <div style="display:flex;align-items:center;gap:6px">
@@ -678,6 +682,9 @@ async function renderSettings(container) {
     <div class="tab-content" id="tab-stages">
       <div id="stage-lib-content"></div>
     </div>`;
+    // 回显当前主题选择（跟随系统为默认）
+    const selTheme = document.getElementById('sel-theme');
+    if (selTheme) selTheme.value = localStorage.getItem('theme') || 'Auto';
     // Tab switching
     container.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
