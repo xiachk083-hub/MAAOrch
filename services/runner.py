@@ -2813,6 +2813,36 @@ class AccountRunner:
         except Exception:
             pass
 
+    def _record_runtime_cannot(self, aid: str, stage: str, reason: str) -> None:
+        """回写 farm_probe.json: 该关实测不可刷（RUNTIME_CANNOT）。
+
+        2026-08-16 闭环（用户: 关卡刷不了有 4 种，其中「开挂过的关能进编队
+        但进不了关卡」「代理失误」是详情页判定看不出的——运行时才暴露）。
+        probe 预检只覆盖「详情页可见」的锁定（未解锁/借人不能代理）；
+        这里把运行时实测失败（导航失败/作战失败 2+ 帧）回写进 probe 缓存，
+        planner 下次规划按 ok=False 剔除该关自动重推，不再重复踩坑。
+
+        7 天窗口（同 CANNOT/DONE）：账号推主线后关卡可能解锁/借人权过期。
+        """
+        try:
+            import json as _json
+            from infrastructure.utils import atomic_write
+            base = Path(__file__).parent.parent / "models" / "accounts" / aid
+            p = base / "farm_probe.json"
+            d = {}
+            if p.exists():
+                try:
+                    d = _json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    d = {}
+            d[stage] = {"verdict": "RUNTIME_CANNOT", "ok": False,
+                        "detail": f"运行时实测不可刷: {reason}",
+                        "ts": time.time()}
+            atomic_write(p, _json.dumps(d, ensure_ascii=False, indent=2))
+            self._log.info(f"[回写] {aid} {stage} 标记 RUNTIME_CANNOT ({reason})")
+        except Exception:
+            pass
+
     def _downgrade_stage(self, aid: str, ac: dict, p) -> bool:
         """Fight failed (unlocked/navigation) → record check, retry next stage.
         Returns True if a downgrade/restart was issued."""
@@ -2824,6 +2854,8 @@ class AccountRunner:
         ac["_stage_fallback"] = fallback[1:]
         if cur_stage:
             self._record_stage_check(aid, cur_stage, "nav_fail")
+            # 2026-08-16 闭环: 运行时实测不可刷 → 回写 probe 缓存, 规划层重推
+            self._record_runtime_cannot(aid, cur_stage, "导航/进入作战失败")
         name = ac.get("name", aid)
         self.emit_log(f"⬇ {name} 关卡「{cur_stage or '?'}」不可刷，降级到「{next_stage}」")
         self._log.info(f"[降级] {name}: {cur_stage} → {next_stage}")

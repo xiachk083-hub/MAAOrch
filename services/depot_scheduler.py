@@ -234,7 +234,10 @@ class DepotScanner:
             old = cache.get(stage)
             if old and old.get("verdict") == "CAN_FARM":
                 return old
-            if old and old.get("ts") and old.get("verdict") in ("CANNOT", "DONE"):
+            # RUNTIME_CANNOT: runner 运行时实测回写（导航失败/作战失败 2+ 帧）,
+            # 7 天窗口内直接锁定（2026-08-16 闭环）; 过期后重测。
+            if old and old.get("ts") and old.get("verdict") in (
+                    "CANNOT", "DONE", "RUNTIME_CANNOT"):
                 if time.time() - float(old["ts"]) < 7 * 86400:
                     old["ok"] = False
                     return old
