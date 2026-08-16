@@ -123,6 +123,12 @@ function setTheme(theme) {
   document.documentElement.className = t;
   localStorage.setItem('theme', theme);
 }
+// 新 UI 首次进入：旧版默认主题是「暗色」且存进过 localStorage，
+// 会覆盖新版「跟随系统」默认 → 迁移：首次打开丢弃旧选择回到 Auto。
+if (!localStorage.getItem('maorch_ui_v')) {
+  localStorage.removeItem('theme');
+  localStorage.setItem('maorch_ui_v', '2');
+}
 const savedTheme = localStorage.getItem('theme') || 'Auto';
 setTheme(savedTheme);
 
