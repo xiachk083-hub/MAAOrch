@@ -89,6 +89,7 @@ DEFAULT_FILES = [
     "manager/manager.py",
     "config/material_water_levels.json",
     "config/farm_stages.json",
+    "config/drop_matrix.json",
     "config/activity_stages.json",
 ]
 

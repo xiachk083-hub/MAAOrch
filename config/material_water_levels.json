@@ -22,5 +22,7 @@
   "daily_scan_time": "04:30",
   "scan_enabled": true,
   "penguin_refresh_time": "03:30",
-  "penguin_enabled": true
+  "penguin_enabled": true,
+  "plan_mode": "lp",
+  "allow_craft": true
 }

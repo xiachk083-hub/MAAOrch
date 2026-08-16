@@ -25,6 +25,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).parent.parent
 DB_PATH = ROOT / "data" / "penguin.db"
 FARM_STAGES_PATH = ROOT / "config" / "farm_stages.json"
+DROP_MATRIX_PATH = ROOT / "config" / "drop_matrix.json"
 MAA_RES = ROOT / "services" / "maa" / "source" / "resource"
 
 # 蓝材料（T3）标准清单 — 备选榜覆盖的 17 个核心材料
@@ -270,8 +271,61 @@ def audit_farm_table(farm: dict) -> list:
     return missing_all
 
 
+def build_drop_matrix(agg: dict) -> dict:
+    """聚合矩阵 → 副产品全量表 {code: {ap, sample, drops: {itemId: rate}}}。
+
+    LP 全局规划用（2026-08-16 完整升级）:
+    - 与 farm_stages 同源（企鹅矩阵），但保留每关对全部 17 蓝材料的期望
+      掉落（含 EXTRA 期望——副产品抵扣按数学期望计入，与 arkntools 同口径）
+    - 只收 17 蓝材料（BLUE_MATERIALS）掉落；磨难独立 -HARD 条目
+    - 未知 stageId / 样本 < 500 / 掉率异常(0~5) 剔除，与 farm_stages 规则一致
+    """
+    items, stages = _load_maa()
+    name2id = {v["name"]: k for k, v in items.items()}
+    target_ids = {name2id[n] for n in BLUE_MATERIALS if n in name2id}
+    stage_map = {}  # stageId -> (code, ap)
+    for st in stages:
+        sid = st["stageId"]
+        if not is_resident(sid):
+            continue
+        hard = sid.startswith("tough_")
+        code = f"{st['code']}-HARD" if hard else st["code"]
+        stage_map[sid] = (code, st["apCost"])
+    out: dict = {}
+    for (sid, iid), (q, t) in agg.items():
+        if iid not in target_ids or sid not in stage_map:
+            continue
+        if t < 500:
+            continue
+        code, ap = stage_map[sid]
+        rate = q / t
+        if not (0 < rate <= 5):
+            continue
+        e = out.setdefault(code, {"ap": ap, "drops": {}, "sample": t})
+        e["drops"][iid] = round(rate, 4)
+        if t > e["sample"]:
+            e["sample"] = t
+    return out
+
+
+def regen_drop_matrix() -> dict:
+    """用最新快照重生成副产品表（LP 规划数据源），写 config/drop_matrix.json。"""
+    c = _conn()
+    try:
+        agg = latest_agg(c)
+    finally:
+        c.close()
+    if not agg:
+        return {"attempted": True, "ok": False, "error": "本地库无数据"}
+    dm = build_drop_matrix(agg)
+    DROP_MATRIX_PATH.parent.mkdir(parents=True, exist_ok=True)
+    DROP_MATRIX_PATH.write_text(json.dumps(dm, ensure_ascii=False, indent=2),
+                                encoding="utf-8")
+    return {"attempted": True, "ok": True, "stages": len(dm)}
+
+
 def regen_farm_table() -> dict:
-    """用最新快照重生成备选榜，审计总漏 0 才替换生效。"""
+    """用最新快照重生成备选榜（+副产品表），审计总漏 0 才替换生效。"""
     c = _conn()
     try:
         agg = latest_agg(c)
@@ -287,7 +341,11 @@ def regen_farm_table() -> dict:
     FARM_STAGES_PATH.parent.mkdir(parents=True, exist_ok=True)
     FARM_STAGES_PATH.write_text(json.dumps(farm, ensure_ascii=False, indent=2),
                                 encoding="utf-8")
-    return {"attempted": True, "ok": True, "materials": len(farm)}
+    dm = build_drop_matrix(agg)
+    DROP_MATRIX_PATH.write_text(json.dumps(dm, ensure_ascii=False, indent=2),
+                                encoding="utf-8")
+    return {"attempted": True, "ok": True, "materials": len(farm),
+            "drop_stages": len(dm)}
 
 
 # ── 定时线程 ──

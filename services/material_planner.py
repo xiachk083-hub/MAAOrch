@@ -62,7 +62,19 @@ ROOT = pathlib.Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))  # 直接 python services/xx.py 时根不在 sys.path
 CONFIG_PATH = ROOT / "config" / "material_water_levels.json"
 FARM_STAGES_PATH = ROOT / "config" / "farm_stages.json"
+DROP_MATRIX_PATH = ROOT / "config" / "drop_matrix.json"
 REPORT_DIR = ROOT / "data" / "reports"
+
+# LP 求解器（2026-08-16 完整升级: 全局最小理智 + 合成/副产品决策）
+# scipy/numpy 缺失时自动回退贪心模式（plan_mode="greedy" 等价旧行为）。
+try:
+    import numpy as _np
+    from scipy.optimize import linprog as _linprog
+    _HAS_LP = True
+except ImportError:
+    _np = None
+    _linprog = None
+    _HAS_LP = False
 
 
 def load_farm_stages() -> dict:
@@ -70,6 +82,27 @@ def load_farm_stages() -> dict:
     if FARM_STAGES_PATH.exists():
         return json.loads(FARM_STAGES_PATH.read_text(encoding="utf-8"))
     return FARM_TABLE
+
+
+def load_drop_matrix() -> dict:
+    """副产品全量表 config/drop_matrix.json（企鹅矩阵, 每关对 17 蓝材料期望）。
+
+    缺失时从 farm_stages 退化：仅主掉落单材料向量（无副产品抵扣）。
+    """
+    if DROP_MATRIX_PATH.exists():
+        return json.loads(DROP_MATRIX_PATH.read_text(encoding="utf-8"))
+    dm = {}
+    for m, stages in load_farm_stages().items():
+        for s in stages:
+            dm.setdefault(s["stage"], {"ap": s.get("ap", 18),
+                                       "drops": {}, "sample": 0})
+    return dm
+
+
+def load_item_index() -> dict:
+    """MAA item_index.json（材料名 <-> itemId 权威映射，与企鹅/工具箱同体系）。"""
+    p = ROOT / "services" / "maa" / "source" / "resource" / "item_index.json"
+    return json.loads(p.read_text(encoding="utf-8"))
 
 
 def stage_chapter(code: str) -> int | None:
@@ -182,6 +215,30 @@ def observed_daily_ap(aid: str) -> float | None:
 
 def plan(snapshot: dict, config: dict, budget: int | None = None,
          chapter: int | None = None, probe_fn=None) -> dict:
+    """规划入口: 按配置 plan_mode 分发。
+
+    - "lp"（默认, 需 scipy）: 全局最小理智线性规划, 合成+副产品抵扣
+    - "greedy": 旧贪心（每材料 top1 关, 纯刷）; scipy 缺失时自动回退
+    """
+    mode = config.get("plan_mode", "lp")
+    if mode == "lp" and _HAS_LP:
+        try:
+            return plan_lp(snapshot, config, budget=budget, chapter=chapter,
+                           probe_fn=probe_fn)
+        except Exception as e:  # LP 异常兜底, 不阻塞扫描
+            import traceback as _tb
+            _tb.print_exc()
+            cfg2 = dict(config)
+            cfg2["plan_mode"] = "greedy"
+            cfg2["_lp_error"] = str(e)[:300]
+            return plan_greedy(snapshot, cfg2, budget=budget, chapter=chapter,
+                               probe_fn=probe_fn)
+    return plan_greedy(snapshot, config, budget=budget, chapter=chapter,
+                       probe_fn=probe_fn)
+
+
+def plan_greedy(snapshot: dict, config: dict, budget: int | None = None,
+                chapter: int | None = None, probe_fn=None) -> dict:
     """Water-level planning. Returns full plan dict for report rendering.
 
     chapter: 账号主线进度（None=不过滤，如 10=最多能刷 10 章）。
@@ -320,6 +377,317 @@ def plan(snapshot: dict, config: dict, budget: int | None = None,
     }
 
 
+# ═══════════════════════════════════════════════════════════════════
+# LP 全局规划（2026-08-16 完整升级: 最小理智 + 合成决策 + 副产品抵扣）
+# ═══════════════════════════════════════════════════════════════════
+
+def _name2id() -> dict:
+    try:
+        return {v["name"]: k for k, v in load_item_index().items()}
+    except Exception:
+        return {}
+
+
+def _solve_lp(cands: dict, mat_drops: dict, gaps: dict, name2id: dict,
+              allow_craft: bool, counts: dict) -> dict | None:
+    """核心 LP: min Σ ap_s·x_s, s.t. ∀m Σ_s drop_{s,m}·x_s + y_m ≥ gap_m。
+
+    cands:     {code: {"ap": int}}
+    mat_drops: {材料名: {code: rate}} — 每材料合格关的掉率（已按效率门槛过滤）
+    gaps:      {材料名: 缺口数}
+    返回 {"x": {code: 次数(实数)}, "y": {材料: 合成数(实数)}} 或 None(无解)。
+    """
+    mat_names = list(gaps.keys())
+    codes = sorted(cands.keys())
+    craft_names = ([m for m in mat_names if m in CRAFT_RECIPES]
+                   if allow_craft else [])
+    n_stage, n_craft = len(codes), len(craft_names)
+
+    c = _np.array([cands[cd]["ap"] for cd in codes] + [0.0] * n_craft)
+    A_ub, b_ub = [], []
+    for i, m in enumerate(mat_names):
+        drops = mat_drops.get(m, {})
+        row = [drops.get(cd, 0.0) for cd in codes]
+        if m in craft_names:
+            ci = craft_names.index(m)
+            # 合成变量系数=1（1 个成品补 1 个缺口）；ratio 只用于库存上限
+            row += [1.0 if j == ci else 0.0 for j in range(n_craft)]
+        else:
+            row += [0.0] * n_craft
+        A_ub.append([-v for v in row])
+        b_ub.append(-gaps[m])
+    bounds = [(0, None)] * n_stage
+    for m in craft_names:
+        t1 = CRAFT_RECIPES[m]["t1"]
+        have = int(counts.get(t1, 0))
+        bounds.append((0, max(0, have // CRAFT_RECIPES[m]["ratio"])))
+    res = _linprog(c, A_ub=_np.array(A_ub), b_ub=_np.array(b_ub),
+                   bounds=bounds, method="highs")
+    if not res.success:
+        return None
+    x = res.x
+    return {
+        "x": {cd: float(x[j]) for j, cd in enumerate(codes) if x[j] > 1e-9},
+        "y": {m: float(x[n_stage + k]) for k, m in enumerate(craft_names)
+              if x[n_stage + k] > 1e-9},
+    }
+
+
+def _build_days_from_stage_times(stage_times: dict, gaps: dict,
+                                 budget: int) -> list:
+    """关级任务多日排程: 单次 AP 升序, 每日预算填满顺延。
+
+    stage_times: {code: {times, ap, name(主材料名)}}。返回 days 列表。
+    """
+    tasks = sorted(stage_times.values(), key=lambda t: t["ap"])
+    remain = {t["stage"]: t["times"] for t in tasks}
+    days: list[dict] = []
+    while any(v > 0 for v in remain.values()):
+        day_items = []
+        ap_used = 0
+        budget_left = budget
+        for t in tasks:
+            st, ap = t["stage"], t["ap"]
+            if budget_left <= 0 or remain[st] <= 0:
+                continue
+            n = min(remain[st], budget_left // ap)
+            if n <= 0:
+                continue
+            remain[st] -= n
+            day_items.append({"name": t["name"], "stage": st, "rounds": n})
+            ap_used += int(n * ap)
+            budget_left -= int(n * ap)
+        if not day_items:
+            break
+        days.append({"items": day_items, "ap_used": ap_used,
+                     "leftover": int(budget_left)})
+    return days
+
+
+def plan_lp(snapshot: dict, config: dict, budget: int | None = None,
+            chapter: int | None = None, probe_fn=None) -> dict:
+    """LP 全局最小理智规划（合成+副产品抵扣, 多关混合）。
+
+    与 plan_greedy 同签名/同输出结构（days/gap_fills/locked/topup 兼容），
+    gap_fills 每材料一条: farm=[{stage,rounds}]（可多关）+ craft 合成字段。
+    """
+    farm = load_farm_stages()
+    drop_mx = load_drop_matrix()
+    levels: dict = config.get("materials", {})
+    budget = budget if budget is not None else int(config.get("ap_budget_per_day", 1000))
+    allow_craft = bool(config.get("allow_craft", True))
+    counts = snapshot.get("named", {})
+    if snapshot.get("error"):
+        return {"error": snapshot["error"]}
+    name2id = _name2id()
+
+    rows = []
+    for name, level in levels.items():
+        cur = counts.get(name, 0)
+        gap = max(0, level - cur)
+        rows.append({"name": name, "cur": cur, "level": level,
+                     "margin": cur - level, "gap": gap})
+    gaps = {r["name"]: r["gap"] for r in rows if r["gap"] > 0}
+
+    # ── 候选关: farm 备选并集 ∩ drop_matrix（副产品向量全量）──
+    cand: dict = {}
+    for m, stages in farm.items():
+        for s in stages:
+            code = s["stage"]
+            dm = drop_mx.get(code)
+            if not dm:
+                continue
+            cand.setdefault(code, {"ap": dm["ap"]})
+    if chapter is not None:
+        cand = {c: v for c, v in cand.items()
+                if (stage_chapter(c) is not None and stage_chapter(c) <= chapter)}
+
+    # ── 效率门槛: 每材料只留 eap ≤ 最优 eap × factor 的关（2026-08-16 模拟暴露:
+    #    候选被压缩到只剩超低掉率关时, LP 会硬刷上千次凑缺口 → 必须锁给用户）──
+    eap_factor = float(config.get("lp_eap_factor", 2.5))
+    mat_drops: dict = {}  # {材料名: {code: rate}} 合格关掉率
+    for m, stages in farm.items():
+        if not stages:
+            continue
+        best_eap = stages[0].get("ap", 18) / max(stages[0]["rate"], 1e-6)
+        cap_eap = best_eap * eap_factor
+        ok: dict = {}
+        for s in stages:
+            code = s["stage"]
+            if code not in cand:
+                continue
+            rate = drop_mx.get(code, {}).get("drops", {}).get(name2id.get(m, ""), 0)
+            if rate <= 0:
+                continue
+            eap = cand[code]["ap"] / rate
+            if eap <= cap_eap or rate >= 0.25:  # 绝对掉率下限兜底(好关不许被门槛误杀)
+                ok[code] = rate
+        if ok:
+            mat_drops[m] = ok
+
+    probe_log: dict = {}
+    banned: set = set()
+
+    def _cand_now():
+        return {c: v for c, v in cand.items() if c not in banned}
+
+    # 无合格关/不可合成的材料 → locked（craft 兜底）
+    locked: list[dict] = []
+    gap_pool = dict(gaps)
+    solved = {m: g for m, g in gap_pool.items()
+              if mat_drops.get(m) or (m in CRAFT_RECIPES and allow_craft)}
+    unsolved = {m: g for m, g in gap_pool.items() if m not in solved}
+    for m, g in unsolved.items():
+        r = next((x for x in rows if x["name"] == m), {"name": m})
+        if m in CRAFT_RECIPES and allow_craft:
+            rc = CRAFT_RECIPES[m]
+            locked.append({**r, "locked": True, "best": "",
+                           "lock_reason": "无合格掉落关(效率门槛), 用合成兜底",
+                           "craft": {"t1": rc["t1"], "ratio": rc["ratio"],
+                                     "stage": rc["stage"], "gold": rc["gold"],
+                                     "need": g * rc["ratio"]}})
+        else:
+            locked.append({**r, "locked": True, "best": "",
+                           "lock_reason": "无合格掉落关且无合成配方"})
+    gaps = solved
+
+    sol = None
+    if gaps:
+        for _round in range(4):  # probe 锁定迭代重解
+            sol = _solve_lp(_cand_now(), mat_drops, gaps, name2id,
+                            allow_craft, counts)
+            if sol is None:
+                break
+            if probe_fn is None:
+                break
+            # 解出的关逐个实测, 锁定剔除重解
+            new_banned = []
+            for cd in sol["x"]:
+                pr = probe_fn(cd)
+                probe_log[cd] = {k: pr.get(k) for k in ("ok", "verdict", "score", "detail")}
+                if pr.get("ok") is False:
+                    new_banned.append(cd)
+            if not new_banned:
+                break
+            banned.update(new_banned)
+
+    # LP 无解(如合格关全被 probe 锁死/合成上限不足): 剩余缺口转 locked 兜底,
+    # 绝不允许静默丢失缺口（2026-08-16 模拟暴露）。
+    if gaps and sol is None:
+        for m, g in list(gaps.items()):
+            gaps.pop(m)
+            r = next((x for x in rows if x["name"] == m), {"name": m})
+            if m in CRAFT_RECIPES and allow_craft:
+                rc = CRAFT_RECIPES[m]
+                locked.append({**r, "locked": True, "best": "",
+                               "lock_reason": "可用关不足以覆盖缺口, 用合成兜底",
+                               "craft": {"t1": rc["t1"], "ratio": rc["ratio"],
+                                         "stage": rc["stage"], "gold": rc["gold"],
+                                         "need": g * rc["ratio"]}})
+            else:
+                locked.append({**r, "locked": True, "best": "",
+                               "lock_reason": "可用关不足以覆盖缺口且无合成配方"})
+
+    # ── 结果组装 ──
+    gap_fills: list[dict] = []
+    stage_times: dict = {}
+    if sol:
+        times = {cd: math.ceil(v) for cd, v in sol["x"].items()}
+        craft_y = {m: math.ceil(v) for m, v in sol["y"].items()}
+        for m, g in gaps.items():
+            drops_m = mat_drops.get(m, {})
+            farm_rows = []
+            for cd, t in times.items():
+                rate = drops_m.get(cd, 0)
+                if rate > 0:
+                    farm_rows.append({"stage": cd, "rounds": t, "rate": rate,
+                                      "gain": round(t * rate, 1)})
+            farm_rows.sort(key=lambda x: -x["gain"])
+            craft = None
+            if m in craft_y and craft_y[m] > 0:
+                rc = CRAFT_RECIPES[m]
+                craft = {"t1": rc["t1"], "ratio": rc["ratio"],
+                         "stage": rc["stage"], "gold": rc["gold"],
+                         "num": craft_y[m], "need": craft_y[m] * rc["ratio"]}
+            gain_total = round(sum(f["gain"] for f in farm_rows), 1)
+            if not farm_rows and not craft:
+                continue
+            if farm_rows:
+                main = farm_rows[0]
+            else:
+                main = {"stage": "🔧合成", "rounds": craft["num"]}
+            for fr in farm_rows:
+                stage_times.setdefault(fr["stage"],
+                                       {"stage": fr["stage"], "ap": cand[fr["stage"]]["ap"],
+                                        "times": 0, "name": m})
+                stage_times[fr["stage"]]["times"] = fr["rounds"]
+            ap_cost = sum(fr["rounds"] * cand[fr["stage"]]["ap"]
+                          for fr in farm_rows)
+            gap_fills.append({
+                "name": m, "cur": next(r["cur"] for r in rows if r["name"] == m),
+                "level": next(r["level"] for r in rows if r["name"] == m),
+                "gap": g,
+                "stage": main["stage"], "rounds": main["rounds"],
+                "expected_gain": gain_total,
+                "ap_cost": ap_cost,
+                "farm": farm_rows,
+                "craft": craft,
+            })
+        # 同关多材料: times 取最大（同关只刷一次, 次数即 LP 解）
+        for cd, t in times.items():
+            if cd in stage_times:
+                stage_times[cd]["times"] = t
+
+    days = _build_days_from_stage_times(stage_times, gaps, budget)
+
+    # ── 补刀: 排程末剩余预算 → 余量最小材料（与 greedy 同）──
+    last_leftover = budget
+    if days:
+        last_leftover = days[-1]["leftover"]
+    topup = None
+    if not locked and gaps:
+        for r in sorted(rows, key=lambda x: x["margin"]):
+            stages = farm.get(r["name"])
+            if not stages or r["name"] in gaps:
+                continue
+            st = pick_stage(stages, chapter, probe_fn)
+            if st:
+                topup_r = last_leftover // st["ap"]
+                if topup_r > 0:
+                    topup = {**r, "stage": st["stage"], "rounds": topup_r,
+                             "expected_gain": round(topup_r * st["rate"], 1),
+                             "ap_cost": topup_r * st["ap"]}
+                break
+
+    skipped = [r for r in rows if r["gap"] > 0 and r["name"] not in farm
+               and r["name"] not in gaps and r["name"] not in
+               {l["name"] for l in locked}]
+    met = [r for r in rows if r["gap"] == 0 and r["name"] in farm]
+    total_ap = sum(t["ap"] * t["times"] for t in stage_times.values())
+    return {
+        "account": snapshot.get("account", ""),
+        "account_id": snapshot.get("account_id", ""),
+        "ts": snapshot.get("ts", ""),
+        "snapshot_file": snapshot.get("_snapshot_file", ""),
+        "budget": budget,
+        "chapter": chapter,
+        "plan_mode": "lp",
+        "allow_craft": allow_craft,
+        "lp_error": config.get("_lp_error"),
+        "rows": rows,
+        "gap_fills": gap_fills,
+        "skipped": skipped,
+        "locked": locked,
+        "days": days,
+        "total_ap": total_ap,
+        "topup": topup,
+        "probe": probe_log,
+        "met_count": len(met),
+        "total": len(levels),
+        "all_met": not gap_fills,
+    }
+
+
 def render_report(p: dict) -> str:
     if p.get("error"):
         return f"ERROR: {p['error']}"
@@ -346,12 +714,16 @@ def render_report(p: dict) -> str:
                      (f", {'、'.join(extra)}" if extra else ""))
     if p.get("chapter") is not None:
         lines.append(f"主线进度过滤: ≤ {p['chapter']} 章（备选关顺位选取）")
+    if p.get("plan_mode") == "lp":
+        craft_note = "合成+副产品抵扣" if p.get("allow_craft") else "纯刷(副产品抵扣)"
+        lines.append(f"规划模式: LP 全局最小理智（{craft_note}）")
 
     # ── 现状全览 ──
     lines.append("")
     lines.append(f"{'材料':<8}{'仓库':>7}{'水位':>7}{'余量':>7}  "
                  f"{'推荐关':<10}{'刷取次数':>8}{'期望收获':>8}{'期望AP':>8}")
     lines.append("-" * 80)
+    fill_by_name = {f["name"]: f for f in p["gap_fills"]}
     for r in p["rows"]:
         if r.get("locked"):
             stage = f"锁(最优{r['best']})"
@@ -359,12 +731,19 @@ def render_report(p: dict) -> str:
             gain = "-"
             apc = "-"
         else:
-            stage = r.get("stage", "")
-            if r.get("alt_of"):
-                stage += " *"
-            rounds = str(r.get("rounds", "-"))
-            gain = f"{r.get('expected_gain', 0)}" if r.get("rounds") else "-"
-            apc = str(r.get("ap_cost", "-"))
+            f = fill_by_name.get(r["name"])
+            if f:
+                stage = f.get("stage", "")
+                rounds = str(f.get("rounds", "-"))
+                gain = f"{f.get('expected_gain', 0)}" if f.get("rounds") else "-"
+                apc = str(f.get("ap_cost", "-"))
+            else:
+                stage = r.get("stage", "")
+                if r.get("alt_of"):
+                    stage += " *"
+                rounds = str(r.get("rounds", "-"))
+                gain = f"{r.get('expected_gain', 0)}" if r.get("rounds") else "-"
+                apc = str(r.get("ap_cost", "-"))
         lines.append(f"{r['name']:<8}{r['cur']:>7}{r['level']:>7}{r['margin']:>+7}  "
                      f"{stage:<10}{rounds:>8}{gain:>8}{apc:>8}")
 
@@ -374,10 +753,21 @@ def render_report(p: dict) -> str:
         lines.append("── 刷取任务（按 AP 消耗升序）──")
         for r in p["gap_fills"]:
             alt = f"（次优关，最优 {r['alt_of']} 超出进度）" if r.get("alt_of") else ""
-            lines.append(f"  {r['name']}: 缺 {r['gap']} → {r['stage']} × "
-                         f"{r['rounds']} 次 (期望 +{r['expected_gain']}, "
-                         f"{r['ap_cost']} AP){alt}")
+            farm = r.get("farm") or [{"stage": r.get("stage"),
+                                      "rounds": r.get("rounds", 0)}]
+            src = " + ".join(f"{x['stage']}×{x['rounds']}" for x in farm if x.get("stage"))
+            lines.append(f"  {r['name']}: 缺 {r['gap']} → {src} "
+                         f"(期望 +{r['expected_gain']}, {r['ap_cost']} AP){alt}")
+            if r.get("craft"):
+                c = r["craft"]
+                lines.append(f"    🔧 合成: {c['t1']}×{c['need']} "
+                             f"→ 合 {c['num']} 个 ({c['gold']} 龙门币/个)")
         lines.append(f"  合计 {len(p['gap_fills'])} 个任务 {p['total_ap']} AP")
+        craft_cost = sum((r.get("craft") or {}).get("num", 0)
+                         * (r.get("craft") or {}).get("gold", 0)
+                         for r in p["gap_fills"])
+        if craft_cost:
+            lines.append(f"  🔧 合成龙门币: 约 {craft_cost:,}")
 
         # ── 多日排程 ──
         lines.append("")
@@ -395,14 +785,15 @@ def render_report(p: dict) -> str:
         lines.append("")
         lines.append("── 无法刷取 ──")
         for r in p["locked"]:
+            best_txt = f"，最优 {r['best']} 起" if r.get("best") else ""
             if r.get("craft"):
                 c = r["craft"]
-                lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '锁定')}，"
-                             f"最优 {r['best']} 起) → 🔧 合成兜底: 刷 {c['t1']}({c['stage']}) "
+                lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '锁定')}{best_txt})"
+                             f" → 🔧 合成兜底: 刷 {c['t1']}({c['stage']}) "
                              f"{c['need']} 个 → 合成 {r['gap']} 个 ({c['gold']} 龙门币/个)")
             else:
-                lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '锁定')}，"
-                             f"最优 {r['best']} 起) → 无合成配方（仅掉落/兑换）")
+                lines.append(f"  {r['name']}: 缺 {r['gap']} ({r.get('lock_reason', '锁定')}{best_txt})"
+                             f" → 无合成配方（仅掉落/兑换）")
 
     # ── 代理预检结果 ──
     if p.get("probe"):
