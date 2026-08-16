@@ -198,8 +198,11 @@ class StageProbe:
                 pass
         return titles
 
-    def _ocr_texts(self, img: np.ndarray, roi=None) -> list[tuple[str, float]]:
-        """OCR 截图（内联复用 MAA PaddleOCR ONNX — ocr_tool.py 核心）。"""
+    def _ocr_texts(self, img: np.ndarray, roi=None) -> list[tuple[str, tuple, float]]:
+        """OCR 截图（内联复用 MAA PaddleOCR ONNX — ocr_tool.py 核心）。
+
+        返回 [(文字, (x,y,w,h), 置信度)] — 调用方按三元组解包。
+        """
         import cv2
         import onnxruntime as ort
         inst = self._inst_dir()
@@ -578,6 +581,123 @@ class StageProbe:
             self._log(f"--- {s} ---")
             out[s] = self.probe(s)
         return out
+
+    # ── 剿灭周常检测（2026-08-16 用户实测定稿）──────────────────────
+    # 机制（用户实锤 + 15 台官服样本）:
+    #   · 剿灭关没有三星；"星级"= 该关 400 杀（达成即永久解锁全权代理，打一次定下来）
+    #   · 本周是否可刷 = 终端页（常态事务）有没有「剿灭作战」卡片:
+    #       有卡片 = 本周未刷 → CAN_FARM；无卡片 = 本周已刷 → DONE
+    #   · 上限因号而异（400/1700/1800），看左下角 X/Y，X==Y 即满
+    #   · MAA 导航信号（实测 b-3 成功 vs b-2 失败）:
+    #       成功 = GoLastBattle@QuickSwitch@ToTerminal → Annihilation → UsePrts-Annihilation
+    #       失败 = Terminal-Entry → TerminalTogether → Annihilation 识别 20 次失败
+    #   （失败=终端页无剿灭卡片=本周已刷，结果应为 DONE 而非 CANNOT）
+    #
+    # 判定：不用 MAA 判断结果（判定铁律），用 asst.log 导航信号 + 截图交叉验证。
+    def probe_annihilation_weekly(self, stage: str = "Annihilation") -> dict:
+        """检测账号本周剿灭是否可刷（终端页有无剿灭卡片）。
+
+        复用 MAA 导航（_run_asst Fight times=0）到达剿灭入口，读取 asst.log
+        导航信号 + 截图交叉验证，返回:
+          CAN_FARM 本周未刷（导航成功进入剿灭入口）
+          DONE     本周已刷（导航失败：终端页无剿灭卡片）
+          SHOTFAIL 截图失败
+        """
+        # 1) 启动模拟器 + StartUp 登录（复用 probe 的启动逻辑）
+        from infrastructure.task_constants import find_mumu_cli
+        cli = find_mumu_cli()
+        idx_flag = "-v" if "MuMuManager" in cli else "--vmindex"
+        try:
+            r = subprocess.run([cli, "info", idx_flag, self.emu_idx],
+                               capture_output=True, text=True, timeout=8,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                               encoding="utf-8", errors="replace")
+            d = json.loads(r.stdout.lstrip("\ufeff").strip())
+            if not (d.get("is_android_started") or d.get("is_process_started")):
+                self._log(f"启动模拟器 #{self.emu_idx}...")
+                subprocess.run([cli, "control", idx_flag, self.emu_idx, "launch"],
+                               capture_output=True, timeout=15,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                deadline = time.time() + 240
+                while time.time() < deadline:
+                    time.sleep(5)
+                    try:
+                        r2 = subprocess.run([cli, "info", idx_flag, self.emu_idx],
+                                            capture_output=True, text=True, timeout=8,
+                                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                                            encoding="utf-8", errors="replace")
+                        d2 = json.loads(r2.stdout.lstrip("\ufeff").strip())
+                        if d2.get("is_android_started") and d2.get("adb_port"):
+                            break
+                    except Exception:
+                        pass
+        except Exception as e:
+            self._log(f"模拟器检查失败: {e}")
+
+        self._log(f"StartUp (client={self.client_type})...")
+        self._run_asst(stage, start_game=True)
+        time.sleep(1)
+
+        # 2) 清空 asst.log 只留本轮导航日志
+        self._clear_log()
+        self._log(f"导航 {stage}（MAA 自动寻路到剿灭入口）...")
+        ok = self._run_asst(stage, start_game=False)
+        time.sleep(2)
+
+        # 3) 读 asst.log 导航信号（判定铁律：以 MAA 真实导航为准）
+        inst_dir = self._inst_dir()
+        log_path = inst_dir / "debug" / "asst.log"
+        text = ""
+        try:
+            if log_path.exists():
+                text = log_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+        nav_success = "UsePrts-Annihilation" in text or "AnnihilationConfirm" in text
+        nav_failed_terminal = ("SubTaskError" in text and "Annihilation" in text) \
+            or ("TerminalTogether" in text and "TaskChainError" in text)
+        quick_switch = "GoLastBattle@QuickSwitch" in text
+
+        self._log(f"  导航信号: nav_success={nav_success} "
+                  f"quick_switch={quick_switch} terminal_fail={nav_failed_terminal}")
+
+        # 4) 截图交叉验证（判定铁律：日志 + 画面双确认）
+        img = self._capture()
+        if img is None:
+            return {"verdict": "SHOTFAIL", "score": 0.0,
+                    "detail": f"导航后截图失败（nav_success={nav_success}）"}
+
+        # 保存现场截图（排查用）
+        try:
+            import cv2
+            d = pathlib.Path(__file__).parent.parent / "logs" / "probe_shots"
+            d.mkdir(exist_ok=True)
+            cv2.imwrite(str(d / f"anni_weekly_{int(time.time())}.png"), img)
+        except Exception:
+            pass
+
+        # 5) 组合判定
+        if nav_success:
+            # MAA 成功进入剿灭入口 → 本周有卡片 → 可刷
+            result = self.judge(img)  # 详情页三态判定（CAN_FARM/CANNOT/DONE）
+            if result["verdict"] == VERDICT_DONE:
+                # judge 判 DONE 可能因为画面不在详情页；但 MAA 已导航成功，
+                # 交叉验证：截图上应能看到代理指挥/开始行动
+                texts = self._ocr_texts(img)
+                joined = "|".join(t for t, _b, _s in texts)
+                if "代理" in joined or "开始行动" in joined or "行动" in joined:
+                    return {"verdict": VERDICT_CAN_FARM, "score": result["score"],
+                            "detail": "导航成功进入剿灭入口（画面含代理/开始行动）"}
+            return result
+        if nav_failed_terminal or not quick_switch:
+            # MAA 导航失败（终端页无剿灭卡片）→ 本周已刷
+            return {"verdict": VERDICT_DONE, "score": 0.0,
+                    "detail": "终端页无剿灭卡片（MAA 导航失败）— 本周已刷或未解锁入口"}
+        # 兜底：日志无明确信号 → 以画面为准
+        result = self.judge(img)
+        self._log(f"判定(兜底): {result['verdict']}")
+        return result
 
 
 def run_cli() -> None:
