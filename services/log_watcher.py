@@ -394,10 +394,13 @@ class LogWatcher(threading.Thread):
             # 补全事件类型（2026-08-11 用户: 日志要全量收集，避免遗漏）
             elif "TaskStart" in line or "TaskChainStart" in line:
                 _record_event(self._aid, "task_start", line)
-            elif "TaskCompleted" in line:
+            elif "TaskCompleted" in line and "SubTaskCompleted" not in line:
                 # 断点续做（2026-08-16）: 单任务链完成 → 记入 AccountState
                 # done_chains（本次任务已完成方块），重启注入时跳过。
                 # 格式: ...TaskChainCompleted... "taskchain":"StartUp"
+                # ⚠️ 2026-08-17 修复: 必须排除 SubTaskCompleted（子任务完成，
+                # 也含 "TaskCompleted" 子串 + taskchain 字段）— 否则 Fight 第一个
+                # 子任务完成就被误记 "Fight" 完成 → 断点续做跳过刷体力。
                 _record_event(self._aid, "task_completed", line)
                 try:
                     import re as _rc
