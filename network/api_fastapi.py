@@ -777,6 +777,52 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         threading.Thread(target=_run, daemon=True).start()
         return {"ok": True, "account_id": aid, "stage": stage, "status": "running"}
 
+    @app.post("/api/probe/anni_weekly")
+    def handle_probe_anni_weekly(body: dict):
+        """剿灭周常检测（2026-08-17）: 终端页有无剿灭卡片判定本周可刷。
+
+        Body: {account_id} → 结果 CAN_FARM(本周未刷)/DONE(本周已刷)/SHOTFAIL，
+        存 _probe_results["<aid>@anni_weekly"]，前端轮询 /api/probe/status。
+        """
+        from services.stage_probe import StageProbe
+        aid = body.get("account_id", "")
+        if not aid:
+            raise HTTPException(400, "account_id required")
+        ac = next((a for a in mw.accounts if a.get("id") == aid), None)
+        if not ac:
+            raise HTTPException(404, "account not found")
+        emu = ac.get("emu_instance_index", "")
+        if not emu:
+            raise HTTPException(400, "account has no emulator")
+        client = {"Bilibili": "Bilibili", "YoStarJP": "JP", "YoStarEN": "EN"}.get(
+            ac.get("game_client", ""), "Official")
+
+        def _run():
+            try:
+                v2 = getattr(mw, "emu_service_v2", None)
+                if v2 is not None:
+                    v2.mark_external(str(emu))
+                mts = getattr(mw, "manual_emu_started", None)
+                if mts is not None:
+                    mts[str(emu)] = time.time()
+            except Exception:
+                pass
+            key = f"{aid}@anni_weekly"
+            try:
+                probe = StageProbe(emu, client_type=client)
+                result = probe.probe_annihilation_weekly()
+                result["logs"] = getattr(probe, "logs", [])[-30:]
+                with _probe_lock:
+                    _probe_results[key] = result
+                mw._log(f"[剿灭周常] {ac.get('name','')}: {result['verdict']}")
+            except Exception as e:
+                with _probe_lock:
+                    _probe_results[key] = {"verdict": "ERROR", "score": 0.0,
+                                           "detail": str(e)[:300]}
+
+        threading.Thread(target=_run, daemon=True).start()
+        return {"ok": True, "account_id": aid, "status": "running"}
+
     @app.get("/api/probe/results")
     def handle_probe_results():
         with _probe_lock:
