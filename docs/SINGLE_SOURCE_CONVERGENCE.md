@@ -81,6 +81,11 @@
 
 ### Step 5：账房收口（体力/仓库/材料关/根数据）
 - depot CLI 复用 depot_scheduler；材料关表合一；根目录日志收口 logs/
+- **2026-08-17 状态**：全部完成 ✅ — logger.py `_LOG_DIR`=logs/（debug/events/crash 三日志），
+  oplog 写者迁 logs/oplog.json（api_fastapi 双位置兼容读），runtime_health
+  events.log 双位置兼容，backfill_stats 已迁移。asst.log 解析读者唯一
+  （log_watcher.py），runner/launch_queue 仅剩 mtime 活性检测（无内容解析），
+  MuMuManager 无硬编码路径（全部 find_mumu_cli 单点）。
 
 ## 4. 验收标准
 
@@ -122,7 +127,7 @@ log_watcher/runner/launch_queue/stage_probe — 迁移原则：连接建立可�
 | 事件 | event_bus | ✅ 骨架+runner+LogWatcher 已接（a9d9872/17a7b79） |
 | 仓库扫描 | depot_scheduler | ✅ 单一实现 `depot_reader.py`（material_planner CLI 与 scheduler 同用一类，非自建） |
 | 材料关表 | farm_dispatch | ✅ smart_scheduler 整文件删除（bc3e84a） |
-| 根日志 | logger 单点 | ⏳ 待收口：logger.py:7 `_LOG_DIR`=项目根（debug.log/events.log/crash.log）、api_fastapi.py:18 oplog.json+553/1277 debug.log、runtime_health.py:16+backfill_stats.py:18 events.log 读路径 — **logger.py 为并行会话活跃文件，白天协调后统一改 logs/** |
+| 根日志 | logger 单点 | ✅ 完成（2026-08-17）：logger.py `_LOG_DIR`=logs/、oplog 写者迁 logs/、api_fastapi/runtime_health 读者双位置兼容、backfill_stats 已迁移 |
 
 ## 附录 C：runner 自读 asst.log 影子功能盘点（2026-08-14 摸底，Step 3b 输入）
 

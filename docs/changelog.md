@@ -1,5 +1,44 @@
 # 变更记录
 
+## 2026-08-17 — 接手 DSH 未提交工作收尾（LP 规划升级 / 剿灭周常检测 / Go 清理）
+
+### 收尾提交（5 个，f3920ab..697ed47）
+
+1. **LP 全局最小理智规划**（material_planner/penguin_data，f3920ab）：
+   scipy linprog 求解 `min Σap·x` 覆盖各材料缺口，合成变量成本 0（消耗低级
+   材料+龙门币），副产品按企鹅矩阵期望抵扣（新数据源 config/drop_matrix.json，
+   332 关 × 17 蓝材料，regen 随备选榜一起生成）。`plan_mode=lp` 默认，
+   scipy 缺失自动回退 greedy；eap 效率门槛 2.5x 防 LP 硬刷低掉率关；
+   probe 锁定迭代重解 4 轮；无解缺口转 locked 合成兜底不静默丢缺口。
+   本地实测 0.03s 出结果。
+2. **剿灭周常检测**（stage_probe，6e0d51e）：终端页有无「剿灭作战」卡片
+   = 本周是否可刷（用户实锤+15 台官服样本）。MAA 导航信号
+   （GoLastBattle@QuickSwitch→Annihilation=成功；Terminal-Entry 识别失败=
+   无卡片=本周已刷）+ 截图交叉验证，返回 CAN_FARM/DONE/SHOTFAIL。
+3. **RUNTIME_CANNOT 回写闭环**（runner/depot_scheduler，cf6abc1）：开挂过的
+   关能进编队进不了关卡、代理失误等详情页看不出的运行时失败，回写
+   farm_probe.json 标 RUNTIME_CANNOT（7 天窗口），planner 下次自动剔除重推。
+4. **前端回退 lieflat → 简洁暗色**（a171a9a）：lieflat 设计系统整套移除
+   （Google Fonts 外网依赖/Paper 旗舰 token 体系），回 VS Code 风格暗色
+   硬编码色；导航简化（队列入更多页），缓存版本 _v=20260816r1。
+5. **移除 Go 版 vision_cli**（697ed47）：本地已部署 PaddleOCR 双模型
+   （det+rec ONNX），OCR 走本地模型不再需要 Go 工具链；.gitignore 同步清理。
+
+### 核查确认
+
+- 单点收敛 Step 5 完成：logger `_LOG_DIR`=logs/、oplog 迁 logs/、
+  api_fastapi/runtime_health 读者双位置兼容、backfill_stats 已迁移；
+  asst.log 解析读者唯一（log_watcher），MuMuManager 无硬编码路径
+  （find_mumu_cli 单点）。
+
+### 注意点
+
+- LP 合成决策：合成成本 0 AP，LP 会优先合成（如糖组缺口 55 全合成 81 次）
+  而不是刷取——与 08-13「纯刷取不合成」拍板有出入，若仍要纯刷需
+  关 allow_craft 或限制合成仅兜底。
+- 前端回退是工作区状态（DSH 08-16 18:30 之后改的），如 lieflat 方向
+  才是本意可 revert a171a9a。
+
 ## 2026-06-24 — 移除公式 ADB 端口推算
 
 ### 背景
