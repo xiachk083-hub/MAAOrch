@@ -131,6 +131,14 @@ if (!localStorage.getItem('maorch_ui_v')) {
 }
 const savedTheme = localStorage.getItem('theme') || 'Auto';
 setTheme(savedTheme);
+const THEME_LABELS = { Auto: '跟随系统', Light: '亮色', Dark: '暗色', Notepaper: 'Notepaper' };
+function cycleTheme() {
+  const cur = localStorage.getItem('theme') || 'Auto';
+  const order = ['Auto', 'Light', 'Dark', 'Notepaper'];
+  const next = order[(order.indexOf(cur) + 1) % order.length];
+  setTheme(next);
+  toast('主题：' + (THEME_LABELS[next] || next));
+}
 
 // ── Page renderers ──
 function renderPage() {
