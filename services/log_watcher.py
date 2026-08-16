@@ -394,6 +394,24 @@ class LogWatcher(threading.Thread):
             # 补全事件类型（2026-08-11 用户: 日志要全量收集，避免遗漏）
             elif "TaskStart" in line or "TaskChainStart" in line:
                 _record_event(self._aid, "task_start", line)
+            elif "TaskCompleted" in line:
+                # 断点续做（2026-08-16）: 单任务链完成 → 记入 AccountState
+                # done_chains（本次任务已完成方块），重启注入时跳过。
+                # 格式: ...TaskChainCompleted... "taskchain":"StartUp"
+                _record_event(self._aid, "task_completed", line)
+                try:
+                    import re as _rc
+                    _mch = _rc.search(r'"taskchain":"([^"]+)"', line)
+                    if _mch:
+                        _chain = _mch.group(1)
+                        from models.account_state import AccountState
+                        AccountState(self._aid).mark_chain_done(_chain)
+                        try:
+                            self._fire("task_completed", line)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
             elif "FightTimes" in line and "sanity" in line.lower():
                 _record_event(self._aid, "fight_sanity", line)  # 刷次数+体力
                 # 2026-08-15 收敛: times_finished 信号（刷关次数 — 假完成

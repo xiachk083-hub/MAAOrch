@@ -2960,6 +2960,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         smart = mw.config.get("smart_global", {}).get("enabled", False)
         if probe_mode:
             base_tasks = ["StartUp", "Probe"]
+        elif only_anni:
+            # 2026-08-16 修复: only_anni 之前仅在 smart_global.enabled=True 时
+            # 生效（_get_web_schedule_tasks 内部），生产未开智能调度时被静默
+            # 忽略、注入成日常全套（StartUp/Fight/Infrast/Recruit/Mall/Award）。
+            # 用户要求「只刷剿灭」→ only_anni 无条件优先，其余一律不注入。
+            base_tasks = ["StartUp", "Annihilation"]
         else:
             base_tasks = _get_web_schedule_tasks(mw, include_anni, only_anni) if smart else [
                 "StartUp", "Fight", "Infrast", "Recruit", "Mall", "Award"]
@@ -2976,7 +2982,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 continue
             # Per-account annihilation
             tasks = list(base_tasks)
-            if not probe_mode:
+            if not probe_mode and not only_anni:
+                # only_anni 时任务已固定为 StartUp+Annihilation，不做 per-account
+                # 移除（2026-08-16: 账号 smart_annihilation 为空时曾被移除，
+                # 导致"只刷剿灭"注入失败）
                 anni = a.get("smart_annihilation", "")
                 has_anni = "Annihilation" in tasks
                 if has_anni and not anni:

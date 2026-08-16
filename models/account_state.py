@@ -111,6 +111,27 @@ class AccountState:
         self._data["last_use"] = self._now()
         self._save()
 
+    # ── 断点续做：本次任务已完成的任务链（2026-08-16）──
+    # done_chains = 本次任务运行中已完成的 MAA 任务链集合（StartUp 永不记，
+    # 重启后必重登）。即使中途终止/崩溃，重启后注入时跳过已完成方块、
+    # 从断点继续（不做重复的清体力/基建）。正常全部完成后 clear。
+    def mark_chain_done(self, chain: str) -> None:
+        if not chain or chain in ("StartUp", "Startup"):
+            return
+        cur = self._data.setdefault("done_chains", [])
+        if chain not in cur:
+            cur.append(chain)
+        self._save()
+
+    @property
+    def done_chains(self) -> list[str]:
+        return list(self._data.get("done_chains", []) or [])
+
+    def clear_done_chains(self) -> None:
+        if self._data.get("done_chains"):
+            self._data.pop("done_chains", None)
+            self._save()
+
     # ── 读取 ──
     @property
     def data(self) -> dict:

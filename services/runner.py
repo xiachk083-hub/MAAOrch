@@ -1094,6 +1094,25 @@ class AccountRunner:
             _probe_mode = "Probe" in task_list
             if _probe_mode:
                 task_list = [t for t in task_list if t != "Probe"]
+            # ── 断点续做（2026-08-16）: 重启/中断后跳过本次已完成的方块 ──
+            # 读 AccountState.done_chains（LogWatcher 在 TaskCompleted 时记录），
+            # 已完成的剔除（StartUp 永不跳 — 重登+确保模拟器/游戏就绪）。
+            # 用户痛点: 一次任务 5 方块，第 1 个完成中断重启后从头重做 —
+            # 跳过已完成 → 从断点继续（不重复清体力/基建已确认的操作）。
+            # 安全: 只跳明确记录的；TaskChainError 不算完成；全部完成清除。
+            try:
+                if len(task_list) > 1:  # 纯 StartUp 不处理
+                    from models.account_state import AccountState as _AS
+                    _done = _AS(aid).done_chains
+                    if _done:
+                        _norm = {str(d).lower() for d in _done}
+                        _before = list(task_list)
+                        task_list = [t for t in task_list if str(t).lower() not in _norm]
+                        if len(task_list) != len(_before):
+                            _skip = [t for t in _before if str(t).lower() in _norm]
+                            self.emit_log(f"♻️ 断点续做: 跳过已完成的 {_skip}（{','.join(_before)} → {','.join(task_list)}）")
+            except Exception:
+                pass
             plan_txt = ",".join(task_list)
             self.emit_log(f"🧠 智能调度: {plan_txt}" + (" (+Probe 关卡检测)" if _probe_mode else ""))
             self._log.info(f"[注入] {ac.get('name', aid)} task_list={task_list} params={params}")
