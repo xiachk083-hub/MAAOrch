@@ -767,6 +767,14 @@ class ConfigService:
                             elif day_stage:
                                 item["StagePlan"] = [day_stage]
                                 item["IsStageManually"] = True
+                        # 48h 过期体力药（2026-08-17 用户要求）: 普通清日常也要吃
+                        # 过期药。此前 ts_raw 为空时走不到下面 ts_raw 合并分支 →
+                        # Fight 保留模板的 UseExpiringMedicine=False → 过期药从不吃。
+                        # 这里在 append 前强制默认开（task_settings 显式覆盖仍生效，
+                        # 因 ts_raw 合并分支在后面会覆盖本值）。
+                        if item.get("TaskType", "").lower() == "fight":
+                            item["UseExpiringMedicine"] = True
+                            item["MedicineExpireDays"] = 2
                         c["TaskQueue"].append(item)
                 c["TaskSelectedIndex"] = 0
                 c.setdefault("DragItemIsChecked", {})
