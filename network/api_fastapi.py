@@ -3627,13 +3627,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
         # 账号对照
         qd = _lq()
-        active = {a["account_name"].replace("明日方舟-", "") for a in qd._active if hasattr(a, "account_name")}
-        pending = {e.account_id for e in qd._pending}
+        active_ids = set(qd._active_emus.values())
+        pending_ids = {e.account_id for e in qd._pending}
         accounts = []
         for ac in mw.accounts:
             if not ac.get("name", "").startswith("官-"):
                 continue
             nm = ac["name"].replace("明日方舟-", "")
+            aid = ac.get("id", "")
             e = emus.get(nm, {})
             m = maas.get(nm, {})
             real = e.get("adb_real")
@@ -3647,7 +3648,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 "name": nm, "emu": ac.get("emu_instance_index", ""),
                 "real_port": real, "cfg_port": cfg_num, "match": match,
                 "emu_on": e.get("on", None), "maa_alive": m.get("alive", None),
-                "queue": "active" if nm in active else ("pending" if nm in pending else "-"),
+                "queue": "active" if aid in active_ids else ("pending" if aid in pending_ids else "-"),
                 "tasks": m.get("tasks", [])})
         mism = [a["name"] for a in accounts if a["real_port"] and a["cfg_port"] and not a["match"]]
         return {"ok": True, "emulator_count": len(emus), "maa_count": len(maas),
@@ -3667,9 +3668,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                           "stages", "fight_default", "farm_tag", "suspended", "smart_annihilation")},
                "queue": "-"}
         qd = _lq()
-        if name in {a["account_name"].replace("明日方舟-", "") for a in qd._active}:
+        _aid = ac.get("id", "")
+        if _aid in set(qd._active_emus.values()):
             out["queue"] = "active"
-        elif name in {e.account_id for e in qd._pending}:
+        elif _aid in {e.account_id for e in qd._pending}:
             out["queue"] = "pending"
 
         # 模拟器
