@@ -484,12 +484,14 @@ class ConfigService:
 
             if not use_v6:
                 self._set_connection(c, ac, use_v6=False)
-                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
+                # PostActions: 8=只退 MAA 不关游戏（2026-08-15 用户最终要求；
+                # 12 会连带关游戏 → 关游戏卡住 → 日志静止挂起）。统一 8。
+                c["MainFunction.PostActions"] = "8"
             else:
                 self._set_connection(c, ac, use_v6=True)
-                # MAA 的方式关闭（2026-08-12 用户）— ExitEmulator+ExitSelf，
-                # MAA 完成自己关模拟器；显式写覆盖 MAA 保存合并的旧值
-                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
+                # PostActions: 8=只退 MAA 不关游戏（2026-08-15 用户最终要求）。
+                # 不再用 12（ExitEmulator+ExitSelf 连带关游戏，会卡住）。
+                c["MainFunction.PostActions"] = "8"
 
             emu_idx = ac.get("emu_instance_index", "")
             if emu_idx:
@@ -506,10 +508,10 @@ class ConfigService:
                     if ac.get("emu_wait"):
                         c["Start.EmulatorWaitSeconds"] = str(ac["emu_wait"])
 
-            # PostActions: MAA 的方式关闭（2026-08-12 用户: MAA 怎么用我们
-            # 就怎么用 — MAA 完成自己关游戏+关模拟器）。connect-only 不关。
+            # PostActions: 8=只退 MAA 不关游戏（2026-08-15 用户最终要求；
+            # 12=ExitEmulator+ExitSelf 连带关游戏 → 关游戏卡住 → 日志静止挂起）。
             if ac.get("post_action"):
-                c["MainFunction.PostActions"] = "8" if ac.get("_connect_only") else "12"
+                c["MainFunction.PostActions"] = "8"
 
             if use_v6:
                 task_set = {t.lower() for t in task_list}
