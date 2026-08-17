@@ -89,6 +89,24 @@ def build_mcp_app(mw: Any) -> Any:
     # ── 只读：状态/总览 ──────────────────────────────────────────────
 
     @mcp.tool()
+    def link_map() -> dict:
+        """模拟器↔MAA↔ADB 端口对应关系：每个官服账号的模拟器真实端口 vs MAA
+        配置端口是否一致、模拟器/MAA 是否活着、任务链。查对应/连接错乱用这个。"""
+        return _call_api(mw, "/api/inspect/link_map")
+
+    @mcp.tool()
+    def inspect_account(account_name: str) -> dict:
+        """勘察单个账号现场：配置、模拟器状态、MAA 实例、当前任务、asst.log
+        最近错误。账号卡住/动作异常时用它定位卡在哪。"""
+        return _call_api(mw, f"/api/inspect/account/{account_name}")
+
+    @mcp.tool()
+    def processes() -> dict:
+        """枚举可疑进程（MAA/python/adb/MuMu 含父子关系）— 查挂着的子代/
+        残留/多余进程。"""
+        return _call_api(mw, "/api/inspect/processes")
+
+    @mcp.tool()
     def status() -> dict:
         """MAAOrch 总体运行状态（等效 Web 首页）：模拟器、账号、队列、任务、统计总览。"""
         return _call_api(mw, "/api/status")

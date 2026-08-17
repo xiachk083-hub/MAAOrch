@@ -3547,6 +3547,212 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         save_config(mw.config)
         return {"ok": True, "imported": imported}
 
+    # ── 勘察端点（2026-08-17：MCP 勘察工具后端 — 现场对应/连接关系）──
+    # 项目在目标机运行，可直接 subprocess 调 MuMuManager / 读实例文件，
+    # MCP 工具薄封装调这些端点（见 network/mcp_server.py 的 inspect_*）。
+
+    @app.get("/api/inspect/link_map")
+    def inspect_link_map():
+        """模拟器 ↔ MAA ↔ ADB 端口对应关系 + 一致性 + 任务链。
+
+        返回 {emulators: {name: {idx, on, adb_real}}, maas: {name: {inst, addr_cfg, alive, tasks}},
+              accounts: [{name, emu, real_port, cfg_port, match, queue, tasks}]}"""
+        import re as _re
+        from infrastructure.task_constants import find_mumu_cli, cli_flag
+        cli = find_mumu_cli()
+
+        # 模拟器真实端口
+        emus: dict = {}
+        if cli:
+            for i in range(0, 61):
+                try:
+                    r = subprocess.run([cli, "info", cli_flag(cli), str(i)],
+                                       capture_output=True, text=True, timeout=6,
+                                       encoding="utf-8", errors="replace")
+                    d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                    nm = d.get("name", "")
+                    if nm:
+                        emus[nm.replace("明日方舟-", "")] = {
+                            "idx": i, "on": bool(d.get("is_process_started")),
+                            "adb_real": d.get("adb_port")}
+                except Exception:
+                    pass
+
+        # MAA 实例：配置端口 + 归属 + 活否 + 任务
+        inst_dir = pathlib.Path(__file__).parent.parent / "services" / "maa" / "instances"
+        maas: dict = {}
+        if inst_dir.exists():
+            for inst in inst_dir.iterdir():
+                if not inst.name.isdigit():
+                    continue
+                mp = inst / ".meta"
+                if not mp.exists():
+                    continue
+                try:
+                    nm = mp.read_text(encoding="utf-8", errors="replace").split("|")[-1].strip()
+                except Exception:
+                    continue
+                alive = False
+                pidp = inst / ".pid"
+                if pidp.exists():
+                    try:
+                        pid = pidp.read_text().strip()
+                        r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV"],
+                                           capture_output=True, text=True, timeout=15, errors="replace")
+                        alive = "MAA.exe" in r.stdout
+                    except Exception:
+                        pass
+                addr_cfg, tasks = "", []
+                gnew = inst / "config" / "gui.new.json"
+                if gnew.exists():
+                    try:
+                        d = json.loads(gnew.read_text(encoding="utf-8"))
+                        cfg = d.get("Configurations", {}).get("Default", {})
+                        addr_cfg = cfg.get("Connect.Address") or cfg.get("Connect", {}).get("Address", "")
+                        tq = cfg.get("TaskQueue")
+                        if isinstance(tq, str):
+                            tq = json.loads(tq)
+                        for it in (tq or []):
+                            if isinstance(it, str):
+                                try:
+                                    it = json.loads(it)
+                                except Exception:
+                                    continue
+                            if it.get("IsEnable"):
+                                tasks.append(it.get("TaskType", "?"))
+                    except Exception:
+                        pass
+                maas[nm] = {"inst": inst.name, "addr_cfg": addr_cfg,
+                            "alive": alive, "tasks": tasks}
+
+        # 账号对照
+        qd = _lq()
+        active = {a["account_name"].replace("明日方舟-", "") for a in qd._active if hasattr(a, "account_name")}
+        pending = {e.account_id for e in qd._pending}
+        accounts = []
+        for ac in mw.accounts:
+            if not ac.get("name", "").startswith("官-"):
+                continue
+            nm = ac["name"].replace("明日方舟-", "")
+            e = emus.get(nm, {})
+            m = maas.get(nm, {})
+            real = e.get("adb_real")
+            cfg = m.get("addr_cfg", "")
+            cfg_num = ""
+            if cfg:
+                mm = _re.search(r":(\d+)", str(cfg))
+                cfg_num = mm.group(1) if mm else str(cfg)
+            match = bool(real and cfg_num and str(real) == str(cfg_num))
+            accounts.append({
+                "name": nm, "emu": ac.get("emu_instance_index", ""),
+                "real_port": real, "cfg_port": cfg_num, "match": match,
+                "emu_on": e.get("on", None), "maa_alive": m.get("alive", None),
+                "queue": "active" if nm in active else ("pending" if nm in pending else "-"),
+                "tasks": m.get("tasks", [])})
+        mism = [a["name"] for a in accounts if a["real_port"] and a["cfg_port"] and not a["match"]]
+        return {"ok": True, "emulator_count": len(emus), "maa_count": len(maas),
+                "accounts": accounts, "mismatches": mism}
+
+    @app.get("/api/inspect/account/{name}")
+    def inspect_account(name: str):
+        """单个账号深挖：配置 + 模拟器 + MAA 实例 + 当前任务 + asst.log 最近错误。"""
+        import re as _re
+        ac = next((x for x in mw.accounts
+                   if x.get("name", "").replace("明日方舟-", "") == name), None)
+        if not ac:
+            raise HTTPException(404, f"account {name} not found")
+        emu_idx = ac.get("emu_instance_index", "")
+        out = {"name": name,
+               "config": {k: ac.get(k) for k in ("emu_instance_index", "game_client",
+                          "stages", "fight_default", "farm_tag", "suspended", "smart_annihilation")},
+               "queue": "-"}
+        qd = _lq()
+        if name in {a["account_name"].replace("明日方舟-", "") for a in qd._active}:
+            out["queue"] = "active"
+        elif name in {e.account_id for e in qd._pending}:
+            out["queue"] = "pending"
+
+        # 模拟器
+        from infrastructure.task_constants import find_mumu_cli, cli_flag
+        cli = find_mumu_cli()
+        out["emu"] = {}
+        if cli:
+            try:
+                r = subprocess.run([cli, "info", cli_flag(cli), str(emu_idx)],
+                                   capture_output=True, text=True, timeout=8,
+                                   encoding="utf-8", errors="replace")
+                d = json.loads(r.stdout.lstrip("\ufeff").strip())
+                out["emu"] = {"idx": d.get("index"), "on": bool(d.get("is_process_started")),
+                              "adb": d.get("adb_port"), "state": d.get("player_state")}
+            except Exception:
+                pass
+
+        # MAA 实例（.meta 匹配）
+        inst_dir = pathlib.Path(__file__).parent.parent / "services" / "maa" / "instances"
+        out["maa"] = {}
+        if inst_dir.exists():
+            for inst in inst_dir.iterdir():
+                if not inst.name.isdigit():
+                    continue
+                mp = inst / ".meta"
+                if not mp.exists():
+                    continue
+                try:
+                    nm = mp.read_text(encoding="utf-8", errors="replace").split("|")[-1].strip()
+                except Exception:
+                    continue
+                if nm != name:
+                    continue
+                alive = False
+                pidp = inst / ".pid"
+                if pidp.exists():
+                    try:
+                        pid = pidp.read_text().strip()
+                        r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV"],
+                                           capture_output=True, text=True, timeout=15, errors="replace")
+                        alive = "MAA.exe" in r.stdout
+                    except Exception:
+                        pass
+                al = inst / "debug" / "asst.log"
+                cur, recent, age = "", [], -1
+                if al.exists():
+                    import time as _t
+                    age = _t.time() - al.stat().st_mtime
+                    lines = al.read_text(encoding="utf-8", errors="replace").strip().splitlines()
+                    for l in reversed(lines):
+                        m = _re.search(r'"cur_task":"([^"]*)"', l)
+                        if m and not cur:
+                            cur = m.group(1)[:60]
+                    recent = [l[:140] for l in lines[-6:]]
+                out["maa"] = {"inst": inst.name, "pid": pidp.read_text().strip() if pidp.exists() else "",
+                              "alive": alive, "log_age": age, "cur_task": cur, "recent": recent}
+                break
+        return out
+
+    @app.get("/api/inspect/processes")
+    def inspect_processes():
+        """枚举可疑进程（MAA/python/adb/MuMu）含父子关系，查挂着的子代。"""
+        import time as _t
+        procs = []
+        try:
+            r = subprocess.run(["powershell", "-NoProfile", "-Command",
+                "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'MAA|python|adb|MuMu|mumu' } "
+                "| Select-Object ProcessId, ParentProcessId, CreationDate, Name, CommandLine "
+                "| ConvertTo-Json -Compress -Depth 2"],
+                capture_output=True, text=True, timeout=40, encoding="utf-8", errors="replace")
+            data = json.loads(r.stdout or "[]")
+            if isinstance(data, dict):
+                data = [data]
+            for p in data:
+                cmd = p.get("CommandLine") or ""
+                if len(cmd) > 200:
+                    cmd = cmd[:200] + "..."
+                procs.append({"pid": p.get("ProcessId"), "parent": p.get("ParentProcessId"),
+                              "name": p.get("Name"), "cmd": cmd})
+        except Exception:
+            pass
+        return {"ok": True, "processes": procs}
+
     # ── MCP 挂载（2026-08-14：DSH Agent 工具插件 — 必须在静态 catch-all 之前）──
     # streamable-http，挂载点自身校验 x-agent-token（api_token 配置时）。
     # FastAPI mount 子 app 不传播 lifespan → 显式组合 MCP 的 lifespan。
