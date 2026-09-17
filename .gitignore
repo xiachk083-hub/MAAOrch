@@ -84,3 +84,26 @@ debug/scratch_*/
 
 # 运行时数据与编译产物（2026-08-14）
 data/
+
+# 本地 MCP 配置（含本机 SSH 密钥路径，不进公开仓库）
+.mcp.json
+
+# 运行时产物 / 临时文件（元 Agent 启用 --apply 前必须干净）
+_trash/
+_tmp_*.py
+data/agent_run/*.log
+data/agent_run/frames/
+data/agent_run/trace*.jsonl
+asst.log
+*.bak_*
+data/agent_run/agents_health.json
+data/agent_run/iterations.jsonl
+data/agent_run/*.png
+
+# 推图 UI 重试通道的 token（ui/control_server.py 生成；进了仓库 = 局域网谁都能点一键推图）
+ui/control_token.txt
+
+# 推图状态/锁：属于值（UID、进度），不进公开仓库
+tools/push/push_state_*.json
+tools/push/emu_*.lock
+data/_trash/
