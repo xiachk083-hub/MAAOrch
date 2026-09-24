@@ -17,14 +17,19 @@
 /**
  * 时间窗（2026-09-24 08:55 按 MAS 队列真实时刻改）：**只避开发车前 60 分钟**。
  * 依据 `E:\AUTO-MAS\config\QueueConfig.json` 实测：**早班定时 1–12 = 05:00 起（每 3 分一个）**、
- * **晚班定时 1–12 = 19:30 起** ⇒ 让位区 = 04:00–05:00 与 18:30–19:30；其余时间**允许发车**，
+ * **晚班定时 1–12 = 19:30 起（实际 19:51 起错峰发车）** ⇒ 让位区 = 04:00–05:00 与 18:30–20:30；其余时间**允许发车**，
  * 真正的保护是"产线在跑/连续 6 分钟没空"的让路闸（那个才反映当下实况）。
  * 旧规则（10–18 / 22–03:30）问题是太死：早班 08:5x 就跑完了，却要干等到 10:00 白丢一个多小时
  * （用户 2026-09-24 08:53 明确要求"把肉鸽抛起来"）。
  */
+export function inYieldZone(hourFloat) {
+  // 早班 05:00 发车点前 60 分钟；晚班 19:30 发车点前 60 分钟 **+ 爬坡到 20:30**
+  // （2026-09-24 补：晚班 12 队是 19:51 起错峰发车，让位区原来 19:30 就结束 ⇒ 19:30–19:51 闸开、
+  //  看守会把肉鸽又发出去，19:51 产线一上就"同一模拟器两个 MAA"，正撞红线③。）
+  return (hourFloat >= 4 && hourFloat <= 5) || (hourFloat >= 18.5 && hourFloat <= 20.5);
+}
 export function inWindow(hourFloat) {
-  const yieldZone = (hourFloat >= 4 && hourFloat <= 5) || (hourFloat >= 18.5 && hourFloat <= 19.5);
-  return !yieldZone;
+  return !inYieldZone(hourFloat);
 }
 
 /**
@@ -37,7 +42,7 @@ export function gate({ prodRunning, prodIdleMin, hourFloat, ramFree, force, prod
   if (prodIdleMin < prodIdleMinRequired) {
     return { open: false, why: `产线只空了 ${Math.round(prodIdleMin)} 分钟（要求连续 ≥${prodIdleMinRequired} 分钟，避免被任务间空档骗到）` };
   }
-  if (!inWindow(hourFloat)) return { open: false, why: '不在肉鸽窗口（10:00–18:00 / 22:00–03:30）' };
+  if (!inWindow(hourFloat)) return { open: false, why: '不在肉鸽窗口（让位区：早班 04:00–05:00 / 晚班 18:30–20:30）' };
   if (ramFree >= 0 && ramFree < ramFloorGB) return { open: false, why: `主机内存只剩 ${ramFree}G（<${ramFloorGB}G 不发车，别把主机压垮）` };
   return { open: true, why: '产线已空 + 窗口内 + 内存够' };
 }
@@ -56,8 +61,8 @@ export function wrapUp({ prodRunning, hourFloat, runningCount, force }) {
   if (force) return { need: false, why: '--force 演练' };
   if (!runningCount) return { need: false, why: '没有在跑的肉鸽' };
   if (prodRunning) return { need: true, why: '产线已恢复（同一模拟器不许两个 MAA）' };
-  if ((hourFloat >= 4 && hourFloat <= 5) || (hourFloat >= 18.5 && hourFloat <= 19.5)) {
-    return { need: true, why: '临近早班(05:00)/晚班(19:30) 发车点 60 分钟内 ⇒ 让位' };
+  if (inYieldZone(hourFloat)) {
+    return { need: true, why: '处在让位区（早班 04:00–05:00 / 晚班 18:30–20:30 爬坡）⇒ 让位' };
   }
   return { need: false, why: '窗口内且产线空闲，继续刷' };
 }

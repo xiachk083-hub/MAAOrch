@@ -8,7 +8,7 @@
  *
  * 跑法：node tools/rogue_plan_selftest.mjs
  */
-import { gate, inWindow, startPerRound, planMachine, wrapUp, actionLabel, updateScreen } from './lib/rogue_plan.mjs';
+import { gate, inWindow, inYieldZone, startPerRound, planMachine, wrapUp, actionLabel, updateScreen } from './lib/rogue_plan.mjs';
 
 let pass = 0;
 let fail = 0;
@@ -37,6 +37,9 @@ check('产线空 7 分钟、23:10，但内存只剩 6G ⇒ 关闸',
 check('白天 13:00 在窗口内', inWindow(13), true);
 check('傍晚 19:00 不在窗口内', inWindow(19), false);
 check('凌晨 03:00 还在夜窗内', inWindow(3), true);
+check('19:50（晚班爬坡中）仍在让位区', inYieldZone(19.83), true);
+check('20:20（晚班还在发车）仍在让位区', inYieldZone(20.33), true);
+check('20:40 出让位区（晚班 12 队已发完、产线自己在跑，闸靠"产线在跑"关）', inYieldZone(20.66), false);
 check('凌晨 04:00 已出夜窗（给 05:00 早班让路）', inWindow(4), false);
 check('内存 20G ⇒ 一轮可发 2 台', startPerRound(20), 2);
 check('内存 12G ⇒ 一轮只发 1 台', startPerRound(12), 1);
@@ -193,6 +196,12 @@ check('产线恢复且我们还在跑 ⇒ 收工',
 check('凌晨 04:00（早班临近）且我们还在跑 ⇒ 收工',
   wrapUp({ prodRunning: false, hourFloat: 4, runningCount: 2, force: false }).need, true);
 check('夜里 23:30 产线空闲、我们还在跑 ⇒ 继续刷，不收',
+  wrapUp({ prodRunning: false, hourFloat: 19.8, runningCount: 5, force: false }).need, true);
+check('20:40 且产线没在跑 ⇒ 不收工（回窗口）',
+  wrapUp({ prodRunning: false, hourFloat: 20.66, runningCount: 5, force: false }).need, false);
+check('收工让路的理由带"让位区"',
+  /让位区/.test(wrapUp({ prodRunning: false, hourFloat: 18.6, runningCount: 5, force: false }).why), true);
+check('产线空闲 + 23:30（夜窗）⇒ 不收工',
   wrapUp({ prodRunning: false, hourFloat: 23.5, runningCount: 2, force: false }).need, false);
 check('白天 13:00 窗口内、产线空闲 ⇒ 继续刷',
   wrapUp({ prodRunning: false, hourFloat: 13, runningCount: 1, force: false }).need, false);
