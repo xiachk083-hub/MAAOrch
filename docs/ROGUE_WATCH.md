@@ -422,3 +422,15 @@ l-2 asst.log: cur_task":"Sarkaz@TerminalDefault / Sarkaz@Roguelike / Sarkaz@Rogu
 ```
 ⇒ 这一次是**闸门按设计升上去了**，但紧接着踩到 §5.22 末那个"冷启动 >94 秒"的坑（已修，并加了"等 150 秒 + 最多重发 3 次"）。15:47 手动重发 `launch` 后设备回来，15:48 看守把 l-2 带回 `running-ok`。**"重启模拟器能不能治好 l-2 的复发"还开着**（要等它接下来半小时不再回到 `fake-complete`）。
 
+
+### 5.24 l-2 的"假完成"其实是**任务真的做完了**（2026-09-24 16:0x 定因）
+
+排查到最后发现：l-2 不是坏了，是**它这个号在「焔燼奇談（サルカズ）」里的等级已经刷满**，而它的任务配的是 `Mode=Exp`（刷等级）⇒ MAA 一进探索就走
+`Sarkaz@Roguelike@ChooseDifficultyConfirm → CheckLevel → Roguelike@CheckLevelMax → StartExplore → Begin → AbandonConfirm → Begin → AbandonConfirm → TaskChainCompleted/AllTasksCompleted`，
+**45~66 秒就正常收尾**。看守看到"链完成、人不在刷"就判**形态2 假完成**，每 2 分钟救一次 —— 一下午都在救一台"已经做完事的机器"，今晚还白重启了它两次模拟器。
+
+- 现场证据：`runtime/fleet_cases/2026-09-24T080016484Z_l-2.png`（「焔燼奇談」首页，右上「歴史再編 10 / 仮説集 12」= 满级）+ asst.log 里 `CheckLevelMax` 与 `TaskChainCompleted/AllTasksCompleted` 相邻。
+- 反证：同一批里 l-4 也是 Sarkaz，但它 `Sarkaz@Roguelike@ClickToDrops` 一路往下走 ⇒ 主题不是问题，"等级满 + Mode=Exp"才是。
+- **教训**：§5.7 里"形态2 绝不能判 done-for-day"那条是为**真卡死**（画面停在结算页、链已停）写的；但"**MAA 自己按配置正常收尾**"是另一回事 —— 判据缺一条"这次收尾是不是正常收尾（CheckLevelMax / 次数到顶）"。
+- 现状（16:02）：人（我）把 l-2 **按住 60 分钟**并在 `runtime/rogue_fleet_state.json` 里写了原因（`holdReason`），等用户定口径：满级之后是**换主题/换模式接着刷**，还是**这个号本班次就该歇着**。
+
