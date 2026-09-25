@@ -50,6 +50,9 @@ python tools/mas_accounts.py --selftest            # 离线自测：解析 / 过
 - **兜底**：`.gitignore` 里已加 `ScriptConfig.json`（任意层级）—— raw 副本即使被误拷进仓库也进不了提交。
   备份要留就留**脱敏版**（把 `Password` / `SklandToken` / `ServerChanKey` / `Notify_CustomWebhooks` 的值替成
   `[已脱敏]`；实测 212KB 的 raw 里 Password 有 44 处非空），其余字段（账号/服/设备）一个不少，足够离线审计。
+- **一键脱敏**：`python tools/redact_scriptconfig.py --scan` —— 扫全仓库 `*ScriptConfig*.json`（`--dry-run` 先看清单），
+  把敏感键值替成 `[已脱敏]`，校验无残留长串后写 `<原名>.redacted.json` 并**默认删掉 raw 原件**（`--keep-raw` 可保留）。
+  只管含非空密文的文件；空口令的老 dump 会被列出但不改（要删自己删）。`--selftest` 10 项含密文夹具。
 
 ## 5. 与"让位/班次"的关系
 
