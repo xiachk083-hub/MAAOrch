@@ -47,6 +47,9 @@ python tools/mas_accounts.py --selftest            # 离线自测：解析 / 过
 - 本工具**只取白名单字段**（cfg / sid / maa / emu_idx / emu_name / emu_running / adb / server / login / enabled / notes），
   读入后即丢弃任何 `pass|token|secret|key|cred` 键，序列化前再断言一次 ⇒ 导出的 JSON 里不可能有凭据。
 - 自测第 3 组就是拿"带密文的夹具"验这条；`--dump` 时还会 `assert "password" not in payload`。
+- **兜底**：`.gitignore` 里已加 `ScriptConfig.json`（任意层级）—— raw 副本即使被误拷进仓库也进不了提交。
+  备份要留就留**脱敏版**（把 `Password` / `SklandToken` / `ServerChanKey` / `Notify_CustomWebhooks` 的值替成
+  `[已脱敏]`；实测 212KB 的 raw 里 Password 有 44 处非空），其余字段（账号/服/设备）一个不少，足够离线审计。
 
 ## 5. 与"让位/班次"的关系
 

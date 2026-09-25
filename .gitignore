@@ -107,3 +107,19 @@ ui/control_token.txt
 tools/push/push_state_*.json
 tools/push/emu_*.lock
 data/_trash/
+
+# 看门狗（含 SMTP 凭据，禁止入库）
+runtime/watchdog.ini
+runtime/watchdog_state.json
+runtime/watchdog.log
+
+# 崩溃转储（含生产主机内存镜像，禁止入库）
+runtime/dumps/
+
+# L3 守护（2026-09-21）：本地私有配置含 Discord webhook，报告/台账/状态是运行产物
+runtime/mas_watch.local.json
+runtime/reports/
+# 原始 ScriptConfig.json（含 DPAPI 密文口令）任何层级的副本都不入库；要账号数据用 tools/mas_accounts.py 现取
+ScriptConfig.json
+runtime/mas_ledger.jsonl
+runtime/mas_watch_state.json
