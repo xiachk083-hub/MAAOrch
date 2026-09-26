@@ -304,54 +304,119 @@ const PAGE = `<!doctype html><html lang="zh"><meta charset="utf-8">
 <pre id="actout">（动作输出会显示在这里）</pre>
 <script>
 const T = new URLSearchParams(location.search).get('token') || ${JSON.stringify(TOKEN)};
-const api = async (p) => (await fetch(p + (T ? '?token=' + encodeURIComponent(T) : ''))).json();
-const localTime = (iso) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return String(iso);
-  const p = (n) => String(n).padStart(2, '0');
-  return p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+const NL = String.fromCharCode(10);
+/** 统一调用：返回 {code, j}（j 解析失败为 null）。token 只作查询串附加；本机来源 Node/Python 都放行。 */
+const api = async (p, init) => {
+  const url = p + (T ? (p.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(T) : '');
+  try {
+    const r = await fetch(url, init);
+    let j = null;
+    try { j = await r.json(); } catch (e) {}
+    return { code: r.status, j: j };
+  } catch (e) { return { code: 0, j: null, err: String(e) }; }
 };
-/** 触发产线动作（默认 dry-run；勾了"真执行"才落刀）。 */
+const esc = (s) => String(s === undefined || s === null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function table(rows, cols){
+  if (!rows || !rows.length) return '<i>（空）</i>';
+  return '<table><tr>' + cols.map(c=>'<th>'+esc(c)+'</th>').join('') + '</tr>' +
+    rows.map(r=>'<tr>'+cols.map(c=>'<td>'+esc(r[c])+'</td>').join('')+'</tr>').join('') + '</table>';
+}
+const localTime = (iso) => { if (!iso) return '—'; const d = new Date(iso); if (isNaN(d.getTime())) return String(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); };
+/** ★G2/G7：Python 不可达 ⇒ 一律显示「未知」，绝不把空壳当 false 展示（false 会被误读成"没有账号在跑"）。 */
+const isUnknown = (x) => (!x.j) || x.j.unknown === true || x.j.ok === false || x.code === 0 || x.code >= 500;
+const UNKNOWN_HTML = '<span class="warn">未知：Python 上游未启动或不可达 —— 这里不显示 false，避免把"没数据"误读成"没在跑"。<br>启动 Python（main_web.pyw / tools/maaorch_platform.bat）后点「刷新」。</span>';
+let ACCT = [];
+function setBanner(x) {
+  const b = document.getElementById('banner');
+  if (isUnknown(x)) {
+    b.innerHTML = '<div class="warn" style="border:1px solid #6b5b1f;background:#241f10;padding:8px;border-radius:6px">⚠ Python 上游（真运行态/真队列的唯一来源）不可达：相关区块显示为「未知」。Node 原生区块（产线文件、日志、模拟器、产线动作）仍可用。</div>';
+  } else { b.innerHTML = ''; }
+}
+function fillSel(){
+  const sel = document.getElementById('acctSel');
+  const cur = sel.value;
+  sel.innerHTML = ACCT.map(a => '<option value="'+esc(a.index)+'">'+esc(a.index)+' · '+esc(a.name)+(a.running ? '（运行中）' : '')+'</option>').join('');
+  if (cur) sel.value = cur;
+}
+/** 账号与运行态：真值取自 Python /api/status（tasklist MAA.exe + runner._active）。 */
+async function loadStatus() {
+  const x = await api('/api/status');
+  const el = document.getElementById('sbody');
+  const src = document.getElementById('ssrc');
+  setBanner(x);
+  if (isUnknown(x)) { el.innerHTML = UNKNOWN_HTML; src.textContent = '（Python 不可达 → 未知）'; ACCT = []; fillSel(); return; }
+  ACCT = x.j.accounts || [];
+  src.textContent = '（真值：Python HTTP ' + x.code + '）运行中 ' + (x.j.running === undefined ? '?' : x.j.running) + ' · 共 ' + ACCT.length + ' 账号';
+  el.innerHTML = table(ACCT, ['index','name','running','elapsed','adb','emu_index']);
+  fillSel();
+}
+/** 队列：真值取自 Python /api/queue（真队列只在 Python）。 */
+async function loadQueue() {
+  const x = await api('/api/queue');
+  const el = document.getElementById('qbody');
+  const src = document.getElementById('qsrc');
+  if (isUnknown(x)) { el.innerHTML = UNKNOWN_HTML; src.textContent = '（Python 不可达 → 未知）'; return; }
+  const j = x.j;
+  src.textContent = '（真值：Python HTTP ' + x.code + '）';
+  el.innerHTML = '<div>待跑 <b>'+(j.pending_count === undefined ? '?' : j.pending_count)+'</b> · 在跑 <b>'+(j.active_count === undefined ? '?' : j.active_count)+'</b> · 队列 '+(j.paused ? '<span class="warn">已暂停</span>' : '<span class="ok">运行中</span>')+' · 平均时长 '+(j.avg_duration_min === undefined ? '?' : j.avg_duration_min)+' 分钟</div>' +
+    '<h4>待跑（顺序 / ETA）</h4>' + table(j.pending, ['position','account_name','source','task','not_before','eta','eta_min','suspended','slot']) +
+    '<h4>在跑</h4>' + table(j.active, ['account_name','task']);
+}
+/** ★G5：队列四动作（入队/出队/暂停/恢复）—— 真实现只在 Python，Node 只透传，不新增 Python 路由。 */
+async function qact(kind) {
+  const out = document.getElementById('qout');
+  const sel = document.getElementById('acctSel');
+  const needAcct = (kind === 'enqueue' || kind === 'dequeue');
+  if (needAcct && sel.value === '') { out.textContent = '先在左边选一个账号（列表来自 Python 真值；Python 不可达时列表为空）。'; return; }
+  const body = needAcct ? JSON.stringify({ account_index: Number(sel.value) }) : '{}';
+  out.textContent = kind + ' 执行中…（POST /api/queue/' + kind + ' → Python）';
+  const x = await api('/api/queue/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body });
+  out.textContent = 'POST /api/queue/' + kind + ' → HTTP ' + x.code + NL + JSON.stringify(x.j, null, 1);
+  loadQueue(); loadStatus();
+}
+/** 产线今日/跑局/日报/自检：Node 原生读 runtime 文件。 */
+async function loadNative() {
+  const [m, h, r, p] = await Promise.all([api('/api/mas/status'), api('/api/health'), api('/api/runs'), api('/api/production')]);
+  const w = (m.j && m.j.watch) || {};
+  const files = (m.j && m.j.files) || [];
+  document.getElementById('pbody').innerHTML =
+    '<div>MAA 计数 = <b>'+esc(JSON.stringify((p.j && p.j.maa_counts) ?? w.maa_counts ?? null))+'</b> · 状态文件更新 = '+esc(localTime((files[0]||{}).mtime))+'</div>' +
+    table(p.j && p.j.rows, ['日期','已出日报','补跑的账号','补跑数']) +
+    ((p.j && p.j.reports && p.j.reports.length) ? '<div class="sub">L3 守护日报：</div>' + table(p.j.reports, ['文件','KB','生成时间']) : '<div class="sub">（runtime/reports 下暂无日报）</div>') +
+    '<h4>最近跑局（runtime/_ce6/*.attempt.log）</h4>' +
+    table(((r.j && r.j.runs) || []).map(x => ({tag:x.tag, job:x.job, 时长或错误:x.end || '（未进战斗）', 结算:x.settle || '—', 结论:x.gate || '—'})), ['tag','job','时长或错误','结算','结论']) +
+    '<div class="sub">本进程自检：pid '+esc(h.j && h.j.pid)+' · node '+esc(h.j && h.j.node)+' · uptime '+esc(h.j && h.j.uptime_s)+'s · RSS '+esc(h.j && h.j.rss_mb)+'MB · heap '+esc(h.j && h.j.heap_mb)+'MB</div>';
+}
+/** ★G6：模拟器列表（Node 原生真读 MuMuManager；按需调用，不放进 30s 刷新）。 */
+async function loadEmu() {
+  const el = document.getElementById('emuBody');
+  el.textContent = '读取中…（调 MuMuManager info -v all，最多 8 秒）';
+  const x = await api('/api/emulators');
+  if (x.code !== 200 || !x.j || !x.j.emulators) { el.innerHTML = '<span class="warn">读不到模拟器列表：HTTP '+x.code+'</span>'; return; }
+  el.innerHTML = table(x.j.emulators, ['emu','name','index','adb_port','running']);
+}
+/** ★G6：日志尾部（Node 原生读 logs/debug.log）。 */
+async function loadLogs() {
+  const n = document.getElementById('logN').value || 80;
+  const x = await api('/api/logs?lines=' + encodeURIComponent(n));
+  document.getElementById('logsrc').textContent = 'HTTP ' + x.code + ' · Node 原生 logs/debug.log';
+  document.getElementById('logs').textContent = ((x.j && x.j.lines) || []).join(NL);
+}
+/** 产线动作（Node 原生 → tools/auto_mas_rerun.py；默认 dry-run）。 */
 window.act = async (kind) => {
   const acc = (document.getElementById('acc').value || '').split(',').map(s => s.trim()).filter(Boolean);
   const apply = document.getElementById('apply').checked;
   const out = document.getElementById('actout');
   out.textContent = '执行中…（dry_run=' + (!apply) + '）';
-  try {
-    const r = await (await fetch('/api/mas/' + kind + '?token=' + encodeURIComponent(T), {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(kind === 'rerun' ? { accounts: acc, apply } : { apply }),
-    })).json();
-    out.textContent = JSON.stringify(r, null, 1);
-  } catch (e) { out.textContent = '失败：' + e; }
+  const x = await api('/api/mas/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(kind === 'rerun' ? { accounts: acc, apply: apply } : { apply: apply }) });
+  out.textContent = 'HTTP ' + x.code + NL + JSON.stringify(x.j, null, 1);
 };
-function table(rows, cols){
-  if(!rows || !rows.length) return '<i>（空）</i>';
-  return '<table><tr>' + cols.map(c=>'<th>'+c+'</th>').join('') + '</tr>' +
-    rows.map(r=>'<tr>'+cols.map(c=>'<td>'+String(r[c] ?? '')+'</td>').join('')+'</tr>').join('') + '</table>';
-}
-(async () => {
-  const s = await api('/api/status');
-  const m = await api('/api/mas/status');
-  const h = await api('/api/health');
-  const r = await api('/api/runs');
-  const p = await api('/api/production');
-  const w = m.watch || {};
-  document.getElementById('out').innerHTML =
-    '<h3>账号（'+s.accounts.length+'）<span class="sub"> ← 这份是**本地** models/config.json，产线账号在远端 mrfz-0000</span></h3>' +
-    table(s.accounts, ['id','name','client','emu','stages','suspended','failures']) +
-    '<h3>队列</h3><div>队列项 = <b>'+s.queue.count+'</b> · parallel_max = '+s.parallel_max+' · 班次模式 = '+s.schedule_mode+'</div>' +
-    '<h3>产线今日（补跑 / 日报）</h3>' +
-    '<div>MAA 计数 = <b>'+JSON.stringify(p.maa_counts ?? w.maa_counts ?? null)+'</b> · 状态文件更新 = '+localTime((m.files[0]||{}).mtime)+'</div>' +
-    table(p.rows, ['日期','已出日报','补跑的账号','补跑数']) +
-    (p.reports && p.reports.length ? '<div class="sub">L3 守护日报：</div>' + table(p.reports, ['文件','KB','生成时间']) : '<div class="sub">（runtime/reports 下暂无日报）</div>') +
-    '<h3>最近跑局（runtime/_ce6/*.attempt.log）</h3>' +
-    table((r.runs||[]).map(x => ({tag:x.tag, job:x.job, 时长或错误:x.end || '（未进战斗）', 结算:x.settle || '—', 结论:x.gate || '—'})), ['tag','job','时长或错误','结算','结论']) +
-    '<h3>本进程自检</h3><div>pid '+h.pid+' · node '+h.node+' · uptime '+h.uptime_s+'s · RSS '+h.rss_mb+'MB · heap '+h.heap_mb+'MB</div>' +
-    '<div class="sub">数据时间：'+localTime(s.updated_at)+' · 每 30s 自动刷新</div>';
-  setTimeout(() => location.reload(), 30000);
-})().catch(e => { document.getElementById('out').innerHTML = '<span class="err">加载失败：'+e+'</span>' });
+function refreshAll(){ loadStatus(); loadQueue(); loadNative(); }
+refreshAll(); loadLogs();
+setInterval(refreshAll, 30000);
 </script>
 </html>`
 
@@ -470,6 +535,32 @@ function proxyTo(req, res, path, opts = {}) {
   req.resume()   // 必须让 body 流起来，否则带 body 的 POST 等不到 'end'
 }
 
+/**
+ * ★G2（task-16）：「真值只在 Python」的两个读端点（/api/status、/api/queue）的透传 + **显式降级**。
+ * 为什么不直接 proxyTo 了事：Python 关着时 proxyTo 会回 501/502/503，运维页就变成报错页。
+ * 这里先探一下上游端口，探不到就回**语义明确**的 200 + `unknown:true`：
+ *   页面据此显示「未知」，绝不显示 false（"没有账号在跑"/"队列是空的"）这种会误导人的假值。
+ * 说明：本函数只读、只转发，不实现任何业务逻辑（真实现仍在 Python，不新增 Python 路由）。
+ */
+async function proxyTruth(req, res, path) {
+  if (!UPSTREAM) return proxyTo(req, res, path)
+  let upPort = 80
+  try {
+    const u = new URL(UPSTREAM)
+    upPort = Number(u.port || (u.protocol === 'https:' ? 443 : 80))
+  } catch {}
+  const alive = await portListening(upPort)
+  if (!alive) {
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-cache' })
+    return res.end(JSON.stringify({
+      ok: false, unknown: true, degraded: 'python_unreachable',
+      source: `python ${UPSTREAM}`, path, ts: new Date().toISOString(),
+      hint: 'Python 上游（真运行态 / 真队列的唯一来源）未启动或不可达；本页不显示 false，改显示「未知」。',
+    }, null, 2))
+  }
+  return proxyTo(req, res, path)
+}
+
 /** 账号列表（对齐旧 Python 看板 /api/accounts 的字段，2026-09-21 用活服务取的真实形状）。
  *  运行时字段（running/queued/sanity/last_clear/state）目前给默认值 —— 那些要等运行器也迁到
  *  Node 才能如实填写；先保证前端不出现 undefined。 */
@@ -529,7 +620,12 @@ function adbAddressOf(ac) {
   return port ? `127.0.0.1:${port}` : ''
 }
 
-/** 首页要用的四个端点（2026-09-21 按旧服务真实返回形状复刻，字段对齐）。 */
+/**
+ * Node 原生运行态空壳（历史：2026-09-21 按旧服务返回形状复刻）。
+ * ★G2（task-16）：本函数**不再服务** /api/status —— 真值已改为透传 Python（proxyTruth），
+ *   否则这里的 __running 恒 false 会遮蔽 Python 的真运行态（task-12 判定）。
+ *   现在只被 /api/sse（旧前端遗留的推送端点）复用；运维页 /status 不读它。
+ */
 function dashboardStatusPayload() {
   const cfg = readCfg()
   const accounts = (cfg.accounts || []).filter((a) => !a._connect_only).map((a, i) => ({
@@ -543,6 +639,8 @@ function dashboardStatusPayload() {
 
 function queuePayload() {
   // 队列实体在产线主机（AUTO-MAS）上，这里保持与旧服务同形状（本地无队列 ⇒ 空）。
+  // ★G2（task-16）：本函数**不再服务** /api/queue（真队列只在 Python，已改透传 proxyTruth）；
+  //   恒空数组会遮蔽真队列，现仅供 /api/sse 复用。
   return { pending: [], active: [], pending_count: 0, active_count: 0, paused: false, avg_duration_min: 25 }
 }
 
@@ -820,8 +918,13 @@ async function handleRequest(req, res) {
     const remote = (req.socket?.remoteAddress) || ''
     const isLocal = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1'
     if (TOKEN && !isLocal && token !== TOKEN) return json({ ok: false, error: 'unauthorized' }, 401)
-    if (p === '/api/status') return json(dashboardStatusPayload())
-    if (p === '/api/queue') return json(queuePayload())
+    // ★G2（task-16）：/api/status 与 /api/queue 的**真值只在 Python 上游** ——
+    //   真运行态 = Python 的 tasklist MAA.exe + runner._active（network/api_fastapi.py:298-321），
+    //   真队列   = Python 的 launch queue（network/api_fastapi.py:1309-1377）。
+    //   Node 原来的原生实现是"恒 false / 恒空"的空壳，会**遮蔽**这两份真值（task-12 判定）。
+    //   本机又禁止按需拉起 Python（见 ALLOW_UPSTREAM_SPAWN），故 Python 不可达时统一回
+    //   {ok:false, unknown:true} —— 页面按「未知」显示，而不是假装"没有账号在跑"。
+    if (p === '/api/status' || p === '/api/queue') return proxyTruth(req, res, p)
     if (p === '/api/stages') return json(stagesPayload())
     if (p === '/api/account_status') return json(accountStatusPayload())
     if (p === '/api/config') return json(configPayload())
@@ -913,7 +1016,11 @@ async function handleRequest(req, res) {
           const r = copilotPost(p, body)
           if (r) return json(r.body, r.code)
         }
-        return proxyTo(req, res, p)
+        // ★G5（task-16）：队列动作（/api/queue/enqueue|dequeue|pause|resume）的真实现只在 Python，
+        //   这里必须把**已经读出来的 body** 交给 proxyTo —— req 的 data/end 早被上面消费过，
+        //   让 proxyTo 重新监听会永远等不到 'end'（6 秒后被兜底守卫判成 503 upstream_timeout），
+        //   那样入队/出队的参数根本传不到 Python。
+        return proxyTo(req, res, p, { body: Buffer.concat(chunks) })
       })
       return
     }
