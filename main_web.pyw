@@ -360,7 +360,7 @@ pause
 
     url = f"http://{_bind}:{port}/"
     _LOG.info(f"Python API: {url}")
-    _LOG.info(f"人工入口（Node 最小运维页首）: {node_url}")
+    _LOG.info(f"人工入口（Node 最小运维页 /status）: {node_url}")
 
     import webbrowser
     webbrowser.open(node_url)

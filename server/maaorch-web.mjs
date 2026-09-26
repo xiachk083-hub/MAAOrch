@@ -915,6 +915,13 @@ async function handleRequest(req, res) {
   //   这些「前端包扩展名」也一并收紧（旧前端的手写 JS/CSS/字体/APK 都随前端退役）。
   // 保留 ui/ 与 screenshots/ 两个根：那是**数据与截图类**资产（搜索快照、地图编辑与标注
   //   的截图），不是前端包。仍含目录穿越防护。
+  // 已退役的前端包扩展名（.js/.css/.html/.woff2/.ttf/.map/.apk）→ 明确 404，
+  //   不让它们落到文件末尾的"未知路径返回运维页"分支（否则会把 HTML 当 JS 发出去）。
+  const RETIRED_EXT = /\.(js|css|html?|woff2?|ttf|map|apk)$/i
+  if (RETIRED_EXT.test(p)) {
+    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+    return res.end('gone: 旧前端资源已退役（人工入口见 /status）')
+  }
   const STATIC_EXT = /\.(png|jpe?g|gif|svg|ico|webp|mp4|txt|json)$/i
   if (STATIC_EXT.test(p)) {
     const rel = decodeURIComponent(p).replace(/^\/+/, '')
