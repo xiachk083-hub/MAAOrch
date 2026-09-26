@@ -8,7 +8,8 @@
  *   这份跑 19998），验收后再切换端口。
  *
  * 现在提供：
- *   GET /                → 极简只读页（无依赖，纯 HTML）
+ *   GET /                → 302 跳转到 /status（2026-09-26 前端整体退役：本文件不再出手写前端页）
+ *   GET /status          → 唯一人工入口：极简运维面板（本文件内联生成，零静态依赖）
  *   GET /api/status      → 账号/队列/看板状态汇总（需 token）
  *   GET /api/mas/status  → 产线状态（读 runtime/mas_watch_state.json 等，需 token）
  *   GET /api/health      → 进程自检（内存/RSS/uptime，不需要 token）
@@ -264,7 +265,7 @@ const PAGE = `<!doctype html><html lang="zh"><meta charset="utf-8">
  .ok{color:#5ad07a} .warn{color:#e2b93b} .err{color:#e06c75} pre{background:#0b0f13;padding:10px;border-radius:6px;overflow:auto}
 </style>
 <h1>MAAOrch 看板 · Node 版（只读第一版）</h1>
-<div class="sub">跑在 <code>${PORT}</code> · 与旧看板 19999 并存 · 只读不写入</div>
+<div class="sub">跑在 <code>${PORT}</code> · 前端已退役：本页 <code>/status</code> 是唯一人工入口 · 只读不写入</div>
 <h3>产线动作 <span class="sub">（默认 dry-run，勾「真执行」才落刀；每次调用留痕 runtime/node_dashboard_actions.log）</span></h3>
 <div>
   <input id="acc" placeholder="账号名，逗号分隔（如 史蒂芬芬,hbznn119-日）" style="width:340px;background:#0b0f13;color:#dbe4ee;border:1px solid #263140;padding:6px">
@@ -333,6 +334,10 @@ import { appendFileSync } from 'node:fs'
 
 /**
  * 把请求透传给上游（旧 Python 看板）。用于迁移期的"未实现路由"。
+ * ★ 2026-09-26 前端整体退役后，本兜底的适用范围**已收窄**为两类调用：
+ *   (a) `/status` 最小运维页之外的人工/运维调用（例如手动 curl 某条还没搬进 Node 的路由）；
+ *   (b) MCP 之外、尚未迁进 Node 的 Web/API 路由。
+ *   它仍然保证迁移期"零 404"，但**已经没有前端页面依赖它**了（旧前端已下线）。
  * **按需拉起**（2026-09-21）：上游没在跑时不放弃，而是**spawn 一个 Python 再重试一次**
  * —— 这样 Python 不必常驻（它空转 47% CPU 是已知问题），只有点那些还没搬完的功能时才起来。
  * 说明：不改写 body/响应，只做透明转发；转发失败时返回 502 并说明上游是谁。
@@ -887,53 +892,51 @@ async function handleRequest(req, res) {
       })
       return
     }
-    // 未实现的读路由 → 透传给上游（迁移期零 404）
+    // 未实现的读路由 → 透传给上游（迁移期零 404）。
+    // 前端退役后这条路径只服务「人工/运维调用」与尚未搬进 Node 的 MCP 之外路由（见 proxyTo 注释）。
     return proxyTo(req, res, p)
   }
-  // ── 页面路由 ──────────────────────────────────────────────────────────
-  // `/`      = 用户入口：旧的完整前端（ui/web/index.html，顶部已注入状态条）
-  // `/status` = 极简运维面板（本文件生成的只读+写动作页）
-  // 其余静态资源（.js/.css/.png/...）走白名单转发到上游。
+  // ── 页面路由（2026-09-26 前端整体退役后）──────────────────────────────
+  // `/status` = **唯一**人工入口：极简运维面板（本文件内联生成，零静态依赖）。
+  // `/`、`/index.html` 不再是主入口 —— 旧的完整前端 ui/web/index.html 已退役，
+  //   这里只做 302，**绝不**再 readFileSync 那个文件：
+  //   否则前端文件被删除后本路由会 500（这正是 task-13 要拆掉的耦合）。
   if (p === '/' || p === '/index.html') {
-    try {
-      let html = readFileSync(join(ROOT, 'ui', 'web', 'index.html'), 'utf8')
-      // 把本地默认 token 注入到页面（用户在电脑前打开就能看到数据；API 裸请求仍需凭据）。
-      // 用 DOM 承载而不是字符串替换，避免引号/转义类坑。
-      html = html.replace(/<script id="maaorch-token" type="application\/json"><\/script>/,
-        `<script id="maaorch-token" type="application/json">${JSON.stringify(TOKEN)}</script>`)
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' })
-      return res.end(html)
-    } catch (e) {
-      res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' })
-      return res.end('index.html 读取失败: ' + e.message)
-    }
+    res.writeHead(302, { location: '/status', 'cache-control': 'no-cache' })
+    return res.end()
   }
   if (p === '/status') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' })
     return res.end(PAGE)
   }
-  // ── 静态资源：**Node 直接从磁盘服务**（2026-09-21 修正）─────────────────
-  // 以前走上游代理，Python 一停页面就丢掉 CSS/JS（变成裸 HTML）。
-  // 这些文件本来就在 ui/web/ 里，没有理由依赖 Python。含目录穿越防护。
-  const STATIC_EXT = /\.(js|css|png|jpe?g|gif|svg|ico|woff2?|ttf|map|txt|webp|mp4|html|apk)$/i
+  // ── 静态资源：只服务「退役前端之外」的资产（2026-09-26 前端整体退役）────
+  // 退役前：这里直接从 ui/web/ 出 index.html 的 CSS/JS（避开 Python 依赖）。
+  // 退役后：ui/web/ 整个目录不再是本服务的资源来源；`.js/.css/.html/.woff/.ttf/.map/.apk`
+  //   这些「前端包扩展名」也一并收紧（旧前端的手写 JS/CSS/字体/APK 都随前端退役）。
+  // 保留 ui/ 与 screenshots/ 两个根：那是**数据与截图类**资产（搜索快照、地图编辑与标注
+  //   的截图），不是前端包。仍含目录穿越防护。
+  const STATIC_EXT = /\.(png|jpe?g|gif|svg|ico|webp|mp4|txt|json)$/i
   if (STATIC_EXT.test(p)) {
     const rel = decodeURIComponent(p).replace(/^\/+/, '')
     if (rel.includes('..')) {
       res.writeHead(400); return res.end('bad path')
     }
-    const roots = [join(ROOT, 'ui', 'web'), join(ROOT, 'ui'), join(ROOT, 'screenshots')]
+    // 显式闸：ui/web/ 是已退役的前端目录 —— 即使文件还在磁盘上也不从 Node 出
+    //（防「删了又回来」：谁把 app.js 拷回 ui/web/，这里也不会再把它当公开资源）。
+    if (rel.toLowerCase().startsWith('web/')) {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+      return res.end('gone: ui/web 前端资源已退役（人工入口见 /status）')
+    }
+    const roots = [join(ROOT, 'ui'), join(ROOT, 'screenshots')]
     for (const r of roots) {
       const fp = join(r, rel)
       if (existsSync(fp) && statSync(fp).isFile()) {
         const ext = (rel.split('.').pop() || '').toLowerCase()
         const mime = {
-          js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8',
-          html: 'text/html; charset=utf-8', json: 'application/json; charset=utf-8',
+          json: 'application/json; charset=utf-8',
           png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
           svg: 'image/svg+xml', ico: 'image/x-icon', webp: 'image/webp', mp4: 'video/mp4',
-          woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', map: 'application/json',
           txt: 'text/plain; charset=utf-8',
-          apk: 'application/vnd.android.package-archive',
         }[ext] || 'application/octet-stream'
         res.writeHead(200, { 'content-type': mime, 'cache-control': 'no-cache' })
         return res.end(readFileSync(fp))
@@ -949,5 +952,5 @@ async function handleRequest(req, res) {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`[node-dashboard] http://127.0.0.1:${PORT}  (token ${TOKEN ? 'enabled' : 'DISABLED'})`)
-  console.log(`[node-dashboard] 门面模式：/ = 完整前端，/status = 运维面板；未实现的路由透传 ${UPSTREAM || '(已关闭)'}`)
+  console.log(`[node-dashboard] 前端已退役：/ → 302 /status（唯一人工入口）；未实现的路由透传 ${UPSTREAM || '(已关闭)'}`)
 })

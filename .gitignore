@@ -154,3 +154,8 @@ untitled-project/
 # 2026-09-26：审计冻结副本与临时分析件不得入库（78ad828 曾误带 14 文件约 2 万行）
 docs/audits/snapshot/
 .tmp_*.json
+
+# 2026-09-26：非项目内容/工具缓存（未忽略会造成下一次 git add -A 地雷）
+.opencode/
+_sanity_check/
+_anni_check/

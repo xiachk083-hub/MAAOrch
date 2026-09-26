@@ -1,0 +1,183 @@
+# -*- coding: utf-8 -*-
+"""task-11 独立验证（自足：用只读 git show 取 HEAD / HEAD~1 两版代码到临时目录）。
+运行：python docs/audits/_verify_stubs_p2.py.txt
+只读 git 子命令：show（无 add/commit/checkout/reset）。不写任何项目文件。
+"""
+import importlib.machinery, importlib.util, os, subprocess, sys, tempfile, types, threading, shutil
+from pathlib import Path
+
+ROOT = str(Path(__file__).resolve().parents[2])
+os.chdir(ROOT); sys.path.insert(0, ROOT)
+RES = []
+def ok(c, msg):
+    RES.append((bool(c), msg)); print(("PASS " if c else "FAIL ") + msg)
+def load(path, name):
+    loader = importlib.machinery.SourceFileLoader(name, str(path))
+    mod = importlib.util.module_from_spec(importlib.util.spec_from_loader(name, loader))
+    sys.modules[name] = mod; loader.exec_module(mod); return mod
+
+FILES = ["services/launch_queue.py", "services/runner.py", "services/runtime_health.py"]
+TMP = Path(tempfile.mkdtemp(prefix="task11_"))
+def git_show(rev, path, dst):
+    r = subprocess.run(["git", "--no-optional-locks", "show", rev + ":" + path],
+                       capture_output=True)
+    assert r.returncode == 0, (rev, path, r.stderr[:200])
+    dst.write_bytes(r.stdout); return dst
+base = {f: git_show("HEAD~1", f, TMP / ("base_" + Path(f).name)) for f in FILES}
+cur = {f: git_show("HEAD", f, TMP / ("cur_" + Path(f).name)) for f in FILES}
+print("临时目录: %s" % TMP)
+print("=== 完整性：被测字节 == HEAD == 工作区 ===")
+def _norm(b): return b.replace(b"\r\n", b"\n")
+for f in FILES:
+    a = Path(f).read_bytes()
+    ok(_norm(a) == _norm(cur[f].read_bytes()),
+       "%s 工作区 == HEAD（被测对象就是已提交内容；CRLF=%d，按行尾归一后逐字节相等）" % (f, a.count(b"\r\n")))
+
+# ═══ 1) T8：双入队 改造前 vs 改造后 ═══
+print("\n===== T8-1 双入队（真实 LaunchQueue.enqueue + on_account_finished）=====")
+def build_lq(mod, launch_slot, emu_idx="0"):
+    ac = {"id": "A1", "name": "n1", "emu_instance_index": emu_idx,
+          "consecutive_failures": 1, "_slot": launch_slot}
+    ctx = types.SimpleNamespace(accounts=[ac], config={}, log=lambda m: None, _mw=None)
+    lq = mod.LaunchQueue(ctx)
+    lq._save_queue = lambda: None
+    lq._has_running_process = lambda aid: False
+    lq._tick = lambda: None
+    lq._active_emus = {"0": "A1"} if emu_idx else {}
+    lq._active_emus_ts = {"0": 1.0} if emu_idx else {}
+    return lq, ac
+def two_producers(mod, launch_slot, exit_code):
+    lq, ac = build_lq(mod, launch_slot)
+    lq.on_account_finished(("A1", exit_code, []))                   # 生产者① 队列重试（L350/373/398）
+    lq.enqueue("A1", "auto", priority=0, slot=ac.get("_slot", ""))  # 生产者② runner 自动重启（L3248）
+    return [(e.account_id, e.slot, e.source) for e in lq._pending]
+lq_old = load(base["services/launch_queue.py"], "lq_old")
+lq_new = load(cur["services/launch_queue.py"], "lq_new")
+for slot in ("fight", ""):
+    for ec, tag in ((1, "失败exit=1（L398）"), (-3, "超时-3（L350）"), (-8, "失联-8（L373）")):
+        old = two_producers(lq_old, slot, ec); new = two_producers(lq_new, slot, ec)
+        print("  slot=%-6r %-16s old=%s new=%s" % (slot, tag, old, new))
+        ok(len(old) == (2 if slot else 1), "改造前 slot=%-6r %s → pending %d" % (slot, tag, len(old)))
+        ok(len(new) == 1, "改造后 slot=%-6r %s → pending %d" % (slot, tag, len(new)))
+
+# ═══ 2) T8：emit_finished 逐订阅者隔离 ═══
+print("\n===== T8-2 emit_finished 订阅者异常隔离（爆炸订阅者桩）=====")
+def emit_case(mod, tag):
+    seen, warned = [], []
+    def boom(data): raise RuntimeError("订阅者爆炸")
+    def good(data): seen.append(data)
+    stub = types.SimpleNamespace(_finished_callbacks=[boom, good],
+                                 _log=types.SimpleNamespace(warn=lambda m: warned.append(m)))
+    propagated = None
+    try: mod.AccountRunner.emit_finished(stub, ("A1", 1, []))
+    except Exception as e: propagated = e
+    released = ["A1"] if propagated is None else []
+    print("  %s propagated=%r good_ran=%s released_after=%s warn=%s" % (
+        tag, propagated, seen == [("A1", 1, [])], released, bool(warned)))
+    return propagated, seen, released, warned
+r_old = load(base["services/runner.py"], "runner_old")
+r_new = load(cur["services/runner.py"], "runner_new")
+p_old, s_old, rel_old, _ = emit_case(r_old, "改造前")
+ok(p_old is not None and rel_old == [], "改造前：订阅者异常冒泡 → 后续 release 被跳过（复现 R1）")
+ok(s_old == [], "改造前：异常中断循环 → 后续正常订阅者收不到通知")
+p_new, s_new, rel_new, w_new = emit_case(r_new, "改造后")
+ok(p_new is None, "改造后：异常不再冒泡（逐订阅者隔离）")
+ok(rel_new == ["A1"], "改造后：异常订阅者之后仍能走到 release")
+ok(s_new == [("A1", 1, [])], "改造后：其余订阅者照常收到通知")
+ok(bool(w_new), "改造后：异常有 warn 留痕: %s" % (w_new[:1],))
+
+# ═══ 3) T9：六处杀进程路径 旧/新 × 闸关/闸开 ═══
+print("\n===== T9 六处杀进程闸门（旧 vs 新差分）=====")
+class R:
+    def __init__(self, out=""): self.stdout = out; self.stderr = ""; self.returncode = 0
+def harness(mod, gate, mw_config=None, lq_cfg=None, lq_missing=False, lq_cfg_none=False):
+    tmp = Path(tempfile.mkdtemp(prefix="task11_inst_"))
+    (tmp / "1").mkdir(); (tmp / "1" / ".pid").write_text("555"); (tmp / "1" / ".meta").write_text("A2|n2")
+    (tmp / "2").mkdir(); (tmp / "2" / ".pid").write_text("666")
+    calls = []
+    def fake_run(cmd, *a, **k):
+        c = list(cmd) if not isinstance(cmd, str) else [cmd]; calls.append(c)
+        j = " ".join(str(x) for x in c)
+        if "Measure-Object).Count" in j: return R("7")
+        if "MAA.exe" in j and "CSV" in j: return R(chr(34) + "MAA.exe" + chr(34) + "," + chr(34) + "777" + chr(34))
+        if "MuMuNxCrashReporter.exe" in j and "tasklist" in j: return R("MuMuNxCrashReporter.exe")
+        return R("")
+    class P:
+        def __init__(self, pid, idx):
+            import time
+            self.info = {"name": "MuMuVMMHeadless.exe", "cmdline": ["x", "MuMuPlayer-12.0-" + idx],
+                         "pid": pid, "create_time": time.time() - 1000}
+    import psutil
+    mod.INSTANCES = tmp; mod._pid_alive = lambda pid: True; mod._running_emulators = lambda: {}
+    psutil.process_iter = lambda attrs=None: iter([P(111, "0"), P(222, "9")])
+    class MW:
+        def __init__(self):
+            self.accounts = [{"id": "A1", "name": "n1", "emu_instance_index": "0"}]
+            self.runner = None; self.config = mw_config if mw_config is not None else {"emu_reclaim_enabled": gate}
+            self._msgs = []
+        def _log(self, m): self._msgs.append(m)
+    mw = MW()
+    if not lq_missing:
+        cfg = None if lq_cfg_none else (lq_cfg if lq_cfg is not None else {"emu_reclaim_enabled": gate})
+        mw.launch_queue = types.SimpleNamespace(ctx=types.SimpleNamespace(config=cfg),
+                                                _active_emus={"0": "A1"}, _pending=[])
+    real = subprocess.run; subprocess.run = fake_run
+    try: out = mod.check_health(mw)
+    finally: subprocess.run = real
+    shutil.rmtree(tmp, ignore_errors=True)
+    kills = [c for c in calls if (c and "taskkill" in str(c[0])) or "Stop-Process" in " ".join(map(str, c))]
+    return kills, out, mw._msgs
+
+import services.runtime_health as rh_new
+rh_old = load(base["services/runtime_health.py"], "rh_old")
+res = {}
+for tag, mod in (("old", rh_old), ("new", rh_new)):
+    for gate in (False, True):
+        k, out, msgs = harness(mod, gate); res[(tag, gate)] = (k, out, msgs)
+        print("  %s gate=%-5s kills=%d issues=%s" % (tag, gate, len(k), [i["category"] for i in out["issues"]]))
+ok(len(res[("new", False)][0]) == 0, "新：闸关 6 处杀进程调用数 = %d（期望 0）" % len(res[("new", False)][0]))
+ok(len(res[("new", True)][0]) == 6, "新：闸开杀进程调用数 = %d（期望 6）" % len(res[("new", True)][0]))
+ok(len(res[("old", False)][0]) == 5, "旧：闸关仍杀 %d 处（G3 只盖了 VMM，暴露面）" % len(res[("old", False)][0]))
+ok(res[("old", True)][0] == res[("new", True)][0], "闸开：新旧杀进程命令序列逐字一致")
+ok(res[("old", True)][1]["counts"] == res[("new", True)][1]["counts"], "闸开：新旧 counts 完全一致")
+ok([i["detail"] for i in res[("old", True)][1]["issues"]] == [i["detail"] for i in res[("new", True)][1]["issues"]],
+   "闸开：新旧 issues detail 逐字一致")
+ok(any("Stop-Process" in " ".join(map(str, c)) for c in res[("new", True)][0]), "闸开含 L299 PowerShell Stop-Process 路径")
+ok(not any(c and c[-1] == "222" for c in res[("new", True)][0]), "闸开：无账号映射 VMM（idx9/pid222）未被杀")
+ok(len(res[("new", False)][2]) == 6 and all("已跳过" in m for m in res[("new", False)][2]),
+   "闸关 6 处均留痕（%d 条）" % len(res[("new", False)][2]))
+for m in res[("new", False)][2]: print("    LOG: " + m)
+ok("已跳过僵尸 VMM 清理（emu_reclaim_enabled=False）" in res[("new", False)][2], "VMM 文案与 G3 逐字一致")
+
+print("\n===== T9b _kill_gate 失效方向（lq 缺失 / config 非 dict）=====")
+import services.runtime_health as rh_live
+still = rh_live
+edges = [
+    ("lq 缺失 + mw.config 无键", {}, None, True, False),
+    ("lq 缺失 + mw.config=True", {"emu_reclaim_enabled": True}, None, True, False),
+    ("lq 缺失 + mw.config=False", {"emu_reclaim_enabled": False}, None, True, False),
+    ("lq.ctx.config=None + mw.config=True", {"emu_reclaim_enabled": True}, None, False, True),
+    ("lq.ctx.config={} + mw.config=True", {"emu_reclaim_enabled": True}, {}, False, False),
+    ("lq.ctx.config=True + mw.config={}", {}, {"emu_reclaim_enabled": True}, False, False),
+]
+for name, mwc, lqc, miss, none_cfg in edges:
+    ko, _, _ = harness(rh_old, True, mw_config=mwc, lq_cfg=lqc, lq_missing=miss, lq_cfg_none=none_cfg)
+    kn, _, _ = harness(rh_new, True, mw_config=mwc, lq_cfg=lqc, lq_missing=miss, lq_cfg_none=none_cfg)
+    print("  %-38s old_kills=%d new_kills=%d" % (name, len(ko), len(kn)))
+    if name.startswith("lq 缺失 + mw.config 无键") or name.startswith("lq.ctx.config={}"):
+        ok(len(kn) == 0, "%s → 新闸安全侧（0 杀）" % name)
+    if name.startswith("lq.ctx.config=True"):
+        ok(len(kn) == 6, "%s → 主源 True 优先（6 杀，与旧一致）" % name)
+
+print("\n===== 订阅者注册（修正 p1 误判）=====")
+mw_src = Path("main_web.pyw").read_text(encoding="utf-8").splitlines()
+regs = [(i + 1, l.strip()) for i, l in enumerate(mw_src) if "_finished_callbacks.append" in l]
+for n, l in regs: print("  main_web.pyw:%d: %s" % (n, l))
+ok(len(regs) == 2, "main_web.pyw 有 %d 个 _finished_callbacks 订阅者（p1 误报 0：我只 grep 了 .py，漏掉 .pyw）" % len(regs))
+ok("launch_queue.on_account_finished" in regs[0][1], "其中 main_web.pyw:%d 就是队列重试路径（双入队当时确实活着）" % regs[0][0])
+
+print("\n===== SUMMARY =====")
+print("total=%d pass=%d fail=%d" % (len(RES), sum(1 for c, _ in RES if c), sum(1 for c, _ in RES if not c)))
+for c, m in RES:
+    if not c: print("FAIL " + m)
+shutil.rmtree(TMP, ignore_errors=True)

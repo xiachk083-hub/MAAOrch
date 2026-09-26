@@ -345,11 +345,25 @@ pause
     _uvicorn_server = uvicorn.Server(_uvicorn_config)
     _th.Thread(target=_uvicorn_server.run, daemon=True).start()
 
+    # ★ 2026-09-26 前端整体退役：浏览器入口 = **Node 最小运维页 /status**，
+    #   不再是 Python 自己的 `/`（旧完整前端 ui/web/index.html 已下线；Python 侧只留 FastAPI + MCP）。
+    #   端口口径：Node 看板端口由**启动脚本参数**决定、不是写死的 19999 ——
+    #     tools/maaorch_platform.bat:16 与 tools/maaorch_web_launch.ps1:58 都传 `--port 19999`；
+    #     Python 这边看不到那个参数，故优先读配置项 node_dashboard_port，缺省才回落到 19999。
+    #   ⚠️ 若 Node 看板未启动，此入口不可用（连接被拒 / 打不开）；本进程不负责把它拉起来。
+    _node_port = 19999
+    try:
+        _node_port = int(config.get("node_dashboard_port", 19999) or 19999)
+    except Exception:
+        _node_port = 19999
+    node_url = f"http://127.0.0.1:{_node_port}/status"
+
     url = f"http://{_bind}:{port}/"
-    _LOG.info(f"Web UI: {url}")
+    _LOG.info(f"Python API: {url}")
+    _LOG.info(f"人工入口（Node 最小运维页首）: {node_url}")
 
     import webbrowser
-    webbrowser.open(url)
+    webbrowser.open(node_url)
 
     def _quit():
         if _dash:
@@ -372,7 +386,9 @@ pause
         tray = QSystemTrayIcon(_app)
         tray.setToolTip("MAAOrch")
         menu = QMenu()
-        menu.addAction("打开浏览器", lambda: webbrowser.open(url))
+        # 「打开浏览器」打开的是 Node 最小运维页 /status（见上方 node_url 注释：
+        #   端口来自启动脚本参数；Node 未启动则该入口不可用）。
+        menu.addAction("打开浏览器", lambda: webbrowser.open(node_url))
         menu.addAction("退出", _quit)
         tray.setContextMenu(menu)
         tray.show()
