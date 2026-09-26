@@ -150,3 +150,7 @@ tools/emu_maa_tool/maa_instances/
 
 # 4) 游离的嵌套 git 仓库（无 commit checked out）——会让每一次 git add -A 直接 fatal exit 128
 untitled-project/
+
+# 2026-09-26：审计冻结副本与临时分析件不得入库（78ad828 曾误带 14 文件约 2 万行）
+docs/audits/snapshot/
+.tmp_*.json

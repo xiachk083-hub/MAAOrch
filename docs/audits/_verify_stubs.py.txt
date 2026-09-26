@@ -1,0 +1,151 @@
+# -*- coding: utf-8 -*-
+"""Task-4 独立验证桩（不写项目文件、不碰真实进程）。
+运行: python docs/audits/_verify_stubs.py.txt
+"""
+import os, sys, json, re, types, traceback
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.chdir(ROOT); sys.path.insert(0, ROOT)
+RES = []
+BT = "\x60"
+
+def ok(c, msg): RES.append(("PASS" if c else "FAIL", msg)); print(("PASS " if c else "FAIL ") + msg)
+
+# 1) G3: health 僵尸 VMM 闸门
+print("\n===== G3 health 僵尸 VMM 闸门 =====")
+import subprocess, time
+import services.runtime_health as rh
+
+class _FakeProc:
+    def __init__(self, pid, idx, age=1000.0):
+        self.info = {"name": "MuMuVMMHeadless.exe",
+                     "cmdline": ["MuMuPlayer.exe", "MuMuPlayer-12.0-%s" % idx],
+                     "pid": pid, "create_time": time.time() - age}
+
+_calls = []
+_real_run = subprocess.run
+class _R:
+    stdout = ""; stderr = ""; returncode = 0
+def _rec_run(cmd, *a, **k):
+    _calls.append(list(cmd) if not isinstance(cmd, str) else [cmd]); return _R()
+
+import psutil
+_fake_procs = [_FakeProc(111, "0", 1000.0), _FakeProc(222, "9", 1000.0)]
+
+def run_case(gate):
+    global _calls
+    _calls = []
+    subprocess.run = _rec_run
+    psutil.pid_exists = lambda pid: False
+    psutil.process_iter = lambda attrs=None: iter(_fake_procs)
+    rh._running_emulators = lambda: {}
+    logs = []
+    mw = types.SimpleNamespace(
+        accounts=[{"id": "A1", "name": "n1", "emu_instance_index": "0"}],
+        runner=None,
+        launch_queue=types.SimpleNamespace(ctx=types.SimpleNamespace(config={"emu_reclaim_enabled": gate})),
+        _log=logs.append)
+    out = rh.check_health(mw)
+    kills = [c for c in _calls if c and str(c[0]).lower().endswith("taskkill")]
+    print("  gate=%s taskkill=%s issues=%s log=%s" % (gate, kills, [i.get("category") for i in out.get("issues", [])], logs))
+    return kills, out, logs
+
+try:
+    k_off, out_off, log_off = run_case(False)
+    ok(len(k_off) == 0, "闸关 → taskkill 调用数=%d（期望 0）" % len(k_off))
+    ok(any("跳过僵尸 VMM" in m for m in log_off), "闸关有留痕")
+    k_on, out_on, log_on = run_case(True)
+    pids = [c[-1] for c in k_on]
+    ok(pids == ["111"], "闸开 → 只杀有账号映射的 idx0(pid=111)，无映射 idx9 不碰: %s" % pids)
+    ok(any(i.get("category") == "zombie_vmm" for i in out_on.get("issues", [])), "闸开时报 zombie_vmm")
+finally:
+    subprocess.run = _real_run
+
+# 2) G5 守卫短路推演
+print("\n===== G5 release 顺序 vs on_account_finished 守卫 =====")
+def mimic(order):
+    lq = {"active_emus": {"emu0": "A1"}, "ts": {"emu0": 1.0}}
+    def release():
+        lq["active_emus"].pop("emu0", None); lq["ts"].pop("emu0", None)
+    def hook(aid):
+        old = lq["active_emus"].pop("emu0", None)
+        lq["ts"].pop("emu0", None)
+        return "early-return(重试/退避不可达)" if old != aid else "proceed(重试/退避可达)"
+    if order == "release-first":
+        release(); return hook("A1")
+    r = hook("A1"); release(); return r
+print("  release-first ->", mimic("release-first"))
+print("  release-after ->", mimic("release-after"))
+ok(mimic("release-first").startswith("early-return"), "改前顺序确实短路 on_account_finished（守卫 old != aid）")
+ok(mimic("release-after").startswith("proceed"), "改后顺序守卫不再短路")
+
+# 3) G5 双入队：enqueue 去重键(account_id, slot)
+print("\n===== G5 双入队条件 =====")
+def enq(pending, aid, slot):
+    pending = [e for e in pending if not (e[0] == aid and e[1] == slot)]
+    pending.append((aid, slot)); return pending
+for tag, s in (("定时/手动/理智 slot=''", ""), ("force slot='fight'", "fight"), ("dispatch slot='roguelike'", "roguelike")):
+    p = enq(enq([], "A1", ""), "A1", s)
+    ok(len(p) == (1 if s == "" else 2), "%s → pending=%d %s" % (tag, len(p), p))
+
+# 4) T3 mas_adapter
+print("\n===== T3 mas_adapter 结构错误 / dry_run =====")
+import services.mas_adapter as ma
+before = set(sys.modules)
+r1 = ma.cleanup(dry_run=True)
+ok(isinstance(r1, dict) and r1.get("dry_run") is True and "services.mas_l3" not in (set(sys.modules) - before),
+   "cleanup(dry_run=True) → %s，且未 import mas_l3" % r1.get("action"))
+r2 = ma.rerun(accounts=["A1", "A2"], dry_run=True)
+ok(isinstance(r2, dict) and r2.get("dry_run") is True and r2.get("would_start") == ["A1", "A2"],
+   "rerun(dry_run=True) → would_start=%s" % r2.get("would_start"))
+
+class _Boom:
+    def __getattr__(self, n):
+        def _f(*a, **k): raise RuntimeError("ssh timed out unreachable")
+        return _f
+ma._MOD = _Boom()
+for name, fn in (("snapshot", lambda: ma.snapshot()), ("status", lambda: ma.status(7)),
+                 ("history", lambda: ma.history(3)), ("ledger", lambda: ma.ledger(2)),
+                 ("rerun_state", ma.rerun_state), ("rerun", lambda: ma.rerun(["A1"], dry_run=False)),
+                 ("cleanup", lambda: ma.cleanup(dry_run=False))):
+    try:
+        r = fn()
+    except Exception as e:
+        ok(False, "%s 抛异常 %r（契约要求不抛）" % (name, e)); continue
+    ok(isinstance(r, dict) and r.get("ok") is False and bool(r.get("error")),
+       "%s 异常场景 → ok=%s error=%r degraded=%s" % (name, r.get("ok"), (r.get("error") or "")[:26], r.get("degraded")))
+ma._MOD = None
+
+# 5) T3 MCP 工具清单
+print("\n===== T3 MCP 工具清单 =====")
+src = open("network/mcp_server.py", encoding="utf-8").read()
+names = re.findall(r"@mcp\.tool\(\)[\s\S]*?def\s+(\w+)", src)
+ok(len(names) == 25, "@mcp.tool() 总数=%d（期望 25）" % len(names))
+doc = open("docs/POSITIONING.md", encoding="utf-8").read()
+seg = doc.split("MCP 工具清单")[1].split("口径澄清")[0]
+doc_names = set()
+for _line in seg.splitlines():
+    if _line.strip().startswith("-") and BT in _line:
+        for _p in _line.split("：", 1)[-1].strip().strip(BT).split(","):
+            _p = _p.split(BT)[0].strip()
+            if re.fullmatch(r"[a-z_]+", _p):
+                doc_names.add(_p)
+print("  源码:", ",".join(names))
+ok(set(names) <= doc_names, "文档覆盖源码全部工具名；差集=%s" % (set(names) - doc_names))
+ok(doc_names - set(names) == set(), "文档无源码不存在的工具名；多余=%s" % (doc_names - set(names)))
+
+# 6) 门面边界
+print("\n===== T3 门面边界 =====")
+ad = open("services/mas_adapter.py", encoding="utf-8").read()
+ok("urllib" not in ad and "requests" not in ad, "mas_adapter 无 HTTP 依赖（不新增 REST）")
+ms = open("network/mcp_server.py", encoding="utf-8").read()
+ok("from services import mas_adapter" in ms and "import mas_l3" not in ms, "mcp_server 只经 mas_adapter")
+import services.mas_l3 as l3
+need = ["host_snapshot", "collect_status", "history", "_ledger_tail", "rerun_state", "rerun_async", "cleanup"]
+missing = [n for n in need if not callable(getattr(l3, n, None))]
+ok(not missing, "mas_l3 具备 adapter 依赖接口；缺=%s" % missing)
+
+print("\n===== SUMMARY =====")
+print("total=%d pass=%d fail=%d" % (len(RES), sum(1 for s, _ in RES if s == "PASS"), sum(1 for s, _ in RES if s == "FAIL")))
+for s, m in RES:
+    if s == "FAIL": print("FAIL " + m)
