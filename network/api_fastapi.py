@@ -228,10 +228,6 @@ def create_app(mw: Any) -> FastAPI:
                 return JSONResponse({"error": "unauthorized"}, 401)
         return await call_next(request)
 
-    # ── Static file serving (catch-all, MUST be last route) ──
-
-    web_dir = Path(__file__).parent.parent / "ui" / "web"
-
     # ── Helpers ──
 
     _CF = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
@@ -320,21 +316,6 @@ def create_app(mw: Any) -> FastAPI:
         running_count = len(rc._active) if rc else sum(1 for a in accts if a["running"])
         return {"accounts": accts, "pipeline_running": False, "running": running_count}
 
-    @app.get("/api/node/info")
-    def handle_node_info():
-        import psutil as _ps
-        mem = _ps.virtual_memory()
-        return {
-            "node_id": mw.config.get("node_id", ""),
-            "node_name": mw.config.get("node_name", ""),
-            "version": "1.2.0",
-            "parallel_max": mw.config.get("parallel_max", 3),
-            "account_count": len(mw.accounts),
-            "running_count": len(getattr(mw, "_proc_status", set())),
-            "cpu_count": _ps.cpu_count(),
-            "memory_total_mb": mem.total // 1048576,
-            "memory_available_mb": mem.available // 1048576,
-        }
 
     @app.get("/api/node/dashboard")
     def handle_node_dashboard():
@@ -508,132 +489,12 @@ def create_app(mw: Any) -> FastAPI:
             elapsed = int(time.time() - mw._proc_start_times[pid])
         return {"name": a.get("name", ""), "running": running, "elapsed": elapsed}
 
-    @app.get("/api/account/{idx}/stats")
-    def handle_account_stats(idx: int):
-        from models.stats import RunStats
-        a = _account_by_idx(idx)
-        st = RunStats(a["id"])
-        pid = _proc_pid(a)
-        running = _is_running(pid)
-        return {"account_name": a.get("name", ""), "running": running, "stats": st._data}
 
-    @app.get("/api/account/{idx}/screenshot")
-    def handle_account_screenshot(idx: int):
-        a = _account_by_idx(idx)
-        addr = a.get("adb_address", "")
-        adb = a.get("adb_path", "")
-        if not addr and a.get("emu_instance_index"):
-            # 直接检测实际端口 — 公式端口会漂移，禁止使用
-            from infrastructure.task_constants import detect_emu_adb
-            addr = detect_emu_adb(a["emu_instance_index"])
-        if not addr:
-            raise HTTPException(400, "no adb address")
-        if not adb:
-            from infrastructure.task_constants import find_mumu_cli, cli_flag
-            cli = find_mumu_cli()
-            if cli:
-                cand = str(Path(cli).parent / "adb.exe")
-                if Path(cand).exists():
-                    adb = cand
-            if not adb:
-                adb = "adb"
-        subprocess.run([adb, "-s", addr, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
-                       capture_output=True, timeout=5, creationflags=_CF)
-        subprocess.run([adb, "-s", addr, "shell", "input", "keyevent", "KEYCODE_MENU"],
-                       capture_output=True, timeout=5, creationflags=_CF)
-        r = subprocess.run([adb, "-s", addr, "exec-out", "screencap", "-p"],
-                           capture_output=True, timeout=15, creationflags=_CF)
-        if r.returncode != 0 or len(r.stdout) < 100:
-            raise HTTPException(500, "screencap failed")
-        return StreamingResponse(io.BytesIO(r.stdout), media_type="image/png",
-                                 headers={"Cache-Control": "no-cache"})
 
-    @app.get("/api/screenshots/{aid}")
-    def handle_screenshots_list(aid: str):
-        _proj = Path(__file__).parent.parent
-        shot_root = _proj / "screenshots" / aid
-        runs = []
-        if shot_root.exists():
-            dirs = sorted(shot_root.glob("run_*"), key=lambda d: d.stat().st_mtime, reverse=True)[:20]
-            for d in dirs:
-                shots = sorted(d.glob("*.png"), key=lambda f: f.stat().st_mtime)
-                runs.append({"dir": d.name, "ts": d.stat().st_mtime,
-                             "shots": [{"file": f.name, "ts": f.stat().st_mtime} for f in shots]})
-        a = next((x for x in mw.accounts if x["id"] == aid), None)
-        return {"ok": True, "aid": aid, "name": a.get("name", "") if a else "", "runs": runs}
 
-    @app.get("/api/screenshots/file/{aid}/{run_dir}/{fname:path}")
-    def handle_screenshot_file(aid: str, run_dir: str, fname: str):
-        fp = Path(__file__).parent.parent / "screenshots" / aid / run_dir / fname
-        if not fp.exists():
-            raise HTTPException(404)
-        return FileResponse(str(fp), media_type="image/png")
 
-    @app.get("/api/screenshots/{aid}/export/{run_ts}")
-    def handle_screenshot_export(aid: str, run_ts: str):
-        ss_dir = Path(__file__).parent.parent / "screenshots" / aid
-        run_dir = ss_dir / run_ts if run_ts else None
-        if not run_dir or not run_dir.exists():
-            raise HTTPException(404)
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for f in sorted(run_dir.rglob("*")):
-                if f.is_file():
-                    zf.write(str(f), str(f.relative_to(run_dir.parent)))
-        return StreamingResponse(io.BytesIO(buf.getvalue()), media_type="application/zip",
-                                 headers={"Content-Disposition": f'attachment; filename="{aid}_{run_ts}.zip"'})
 
-    @app.get("/api/export/logs")
-    def handle_export_logs():
-        _proj = Path(__file__).parent.parent
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            dl = _proj / "logs" / "debug.log"
-            if not dl.exists():
-                dl = _proj / "debug.log"  # 根日志收口前兼容（Step 5）
-            if dl.exists():
-                zf.write(str(dl), "debug.log")
-            cf = _proj / "models" / "config.json"
-            if cf.exists():
-                zf.write(str(cf), "config.json")
-            ss = _proj / "screenshots"
-            if ss.exists():
-                for f in ss.rglob("*"):
-                    if f.is_file():
-                        zf.write(str(f), f"screenshots/{f.relative_to(ss)}")
-            inst = _proj / "services" / "maa" / "instances"
-            if inst.exists():
-                for d in inst.iterdir():
-                    al = d / "debug" / "asst.log"
-                    if al.exists():
-                        zf.write(str(al), f"maa_instances/{d.name}/asst.log")
-                    idir = d / "debug" / "interface"
-                    if idir.exists():
-                        for f in idir.glob("*.png"):
-                            zf.write(str(f), f"maa_instances/{d.name}/interface/{f.name}")
-        return StreamingResponse(io.BytesIO(buf.getvalue()), media_type="application/zip",
-                                 headers={"Content-Disposition": 'attachment; filename="maorch_logs.zip"'})
 
-    @app.get("/api/export/gantt")
-    def handle_export_gantt():
-        gantt = getattr(mw, '_gantt_events', [])
-        if not gantt:
-            return {"ok": True, "html": "<html><body><p>暂无编年史数据</p></body></html>"}
-        rows = ""
-        for e in gantt[-200:]:
-            ts_str = datetime.fromtimestamp(e.get("ts", 0)).strftime("%Y-%m-%d %H:%M") if e.get("ts") else ""
-            name = e.get("name", "?")
-            evt = e.get("event", "")
-            color = {"start": "#4caf50", "stop": "#f44336", "task": "#2196f3"}.get(evt, "#999")
-            rows += f"<tr><td>{ts_str}</td><td>{name}</td><td style='color:{color}'>{evt}</td></tr>"
-        html = f"""<!DOCTYPE html><html lang=zh-cn><meta charset=utf-8><title>编年史导出</title>
-<style>body{{font-family:sans-serif;background:#1e1e1e;color:#ccc;padding:20px}}
-table{{width:100%;border-collapse:collapse;font-size:12px}}
-th,td{{padding:6px 8px;text-align:left;border-bottom:1px solid #333}}
-th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
-<h2 style=color:#498205>📜 编年史</h2><p style=color:#888;font-size:11px>导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M')} | 共 {len(gantt)} 条</p>
-<table><tr><th>时间</th><th>账号</th><th>事件</th></tr>{rows}</table></html>"""
-        return HTMLResponse(html, headers={"Content-Disposition": 'attachment; filename="gantt_export.html"'})
 
     @app.get("/api/stats/dashboard")
     def handle_stats_dashboard():
@@ -674,47 +535,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             "top_materials": top_mats,
         }
 
-    @app.get("/api/stats")
-    def handle_all_stats():
-        from models.stats import RunStats
-        result = []
-        for i, a in enumerate(mw.accounts):
-            st = RunStats(a["id"])
-            pid = _proc_pid(a)
-            running = _is_running(pid)
-            result.append({"index": i, "account_name": a.get("name", ""),
-                           "running": running, "total_runs": st.total_runs, "stats": st._data})
-        return {"accounts": result}
 
-    @app.get("/api/stats/daily")
-    def handle_stats_daily(date: str = ""):
-        from services.stats_aggregator import aggregate
-        return aggregate("day", date, mw.accounts)
 
-    @app.get("/api/stats/weekly")
-    def handle_stats_weekly(date: str = ""):
-        from services.stats_aggregator import aggregate
-        return aggregate("week", date, mw.accounts)
 
-    @app.get("/api/stats/monthly")
-    def handle_stats_monthly(date: str = ""):
-        from services.stats_aggregator import aggregate
-        return aggregate("month", date, mw.accounts)
 
-    @app.get("/api/stats/yearly")
-    def handle_stats_yearly(date: str = ""):
-        from services.stats_aggregator import aggregate
-        return aggregate("year", date, mw.accounts)
 
-    @app.get("/api/stats/all")
-    def handle_stats_all_period():
-        from services.stats_aggregator import aggregate
-        return aggregate("all", "", mw.accounts)
 
-    @app.get("/api/stats/periods")
-    def handle_stats_periods():
-        from services.stats_aggregator import available_periods
-        return available_periods(mw.accounts)
 
     # ── L3 产线工作台（/api/mas/*）────────────────────────────────────
     # 数据源见 services/mas_l3.py：主机实时快照（SSH）+ AUTO-MAS 历史聚合 + 本地留痕。
@@ -889,57 +715,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     # 模型: 扫描器独立 Asst 子进程（不进 queue，用户拍板），互斥跳过忙的账号
     # ═══════════════════════════════════════════
 
-    @app.post("/api/depot/scan")
-    def handle_depot_scan(body: dict):
-        """扫描指定账号仓库并生成材料规划（异步）。
-        Body: {account_ids: [...], activity_only: bool, parallel: int}
-        activity_only=true 只预检活动关（外服跳过），可并行（默认 4 路）。
-        状态轮询 GET /api/depot/status。"""
-        from services.depot_scheduler import DepotScanner
-        ids = [str(x) for x in (body.get("account_ids") or [])]
-        acs = [a for a in mw.accounts if a.get("id") in ids]
-        if not acs:
-            raise HTTPException(400, "no valid account_ids")
-        activity_only = bool(body.get("activity_only"))
-        parallel = max(1, min(8, int(body.get("parallel", 4) or 4)))
-        def _run():
-            try:
-                sc = DepotScanner(mw)
-                if activity_only:
-                    sc.scan_activity_many([a.get("id") for a in acs],
-                                          parallel=parallel)
-                else:
-                    sc.scan_accounts([a.get("id") for a in acs])
-            except Exception as e:
-                mw._log(f"[材料规划] 扫描异常: {e}")
-        threading.Thread(target=_run, daemon=True).start()
-        return {"ok": True, "count": len(acs), "status": "running",
-                "activity_only": activity_only, "parallel": parallel}
 
-    @app.get("/api/depot/status")
-    def handle_depot_status():
-        """各账号仓库快照/计划状态 + 正在扫描标记。"""
-        from services.depot_scheduler import _SCAN_STATUS, _SCAN_LOCK
-        base = Path(__file__).parent.parent / "models" / "accounts"
-        out = []
-        with _SCAN_LOCK:
-            st = dict(_SCAN_STATUS)
-        for a in mw.accounts:
-            aid = a.get("id", "")
-            depot_f = base / aid / "depot.json"
-            plan_f = base / aid / "plan.json"
-            s = st.get(aid, {})
-            out.append({
-                "id": aid, "name": a.get("name", ""),
-                "emu": a.get("emu_instance_index", ""),
-                "mainline_chapter": a.get("mainline_chapter", 0),
-                "suspended": a.get("suspended", False),
-                "state": s.get("state", ""), "reason": s.get("reason", ""),
-                "error": s.get("error", ""), "summary": s.get("summary", ""),
-                "depot_ts": int(depot_f.stat().st_mtime) if depot_f.exists() else 0,
-                "plan_ts": int(plan_f.stat().st_mtime) if plan_f.exists() else 0,
-            })
-        return {"ok": True, "accounts": out}
 
     @app.get("/api/depot/plan")
     def handle_depot_plan(account_id: str = ""):
@@ -954,92 +730,14 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         except Exception as e:
             raise HTTPException(500, f"计划文件损坏: {e}")
 
-    @app.get("/api/depot/probe")
-    def handle_depot_probe(account_id: str = ""):
-        """该账号的关卡预检缓存（farm_probe.json: stage → {verdict, detail, ts}）。"""
-        if not account_id:
-            raise HTTPException(400, "account_id required")
-        p = Path(__file__).parent.parent / "models" / "accounts" / account_id / "farm_probe.json"
-        if not p.exists():
-            return {"ok": True, "probe": {}}
-        try:
-            return {"ok": True, "probe": json.loads(p.read_text(encoding="utf-8"))}
-        except Exception as e:
-            raise HTTPException(500, f"预检缓存损坏: {e}")
 
-    @app.get("/api/depot/config")
-    def handle_depot_config():
-        """水位/预算/定时配置（config/material_water_levels.json）。"""
-        p = Path(__file__).parent.parent / "config" / "material_water_levels.json"
-        try:
-            return {"ok": True, "config": json.loads(p.read_text(encoding="utf-8"))}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
 
-    @app.post("/api/depot/config")
-    def handle_depot_config_save(body: dict):
-        """保存水位/预算/定时配置。Body: {materials: {名: 数量}, ap_budget_per_day,
-        daily_scan_time: "HH:MM", scan_enabled: bool,
-        penguin_refresh_time: "HH:MM", penguin_enabled: bool}"""
-        import re as _re
-        mats = body.get("materials")
-        budget = body.get("ap_budget_per_day")
-        hhmm = body.get("daily_scan_time")
-        phhmm = body.get("penguin_refresh_time")
-        if not isinstance(mats, dict) or not mats:
-            raise HTTPException(400, "materials 必须是非空对象")
-        for k, v in mats.items():
-            if not isinstance(v, int) or v < 0:
-                raise HTTPException(400, f"材料 {k} 水位必须是非负整数")
-        if budget is not None and (not isinstance(budget, int) or budget <= 0):
-            raise HTTPException(400, "ap_budget_per_day 必须是正整数")
-        if hhmm is not None and not _re.match(r"^\d{2}:\d{2}$", str(hhmm)):
-            raise HTTPException(400, "daily_scan_time 格式 HH:MM")
-        if phhmm is not None and not _re.match(r"^\d{2}:\d{2}$", str(phhmm)):
-            raise HTTPException(400, "penguin_refresh_time 格式 HH:MM")
-        p = Path(__file__).parent.parent / "config" / "material_water_levels.json"
-        cfg = {}
-        if p.exists():
-            cfg = json.loads(p.read_text(encoding="utf-8"))
-        cfg["materials"] = mats
-        if budget is not None:
-            cfg["ap_budget_per_day"] = budget
-        if hhmm is not None:
-            cfg["daily_scan_time"] = hhmm
-        if "scan_enabled" in body:
-            cfg["scan_enabled"] = bool(body["scan_enabled"])
-        if phhmm is not None:
-            cfg["penguin_refresh_time"] = phhmm
-        if "penguin_enabled" in body:
-            cfg["penguin_enabled"] = bool(body["penguin_enabled"])
-        tmp = p.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-        tmp.replace(p)
-        mw._log(f"[材料规划] 配置已保存: {len(mats)} 材料水位, 预算 {cfg.get('ap_budget_per_day')}")
-        return {"ok": True}
 
     # ═══════════════════════════════════════════
     # 企鹅物流数据采集（2026-08-13: 权威掉率数据定期入库）
     # ═══════════════════════════════════════════
 
-    @app.post("/api/penguin/refresh")
-    def handle_penguin_refresh():
-        """手动触发采集（异步）: 拉取 → SQLite 入库 → 变了自动重生成备选榜。"""
-        from services.penguin_data import refresh
-        def _run():
-            try:
-                r = refresh()
-                mw._log(f"[企鹅物流] 采集: {r.get('rows', 0)} 对, "
-                        f"变化={r.get('changed')}, 榜重生成={r.get('farm_regen', {}).get('ok')}")
-            except Exception as e:
-                mw._log(f"[企鹅物流] 采集异常: {e}")
-        threading.Thread(target=_run, daemon=True).start()
-        return {"ok": True, "status": "running"}
 
-    @app.get("/api/penguin/status")
-    def handle_penguin_status():
-        from services.penguin_data import status
-        return status()
 
     # ═══════════════════════════════════════════
     # 活动关识别（2026-08-13: 每小时自动 + 手动修正）
@@ -1050,19 +748,6 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         from services.activity_tracker import status
         return status()
 
-    @app.post("/api/activity/refresh")
-    def handle_activity_refresh():
-        """手动触发当前活动识别（异步）。"""
-        from services.activity_tracker import detect
-        def _run():
-            try:
-                r = detect()
-                mw._log(f"[活动] 手动识别: active={r.get('active')} "
-                        f"{r.get('zone_name', '')}")
-            except Exception as e:
-                mw._log(f"[活动] 识别异常: {e}")
-        threading.Thread(target=_run, daemon=True).start()
-        return {"ok": True, "status": "running"}
 
     @app.post("/api/activity/stages")
     def handle_activity_save(body: dict):
@@ -1168,34 +853,6 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         from services.runtime_health import check_health
         return check_health(mw)
 
-    @app.get("/api/emulators/diagnose")
-    def handle_emulators_diagnose(idx: str = ""):
-        """模拟器体检（2026-08-11 用户）— 配置+运行状态+资源占用+健康评估。
-        ?idx=21 查单台；不带 idx 查全部运行中的。"""
-        from services.emu_service import diagnose_emulator, get_health_snapshot
-        from infrastructure.task_constants import find_mumu_cli
-        cli = find_mumu_cli()
-        if not cli:
-            return {"ok": False, "error": "mumu-cli not found"}
-        # 实时体检：缓存快照并入（5s 内数据，无采样等待）
-        snap = get_health_snapshot()
-        if idx:
-            d = diagnose_emulator(cli, idx)
-            d["live"] = snap.get(str(idx), {})
-            return d
-        # 全部运行中
-        import subprocess as _sp, json as _j
-        r = _sp.run([cli, "info", "-v", "all"], capture_output=True, text=True, timeout=10,
-                    creationflags=getattr(_sp, "CREATE_NO_WINDOW", 0), encoding="utf-8", errors="replace")
-        try:
-            data = _j.loads(r.stdout.lstrip("﻿").strip())
-        except Exception:
-            return {"ok": False, "error": "info 解析失败"}
-        out = []
-        for k, v in data.items():
-            if v.get("is_process_started"):
-                out.append(diagnose_emulator(cli, k))
-        return {"ok": True, "emulators": out}
 
     @app.get("/api/events/list")
     def handle_events_list(year: int = 2026):
@@ -1206,58 +863,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    @app.get("/api/events/calendar")
-    def handle_events_calendar(year: int = 2026):
-        """活动日历（按月分组）。"""
-        from services.event_analyzer import calendar
-        try:
-            return {"ok": True, **calendar(year)}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
 
-    @app.get("/api/events/analyze")
-    def handle_events_analyze(year: int = 2026):
-        """活动历史分析（时长/月天数/重叠/月数量 — 2026-08-11 用户 4 问）。"""
-        from services.event_analyzer import analyze
-        try:
-            return {"ok": True, **analyze(year)}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
 
-    @app.get("/api/announcements")
-    def handle_announcements():
-        """游戏公告（独立收集任务 — 2026-08-11 用户，与日志分开）。"""
-        from services.announce_collector import get_announcements, collect_once
-        return get_announcements()
 
-    @app.post("/api/announcements/refresh")
-    def handle_announcements_refresh():
-        """手动刷新公告（抓取+新公告检测）。"""
-        from services.announce_collector import collect_once
-        return {"ok": True, **collect_once()}
 
-    @app.get("/api/logs/collect_status")
-    def handle_logs_collect_status():
-        """样本收集健康（失败计数 — 收集是根不能漏，2026-08-11 用户）。"""
-        from services.log_watcher import get_collect_status
-        return {"ok": True, **get_collect_status()}
 
-    @app.get("/api/logs/samples")
-    def handle_logs_samples():
-        """日志样本索引快照（自动分拣实时数据 — 2026-08-11 用户）。"""
-        from services.log_sorter import _SORTER
-        if _SORTER is None:
-            return {"ok": False, "error": "sorter 未启动"}
-        return {"ok": True, **(_SORTER.snapshot())}
 
-    @app.get("/api/events_bus")
-    def handle_events_bus(limit: int = 100):
-        """事件总线最近事件（单点收敛 Step 1 — 排障一查到底）。"""
-        try:
-            from services.event_bus import recent
-            return {"ok": True, "events": recent(max(1, min(500, limit)))}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
 
     @app.get("/api/debug/state")
     def handle_debug_state():
@@ -1380,162 +991,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     # 来源: 完成截图 logs/shots/*.png + 收集器拷贝的 MAA 界面/掉落图
     # logs/shots/<aid>/*.png
 
-    @app.get("/api/shots/list")
-    def handle_shots_list():
-        _sd = Path(__file__).parent.parent / "logs" / "shots"
-        out = []
-        if _sd.is_dir():
-            try:
-                for f in sorted(_sd.rglob("*.png"), reverse=True)[-500:]:
-                    rel = f.relative_to(_sd).as_posix()
-                    # 文件名形如 <aid>_<ts>.png（完成图）或 <aid>/<prefix><ts>.png（收集图）
-                    try:
-                        ts = f.stat().st_mtime
-                    except Exception:
-                        ts = 0
-                    out.append({"path": rel, "ts": ts,
-                                "size": f.stat().st_size if f.exists() else 0})
-            except Exception:
-                pass
-        return {"ok": True, "shots": out}
 
-    @app.get("/api/shots/file")
-    def handle_shots_file(path: str = ""):
-        _sd = Path(__file__).parent.parent / "logs" / "shots"
-        try:
-            _p = (_sd / path).resolve()
-            if not str(_p).startswith(str(_sd.resolve())) or not _p.exists():
-                raise HTTPException(404, "not found")
-            return FileResponse(_p, media_type="image/png")
-        except HTTPException:
-            raise
-        except Exception:
-            raise HTTPException(404, "not found")
 
-    @app.get("/api/logs")
-    def handle_logs(lines: int = 50):
-        lp = Path(__file__).parent.parent / "logs" / "debug.log"
-        if not lp.exists():
-            lp = Path(__file__).parent.parent / "debug.log"  # 收口前兼容
-        if lp.exists():
-            try:
-                content = lp.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
-                return {"lines": content}
-            except:
-                raise HTTPException(500, "read failed")
-        return {"lines": []}
 
-    @app.get("/api/maa/log")
-    def handle_maa_log(aid: str = "", lines: int = 100, source: str = ""):
-        """单账号日志。source 为空=精炼(GUI 日志过滤心跳，人可读)；source=asst=原始 asst.log。
 
-        2026-08-16: 默认改为精炼——读 gui.log（MAA GUI 面板同源日志），过滤
-        maa_remote/task 心跳（每秒一条刷屏）只保留人类可读的关键行（任务链
-        开始/完成、完成任务、理智、RunningState、WRN/ERR）。采集不受影响
-        （asst.log 照常归档追查）。"""
-        if not aid:
-            raise HTTPException(400, "missing aid")
-        a = next((x for x in mw.accounts if x["id"] == aid), None)
-        if not a:
-            raise HTTPException(404, "account not found")
 
-        def _find_inst_dir() -> Path | None:
-            for w in mw.warehouse:
-                if w.get("account_ref") == aid:
-                    p = Path(w.get("path", "")).parent
-                    if p.exists():
-                        return p
-            _root = Path(__file__).parent.parent / "services" / "maa" / "instances"
-            for _inst_dir in _root.glob("*/"):
-                _meta = _inst_dir / ".meta"
-                if _meta.exists():
-                    try:
-                        if _meta.read_text(encoding="utf-8", errors="replace").strip().split("|", 1)[0] == aid:
-                            return _inst_dir
-                    except Exception:
-                        pass
-            return None
-
-        _inst = _find_inst_dir()
-        if _inst is None:
-            return {"lines": [], "name": a.get("name", ""), "error": "no instance dir found, launch MAA first"}
-        # 原始 asst.log（采集层照旧——完整追查用）
-        if source == "asst":
-            _al = _inst / "debug" / "asst.log"
-            if _al.exists():
-                try:
-                    _c = _al.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
-                    return {"lines": _c, "name": a.get("name", ""), "source": "asst"}
-                except Exception:
-                    pass
-            return {"lines": [], "name": a.get("name", ""), "source": "asst"}
-        # 默认精炼：gui.log 过滤心跳，只留人可读关键行
-        _gl = _inst / "debug" / "gui.log"
-        if _gl.exists():
-            try:
-                _raw = _gl.read_text(encoding="utf-8", errors="replace").strip().split("\n")
-            except Exception:
-                _raw = []
-            _keep = []
-            for _rl in _raw:
-                if "maa_remote/task" in _rl or "HttpResponseLoggingExtension" in _rl:
-                    continue  # 心跳刷屏 → 滤掉
-                if any(_k in _rl for _k in (
-                        "TaskChain", "完成任务", "理智", "Start Task", "Completed Task",
-                        "RunningState", "ExecutionState", "TaskQueueViewModel",
-                        "WRN", "ERR", "Error", "错误", "异常", "截图用时较长",
-                        "ConnectionInfo", "AsstProxy", "更新")):
-                    _keep.append(_rl)
-            return {"lines": _keep[-lines:], "name": a.get("name", ""), "source": "gui"}
-        # 兜底 asst.log
-        _al = _inst / "debug" / "asst.log"
-        if _al.exists():
-            try:
-                _c = _al.read_text(encoding="utf-8", errors="replace").strip().split("\n")[-lines:]
-                return {"lines": _c, "name": a.get("name", ""), "source": "asst"}
-            except Exception:
-                pass
-        return {"lines": [], "name": a.get("name", "")}
-
-    @app.get("/api/maa/logs_history")
-    def handle_maa_logs_history(aid: str = "", file: str = "", lines: int = 200):
-        """List archived MAA logs (logs/maa_history/<aid>/). With ?file= read content."""
-        hist_root = Path(__file__).parent.parent / "logs" / "maa_history"
-        if not aid:
-            dirs = sorted([d.name for d in hist_root.iterdir() if d.is_dir()]) if hist_root.exists() else []
-            return {"ok": True, "accounts": dirs}
-        hist = hist_root / str(aid)
-        if not hist.exists():
-            return {"ok": True, "files": []}
-        if file:
-            fp = (hist / file).resolve()
-            if not str(fp).startswith(str(hist.resolve())) or not fp.exists():
-                raise HTTPException(404, "log not found")
-            try:
-                content = fp.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
-                return {"ok": True, "aid": aid, "file": file, "lines": content}
-            except Exception as e:
-                raise HTTPException(500, f"read failed: {e}")
-        files = []
-        for f in sorted(hist.glob("*.log"), reverse=True)[:60]:
-            files.append({"name": f.name, "size": f.stat().st_size,
-                          "mtime": f.stat().st_mtime})
-        return {"ok": True, "aid": aid, "files": files}
-
-    @app.get("/api/stage_checks")
-    def handle_stage_checks(aid: str = ""):
-        """Per-account stage availability checks (models/stage_checks.json)."""
-        from services.runner import _STAGE_CHECKS_PATH
-        p = Path(_STAGE_CHECKS_PATH)
-        d = {}
-        if p.exists():
-            try:
-                d = json.loads(p.read_text(encoding="utf-8"))
-            except Exception:
-                d = {}
-        if aid:
-            return {"ok": True, "aid": aid, "checks": d.get(aid, [])}
-        return {"ok": True, "accounts": {k: v for k, v in d.items() if v}}
 
     def _account_sanity(aid: str) -> dict:
         """账号体力快照（实时优先，回退 AccountState）。"""
@@ -1609,159 +1069,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             })
         return {"ok": True, "accounts": data}
 
-    @app.get("/api/accounts/export")
-    def handle_accounts_export():
-        """Export accounts as CSV (includes stage columns)."""
-        import io, csv
-        output = io.StringIO()
-        _stage_lib = mw.config.get("stage_library", [])
-        _stage_ids = [s.get("id", "") for s in _stage_lib if s.get("id")]
-        _cn_headers = ["id","名称","游戏客户端","模拟器索引","切换标识","UID","备注","过期日","已暂停"] + _stage_ids
-        _field_map = {"id":"id","名称":"name","游戏客户端":"game_client","模拟器索引":"emu_instance_index","切换标识":"account_switch","UID":"uid","备注":"note","过期日":"expire_date","已暂停":"suspended"}
-        w = csv.writer(output)
-        w.writerow(_cn_headers)
-        for a in mw.accounts:
-            _ac_stages = set(a.get("stages", []) or [])
-            _row = [a.get(_field_map[h], "") for h in _cn_headers[:9]]
-            _row += ["1" if s in _ac_stages else "0" for s in _stage_ids]
-            w.writerow(_row)
-        from datetime import datetime as _dt
-        _ts = _dt.now().strftime("%Y%m%d_%H%M%S")
-        return StreamingResponse(io.BytesIO(output.getvalue().encode("utf-8-sig")),
-                                 media_type="text/csv; charset=utf-8",
-                                 headers={"Content-Disposition": f"attachment; filename=accounts_{_ts}.csv"})
 
-    @app.post("/api/accounts/csv_import")
-    def handle_accounts_csv_import(body: dict):
-        """Import accounts from CSV text. Updates existing by id, creates new."""
-        import csv, io
-        csv_text = body.get("csv", "")
-        if not csv_text:
-            raise HTTPException(400, "missing csv")
-        _header_map = {
-            "id": "id", "名称": "name", "name": "name",
-            "游戏客户端": "game_client", "game_client": "game_client",
-            "模拟器索引": "emu_instance_index", "emu_instance_index": "emu_instance_index",
-            "切换标识": "account_switch", "account_switch": "account_switch",
-            "UID": "uid", "uid": "uid",
-            "备注": "note", "note": "note",
-            "过期日": "expire_date", "expire_date": "expire_date",
-            "已暂停": "suspended", "suspended": "suspended",
-        }
-        reader = csv.DictReader(io.StringIO(csv_text))
-        if not reader.fieldnames:
-            raise HTTPException(400, "empty or invalid csv")
-        updated = 0
-        created = 0
-        errors = []
-        for i, row in enumerate(reader, 2):
-            try:
-                # Map Chinese headers to English field names
-                mapped = {}
-                for k, v in row.items():
-                    fname = _header_map.get(k.strip(), k.strip())
-                    mapped[fname] = v.strip() if v else ""
-                aid = mapped.get("id", "").strip()
-                if not aid:
-                    aid = uuid.uuid4().hex[:12]
-                existing = next((a for a in mw.accounts if a["id"] == aid), None)
-                if existing:
-                    for f in ("name","game_client","emu_instance_index","account_switch","uid","note","expire_date"):
-                        if f in mapped:
-                            existing[f] = mapped[f]
-                    if "suspended" in mapped:
-                        existing["suspended"] = mapped["suspended"].lower() in ("true","1","yes")
-                    updated += 1
-                else:
-                    new = {"id": aid, "consecutive_failures": 0}
-                    for f in ("name","game_client","emu_instance_index","account_switch","uid","note","expire_date"):
-                        new[f] = mapped.get(f, "")
-                    new["suspended"] = mapped.get("suspended","").lower() in ("true","1","yes")
-                    mw.accounts.append(new)
-                    created += 1
-            except Exception as e:
-                errors.append(f"行{i}: {e}")
-        mw.config["accounts"] = mw.accounts
-        try:
-            from models.config_manager import save_config
-            save_config(mw.config)
-        except Exception:
-            pass
-        return {"ok": True, "updated": updated, "created": created, "errors": errors}
 
-    @app.post("/api/accounts/batch_save")
-    def handle_accounts_batch_save(body: dict):
-        """Save all accounts from table edit. Body: { accounts: [...], new_stages: [str] }"""
-        _stage_lib = mw.config.setdefault("stage_library", [])
-        new_stages = body.get("new_stages", [])
-        for sid in new_stages:
-            if sid and not any(s.get("id") == sid for s in _stage_lib):
-                _stage_lib.append({"id": sid, "name": sid, "count": 0})
-        updated = 0
-        created = 0
-        for ac in body.get("accounts", []):
-            aid = ac.get("id", "").strip()
-            if not aid:
-                aid = uuid.uuid4().hex[:12]
-            existing = next((a for a in mw.accounts if a["id"] == aid), None)
-            if existing:
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "adb_address", "fight_default", "stage_ability", "farm_tag", "mainline_chapter"):
-                    if f in ac:
-                        # 挂起变更审计 — suspended 被全量保存覆盖过（2026-08-10
-                        # 官-2/官-25/官-41 挂起丢失），记录谁改的以便定位
-                        if f == "suspended" and existing.get("suspended") != ac[f]:
-                            mw._log(f"[挂起] {existing.get('name','?')}: {existing.get('suspended')} → {ac[f]}")
-                        existing[f] = ac[f]
-                if "stages" in ac:
-                    existing["stages"] = ac["stages"] if isinstance(ac["stages"], list) else []
-                updated += 1
-            else:
-                new_ac = {"id": aid, "consecutive_failures": 0}
-                for f in ("name", "game_client", "emu_instance_index", "account_switch", "uid", "note", "expire_date", "smart_annihilation", "suspended", "stages", "adb_address", "fight_default", "stage_ability", "farm_tag", "mainline_chapter"):
-                    if f in ac:
-                        new_ac[f] = ac[f]
-                mw.accounts.append(new_ac)
-                created += 1
-        mw.config["accounts"] = mw.accounts
-        _cfg_err = ""
-        try:
-            from models.config_manager import save_config
-            save_config(mw.config)
-        except Exception as _e:
-            _cfg_err = str(_e)
-            mw._log(f"[保存] 写入 config.json 失败: {_e}")
-        return {"ok": True, "updated": updated, "created": created, "config_error": _cfg_err}
 
-    @app.get("/api/oplog")
-    def handle_oplog():
-        return {"ok": True, "ops": _OPLOG[-50:]}
 
-    @app.get("/api/config")
-    def handle_get_config():
-        cfg = mw.config
-        return {"ok": True, "config": {
-            "maa_version": cfg.get("maa_version", ""),
-            "parallel_max": cfg.get("parallel_max", 3),
-            "appearance_mode": cfg.get("appearance_mode", "Dark"),
-            "schedule_mode": cfg.get("schedule_mode", "daily"),
-            "maa_instances": cfg.get("maa_instances", 0),
-            "api_port": cfg.get("api_port", 19999),
-            "smart_global": cfg.get("smart_global", {}),
-            "webhook_url": cfg.get("webhook_url", ""),
-            "bind_address": cfg.get("bind_address", "127.0.0.1"),  # ★ 2026-09-26 与 main_web.pyw:332 同缺省
-            "api_token": cfg.get("api_token", ""),
-            "ai_provider": cfg.get("ai_provider", "openai"),
-            "ai_api_key": cfg.get("ai_api_key", ""),
-            "ai_endpoint": cfg.get("ai_endpoint", ""),
-            "ai_model": cfg.get("ai_model", ""),
-            "ai_auto_analyze": cfg.get("ai_auto_analyze", False),
-            "tg_token": cfg.get("tg_token", ""),
-            "tg_chat_id": cfg.get("tg_chat_id", ""),
-        }}
 
-    @app.get("/api/settings/smart")
-    def handle_get_smart():
-        return {"ok": True, "smart_global": mw.config.get("smart_global", {})}
 
     @app.get("/api/emulators")
     def handle_emulators():
@@ -1776,38 +1088,12 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                 return {"ok": True, "emulator": e}
         raise HTTPException(404)
 
-    @app.get("/api/account/{idx}/config")
-    def handle_account_config(idx: int):
-        a = _account_by_idx(idx)
-        return {"ok": True, "account_id": a["id"], "task_settings": a.get("task_settings", {})}
 
-    @app.get("/api/stages")
-    def handle_get_stages():
-        lib = mw.config.get("stage_library", [])
-        for st in lib:
-            sid = st.get("id", "")
-            st["count"] = sum(1 for a in mw.accounts if sid in a.get("stages", []))
-            st["account_ids"] = [a.get("id", "") for a in mw.accounts if sid in a.get("stages", [])]
-        return {"ok": True, "stages": lib}
 
     # ═══════════════════════════════════════════
     # SSE endpoint (streaming)
     # ═══════════════════════════════════════════
 
-    @app.get("/api/sse")
-    async def handle_sse(request: Request):
-        async def event_stream():
-            while True:
-                if await request.is_disconnected():
-                    break
-                try:
-                    data = _gather_sse_state()
-                    yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-                except:
-                    yield f"data: {json.dumps({'ok': False})}\n\n"
-                await asyncio.sleep(1)
-        return StreamingResponse(event_stream(), media_type="text/event-stream",
-                                 headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
 
     def _gather_sse_state() -> dict:
         try:
@@ -1838,31 +1124,8 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     # POST endpoints
     # ═══════════════════════════════════════════
 
-    @app.post("/api/sse")
-    async def handle_sse_post(request: Request):
-        return await handle_sse(request)
 
-    @app.post("/api/node/register")
-    def handle_node_register(body: dict):
-        daigan_url = body.get("daigan_url", "")
-        if daigan_url and daigan_url.startswith("https://"):
-            mw.config["daigan_url"] = daigan_url
-            from models.config_manager import save_config
-            save_config(mw.config)
-            mw._log(f"节点已注册到: {daigan_url}")
-        return {"node_id": mw.config.get("node_id", ""), "status": "registered"}
 
-    @app.post("/api/node/heartbeat")
-    def handle_node_heartbeat(body: dict):
-        import psutil as _ps
-        lq = getattr(mw, "launch_queue", None)
-        return {
-            "node_id": mw.config.get("node_id", ""), "status": "ok",
-            "ts": time.time(),
-            "running": len(getattr(mw, "_proc_status", set())),
-            "queued": lq.pending_count if lq else 0,
-            "mem_avail_mb": _ps.virtual_memory().available // 1048576,
-        }
 
     @app.post("/api/account/{idx}/launch")
     def handle_account_launch(idx: int):
@@ -1881,27 +1144,6 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         _log_op("停止", a.get("name", ""))
         return {"ok": True}
 
-    @app.post("/api/config/sync")
-    def handle_config_sync(body: dict):
-        acct_name = body.get("account_name", "")
-        gui_json = body.get("gui_json")
-        if not acct_name or not isinstance(gui_json, dict):
-            raise HTTPException(400, "invalid fields")
-        a = next((a for a in mw.accounts if a.get("name") == acct_name), None)
-        if not a:
-            raise HTTPException(404, "account not found")
-        progs = [w for w in mw.warehouse if w.get("account_ref") == a["id"]]
-        if not progs:
-            raise HTTPException(400, "no MAA bound")
-        inst_path = Path(progs[0]["path"]).resolve()
-        parts = inst_path.parts
-        if not any(parts[i:i+2] == ("maa", "instances") for i in range(len(parts)-1)):
-            raise HTTPException(403, "invalid path")
-        d = inst_path.parent / "config"
-        d.mkdir(parents=True, exist_ok=True)
-        (d / "gui.json").write_text(json.dumps(gui_json, ensure_ascii=False, indent=2), encoding="utf-8")
-        (d / "gui.new.json").write_text(json.dumps(gui_json, ensure_ascii=False, indent=2), encoding="utf-8")
-        return {"ok": True}
 
     @app.post("/api/queue/enqueue")
     def handle_queue_enqueue(body: dict):
@@ -1969,182 +1211,17 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         mw._log("▶️ 队列已恢复")
         return {"ok": True, "paused": False}
 
-    @app.post("/api/account")
-    def handle_create_account(body: dict):
-        new_id = uuid.uuid4().hex[:12]
-        acct = {
-            "id": new_id, "name": body.get("name", ""),
-            "game_client": body.get("game_client", ""),
-            "emu_instance_index": body.get("emu_instance_index", ""),
-            "account_switch": body.get("account_switch", ""),
-            "uid": body.get("uid", ""),
-            "note": body.get("note", ""),
-            "expire_date": body.get("expire_date", ""),
-            "consecutive_failures": 0,
-        }
-        mw.accounts.append(acct)
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True, "id": new_id}
 
-    @app.post("/api/account/{idx}/edit")
-    def handle_edit_account(idx: int, body: dict):
-        a = _account_by_idx(idx)
-        for field in ("name", "game_client", "emu_instance_index", "account_switch",
-                      "uid", "suspended", "note", "expire_date", "stages",
-                      "skip_daily", "skip_award", "roguelike_only", "maa_instance_dir",
-                      "adb_address", "adb_path", "roguelike_themes",
-                      "roguelike_theme_idx"):
-            if field in body:
-                a[field] = body[field]
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
-    @app.post("/api/account/{idx}/delete")
-    def handle_delete_account(idx: int):
-        a = _account_by_idx(idx)
-        del mw.accounts[idx]
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
-    @app.post("/api/account/{idx}/config")
-    def handle_save_account_config(idx: int, body: dict):
-        a = _account_by_idx(idx)
-        a["task_settings"] = body.get("task_settings", {})
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
-    @app.get("/api/account/{idx}/fight_config")
-    def handle_get_fight_config(idx: int):
-        a = _account_by_idx(idx)
-        return {
-            "ok": True,
-            "fight_mode": a.get("fight_mode", "schedule"),
-            "fight_default": a.get("fight_default", "1-7"),
-            "schedule_weekly": a.get("schedule_weekly", {}),
-            "schedule_monthly": a.get("schedule_monthly", {}),
-            "fight_priority": a.get("fight_priority", {}),
-            "fight_materials": a.get("fight_materials", []),
-            "fight_times_per_stage": a.get("fight_times_per_stage", 3),
-            "fight_series": a.get("fight_series", 1),
-        }
 
-    @app.post("/api/account/{idx}/fight_config")
-    def handle_save_fight_config(idx: int, body: dict):
-        a = _account_by_idx(idx)
-        for f in ("fight_mode", "fight_default", "schedule_weekly", "schedule_monthly", "fight_priority", "fight_materials", "fight_times_per_stage", "fight_series"):
-            if f in body:
-                a[f] = body[f]
-        # priority 模式的关卡来自账号 stages — 保存优先级时同步合并（去重）
-        prio = a.get("fight_priority", {}) or {}
-        stages = list(a.get("stages", []) or [])
-        for s in prio.keys():
-            if s and s not in stages:
-                stages.append(s)
-        a["stages"] = stages
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
-    @app.post("/api/screenshots/{aid}/delete")
-    def handle_screenshots_delete(aid: str, body: dict):
-        run_dir = body.get("run_dir", "")
-        if not aid or not run_dir:
-            raise HTTPException(400, "missing aid or run_dir")
-        fp = Path(__file__).parent.parent / "screenshots" / aid / run_dir
-        if not fp.exists():
-            raise HTTPException(404)
-        shutil.rmtree(str(fp))
-        return {"ok": True}
 
-    @app.post("/api/config")
-    def handle_save_config(body: dict):
-        for field in ("maa_version", "maa_instances", "parallel_max", "appearance_mode",
-                      "schedule_mode", "deficit", "stuck_timeout", "webhook_url",
-                      "bind_address", "api_token", "ai_provider", "ai_api_key",
-                      "ai_endpoint", "ai_model", "ai_auto_analyze", "tg_token", "tg_chat_id"):
-            if field in body:
-                mw.config[field] = body[field]
-        if "smart_global" in body:
-            mw.config["smart_global"] = body["smart_global"]
-        from models.config_manager import save_config
-        save_config(mw.config)
-        # Rebuild instances if parallel_max changed
-        if "parallel_max" in body:
-            from services.instance_pool import ensure_maa_instances_async
-            threading.Thread(target=lambda: ensure_maa_instances_async(mw.ctx, True), daemon=True).start()
-        return {"ok": True}
 
-    @app.post("/api/settings/smart")
-    def handle_save_smart(body: dict):
-        sg = mw.config.setdefault("smart_global", {})
-        sg.update(body)
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
-    @app.post("/api/ai/analyze")
-    def handle_ai_analyze(body: dict):
-        from services.ai_assistant import analyze_failure
-        aid = body.get("aid", "")
-        if not aid:
-            raise HTTPException(400, "missing aid")
-        acct = next((a for a in mw.accounts if a.get("id") == aid), None)
-        if not acct:
-            raise HTTPException(404, "account not found")
-        result = analyze_failure(
-            aid=aid,
-            name=acct.get("name", aid),
-            exit_code=body.get("exit_code", -11),
-            failed_tasks=body.get("failed_tasks", []),
-            consecutive_failures=acct.get("consecutive_failures", 0),
-            game_client=acct.get("game_client", ""),
-            warehouse=mw.warehouse,
-            config=mw.config,
-        )
-        if result:
-            if not hasattr(mw, '_ai_insights'):
-                mw._ai_insights = []
-            mw._ai_insights.append({"aid": aid, "ts": time.time(), **result})
-            if len(mw._ai_insights) > 20:
-                mw._ai_insights = mw._ai_insights[-20:]
-        return {"ok": True, "result": result}
 
-    @app.post("/api/stages")
-    def handle_save_stages(body: dict):
-        mw.config["stage_library"] = body.get("stages", [])
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
-    @app.post("/api/stages/apply")
-    def handle_stages_apply(body: dict):
-        stage_id = body.get("stage_id", "")
-        account_ids = body.get("account_ids", [])
-        toggle = body.get("toggle", True)
-        if not stage_id or not account_ids:
-            raise HTTPException(400, "missing stage_id or account_ids")
-        for a in mw.accounts:
-            if a.get("id") in account_ids:
-                stages = a.setdefault("stages", [])
-                if toggle:
-                    if stage_id not in stages:
-                        stages.append(stage_id)
-                else:
-                    if stage_id in stages:
-                        stages.remove(stage_id)
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True}
 
     @app.post("/api/action/stop_all")
     def handle_stop_all():
@@ -2430,63 +1507,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             raise HTTPException(500, str(ex))
         raise HTTPException(400, "bad action")
 
-    @app.post("/api/system/close_popups")
-    def handle_close_popups():
-        from services.runner import _close_mumu_popups
-        _close_mumu_popups()
-        return {"ok": True, "message": "弹窗已关闭"}
 
-    @app.post("/api/system/open_folder")
-    def handle_open_folder(body: dict = {}):
-        target = body.get("path", "")
-        if not target:
-            return {"ok": False, "error": "missing path"}
-        from pathlib import Path as _P
-        root = _P(__file__).parent.parent.resolve()
-        # Treat leading "/" as project-root relative (Windows-safe)
-        if target.startswith("/"):
-            target = target.lstrip("/")
-            p = (root / target).resolve()
-        else:
-            p = _P(target).resolve()
-        # Path safety: only allow folders under the project root
-        if not str(p).startswith(str(root)):
-            return {"ok": False, "error": "path outside project root"}
-        p.mkdir(parents=True, exist_ok=True)
-        try:
-            os.startfile(str(p))
-            return {"ok": True}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
 
-    @app.post("/api/system/kill_maa")
-    def handle_kill_maa():
-        r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe"],
-                           capture_output=True, text=True, timeout=5, creationflags=_CF)
-        killed = 0
-        for line in r.stdout.splitlines():
-            if "MAA.exe" not in line:
-                continue
-            p = line.split()
-            if len(p) >= 2:
-                subprocess.run(["taskkill", "/F", "/PID", p[1]],
-                               capture_output=True, timeout=3, creationflags=_CF)
-                killed += 1
-        for img in ["MAA.Updater.exe", "maa-cli.exe"]:
-            subprocess.run(["taskkill", "/F", "/IM", img],
-                           capture_output=True, timeout=3, creationflags=_CF)
-        return {"ok": True, "killed": killed}
 
-    @app.post("/api/system/restart")
-    def handle_system_restart():
-        def _do_restart():
-            time.sleep(2)
-            subprocess.Popen([sys.executable, "-u", "main_web.pyw", "--no-elevate"],
-                             cwd=str(Path(__file__).parent.parent), creationflags=subprocess.CREATE_NO_WINDOW)
-            time.sleep(1)
-            os._exit(0)
-        threading.Thread(target=_do_restart, daemon=True).start()
-        return {"ok": True, "message": "重启中..."}
 
     def _dispatch_slot(ac, tasks, slot: str, params: dict | None = None) -> None:
         """Create a dispatch for the given slot and store on the account."""
@@ -2605,134 +1628,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             return False
         return True
 
-    @app.post("/api/action/smart_all")
-    def handle_smart_all(body: dict):
-        """Dispatch all three slots for all usable accounts."""
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        count = 0
-        for a in mw.accounts:
-            aid = a.get("id", "")
-            if not _account_usable(a, lq):
-                continue
-            if lq.is_queued(aid):
-                continue
-            # Maintenance slot
-            maint_tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
-            _dispatch_slot(a, maint_tasks, "maintenance")
-            lq.enqueue(aid, "force", priority=0, slot="maintenance")
-            # Fight slot (stage selected by inject_smart in config_injector.py)
-            fight_tasks, fight_params = _fight_task_pack(a)
-            _dispatch_slot(a, fight_tasks, "fight", fight_params or None)
-            lq.enqueue(aid, "force", priority=0, slot="fight")
-            # Annihilation slot
-            if a.get("smart_annihilation", ""):
-                anni_tasks = ["StartUp", "Fight"]
-                _dispatch_slot(a, anni_tasks, "annihilation")
-                lq.enqueue(aid, "force", priority=0, slot="annihilation")
-            count += 1
-        if count:
-            mw._log(f"▶ 全调度: {count} 个账号")
-            _log_op("一键调度", f"{count} 个账号")
-            lq.tick()
-        return {"ok": True, "count": count}
 
-    @app.post("/api/action/smart_maintenance")
-    def handle_smart_maintenance():
-        """Dispatch only the maintenance slot (Infrast/Recruit/Mall/Award)."""
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        count = 0
-        for a in mw.accounts:
-            aid = a.get("id", "")
-            if not _account_usable(a, lq):
-                continue
-            if lq.is_queued(aid, slot="maintenance"):
-                continue
-            tasks = ["StartUp", "Infrast", "Recruit", "Mall", "Award"]
-            _dispatch_slot(a, tasks, "maintenance")
-            lq.enqueue(aid, "force", priority=0, slot="maintenance")
-            count += 1
-        if count:
-            mw._log(f"▶ 维护调度: {count} 个账号")
-            _log_op("维护调度", f"{count} 个账号")
-            lq.tick()
-        return {"ok": True, "count": count}
 
-    @app.post("/api/action/smart_fight")
-    def handle_smart_fight():
-        """Dispatch only the fight slot (stage selected by inject_smart)."""
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        count = 0
-        for a in mw.accounts:
-            aid = a.get("id", "")
-            if not _account_usable(a, lq):
-                continue
-            if lq.is_queued(aid, slot="fight"):
-                continue
-            tasks, params = _fight_task_pack(a)
-            _dispatch_slot(a, tasks, "fight", params or None)
-            lq.enqueue(aid, "force", priority=0, slot="fight")
-            count += 1
-        if count:
-            mw._log(f"▶ 刷关调度: {count} 个账号")
-            _log_op("刷关调度", f"{count} 个账号")
-            lq.tick()
-        return {"ok": True, "count": count}
 
-    @app.post("/api/action/connect_running_emus")
-    def handle_connect_running_emus(body: dict = {}):
-        """Detect running emulators and launch a connect-only MAA instance for each.
-        No tasks are enabled — MAA just attaches to the emulator and waits for manual use.
-        mode: connect (idle) | daily (generic dailies) — from body, default connect."""
-        from infrastructure.task_constants import detect_emu_instances
-        mode = body.get("mode", "connect")
-        if mode not in ("connect", "daily"):
-            mode = "connect"
-        game_client = str(body.get("game_client", "") or "")
-        idxs = [str(x) for x in (body.get("indexes") or [])]
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        # Clean up stale connect-only accounts (previous session or stopped ones)
-        conn = getattr(mw, 'connect_accounts', None)
-        if conn is None:
-            mw.connect_accounts = []
-            conn = mw.connect_accounts
-        for ac in list(conn):
-            if ac.get("id") and not lq.is_running(ac["id"]) and not lq.is_queued(ac["id"]):
-                try: conn.remove(ac)
-                except ValueError: pass
-        # Remove old connect-only entries lingering in main accounts list
-        for a in list(mw.accounts):
-            if a.get("_connect_only"):
-                try: mw.accounts.remove(a)
-                except ValueError: pass
-
-        emus = [e for e in detect_emu_instances()
-                if e.get("running") and (not idxs or str(e.get("index", "")) in idxs)]
-        runner = _runner()
-        connected = 0
-        for e in emus:
-            idx = e.get("index", "")
-            aid = f"emu{idx}"
-            real = runner._has_real_process(aid) if runner else False
-            if real or lq.is_queued(aid):
-                continue
-            port = e.get("adb_port", "")
-            ac = _connect_account(conn, idx, port, mode=mode, game_client=game_client)
-            lq.enqueue(aid, "force", priority=0, slot="connect")
-            connected += 1
-            mw._log(f"🔌 连接模拟器 #{idx} (ADB 127.0.0.1:{port}) mode={mode} client={game_client or '默认'}")
-        if connected:
-            _log_op("连接模拟器", f"{connected} 个运行中的模拟器 ({mode})")
-            lq.tick()
-        mw.config["accounts"] = mw.accounts
-        return {"ok": True, "found": len(emus), "connected": connected, "mode": mode}
 
     def _connect_account(conn: list, idx, port: str, mode: str = "connect",
                          game_client: str = "") -> dict:
@@ -2788,39 +1686,6 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             })
         return {"ok": True, "emulators": data}
 
-    @app.post("/api/connect/launch")
-    def handle_connect_launch(body: dict):
-        """Launch MAA for one emulator. mode: connect (idle) | daily (generic dailies)."""
-        idx = body.get("index", "")
-        mode = body.get("mode", "connect")
-        if mode not in ("connect", "daily"):
-            return {"ok": False, "error": f"未知模式: {mode}"}
-        from infrastructure.task_constants import detect_emu_instances
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        emu = next((e for e in detect_emu_instances()
-                    if e.get("index") == idx and e.get("running")), None)
-        if not emu:
-            return {"ok": False, "error": f"模拟器 #{idx} 未运行"}
-        aid = f"emu{idx}"
-        # Use real process check, not queue marks — stale _active_emus entries
-        # would otherwise block relaunch after a crash/stop.
-        runner = _runner()
-        if runner and runner._has_real_process(aid):
-            return {"ok": False, "error": f"模拟器 #{idx} 的 MAA 已在运行"}
-        if lq.is_queued(aid):
-            return {"ok": False, "error": f"模拟器 #{idx} 的 MAA 排队中"}
-        conn = getattr(mw, 'connect_accounts', None)
-        if conn is None:
-            mw.connect_accounts = []
-            conn = mw.connect_accounts
-        ac = _connect_account(conn, idx, emu.get("adb_port", ""), mode=mode,
-                              game_client=str(body.get("game_client", "") or ""))
-        lq.enqueue(aid, "force", priority=0, slot="connect")
-        lq.tick()
-        _log_op("连接", f"模拟器#{idx} ({mode})")
-        return {"ok": True, "aid": aid, "mode": mode}
 
     @app.post("/api/connect/{aid}/stop")
     def handle_connect_stop(aid: str):
@@ -2850,164 +1715,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         lq.tick()
         return {"ok": True}
 
-    @app.post("/api/connect/batch_stop")
-    def handle_connect_batch_stop(body: dict = {}):
-        """Stop connect-mode MAA for selected emulators (or all if no indexes).
-        Only touches connect_accounts — scheduled accounts are never affected."""
-        idxs = [str(x) for x in (body.get("indexes") or [])]
-        runner = _runner()
-        conn = getattr(mw, 'connect_accounts', None) or []
-        stopped = 0
-        for ac in list(conn):
-            aid = ac.get("id", "")
-            if not aid:
-                continue
-            if idxs and str(ac.get("emu_instance_index", "")) not in idxs:
-                continue
-            if runner and runner._has_real_process(aid):
-                runner.stop(aid)
-                stopped += 1
-        return {"ok": True, "stopped": stopped}
 
-    @app.post("/api/connect/batch_emu_stop")
-    def handle_connect_batch_emu_stop(body: dict = {}):
-        """Shut down selected running emulators (all if no indexes).
-        Stops connected MAA first, then shuts down one by one."""
-        from infrastructure.task_constants import detect_emu_instances, find_mumu_cli, cli_flag
-        idxs = [str(x) for x in (body.get("indexes") or [])]
-        cli = find_mumu_cli()
-        if not cli:
-            return {"ok": False, "error": "mumu-cli not found"}
-        emus = [e for e in detect_emu_instances()
-                if e.get("running") and (not idxs or str(e.get("index", "")) in idxs)]
-        stopped = 0
-        for e in emus:
-            idx = str(e.get("index", ""))
-            try:
-                _stop_maa_for_emu(idx)
-            except Exception:
-                pass
-            time.sleep(1.5)  # let MAA exit and release ADB before shutdown
-            try:
-                subprocess.run([cli, "control", cli_flag(cli), idx, "shutdown"],
-                               timeout=15, creationflags=_CF)
-                stopped += 1
-                mw._log(f"⏹ 批量关闭模拟器 #{idx}")
-            except Exception as ex:
-                mw._log(f"[批量关模拟器] #{idx} 失败: {ex}")
-            time.sleep(1)
-        _log_op("批量关闭模拟器", f"{stopped} 个")
-        return {"ok": True, "stopped": stopped}
 
-    @app.get("/api/connect/{aid}/log")
-    def handle_connect_log(aid: str):
-        runner = _runner()
-        p = runner._procs.get(aid)
-        inst_path = getattr(p, "_inst_path", None)
-        if not inst_path:
-            return {"ok": True, "lines": ""}
-        lp = Path(inst_path) / "debug" / "asst.log"
-        try:
-            if not lp.exists():
-                return {"ok": True, "lines": ""}
-            size = lp.stat().st_size
-            start = max(0, size - 6000)
-            with open(lp, "r", encoding="utf-8", errors="replace") as f:
-                f.seek(start)
-                text = f.read()
-            lines = text.splitlines()[-30:]
-            return {"ok": True, "lines": "\n".join(lines)}
-        except Exception as e:
-            return {"ok": True, "lines": f"(日志读取失败: {e})"}
 
-    @app.get("/api/connect/{aid}/screenshot")
-    def handle_connect_screenshot(aid: str):
-        conn = getattr(mw, 'connect_accounts', None) or []
-        ac = next((x for x in conn if x.get("id") == aid), None)
-        if not ac:
-            raise HTTPException(404, "connection not found")
-        addr = ac.get("adb_address", "")
-        if not addr and ac.get("emu_instance_index"):
-            # 直接检测实际端口 — 公式端口会漂移，禁止使用
-            from infrastructure.task_constants import detect_emu_adb
-            addr = detect_emu_adb(ac["emu_instance_index"])
-        if not addr:
-            raise HTTPException(400, "no adb address")
-        # 2.5s per-emulator cache — the connect wall polls every 3-5s, so
-        # most requests hit the cache and adb screencap runs once per tick.
-        import time as _time
-        _now = _time.time()
-        cached = _shot_cache.get(aid)
-        if cached and _now - cached[0] < 2.5:
-            return StreamingResponse(io.BytesIO(cached[1]), media_type="image/png",
-                                     headers={"Cache-Control": "no-cache"})
-        adb = ac.get("adb_path", "") or ""
-        if not adb:
-            try:
-                from infrastructure.task_constants import find_adb
-                adb = find_adb() or "adb"
-            except Exception:
-                adb = "adb"
-        # Serialize screencaps globally — N emulators screencapping at once
-        # saturates the adb channel and slows down MAA tasks themselves.
-        with _shot_lock:
-            r = subprocess.run([adb, "-s", addr, "exec-out", "screencap", "-p"],
-                               capture_output=True, timeout=15, creationflags=_CF)
-        if r.returncode != 0 or len(r.stdout) < 100:
-            raise HTTPException(500, "screencap failed")
-        _shot_cache[aid] = (_time.time(), r.stdout)
-        if len(_shot_cache) > 32:
-            _shot_cache.clear()
-        return StreamingResponse(io.BytesIO(r.stdout), media_type="image/png",
-                                 headers={"Cache-Control": "no-cache"})
 
-    @app.post("/api/action/smart_login")
-    def handle_smart_login():
-        """Dispatch only the login slot (StartUp only, no tasks)."""
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        count = 0
-        for a in mw.accounts:
-            aid = a.get("id", "")
-            if not _account_usable(a, lq):
-                continue
-            if lq.is_queued(aid, slot="login"):
-                continue
-            tasks = ["StartUp"]
-            _dispatch_slot(a, tasks, "login")
-            lq.enqueue(aid, "force", priority=0, slot="login")
-            count += 1
-        if count:
-            mw._log(f"▶ 登录验证: {count} 个账号")
-            _log_op("登录验证", f"{count} 个账号")
-            lq.tick()
-        return {"ok": True, "count": count}
 
-    @app.post("/api/action/smart_annihilation")
-    def handle_smart_annihilation():
-        """Dispatch only the annihilation slot for accounts with smart_annihilation set."""
-        lq = _lq()
-        if lq._paused:
-            lq.resume()
-        count = 0
-        for a in mw.accounts:
-            aid = a.get("id", "")
-            if not _account_usable(a, lq):
-                continue
-            if not a.get("smart_annihilation", ""):
-                continue
-            if lq.is_queued(aid, slot="annihilation"):
-                continue
-            tasks = ["StartUp", "Fight"]
-            _dispatch_slot(a, tasks, "annihilation")
-            lq.enqueue(aid, "force", priority=0, slot="annihilation")
-            count += 1
-        if count:
-            mw._log(f"▶ 剿灭调度: {count} 个账号")
-            _log_op("剿灭调度", f"{count} 个账号")
-            lq.tick()
-        return {"ok": True, "count": count}
 
     @app.post("/api/action/smart_selected")
     def handle_smart_selected(body: dict):
@@ -3078,85 +1790,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             lq.tick()
         return {"ok": True, "count": count}
 
-    @app.post("/api/instance/rebuild")
-    def handle_rebuild():
-        from services.instance_pool import ensure_maa_instances_async
-        threading.Thread(target=lambda: ensure_maa_instances_async(mw.ctx, True), daemon=True).start()
-        return {"ok": True}
 
-    @app.post("/api/maa/check_update")
-    def handle_maa_check_update():
-        cur = mw.config.get("maa_version", "未知")
-        from services.maa_download import _is_source_ready
-        source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
-        # Source integrity FIRST — a corrupted/partial source (e.g. a failed
-        # project replace) must trigger a re-download even if the version number
-        # matches the latest release.
-        if not _is_source_ready(source_dir):
-            return {"ok": True, "has_update": True, "corrupted": True,
-                    "current": cur, "latest": cur,
-                    "reason": "MAA source 不完整（可能替换失败损坏），需要重新下载"}
-        urls = [
-            "https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
-            "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/releases/latest",
-            "https://ghfast.top/https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
-            "https://ghproxy.net/https://github.com/MaaAssistantArknights/MaaRelease/releases/latest",
-        ]
-        tag = ""
-        for url in urls:
-            try:
-                url = validate_http_url(url)
-                headers = {"User-Agent": "MAAOrch"}
-                if "api.github.com" in url:
-                    headers["Accept"] = "application/json"
-                req = urllib.request.Request(url, headers=headers)
-                resp = safe_urlopen(req, timeout=10)
-                if "api.github.com" in url:
-                    data = json.loads(resp.read())
-                    tag = data.get("tag_name", "").lstrip("v")
-                else:
-                    m = re.search(r'/tag/v?([\d.]+)', resp.url)
-                    if m:
-                        tag = m.group(1)
-                    if not tag:
-                        html = resp.read().decode("utf-8", errors="replace")
-                        m = re.search(r'/releases/tag/v?([\d.]+(?:-[\w.]+)?)', html)
-                        if m:
-                            tag = m.group(1)
-                if tag:
-                    break
-            except:
-                continue
-        if tag:
-            return {"ok": True, "has_update": tag != cur, "current": cur, "latest": tag}
-        return {"ok": False, "error": "无法获取版本信息",
-                "manual_url": "https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases"}
 
-    @app.post("/api/maa/download_update")
-    def handle_maa_download_update():
-        def _do_update():
-            try:
-                from services.maa_download import ensure_maa_available
-                source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
-                # Stop all running MAA before updating
-                runner = getattr(mw, 'runner', None)
-                if runner:
-                    for aid in list(runner._active.keys()):
-                        runner.stop(aid)
-                    time.sleep(2)
-                ensure_maa_available(mw.ctx, source_dir)
-                # Rebuild instances after update
-                from services.instance_pool import ensure_maa_instances_async
-                ensure_maa_instances_async(mw.ctx, True)
-            except Exception as e:
-                mw.ctx.log(f"[MAA更新] 失败: {e}")
-        threading.Thread(target=_do_update, daemon=True).start()
-        return {"ok": True, "message": "更新已开始后台下载"}
 
-    @app.get("/api/maa/download_status")
-    def handle_maa_download_status():
-        from services.maa_download import get_download_status
-        return {"ok": True, **get_download_status()}
 
     @app.get("/api/maa/status")
     def handle_maa_status():
@@ -3215,19 +1851,6 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         except Exception as e:
             return {"ok": False, "error": f"启动失败: {e}"}
 
-    @app.post("/api/maa/check_source")
-    def handle_maa_check_source():
-        from services.maa_download import _is_source_ready, _detect_version
-        source_dir = Path(__file__).parent.parent / "services" / "maa" / "source"
-        exe = source_dir / "MAA.exe"
-        r = subprocess.run(["tasklist", "/NH", "/FI", "IMAGENAME eq MAA.exe"],
-                           capture_output=True, text=True, timeout=3, creationflags=_CF)
-        running = "MAA.exe" in r.stdout
-        return {"ok": True,
-                "exe_exists": exe.exists(),
-                "ready": _is_source_ready(source_dir) if exe.exists() else False,
-                "version": _detect_version(source_dir) if exe.exists() else "",
-                "running": running}
 
     @app.get("/api/maa/instances")
     def handle_maa_instances_list():
@@ -3261,108 +1884,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
                               "running": running, "meta": meta})
         return {"ok": True, "instances": items}
 
-    @app.get("/api/maa/instances/{n}/config")
-    def handle_maa_instance_config(n: str):
-        """Diagnostic: show connection-related keys in an instance's MAA config files.
-        Read-only — used to verify what MAA actually reads (Connect.Address etc.).
-        Also lists all files in the config dir (incl. .bak which MAA may fall back to)."""
-        inst_dir = Path(__file__).parent.parent / "services" / "maa" / "instances" / str(n)
-        cfg_dir = inst_dir / "config"
-        result = {"ok": True, "index": n, "files": {}}
-        # List all files in config dir (bak files matter — MAA restores from them)
-        result["dir_files"] = sorted(f.name for f in cfg_dir.iterdir()) if cfg_dir.exists() else []
-        for fn in ("gui.json", "gui.new.json", "gui.json.bak", "gui.new.json.bak"):
-            fp = cfg_dir / fn
-            entry = {"exists": fp.exists()}
-            if fp.exists():
-                try:
-                    d = json.loads(fp.read_text(encoding="utf-8"))
-                    entry["top_keys"] = list(d.keys())
-                    c = d.get("Configurations", {}).get("Default", {})
-                    entry["current"] = d.get("Current", "")
-                    entry["connect"] = {
-                        "Connect.Address": c.get("Connect.Address", ""),
-                        "Connect.AddressHistory": c.get("Connect.AddressHistory", ""),
-                        "Connect.AdbPath": c.get("Connect.AdbPath", ""),
-                        "Connect.AutoDetect": c.get("Connect.AutoDetect", ""),
-                        "Connect.AlwaysAutoDetect": c.get("Connect.AlwaysAutoDetect", ""),
-                        "Connect.ConnectConfig": c.get("Connect.ConnectConfig", ""),
-                        "Connect.TouchMode": c.get("Connect.TouchMode", ""),
-                        "Start.ClientType": c.get("Start.ClientType", ""),
-                        "Start.RunDirectly": c.get("Start.RunDirectly", ""),
-                        "Start.StartGame": c.get("Start.StartGame", ""),
-                        "Start.EmulatorPath": c.get("Start.EmulatorPath", ""),
-                        "Start.EmulatorAddCommand": c.get("Start.EmulatorAddCommand", ""),
-                        "Start.OpenEmulatorAfterLaunch": c.get("Start.OpenEmulatorAfterLaunch", ""),
-                        "MainFunction.PostActions": c.get("MainFunction.PostActions", ""),
-                    }
-                    tq = c.get("TaskQueue", [])
-                    entry["task_queue"] = [
-                        {"type": t.get("TaskType", ""), "enable": t.get("IsEnable", False)}
-                        for t in tq if isinstance(t, dict)
-                    ]
-                    entry["global"] = {k: v for k, v in d.get("Global", {}).items()
-                                       if k.startswith(("GUI.", "Start."))}
-                    gui = c.get("Gui", {})
-                    entry["gui_connect"] = gui.get("ConnectSettings", {})
-                    entry["gui_startup"] = gui.get("StartUpSettings", {})
-                    entry["gui_runtime"] = {k: v for k, v in gui.get("RuntimeSettings", {}).items()
-                                            if k in ("ClientType", "StartGame")}
-                    entry["gui_postactions"] = gui.get("PostActions", "")
-                except Exception as e:
-                    entry["error"] = str(e)
-            result["files"][fn] = entry
-        return result
 
-    @app.post("/api/orch/check_update")
-    def handle_orch_check_update():
-        # Git-based detection (deployment is a git clone) — most accurate
-        root = Path(__file__).parent.parent
-        git_error = ""
-        try:
-            r = subprocess.run(["git", "-C", str(root), "fetch", "origin"],
-                               capture_output=True, timeout=30, creationflags=_CF,
-                               encoding="utf-8", errors="replace")
-            if r.returncode != 0:
-                git_error = (r.stderr or "git fetch failed").strip().splitlines()
-                git_error = git_error[0][:80] if git_error else "git fetch failed"
-            else:
-                branch = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "HEAD"],
-                                        capture_output=True, timeout=10, creationflags=_CF,
-                                        encoding="utf-8", errors="replace").stdout.strip()
-                if not branch:
-                    branch = "main"
-                rev = subprocess.run(["git", "-C", str(root), "rev-list", "--count", f"HEAD..origin/{branch}"],
-                                     capture_output=True, timeout=10, creationflags=_CF,
-                                     encoding="utf-8", errors="replace")
-                if rev.returncode == 0:
-                    behind = int(rev.stdout.strip() or 0)
-                    return {"ok": True, "has_update": behind > 0, "behind": behind,
-                            "branch": branch, "method": "git"}
-                git_error = "git rev-list failed"
-        except FileNotFoundError:
-            git_error = "git 未安装"
-        except subprocess.TimeoutExpired:
-            git_error = "git fetch 超时（网络慢）"
-        except Exception as e:
-            git_error = str(e)[:80]
-        # Fallback: GitHub release check
-        try:
-            req = urllib.request.Request(
-                validate_http_url("https://api.github.com/repos/xiachk083-hub/MAAOrch/releases/latest"),
-                headers={"User-Agent": "MAAOrch-Updater"})
-            with safe_urlopen(req, timeout=10) as r:
-                data = json.loads(r.read().decode())
-            tag = data.get("tag_name", "")
-            html_url = data.get("html_url", "")
-            # Zip mode: git unavailable (zip deployment) — offer main-branch zip download
-            return {"ok": True, "latest": tag, "html_url": html_url,
-                    "method": "release", "git_error": git_error,
-                    "zip_mode": True,
-                    "zip_url": "https://github.com/xiachk083-hub/MAAOrch/archive/refs/heads/main.zip"}
-        except Exception as e:
-            return {"ok": False, "error": str(e), "method": "release",
-                    "git_error": git_error}
 
     def _orch_update_zip(root: Path, result_file: Path, mw_ref) -> None:
         """Zip-deployment update: download main.zip, extract to _update/, then
@@ -3444,126 +1966,11 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             _log(f"[更新] zip 更新失败: {e}")
             os._exit(0)
 
-    @app.post("/api/orch/hot_reload")
-    def handle_orch_hot_reload():
-        """Hot reload: pull latest code + restart. Git mode when available,
-        otherwise re-download main.zip and extract ONLY code files (skip
-        services/maa, models/config.json, logs — data is preserved). Seconds
-        instead of the full deploy's minutes."""
-        root = Path(__file__).parent.parent
-        try:
-            st = subprocess.run(["git", "-C", str(root), "pull", "--ff-only"],
-                                capture_output=True, timeout=60, creationflags=_CF,
-                                encoding="utf-8", errors="replace")
-            if st.returncode == 0:
-                _restart_hot(root, mw)
-                return {"ok": True, "message": "已拉取最新代码并重启"}
-        except Exception:
-            pass
-        # Zip mode fallback
-        threading.Thread(target=_hot_reload_zip, args=(root, mw), daemon=True).start()
-        return {"ok": True, "message": "正在下载最新代码并重启（zip 模式）"}
 
-    @app.post("/api/orch/update")
-    def handle_orch_update():
-        root = Path(__file__).parent.parent
-        result_file = Path(tempfile.gettempdir()) / "maorch_update_result.txt"
-        # Try git mode first; fall back to zip mode for zip deployments
-        git_ok = False
-        try:
-            st = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
-                                capture_output=True, timeout=10, creationflags=_CF,
-                                encoding="utf-8", errors="replace")
-            if st.returncode == 0:
-                git_ok = True
-                if st.stdout.strip():
-                    return {"ok": False, "error": "本地有未提交的改动，请先处理（git stash / commit）"}
-        except Exception:
-            git_ok = False
-        if git_ok:
-            # Generate update.bat: pull + write result + restart, run detached
-            try:
-                bat = root / "update.bat"
-                bat.write_text(
-                    '@echo off\r\n'
-                    'chcp 65001 >nul\r\n'
-                    f'cd /d "{root}"\r\n'
-                    'timeout /t 2 /nobreak >nul\r\n'
-                    f'git pull --ff-only >"{result_file}" 2>&1\r\n'
-                    'if errorlevel 1 (\r\n'
-                    f'  echo [RESULT] FAILED >>"{result_file}"\r\n'
-                    ') else (\r\n'
-                    f'  echo [RESULT] OK >>"{result_file}"\r\n'
-                    ')\r\n'
-                    f'start /min "" "{sys.executable}" "{root}\\main_web.pyw"\r\n'
-                    'del "%~f0"\r\n', encoding="utf-8")
-            except Exception as e:
-                return {"ok": False, "error": f"写入 update.bat 失败: {e}"}
 
-            def _do_git():
-                runner = getattr(mw, 'runner', None)
-                if runner:
-                    for aid in list(runner._active.keys()):
-                        try:
-                            runner.stop(aid)
-                        except Exception:
-                            pass
-                time.sleep(2)
-                subprocess.Popen(["cmd", "/c", str(bat)], creationflags=subprocess.CREATE_NO_WINDOW)
-                time.sleep(1)
-                os._exit(0)
-            threading.Thread(target=_do_git, daemon=True).start()
-            return {"ok": True, "message": "正在更新并重启，页面将短暂不可用"}
-        # Zip mode (git unavailable — zip deployment)
-        threading.Thread(target=_orch_update_zip,
-                         args=(root, result_file, mw), daemon=True).start()
-        return {"ok": True, "message": "正在下载并更新（zip 模式），页面将短暂不可用"}
 
-    @app.get("/api/orch/update_result")
-    def handle_orch_update_result():
-        rf = Path(tempfile.gettempdir()) / "maorch_update_result.txt"
-        if not rf.exists():
-            return {"ok": True, "has_result": False}
-        try:
-            text = rf.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            return {"ok": True, "has_result": False}
-        ok = "[RESULT] OK" in text
-        rf.unlink(missing_ok=True)  # one-shot: delete after read
-        return {"ok": True, "has_result": True, "success": ok, "detail": text[-500:]}
 
-    @app.post("/api/orch/download_update")
-    def handle_orch_download_update():
-        import webbrowser
-        webbrowser.open("https://github.com/xiachk083-hub/MAAOrch/releases/latest")
-        return {"ok": True}
 
-    @app.post("/api/config/export")
-    def handle_config_export():
-        data = {
-            "accounts": mw.accounts,
-            "config": {k: mw.config[k] for k in
-                       ("parallel_max", "schedule_mode", "deficit", "stuck_timeout",
-                        "daily_batch_time", "smart_global") if k in mw.config}
-        }
-        return {"ok": True, "data": data}
-
-    @app.post("/api/config/import")
-    def handle_config_import(body: dict):
-        data = body.get("data", {})
-        imported = 0
-        for ac in data.get("accounts", []):
-            aid = ac.get("id", "")
-            if any(a["id"] == aid for a in mw.accounts):
-                continue
-            for k in ("consecutive_failures", "stats", "_persist_plan", "dispatch_id", "smart_plan"):
-                ac.pop(k, None)
-            mw.accounts.append(ac)
-            imported += 1
-        mw.config["accounts"] = mw.accounts
-        from models.config_manager import save_config
-        save_config(mw.config)
-        return {"ok": True, "imported": imported}
 
     # ── 勘察端点（2026-08-17：MCP 勘察工具后端 — 现场对应/连接关系）──
     # 项目在目标机运行，可直接 subprocess 调 MuMuManager / 读实例文件，
@@ -3785,7 +2192,9 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             pass
         return {"ok": True, "processes": procs}
 
-    # ── MCP 挂载（2026-08-14：DSH Agent 工具插件 — 必须在静态 catch-all 之前）──
+    # ── MCP 挂载（2026-08-14：DSH Agent 工具插件）──
+    # 注：旧静态 catch-all（GET /{full_path:path}）已随前端退役于 2026-09-26 task-14 删除，
+    #     未知路径由 FastAPI 返回干净 404（不再是 FileResponse 指向不存在文件的 500）。
     # streamable-http，挂载点自身校验 x-agent-token（api_token 配置时）。
     # FastAPI mount 子 app 不传播 lifespan → 显式组合 MCP 的 lifespan。
     # ★ 2026-09-26 G6：MCP 挂载开关。fastmcp 导入使 create_app 慢约 5-6s
@@ -3820,18 +2229,6 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             except Exception:
                 pass
 
-    # Catch-all: serve static files (must be last route)
-    @app.get("/{full_path:path}")
-    async def serve_static(full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(404)
-        fp = web_dir / full_path if full_path else web_dir / "index.html"
-        if not str(fp.resolve()).startswith(str(web_dir.resolve())):
-            raise HTTPException(403)
-        if not fp.exists() or not fp.is_file():
-            fp = web_dir / "index.html"
-        mime = mimetypes.guess_type(str(fp))[0] or "application/octet-stream"
-        return FileResponse(str(fp), media_type=mime)
 
     return app
 
