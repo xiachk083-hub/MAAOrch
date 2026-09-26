@@ -3118,9 +3118,6 @@ class AccountRunner:
                 _hb.pop(aid, None)
         except Exception:
             pass
-        # Release queue mark on ANY exit (crash/kill included) — stale marks
-        # blocked relaunches for up to 150s before this fix.
-        self._release_emu_mark(aid)
         self._emu_lost_suspect.pop(aid, None)  # 清失联嫌疑（防重入队后残留误杀）
         self._adb_connected.pop(aid, None)  # 清连接信号（重入队后重新触发）
 
@@ -3216,6 +3213,13 @@ class AccountRunner:
         except Exception:
             pass
         self.emit_finished((aid, exit_code, tasks))
+        # Release queue mark on ANY exit (crash/kill included) — stale marks
+        # blocked relaunches for up to 150s before this fix.
+        # ★ 2026-09-26 G5：必须放在 emit_finished **之后** — 提前释放会让
+        #   launch_queue.on_account_finished 的 `old != account_id` 守卫
+        #   短路（pop 到 None）→ 重试/退避/补体力策略全不可达。位置改到
+        #   通知之后，语义不变（任何退出路径都释放），只是顺序后移。
+        self._release_emu_mark(aid)
         if ac:
             ac.pop("_persist_plan", None)
 

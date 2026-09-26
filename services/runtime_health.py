@@ -259,40 +259,67 @@ def check_health(mw) -> dict:
     # 卡队列半天）。VMM 进程在但对应模拟器不在运行（MuMuManager info all
     # 一次判定）= 关闭残留 → taskkill（模拟器不在运行，杀 VMM 安全）。
     # 保护: 启动 5 分钟内不判僵尸（boot 中/刚 launch 的模拟器）。
+    # ★★ 总闸（2026-09-26 G3）★★ — 沿用回收器同名键 emu_reclaim_enabled
+    # （缺省 False）。/api/health 由首页 ui/web/index.html:34 加载即触发，
+    # 原实现会在这里 taskkill 用户手动开的模拟器（idx 无账号映射也照杀）。
+    # 与 launch_queue._reclaim_idle_emus / _force_reclaim_memory 同语义：
+    # ①总闸关 → 绝不动；②idx 无账号映射（手动开的 / l- 系列）→ 不碰。
     try:
-        _running = _running_emulators()
-        if _running is None:
-            # 查询失败跳过僵尸清理（防全量误杀 — 2026-08-14）
-            issues.append({"severity": "info", "category": "vmm_query",
-                           "detail": "MuMuManager info all 查询失败，跳过僵尸 VMM 清理"})
-        else:
-            import psutil as _ps
-            import re as _re
-            import time as _time
-            for _p in _ps.process_iter(["name", "cmdline", "pid", "create_time"]):
-                try:
-                    if _p.info["name"] != "MuMuVMMHeadless.exe":
-                        continue
-                    _m = _re.search(r"MuMuPlayer-12\.0-(\d+)", " ".join(_p.info["cmdline"] or []))
-                    if not _m:
-                        continue
-                    _idx = _m.group(1)
-                    if _idx in _running:
-                        counts["vmm"] = counts.get("vmm", 0) + 1
-                        continue
-                    # boot 保护: VMM 刚起（<5 分钟）可能是 launch 中的模拟器
-                    if _time.time() - (_p.info["create_time"] or 0) < 300:
-                        continue
-                    subprocess.run(["taskkill", "/F", "/PID", str(_p.info["pid"])],
-                                   capture_output=True, timeout=5,
-                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                    counts["zombie_vmm_killed"] = counts.get("zombie_vmm_killed", 0) + 1
-                    issues.append({"severity": "warning", "category": "zombie_vmm",
-                                   "detail": f"僵尸 VMM: #{_idx} 模拟器不在运行，已清理"})
-                except Exception:
-                    pass
+        _vmm_gate = bool((getattr(getattr(lq, "ctx", None), "config", None) or {}).get(
+            "emu_reclaim_enabled", False))
     except Exception:
-        pass
+        _vmm_gate = False  # 读不到配置 = 不安全 = 不动（默认绝不退化成"杀"）
+    if not _vmm_gate:
+        # 不静默：闸关必须留痕
+        _vmm_gate_msg = "已跳过僵尸 VMM 清理（emu_reclaim_enabled=False）"
+        try:
+            mw._log(_vmm_gate_msg)
+        except Exception:
+            pass
+    else:
+        try:
+            _running = _running_emulators()
+            if _running is None:
+                # 查询失败跳过僵尸清理（防全量误杀 — 2026-08-14）
+                issues.append({"severity": "info", "category": "vmm_query",
+                               "detail": "MuMuManager info all 查询失败，跳过僵尸 VMM 清理"})
+            else:
+                # idx → aid 映射（与回收器同规则 — 2026-09-26 G3）：无映射
+                # （手动开的 / l- 系列）绝不碰。
+                _vmm_emu2aid = {}
+                for _a3 in accounts:
+                    _ei3 = _a3.get("emu_instance_index", "")
+                    if _ei3:
+                        _vmm_emu2aid[str(_ei3)] = _a3.get("id", "")
+                import psutil as _ps
+                import re as _re
+                import time as _time
+                for _p in _ps.process_iter(["name", "cmdline", "pid", "create_time"]):
+                    try:
+                        if _p.info["name"] != "MuMuVMMHeadless.exe":
+                            continue
+                        _m = _re.search(r"MuMuPlayer-12\.0-(\d+)", " ".join(_p.info["cmdline"] or []))
+                        if not _m:
+                            continue
+                        _idx = _m.group(1)
+                        if not _vmm_emu2aid.get(_idx):
+                            continue  # 无账号映射 → 不碰（与回收器同规则）
+                        if _idx in _running:
+                            counts["vmm"] = counts.get("vmm", 0) + 1
+                            continue
+                        # boot 保护: VMM 刚起（<5 分钟）可能是 launch 中的模拟器
+                        if _time.time() - (_p.info["create_time"] or 0) < 300:
+                            continue
+                        subprocess.run(["taskkill", "/F", "/PID", str(_p.info["pid"])],
+                                       capture_output=True, timeout=5,
+                                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                        counts["zombie_vmm_killed"] = counts.get("zombie_vmm_killed", 0) + 1
+                        issues.append({"severity": "warning", "category": "zombie_vmm",
+                                       "detail": f"僵尸 VMM: #{_idx} 模拟器不在运行，已清理"})
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     # ── 2. stale emulators: emulator up but account not running ──
     emu2aid = {}

@@ -1,0 +1,1114 @@
+[
+ {
+  "line": 298,
+  "method": "GET",
+  "path": "/api/status",
+  "key": "GET /api/status",
+  "cls": "①",
+  "why": "MCP status"
+ },
+ {
+  "line": 323,
+  "method": "GET",
+  "path": "/api/node/info",
+  "key": "GET /api/node/info",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 339,
+  "method": "GET",
+  "path": "/api/node/dashboard",
+  "key": "GET /api/node/dashboard",
+  "cls": "①",
+  "why": "MCP dashboard"
+ },
+ {
+  "line": 501,
+  "method": "GET",
+  "path": "/api/account/{idx}/status",
+  "key": "GET /api/account/{idx}/status",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 511,
+  "method": "GET",
+  "path": "/api/account/{idx}/stats",
+  "key": "GET /api/account/{idx}/stats",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 520,
+  "method": "GET",
+  "path": "/api/account/{idx}/screenshot",
+  "key": "GET /api/account/{idx}/screenshot",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 551,
+  "method": "GET",
+  "path": "/api/screenshots/{aid}",
+  "key": "GET /api/screenshots/{aid}",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 565,
+  "method": "GET",
+  "path": "/api/screenshots/file/{aid}/{run_dir}/{fname:path}",
+  "key": "GET /api/screenshots/file/{aid}/{run_dir}/{fname:path}",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 572,
+  "method": "GET",
+  "path": "/api/screenshots/{aid}/export/{run_ts}",
+  "key": "GET /api/screenshots/{aid}/export/{run_ts}",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 586,
+  "method": "GET",
+  "path": "/api/export/logs",
+  "key": "GET /api/export/logs",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 617,
+  "method": "GET",
+  "path": "/api/export/gantt",
+  "key": "GET /api/export/gantt",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 638,
+  "method": "GET",
+  "path": "/api/stats/dashboard",
+  "key": "GET /api/stats/dashboard",
+  "cls": "①",
+  "why": "MCP stats_dashboard"
+ },
+ {
+  "line": 677,
+  "method": "GET",
+  "path": "/api/stats",
+  "key": "GET /api/stats",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 689,
+  "method": "GET",
+  "path": "/api/stats/daily",
+  "key": "GET /api/stats/daily",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 694,
+  "method": "GET",
+  "path": "/api/stats/weekly",
+  "key": "GET /api/stats/weekly",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 699,
+  "method": "GET",
+  "path": "/api/stats/monthly",
+  "key": "GET /api/stats/monthly",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 704,
+  "method": "GET",
+  "path": "/api/stats/yearly",
+  "key": "GET /api/stats/yearly",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 709,
+  "method": "GET",
+  "path": "/api/stats/all",
+  "key": "GET /api/stats/all",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 714,
+  "method": "GET",
+  "path": "/api/stats/periods",
+  "key": "GET /api/stats/periods",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 722,
+  "method": "GET",
+  "path": "/api/mas/status",
+  "key": "GET /api/mas/status",
+  "cls": "①",
+  "why": "MAS 控制面（ui/web/auto_mas.js:455 + Node 原生）"
+ },
+ {
+  "line": 727,
+  "method": "POST",
+  "path": "/api/mas/rerun",
+  "key": "POST /api/mas/rerun",
+  "cls": "①",
+  "why": "MAS 控制面（auto_mas.js:419 + Node 原生）"
+ },
+ {
+  "line": 732,
+  "method": "POST",
+  "path": "/api/mas/cleanup",
+  "key": "POST /api/mas/cleanup",
+  "cls": "①",
+  "why": "MAS 控制面（auto_mas.js:419 + Node 原生）"
+ },
+ {
+  "line": 741,
+  "method": "POST",
+  "path": "/api/probe/stage",
+  "key": "POST /api/probe/stage",
+  "cls": "①",
+  "why": "MCP probe_stage"
+ },
+ {
+  "line": 798,
+  "method": "POST",
+  "path": "/api/probe/anni_weekly",
+  "key": "POST /api/probe/anni_weekly",
+  "cls": "①",
+  "why": "判据 probe/*"
+ },
+ {
+  "line": 844,
+  "method": "GET",
+  "path": "/api/probe/results",
+  "key": "GET /api/probe/results",
+  "cls": "①",
+  "why": "判据 probe/*"
+ },
+ {
+  "line": 849,
+  "method": "POST",
+  "path": "/api/probe/apply_plan",
+  "key": "POST /api/probe/apply_plan",
+  "cls": "①",
+  "why": "判据 probe/*"
+ },
+ {
+  "line": 879,
+  "method": "GET",
+  "path": "/api/probe/status",
+  "key": "GET /api/probe/status",
+  "cls": "①",
+  "why": "MCP probe_status"
+ },
+ {
+  "line": 892,
+  "method": "POST",
+  "path": "/api/depot/scan",
+  "key": "POST /api/depot/scan",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 919,
+  "method": "GET",
+  "path": "/api/depot/status",
+  "key": "GET /api/depot/status",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 944,
+  "method": "GET",
+  "path": "/api/depot/plan",
+  "key": "GET /api/depot/plan",
+  "cls": "①",
+  "why": "MCP depot_plan"
+ },
+ {
+  "line": 957,
+  "method": "GET",
+  "path": "/api/depot/probe",
+  "key": "GET /api/depot/probe",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 970,
+  "method": "GET",
+  "path": "/api/depot/config",
+  "key": "GET /api/depot/config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 979,
+  "method": "POST",
+  "path": "/api/depot/config",
+  "key": "POST /api/depot/config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1025,
+  "method": "POST",
+  "path": "/api/penguin/refresh",
+  "key": "POST /api/penguin/refresh",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1039,
+  "method": "GET",
+  "path": "/api/penguin/status",
+  "key": "GET /api/penguin/status",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1048,
+  "method": "GET",
+  "path": "/api/activity/stages",
+  "key": "GET /api/activity/stages",
+  "cls": "①",
+  "why": "MCP activity_stages"
+ },
+ {
+  "line": 1053,
+  "method": "POST",
+  "path": "/api/activity/refresh",
+  "key": "POST /api/activity/refresh",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1067,
+  "method": "POST",
+  "path": "/api/activity/stages",
+  "key": "POST /api/activity/stages",
+  "cls": "①",
+  "why": "activity 写路径（MCP 只读同名端点）"
+ },
+ {
+  "line": 1091,
+  "method": "GET",
+  "path": "/api/account_status",
+  "key": "GET /api/account_status",
+  "cls": "①",
+  "why": "MCP account_status"
+ },
+ {
+  "line": 1165,
+  "method": "GET",
+  "path": "/api/health",
+  "key": "GET /api/health",
+  "cls": "①",
+  "why": "MCP health"
+ },
+ {
+  "line": 1171,
+  "method": "GET",
+  "path": "/api/emulators/diagnose",
+  "key": "GET /api/emulators/diagnose",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1200,
+  "method": "GET",
+  "path": "/api/events/list",
+  "key": "GET /api/events/list",
+  "cls": "①",
+  "why": "MCP events"
+ },
+ {
+  "line": 1209,
+  "method": "GET",
+  "path": "/api/events/calendar",
+  "key": "GET /api/events/calendar",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1218,
+  "method": "GET",
+  "path": "/api/events/analyze",
+  "key": "GET /api/events/analyze",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1227,
+  "method": "GET",
+  "path": "/api/announcements",
+  "key": "GET /api/announcements",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1233,
+  "method": "POST",
+  "path": "/api/announcements/refresh",
+  "key": "POST /api/announcements/refresh",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1239,
+  "method": "GET",
+  "path": "/api/logs/collect_status",
+  "key": "GET /api/logs/collect_status",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1245,
+  "method": "GET",
+  "path": "/api/logs/samples",
+  "key": "GET /api/logs/samples",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1253,
+  "method": "GET",
+  "path": "/api/events_bus",
+  "key": "GET /api/events_bus",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1262,
+  "method": "GET",
+  "path": "/api/debug/state",
+  "key": "GET /api/debug/state",
+  "cls": "①",
+  "why": "调试必需（现场状态快照）"
+ },
+ {
+  "line": 1309,
+  "method": "GET",
+  "path": "/api/queue",
+  "key": "GET /api/queue",
+  "cls": "①",
+  "why": "MCP queue"
+ },
+ {
+  "line": 1383,
+  "method": "GET",
+  "path": "/api/shots/list",
+  "key": "GET /api/shots/list",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1402,
+  "method": "GET",
+  "path": "/api/shots/file",
+  "key": "GET /api/shots/file",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1415,
+  "method": "GET",
+  "path": "/api/logs",
+  "key": "GET /api/logs",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1428,
+  "method": "GET",
+  "path": "/api/maa/log",
+  "key": "GET /api/maa/log",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1500,
+  "method": "GET",
+  "path": "/api/maa/logs_history",
+  "key": "GET /api/maa/logs_history",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1525,
+  "method": "GET",
+  "path": "/api/stage_checks",
+  "key": "GET /api/stage_checks",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1576,
+  "method": "GET",
+  "path": "/api/accounts",
+  "key": "GET /api/accounts",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1612,
+  "method": "GET",
+  "path": "/api/accounts/export",
+  "key": "GET /api/accounts/export",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1634,
+  "method": "POST",
+  "path": "/api/accounts/csv_import",
+  "key": "POST /api/accounts/csv_import",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1692,
+  "method": "POST",
+  "path": "/api/accounts/batch_save",
+  "key": "POST /api/accounts/batch_save",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1735,
+  "method": "GET",
+  "path": "/api/oplog",
+  "key": "GET /api/oplog",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1739,
+  "method": "GET",
+  "path": "/api/config",
+  "key": "GET /api/config",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1762,
+  "method": "GET",
+  "path": "/api/settings/smart",
+  "key": "GET /api/settings/smart",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1766,
+  "method": "GET",
+  "path": "/api/emulators",
+  "key": "GET /api/emulators",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1771,
+  "method": "GET",
+  "path": "/api/emulator/{idx}",
+  "key": "GET /api/emulator/{idx}",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1779,
+  "method": "GET",
+  "path": "/api/account/{idx}/config",
+  "key": "GET /api/account/{idx}/config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1784,
+  "method": "GET",
+  "path": "/api/stages",
+  "key": "GET /api/stages",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1797,
+  "method": "GET",
+  "path": "/api/sse",
+  "key": "GET /api/sse",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 1841,
+  "method": "POST",
+  "path": "/api/sse",
+  "key": "POST /api/sse",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1845,
+  "method": "POST",
+  "path": "/api/node/register",
+  "key": "POST /api/node/register",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1855,
+  "method": "POST",
+  "path": "/api/node/heartbeat",
+  "key": "POST /api/node/heartbeat",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1867,
+  "method": "POST",
+  "path": "/api/account/{idx}/launch",
+  "key": "POST /api/account/{idx}/launch",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1876,
+  "method": "POST",
+  "path": "/api/account/{idx}/stop",
+  "key": "POST /api/account/{idx}/stop",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1884,
+  "method": "POST",
+  "path": "/api/config/sync",
+  "key": "POST /api/config/sync",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1906,
+  "method": "POST",
+  "path": "/api/queue/enqueue",
+  "key": "POST /api/queue/enqueue",
+  "cls": "①",
+  "why": "MCP enqueue"
+ },
+ {
+  "line": 1929,
+  "method": "POST",
+  "path": "/api/queue/dequeue",
+  "key": "POST /api/queue/dequeue",
+  "cls": "①",
+  "why": "MCP dequeue"
+ },
+ {
+  "line": 1949,
+  "method": "POST",
+  "path": "/api/queue/clear",
+  "key": "POST /api/queue/clear",
+  "cls": "①",
+  "why": "判据 queue*"
+ },
+ {
+  "line": 1956,
+  "method": "POST",
+  "path": "/api/queue/pause",
+  "key": "POST /api/queue/pause",
+  "cls": "①",
+  "why": "MCP queue_control"
+ },
+ {
+  "line": 1964,
+  "method": "POST",
+  "path": "/api/queue/resume",
+  "key": "POST /api/queue/resume",
+  "cls": "①",
+  "why": "MCP queue_control"
+ },
+ {
+  "line": 1972,
+  "method": "POST",
+  "path": "/api/account",
+  "key": "POST /api/account",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 1991,
+  "method": "POST",
+  "path": "/api/account/{idx}/edit",
+  "key": "POST /api/account/{idx}/edit",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2006,
+  "method": "POST",
+  "path": "/api/account/{idx}/delete",
+  "key": "POST /api/account/{idx}/delete",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2015,
+  "method": "POST",
+  "path": "/api/account/{idx}/config",
+  "key": "POST /api/account/{idx}/config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2024,
+  "method": "GET",
+  "path": "/api/account/{idx}/fight_config",
+  "key": "GET /api/account/{idx}/fight_config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2039,
+  "method": "POST",
+  "path": "/api/account/{idx}/fight_config",
+  "key": "POST /api/account/{idx}/fight_config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2057,
+  "method": "POST",
+  "path": "/api/screenshots/{aid}/delete",
+  "key": "POST /api/screenshots/{aid}/delete",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2068,
+  "method": "POST",
+  "path": "/api/config",
+  "key": "POST /api/config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2086,
+  "method": "POST",
+  "path": "/api/settings/smart",
+  "key": "POST /api/settings/smart",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2094,
+  "method": "POST",
+  "path": "/api/ai/analyze",
+  "key": "POST /api/ai/analyze",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2121,
+  "method": "POST",
+  "path": "/api/stages",
+  "key": "POST /api/stages",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2128,
+  "method": "POST",
+  "path": "/api/stages/apply",
+  "key": "POST /api/stages/apply",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2149,
+  "method": "POST",
+  "path": "/api/action/stop_all",
+  "key": "POST /api/action/stop_all",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2157,
+  "method": "GET",
+  "path": "/api/kill_audit",
+  "key": "GET /api/kill_audit",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2165,
+  "method": "GET",
+  "path": "/api/kill_audit/pending",
+  "key": "GET /api/kill_audit/pending",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2174,
+  "method": "POST",
+  "path": "/api/kill_audit/decide",
+  "key": "POST /api/kill_audit/decide",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2195,
+  "method": "POST",
+  "path": "/api/maa_remote/task",
+  "key": "POST /api/maa_remote/task",
+  "cls": "①",
+  "why": "MAA 每秒轮询 GetTask（config_injector.py:366 注入 URI）"
+ },
+ {
+  "line": 2210,
+  "method": "GET",
+  "path": "/api/maa_remote",
+  "key": "GET /api/maa_remote",
+  "cls": "①",
+  "why": "MAA 远程控制状态视图（api_fastapi.py:2210）"
+ },
+ {
+  "line": 2234,
+  "method": "POST",
+  "path": "/api/maa_remote/status",
+  "key": "POST /api/maa_remote/status",
+  "cls": "①",
+  "why": "MAA 上报任务结果（config_injector.py:367 注入 URI）"
+ },
+ {
+  "line": 2318,
+  "method": "POST",
+  "path": "/api/emulator/batch/{action}",
+  "key": "POST /api/emulator/batch/{action}",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2380,
+  "method": "POST",
+  "path": "/api/emulator/{idx}/{action}",
+  "key": "POST /api/emulator/{idx}/{action}",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2433,
+  "method": "POST",
+  "path": "/api/system/close_popups",
+  "key": "POST /api/system/close_popups",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2439,
+  "method": "POST",
+  "path": "/api/system/open_folder",
+  "key": "POST /api/system/open_folder",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2462,
+  "method": "POST",
+  "path": "/api/system/kill_maa",
+  "key": "POST /api/system/kill_maa",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2480,
+  "method": "POST",
+  "path": "/api/system/restart",
+  "key": "POST /api/system/restart",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2608,
+  "method": "POST",
+  "path": "/api/action/smart_all",
+  "key": "POST /api/action/smart_all",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2641,
+  "method": "POST",
+  "path": "/api/action/smart_maintenance",
+  "key": "POST /api/action/smart_maintenance",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2664,
+  "method": "POST",
+  "path": "/api/action/smart_fight",
+  "key": "POST /api/action/smart_fight",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2687,
+  "method": "POST",
+  "path": "/api/action/connect_running_emus",
+  "key": "POST /api/action/connect_running_emus",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2766,
+  "method": "GET",
+  "path": "/api/connect/status",
+  "key": "GET /api/connect/status",
+  "cls": "②",
+  "why": "Node 已原生实现"
+ },
+ {
+  "line": 2791,
+  "method": "POST",
+  "path": "/api/connect/launch",
+  "key": "POST /api/connect/launch",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2825,
+  "method": "POST",
+  "path": "/api/connect/{aid}/stop",
+  "key": "POST /api/connect/{aid}/stop",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2831,
+  "method": "POST",
+  "path": "/api/connect/{aid}/restart",
+  "key": "POST /api/connect/{aid}/restart",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2853,
+  "method": "POST",
+  "path": "/api/connect/batch_stop",
+  "key": "POST /api/connect/batch_stop",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2872,
+  "method": "POST",
+  "path": "/api/connect/batch_emu_stop",
+  "key": "POST /api/connect/batch_emu_stop",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2902,
+  "method": "GET",
+  "path": "/api/connect/{aid}/log",
+  "key": "GET /api/connect/{aid}/log",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2923,
+  "method": "GET",
+  "path": "/api/connect/{aid}/screenshot",
+  "key": "GET /api/connect/{aid}/screenshot",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2964,
+  "method": "POST",
+  "path": "/api/action/smart_login",
+  "key": "POST /api/action/smart_login",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 2987,
+  "method": "POST",
+  "path": "/api/action/smart_annihilation",
+  "key": "POST /api/action/smart_annihilation",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3012,
+  "method": "POST",
+  "path": "/api/action/smart_selected",
+  "key": "POST /api/action/smart_selected",
+  "cls": "①",
+  "why": "MCP smart_dispatch"
+ },
+ {
+  "line": 3081,
+  "method": "POST",
+  "path": "/api/instance/rebuild",
+  "key": "POST /api/instance/rebuild",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3087,
+  "method": "POST",
+  "path": "/api/maa/check_update",
+  "key": "POST /api/maa/check_update",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3135,
+  "method": "POST",
+  "path": "/api/maa/download_update",
+  "key": "POST /api/maa/download_update",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3156,
+  "method": "GET",
+  "path": "/api/maa/download_status",
+  "key": "GET /api/maa/download_status",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3161,
+  "method": "GET",
+  "path": "/api/maa/status",
+  "key": "GET /api/maa/status",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3199,
+  "method": "POST",
+  "path": "/api/maa/launch_source",
+  "key": "POST /api/maa/launch_source",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3218,
+  "method": "POST",
+  "path": "/api/maa/check_source",
+  "key": "POST /api/maa/check_source",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3232,
+  "method": "GET",
+  "path": "/api/maa/instances",
+  "key": "GET /api/maa/instances",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3264,
+  "method": "GET",
+  "path": "/api/maa/instances/{n}/config",
+  "key": "GET /api/maa/instances/{n}/config",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3317,
+  "method": "POST",
+  "path": "/api/orch/check_update",
+  "key": "POST /api/orch/check_update",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3447,
+  "method": "POST",
+  "path": "/api/orch/hot_reload",
+  "key": "POST /api/orch/hot_reload",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3467,
+  "method": "POST",
+  "path": "/api/orch/update",
+  "key": "POST /api/orch/update",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3522,
+  "method": "GET",
+  "path": "/api/orch/update_result",
+  "key": "GET /api/orch/update_result",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3535,
+  "method": "POST",
+  "path": "/api/orch/download_update",
+  "key": "POST /api/orch/download_update",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3541,
+  "method": "POST",
+  "path": "/api/config/export",
+  "key": "POST /api/config/export",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3551,
+  "method": "POST",
+  "path": "/api/config/import",
+  "key": "POST /api/config/import",
+  "cls": "②",
+  "why": ""
+ },
+ {
+  "line": 3572,
+  "method": "GET",
+  "path": "/api/inspect/link_map",
+  "key": "GET /api/inspect/link_map",
+  "cls": "①",
+  "why": "MCP link_map"
+ },
+ {
+  "line": 3675,
+  "method": "GET",
+  "path": "/api/inspect/account/{name}",
+  "key": "GET /api/inspect/account/{name}",
+  "cls": "①",
+  "why": "MCP inspect_account"
+ },
+ {
+  "line": 3764,
+  "method": "GET",
+  "path": "/api/inspect/processes",
+  "key": "GET /api/inspect/processes",
+  "cls": "①",
+  "why": "MCP processes"
+ }
+]

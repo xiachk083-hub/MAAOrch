@@ -195,6 +195,70 @@ def build_mcp_app(mw: Any) -> Any:
         """检测某账号能否刷指定关卡（异步，结果落 probe_status；可配 probe_stages 批量）。"""
         return _call_api(mw, "/api/probe/stage", {"account_id": account_id, "stage": stage})
 
+    # ── MAS（AUTO-MAS 远端多账号调度器）──────────────────────────────
+    # 进程内直连 services.mas_adapter（MAS 唯一门面），不新增 REST 路由
+    # （/api/mas/* 由另一处维护）。adapter 惰性加载 services.mas_l3，主机不可达/
+    # 服务层异常时统一返回 {ok: False, error, degraded: True}，不抛异常。
+    # 只读/写标注见各 docstring；写工具一律 dry_run=True 默认预演。
+
+    @mcp.tool()
+    def mas_snapshot(refresh: bool = False) -> dict:
+        """【只读】MAS 远端主机实时快照（SSH 采集）：在飞 MAA、盘位、队列进度、
+        失败号、未跑账号、磁盘余量。refresh=True 绕过 45 秒缓存强制重采（较慢）。
+        主机不可达时返回 {ok: False, degraded: True} 而非抛异常。"""
+        from services import mas_adapter
+        return mas_adapter.snapshot(refresh=bool(refresh))
+
+    @mcp.tool()
+    def mas_status(days: int = 7, refresh: bool = False) -> dict:
+        """【只读】MAS 产线总览（与 Web 工作台同源）：主机实时快照 + 今日/近 N 天发车
+        聚合（一次过/补跑成功/全败）+ 失败原因 Top + 钉子户 + 本地留痕 + 补跑状态。
+        "昨晚谁失败了、为什么"用这个；days 范围 1-30（默认 7）。"""
+        from services import mas_adapter
+        return mas_adapter.status(days=int(days), refresh=bool(refresh))
+
+    @mcp.tool()
+    def mas_history(days: int = 7) -> dict:
+        """【只读】MAS（AUTO-MAS）近 N 天原始历史（未聚合）：
+        {日期: {账号: {index: 逐次尝试(状态/时间), error_info: 失败原因}}}。
+        需要逐次尝试明细时用它；要看结论用 mas_status。"""
+        from services import mas_adapter
+        return mas_adapter.history(days=int(days))
+
+    @mcp.tool()
+    def mas_ledger(n: int = 12) -> dict:
+        """【只读】MAS 本地留痕（runtime/mas_ledger.jsonl 末尾 n 条）：
+        日报/补跑/清理等事件流水，用于"刚才那轮到底做了什么"的追溯。"""
+        from services import mas_adapter
+        return mas_adapter.ledger(int(n))
+
+    @mcp.tool()
+    def mas_rerun_state() -> dict:
+        """【只读】MAS 补跑进度：后台补跑是否在跑、本批账号、开始/完成时间、结果明细
+        （含 ok=补跑是否发车成功）。"""
+        from services import mas_adapter
+        return mas_adapter.rerun_state()
+
+    @mcp.tool()
+    def mas_rerun(accounts: list[str] | None = None, dry_run: bool = True) -> dict:
+        """【写操作】触发 MAS 补跑发车：给远端 AUTO-MAS 建临时队列补跑失败账号（最多 8 个）。
+
+        会改动远端 MAS 队列。默认 dry_run=True：只预演，不碰远端，返回将要发的号
+        （accounts 为空时按主机快照的失败号解析候选）；只有显式 dry_run=False 才真正提交。
+        """
+        from services import mas_adapter
+        return mas_adapter.rerun(accounts=accounts, dry_run=bool(dry_run))
+
+    @mcp.tool()
+    def mas_cleanup(dry_run: bool = True) -> dict:
+        """【写操作】清理远端 MAS 上的临时补跑队列（tools/auto_mas_rerun.py --cleanup）。
+
+        会改动远端 MAS 队列。默认 dry_run=True：只预演，不删除任何东西；
+        只有显式 dry_run=False 才真正执行清理。
+        """
+        from services import mas_adapter
+        return mas_adapter.cleanup(dry_run=bool(dry_run))
+
     # ── 挂载 ─────────────────────────────────────────────────────────
 
     # http_app(path="/")：内部路由注册在根，挂载前缀（/mcp）由 FastAPI mount 决定

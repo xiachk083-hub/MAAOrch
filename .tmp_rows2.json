@@ -1,0 +1,1477 @@
+[
+ {
+  "line": 298,
+  "method": "GET",
+  "path": "/api/status",
+  "key": "GET /api/status",
+  "h": [
+   "/api/status"
+  ],
+  "node": true,
+  "mcp": true
+ },
+ {
+  "line": 323,
+  "method": "GET",
+  "path": "/api/node/info",
+  "key": "GET /api/node/info",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 339,
+  "method": "GET",
+  "path": "/api/node/dashboard",
+  "key": "GET /api/node/dashboard",
+  "h": [
+   "/api/node/dashboard"
+  ],
+  "node": true,
+  "mcp": true
+ },
+ {
+  "line": 501,
+  "method": "GET",
+  "path": "/api/account/{idx}/status",
+  "key": "GET /api/account/{idx}/status",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 511,
+  "method": "GET",
+  "path": "/api/account/{idx}/stats",
+  "key": "GET /api/account/{idx}/stats",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 520,
+  "method": "GET",
+  "path": "/api/account/{idx}/screenshot",
+  "key": "GET /api/account/{idx}/screenshot",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 551,
+  "method": "GET",
+  "path": "/api/screenshots/{aid}",
+  "key": "GET /api/screenshots/{aid}",
+  "h": [
+   "/api/screenshots/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 565,
+  "method": "GET",
+  "path": "/api/screenshots/file/{aid}/{run_dir}/{fname:path}",
+  "key": "GET /api/screenshots/file/{aid}/{run_dir}/{fname:path}",
+  "h": [
+   "/api/screenshots/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 572,
+  "method": "GET",
+  "path": "/api/screenshots/{aid}/export/{run_ts}",
+  "key": "GET /api/screenshots/{aid}/export/{run_ts}",
+  "h": [
+   "/api/screenshots/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 586,
+  "method": "GET",
+  "path": "/api/export/logs",
+  "key": "GET /api/export/logs",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 617,
+  "method": "GET",
+  "path": "/api/export/gantt",
+  "key": "GET /api/export/gantt",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 638,
+  "method": "GET",
+  "path": "/api/stats/dashboard",
+  "key": "GET /api/stats/dashboard",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 677,
+  "method": "GET",
+  "path": "/api/stats",
+  "key": "GET /api/stats",
+  "h": [
+   "/api/stats"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 689,
+  "method": "GET",
+  "path": "/api/stats/daily",
+  "key": "GET /api/stats/daily",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 694,
+  "method": "GET",
+  "path": "/api/stats/weekly",
+  "key": "GET /api/stats/weekly",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 699,
+  "method": "GET",
+  "path": "/api/stats/monthly",
+  "key": "GET /api/stats/monthly",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 704,
+  "method": "GET",
+  "path": "/api/stats/yearly",
+  "key": "GET /api/stats/yearly",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 709,
+  "method": "GET",
+  "path": "/api/stats/all",
+  "key": "GET /api/stats/all",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 714,
+  "method": "GET",
+  "path": "/api/stats/periods",
+  "key": "GET /api/stats/periods",
+  "h": [
+   "/api/stats/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 722,
+  "method": "GET",
+  "path": "/api/mas/status",
+  "key": "GET /api/mas/status",
+  "h": [
+   "/api/mas/status"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 727,
+  "method": "POST",
+  "path": "/api/mas/rerun",
+  "key": "POST /api/mas/rerun",
+  "h": [
+   "/api/mas/rerun"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 732,
+  "method": "POST",
+  "path": "/api/mas/cleanup",
+  "key": "POST /api/mas/cleanup",
+  "h": [
+   "/api/mas/cleanup"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 741,
+  "method": "POST",
+  "path": "/api/probe/stage",
+  "key": "POST /api/probe/stage",
+  "h": [],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 798,
+  "method": "POST",
+  "path": "/api/probe/anni_weekly",
+  "key": "POST /api/probe/anni_weekly",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 844,
+  "method": "GET",
+  "path": "/api/probe/results",
+  "key": "GET /api/probe/results",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 849,
+  "method": "POST",
+  "path": "/api/probe/apply_plan",
+  "key": "POST /api/probe/apply_plan",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 879,
+  "method": "GET",
+  "path": "/api/probe/status",
+  "key": "GET /api/probe/status",
+  "h": [],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 892,
+  "method": "POST",
+  "path": "/api/depot/scan",
+  "key": "POST /api/depot/scan",
+  "h": [
+   "/api/depot/scan"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 919,
+  "method": "GET",
+  "path": "/api/depot/status",
+  "key": "GET /api/depot/status",
+  "h": [
+   "/api/depot/status"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 944,
+  "method": "GET",
+  "path": "/api/depot/plan",
+  "key": "GET /api/depot/plan",
+  "h": [
+   "/api/depot/plan"
+  ],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 957,
+  "method": "GET",
+  "path": "/api/depot/probe",
+  "key": "GET /api/depot/probe",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 970,
+  "method": "GET",
+  "path": "/api/depot/config",
+  "key": "GET /api/depot/config",
+  "h": [
+   "/api/depot/config"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 979,
+  "method": "POST",
+  "path": "/api/depot/config",
+  "key": "POST /api/depot/config",
+  "h": [
+   "/api/depot/config"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1025,
+  "method": "POST",
+  "path": "/api/penguin/refresh",
+  "key": "POST /api/penguin/refresh",
+  "h": [
+   "/api/penguin/refresh"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1039,
+  "method": "GET",
+  "path": "/api/penguin/status",
+  "key": "GET /api/penguin/status",
+  "h": [
+   "/api/penguin/status"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1048,
+  "method": "GET",
+  "path": "/api/activity/stages",
+  "key": "GET /api/activity/stages",
+  "h": [
+   "/api/activity/stages"
+  ],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 1053,
+  "method": "POST",
+  "path": "/api/activity/refresh",
+  "key": "POST /api/activity/refresh",
+  "h": [
+   "/api/activity/refresh"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1067,
+  "method": "POST",
+  "path": "/api/activity/stages",
+  "key": "POST /api/activity/stages",
+  "h": [
+   "/api/activity/stages"
+  ],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 1091,
+  "method": "GET",
+  "path": "/api/account_status",
+  "key": "GET /api/account_status",
+  "h": [
+   "/api/account_status"
+  ],
+  "node": true,
+  "mcp": true
+ },
+ {
+  "line": 1165,
+  "method": "GET",
+  "path": "/api/health",
+  "key": "GET /api/health",
+  "h": [
+   "/api/health"
+  ],
+  "node": true,
+  "mcp": true
+ },
+ {
+  "line": 1171,
+  "method": "GET",
+  "path": "/api/emulators/diagnose",
+  "key": "GET /api/emulators/diagnose",
+  "h": [
+   "/api/emulators/*",
+   "/api/emulators/diagnose"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1200,
+  "method": "GET",
+  "path": "/api/events/list",
+  "key": "GET /api/events/list",
+  "h": [],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 1209,
+  "method": "GET",
+  "path": "/api/events/calendar",
+  "key": "GET /api/events/calendar",
+  "h": [
+   "/api/events/calendar"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1218,
+  "method": "GET",
+  "path": "/api/events/analyze",
+  "key": "GET /api/events/analyze",
+  "h": [
+   "/api/events/analyze"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1227,
+  "method": "GET",
+  "path": "/api/announcements",
+  "key": "GET /api/announcements",
+  "h": [
+   "/api/announcements"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1233,
+  "method": "POST",
+  "path": "/api/announcements/refresh",
+  "key": "POST /api/announcements/refresh",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1239,
+  "method": "GET",
+  "path": "/api/logs/collect_status",
+  "key": "GET /api/logs/collect_status",
+  "h": [
+   "/api/logs/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1245,
+  "method": "GET",
+  "path": "/api/logs/samples",
+  "key": "GET /api/logs/samples",
+  "h": [
+   "/api/logs/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1253,
+  "method": "GET",
+  "path": "/api/events_bus",
+  "key": "GET /api/events_bus",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1262,
+  "method": "GET",
+  "path": "/api/debug/state",
+  "key": "GET /api/debug/state",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1309,
+  "method": "GET",
+  "path": "/api/queue",
+  "key": "GET /api/queue",
+  "h": [
+   "/api/queue"
+  ],
+  "node": true,
+  "mcp": true
+ },
+ {
+  "line": 1383,
+  "method": "GET",
+  "path": "/api/shots/list",
+  "key": "GET /api/shots/list",
+  "h": [
+   "/api/shots/list"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1402,
+  "method": "GET",
+  "path": "/api/shots/file",
+  "key": "GET /api/shots/file",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1415,
+  "method": "GET",
+  "path": "/api/logs",
+  "key": "GET /api/logs",
+  "h": [
+   "/api/logs"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1428,
+  "method": "GET",
+  "path": "/api/maa/log",
+  "key": "GET /api/maa/log",
+  "h": [
+   "/api/maa/log"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1500,
+  "method": "GET",
+  "path": "/api/maa/logs_history",
+  "key": "GET /api/maa/logs_history",
+  "h": [
+   "/api/maa/logs_history"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1525,
+  "method": "GET",
+  "path": "/api/stage_checks",
+  "key": "GET /api/stage_checks",
+  "h": [
+   "/api/stage_checks"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1576,
+  "method": "GET",
+  "path": "/api/accounts",
+  "key": "GET /api/accounts",
+  "h": [
+   "/api/accounts"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1612,
+  "method": "GET",
+  "path": "/api/accounts/export",
+  "key": "GET /api/accounts/export",
+  "h": [
+   "/api/accounts/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1634,
+  "method": "POST",
+  "path": "/api/accounts/csv_import",
+  "key": "POST /api/accounts/csv_import",
+  "h": [
+   "/api/accounts/csv_import"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1692,
+  "method": "POST",
+  "path": "/api/accounts/batch_save",
+  "key": "POST /api/accounts/batch_save",
+  "h": [
+   "/api/accounts/batch_save"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1735,
+  "method": "GET",
+  "path": "/api/oplog",
+  "key": "GET /api/oplog",
+  "h": [
+   "/api/oplog"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1739,
+  "method": "GET",
+  "path": "/api/config",
+  "key": "GET /api/config",
+  "h": [
+   "/api/config"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1762,
+  "method": "GET",
+  "path": "/api/settings/smart",
+  "key": "GET /api/settings/smart",
+  "h": [
+   "/api/settings/smart"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1766,
+  "method": "GET",
+  "path": "/api/emulators",
+  "key": "GET /api/emulators",
+  "h": [
+   "/api/emulators"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1771,
+  "method": "GET",
+  "path": "/api/emulator/{idx}",
+  "key": "GET /api/emulator/{idx}",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1779,
+  "method": "GET",
+  "path": "/api/account/{idx}/config",
+  "key": "GET /api/account/{idx}/config",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1784,
+  "method": "GET",
+  "path": "/api/stages",
+  "key": "GET /api/stages",
+  "h": [
+   "/api/stages"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1797,
+  "method": "GET",
+  "path": "/api/sse",
+  "key": "GET /api/sse",
+  "h": [],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 1841,
+  "method": "POST",
+  "path": "/api/sse",
+  "key": "POST /api/sse",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1845,
+  "method": "POST",
+  "path": "/api/node/register",
+  "key": "POST /api/node/register",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1855,
+  "method": "POST",
+  "path": "/api/node/heartbeat",
+  "key": "POST /api/node/heartbeat",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1867,
+  "method": "POST",
+  "path": "/api/account/{idx}/launch",
+  "key": "POST /api/account/{idx}/launch",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1876,
+  "method": "POST",
+  "path": "/api/account/{idx}/stop",
+  "key": "POST /api/account/{idx}/stop",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1884,
+  "method": "POST",
+  "path": "/api/config/sync",
+  "key": "POST /api/config/sync",
+  "h": [
+   "/api/config/*",
+   "/api/config/sync"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1906,
+  "method": "POST",
+  "path": "/api/queue/enqueue",
+  "key": "POST /api/queue/enqueue",
+  "h": [],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 1929,
+  "method": "POST",
+  "path": "/api/queue/dequeue",
+  "key": "POST /api/queue/dequeue",
+  "h": [
+   "/api/queue/dequeue"
+  ],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 1949,
+  "method": "POST",
+  "path": "/api/queue/clear",
+  "key": "POST /api/queue/clear",
+  "h": [
+   "/api/queue/clear"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1956,
+  "method": "POST",
+  "path": "/api/queue/pause",
+  "key": "POST /api/queue/pause",
+  "h": [
+   "/api/queue/pause"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1964,
+  "method": "POST",
+  "path": "/api/queue/resume",
+  "key": "POST /api/queue/resume",
+  "h": [
+   "/api/queue/resume"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1972,
+  "method": "POST",
+  "path": "/api/account",
+  "key": "POST /api/account",
+  "h": [
+   "/api/account"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 1991,
+  "method": "POST",
+  "path": "/api/account/{idx}/edit",
+  "key": "POST /api/account/{idx}/edit",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2006,
+  "method": "POST",
+  "path": "/api/account/{idx}/delete",
+  "key": "POST /api/account/{idx}/delete",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2015,
+  "method": "POST",
+  "path": "/api/account/{idx}/config",
+  "key": "POST /api/account/{idx}/config",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2024,
+  "method": "GET",
+  "path": "/api/account/{idx}/fight_config",
+  "key": "GET /api/account/{idx}/fight_config",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2039,
+  "method": "POST",
+  "path": "/api/account/{idx}/fight_config",
+  "key": "POST /api/account/{idx}/fight_config",
+  "h": [
+   "/api/account/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2057,
+  "method": "POST",
+  "path": "/api/screenshots/{aid}/delete",
+  "key": "POST /api/screenshots/{aid}/delete",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2068,
+  "method": "POST",
+  "path": "/api/config",
+  "key": "POST /api/config",
+  "h": [
+   "/api/config"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2086,
+  "method": "POST",
+  "path": "/api/settings/smart",
+  "key": "POST /api/settings/smart",
+  "h": [
+   "/api/settings/smart"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2094,
+  "method": "POST",
+  "path": "/api/ai/analyze",
+  "key": "POST /api/ai/analyze",
+  "h": [
+   "/api/ai/analyze"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2121,
+  "method": "POST",
+  "path": "/api/stages",
+  "key": "POST /api/stages",
+  "h": [
+   "/api/stages"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2128,
+  "method": "POST",
+  "path": "/api/stages/apply",
+  "key": "POST /api/stages/apply",
+  "h": [
+   "/api/stages/apply",
+   "/api/stages/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2149,
+  "method": "POST",
+  "path": "/api/action/stop_all",
+  "key": "POST /api/action/stop_all",
+  "h": [
+   "/api/action/stop_all"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2157,
+  "method": "GET",
+  "path": "/api/kill_audit",
+  "key": "GET /api/kill_audit",
+  "h": [
+   "/api/kill_audit"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2165,
+  "method": "GET",
+  "path": "/api/kill_audit/pending",
+  "key": "GET /api/kill_audit/pending",
+  "h": [
+   "/api/kill_audit/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2174,
+  "method": "POST",
+  "path": "/api/kill_audit/decide",
+  "key": "POST /api/kill_audit/decide",
+  "h": [
+   "/api/kill_audit/decide"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2195,
+  "method": "POST",
+  "path": "/api/maa_remote/task",
+  "key": "POST /api/maa_remote/task",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2210,
+  "method": "GET",
+  "path": "/api/maa_remote",
+  "key": "GET /api/maa_remote",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2234,
+  "method": "POST",
+  "path": "/api/maa_remote/status",
+  "key": "POST /api/maa_remote/status",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2318,
+  "method": "POST",
+  "path": "/api/emulator/batch/{action}",
+  "key": "POST /api/emulator/batch/{action}",
+  "h": [
+   "/api/emulator/batch/*",
+   "/api/emulator/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2380,
+  "method": "POST",
+  "path": "/api/emulator/{idx}/{action}",
+  "key": "POST /api/emulator/{idx}/{action}",
+  "h": [
+   "/api/emulator/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2433,
+  "method": "POST",
+  "path": "/api/system/close_popups",
+  "key": "POST /api/system/close_popups",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2439,
+  "method": "POST",
+  "path": "/api/system/open_folder",
+  "key": "POST /api/system/open_folder",
+  "h": [
+   "/api/system/open_folder"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2462,
+  "method": "POST",
+  "path": "/api/system/kill_maa",
+  "key": "POST /api/system/kill_maa",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2480,
+  "method": "POST",
+  "path": "/api/system/restart",
+  "key": "POST /api/system/restart",
+  "h": [
+   "/api/system/restart"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2608,
+  "method": "POST",
+  "path": "/api/action/smart_all",
+  "key": "POST /api/action/smart_all",
+  "h": [
+   "/api/action/smart_all"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2641,
+  "method": "POST",
+  "path": "/api/action/smart_maintenance",
+  "key": "POST /api/action/smart_maintenance",
+  "h": [
+   "/api/action/smart_maintenance"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2664,
+  "method": "POST",
+  "path": "/api/action/smart_fight",
+  "key": "POST /api/action/smart_fight",
+  "h": [
+   "/api/action/smart_fight"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2687,
+  "method": "POST",
+  "path": "/api/action/connect_running_emus",
+  "key": "POST /api/action/connect_running_emus",
+  "h": [
+   "/api/action/connect_running_emus"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2766,
+  "method": "GET",
+  "path": "/api/connect/status",
+  "key": "GET /api/connect/status",
+  "h": [
+   "/api/connect/status",
+   "/api/connect/*"
+  ],
+  "node": true,
+  "mcp": false
+ },
+ {
+  "line": 2791,
+  "method": "POST",
+  "path": "/api/connect/launch",
+  "key": "POST /api/connect/launch",
+  "h": [
+   "/api/connect/launch",
+   "/api/connect/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2825,
+  "method": "POST",
+  "path": "/api/connect/{aid}/stop",
+  "key": "POST /api/connect/{aid}/stop",
+  "h": [
+   "/api/connect/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2831,
+  "method": "POST",
+  "path": "/api/connect/{aid}/restart",
+  "key": "POST /api/connect/{aid}/restart",
+  "h": [
+   "/api/connect/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2853,
+  "method": "POST",
+  "path": "/api/connect/batch_stop",
+  "key": "POST /api/connect/batch_stop",
+  "h": [
+   "/api/connect/*",
+   "/api/connect/batch_stop"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2872,
+  "method": "POST",
+  "path": "/api/connect/batch_emu_stop",
+  "key": "POST /api/connect/batch_emu_stop",
+  "h": [
+   "/api/connect/*",
+   "/api/connect/batch_emu_stop"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2902,
+  "method": "GET",
+  "path": "/api/connect/{aid}/log",
+  "key": "GET /api/connect/{aid}/log",
+  "h": [
+   "/api/connect/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2923,
+  "method": "GET",
+  "path": "/api/connect/{aid}/screenshot",
+  "key": "GET /api/connect/{aid}/screenshot",
+  "h": [
+   "/api/connect/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2964,
+  "method": "POST",
+  "path": "/api/action/smart_login",
+  "key": "POST /api/action/smart_login",
+  "h": [
+   "/api/action/smart_login"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 2987,
+  "method": "POST",
+  "path": "/api/action/smart_annihilation",
+  "key": "POST /api/action/smart_annihilation",
+  "h": [
+   "/api/action/smart_annihilation"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3012,
+  "method": "POST",
+  "path": "/api/action/smart_selected",
+  "key": "POST /api/action/smart_selected",
+  "h": [
+   "/api/action/smart_selected"
+  ],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 3081,
+  "method": "POST",
+  "path": "/api/instance/rebuild",
+  "key": "POST /api/instance/rebuild",
+  "h": [
+   "/api/instance/rebuild"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3087,
+  "method": "POST",
+  "path": "/api/maa/check_update",
+  "key": "POST /api/maa/check_update",
+  "h": [
+   "/api/maa/check_update"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3135,
+  "method": "POST",
+  "path": "/api/maa/download_update",
+  "key": "POST /api/maa/download_update",
+  "h": [
+   "/api/maa/download_update"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3156,
+  "method": "GET",
+  "path": "/api/maa/download_status",
+  "key": "GET /api/maa/download_status",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3161,
+  "method": "GET",
+  "path": "/api/maa/status",
+  "key": "GET /api/maa/status",
+  "h": [
+   "/api/maa/status"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3199,
+  "method": "POST",
+  "path": "/api/maa/launch_source",
+  "key": "POST /api/maa/launch_source",
+  "h": [
+   "/api/maa/launch_source"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3218,
+  "method": "POST",
+  "path": "/api/maa/check_source",
+  "key": "POST /api/maa/check_source",
+  "h": [
+   "/api/maa/check_source"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3232,
+  "method": "GET",
+  "path": "/api/maa/instances",
+  "key": "GET /api/maa/instances",
+  "h": [
+   "/api/maa/instances"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3264,
+  "method": "GET",
+  "path": "/api/maa/instances/{n}/config",
+  "key": "GET /api/maa/instances/{n}/config",
+  "h": [
+   "/api/maa/instances/*"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3317,
+  "method": "POST",
+  "path": "/api/orch/check_update",
+  "key": "POST /api/orch/check_update",
+  "h": [
+   "/api/orch/check_update"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3447,
+  "method": "POST",
+  "path": "/api/orch/hot_reload",
+  "key": "POST /api/orch/hot_reload",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3467,
+  "method": "POST",
+  "path": "/api/orch/update",
+  "key": "POST /api/orch/update",
+  "h": [
+   "/api/orch/update"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3522,
+  "method": "GET",
+  "path": "/api/orch/update_result",
+  "key": "GET /api/orch/update_result",
+  "h": [
+   "/api/orch/update_result"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3535,
+  "method": "POST",
+  "path": "/api/orch/download_update",
+  "key": "POST /api/orch/download_update",
+  "h": [],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3541,
+  "method": "POST",
+  "path": "/api/config/export",
+  "key": "POST /api/config/export",
+  "h": [
+   "/api/config/*",
+   "/api/config/export"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3551,
+  "method": "POST",
+  "path": "/api/config/import",
+  "key": "POST /api/config/import",
+  "h": [
+   "/api/config/*",
+   "/api/config/import"
+  ],
+  "node": false,
+  "mcp": false
+ },
+ {
+  "line": 3572,
+  "method": "GET",
+  "path": "/api/inspect/link_map",
+  "key": "GET /api/inspect/link_map",
+  "h": [],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 3675,
+  "method": "GET",
+  "path": "/api/inspect/account/{name}",
+  "key": "GET /api/inspect/account/{name}",
+  "h": [],
+  "node": false,
+  "mcp": true
+ },
+ {
+  "line": 3764,
+  "method": "GET",
+  "path": "/api/inspect/processes",
+  "key": "GET /api/inspect/processes",
+  "h": [],
+  "node": false,
+  "mcp": true
+ }
+]

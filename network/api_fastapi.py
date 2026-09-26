@@ -3788,24 +3788,37 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     # ── MCP 挂载（2026-08-14：DSH Agent 工具插件 — 必须在静态 catch-all 之前）──
     # streamable-http，挂载点自身校验 x-agent-token（api_token 配置时）。
     # FastAPI mount 子 app 不传播 lifespan → 显式组合 MCP 的 lifespan。
+    # ★ 2026-09-26 G6：MCP 挂载开关。fastmcp 导入使 create_app 慢约 5-6s
+    #   （冷启动更久），不需要 MCP 的部署可用 mcp_mount_enabled=False 跳过。
+    #   缺省 True = 现有行为不变。
     try:
-        from network.mcp_server import build_mcp_app
-        _mcp_mounted = build_mcp_app(mw)
-        app.mount("/mcp", _mcp_mounted)
-        if getattr(_mcp_mounted, "lifespan", None):
-            from contextlib import asynccontextmanager as _actx
-
-            @_actx
-            async def _combined_lifespan(_app):
-                async with _mcp_mounted.lifespan(_app):
-                    yield
-
-            app.router.lifespan_context = _combined_lifespan
-    except Exception as _mcp_err:
+        _mcp_on = bool(mw.config.get("mcp_mount_enabled", True))
+    except Exception:
+        _mcp_on = True  # 读不到配置 = 维持现状（挂载）
+    if not _mcp_on:
         try:
-            mw._log(f"⚠️ MCP 挂载失败: {_mcp_err}")
+            mw._log("⏭ 已跳过 MCP 挂载（mcp_mount_enabled=False）")
         except Exception:
             pass
+    else:
+        try:
+            from network.mcp_server import build_mcp_app
+            _mcp_mounted = build_mcp_app(mw)
+            app.mount("/mcp", _mcp_mounted)
+            if getattr(_mcp_mounted, "lifespan", None):
+                from contextlib import asynccontextmanager as _actx
+
+                @_actx
+                async def _combined_lifespan(_app):
+                    async with _mcp_mounted.lifespan(_app):
+                        yield
+
+                app.router.lifespan_context = _combined_lifespan
+        except Exception as _mcp_err:
+            try:
+                mw._log(f"⚠️ MCP 挂载失败: {_mcp_err}")
+            except Exception:
+                pass
 
     # Catch-all: serve static files (must be last route)
     @app.get("/{full_path:path}")

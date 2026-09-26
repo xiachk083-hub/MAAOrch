@@ -1,0 +1,1732 @@
+{
+ "routes": [
+  {
+   "line": 298,
+   "method": "GET",
+   "path": "/api/status",
+   "key": "GET /api/status",
+   "exact": [
+    "GET /api/status"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 323,
+   "method": "GET",
+   "path": "/api/node/info",
+   "key": "GET /api/node/info",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 339,
+   "method": "GET",
+   "path": "/api/node/dashboard",
+   "key": "GET /api/node/dashboard",
+   "exact": [
+    "GET /api/node/dashboard"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 501,
+   "method": "GET",
+   "path": "/api/account/{idx}/status",
+   "key": "GET /api/account/{v}/status",
+   "exact": [],
+   "prefix": [
+    "GET /api/account/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 511,
+   "method": "GET",
+   "path": "/api/account/{idx}/stats",
+   "key": "GET /api/account/{v}/stats",
+   "exact": [],
+   "prefix": [
+    "GET /api/account/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 520,
+   "method": "GET",
+   "path": "/api/account/{idx}/screenshot",
+   "key": "GET /api/account/{v}/screenshot",
+   "exact": [],
+   "prefix": [
+    "GET /api/account/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 551,
+   "method": "GET",
+   "path": "/api/screenshots/{aid}",
+   "key": "GET /api/screenshots/{v}",
+   "exact": [],
+   "prefix": [
+    "GET /api/screenshots/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 565,
+   "method": "GET",
+   "path": "/api/screenshots/file/{aid}/{run_dir}/{fname:path}",
+   "key": "GET /api/screenshots/file/{v}/{v}/{v}",
+   "exact": [],
+   "prefix": [
+    "GET /api/screenshots/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 572,
+   "method": "GET",
+   "path": "/api/screenshots/{aid}/export/{run_ts}",
+   "key": "GET /api/screenshots/{v}/export/{v}",
+   "exact": [],
+   "prefix": [
+    "GET /api/screenshots/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 586,
+   "method": "GET",
+   "path": "/api/export/logs",
+   "key": "GET /api/export/logs",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 617,
+   "method": "GET",
+   "path": "/api/export/gantt",
+   "key": "GET /api/export/gantt",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 638,
+   "method": "GET",
+   "path": "/api/stats/dashboard",
+   "key": "GET /api/stats/dashboard",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 677,
+   "method": "GET",
+   "path": "/api/stats",
+   "key": "GET /api/stats",
+   "exact": [
+    "GET /api/stats"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 689,
+   "method": "GET",
+   "path": "/api/stats/daily",
+   "key": "GET /api/stats/daily",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 694,
+   "method": "GET",
+   "path": "/api/stats/weekly",
+   "key": "GET /api/stats/weekly",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 699,
+   "method": "GET",
+   "path": "/api/stats/monthly",
+   "key": "GET /api/stats/monthly",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 704,
+   "method": "GET",
+   "path": "/api/stats/yearly",
+   "key": "GET /api/stats/yearly",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 709,
+   "method": "GET",
+   "path": "/api/stats/all",
+   "key": "GET /api/stats/all",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 714,
+   "method": "GET",
+   "path": "/api/stats/periods",
+   "key": "GET /api/stats/periods",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 722,
+   "method": "GET",
+   "path": "/api/mas/status",
+   "key": "GET /api/mas/status",
+   "exact": [
+    "GET /api/mas/status"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 727,
+   "method": "POST",
+   "path": "/api/mas/rerun",
+   "key": "POST /api/mas/rerun",
+   "exact": [
+    "POST /api/mas/rerun"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 732,
+   "method": "POST",
+   "path": "/api/mas/cleanup",
+   "key": "POST /api/mas/cleanup",
+   "exact": [
+    "POST /api/mas/cleanup"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 741,
+   "method": "POST",
+   "path": "/api/probe/stage",
+   "key": "POST /api/probe/stage",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 798,
+   "method": "POST",
+   "path": "/api/probe/anni_weekly",
+   "key": "POST /api/probe/anni_weekly",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 844,
+   "method": "GET",
+   "path": "/api/probe/results",
+   "key": "GET /api/probe/results",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 849,
+   "method": "POST",
+   "path": "/api/probe/apply_plan",
+   "key": "POST /api/probe/apply_plan",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 879,
+   "method": "GET",
+   "path": "/api/probe/status",
+   "key": "GET /api/probe/status",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 892,
+   "method": "POST",
+   "path": "/api/depot/scan",
+   "key": "POST /api/depot/scan",
+   "exact": [
+    "POST /api/depot/scan"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 919,
+   "method": "GET",
+   "path": "/api/depot/status",
+   "key": "GET /api/depot/status",
+   "exact": [
+    "GET /api/depot/status"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 944,
+   "method": "GET",
+   "path": "/api/depot/plan",
+   "key": "GET /api/depot/plan",
+   "exact": [
+    "GET /api/depot/plan"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 957,
+   "method": "GET",
+   "path": "/api/depot/probe",
+   "key": "GET /api/depot/probe",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 970,
+   "method": "GET",
+   "path": "/api/depot/config",
+   "key": "GET /api/depot/config",
+   "exact": [
+    "GET /api/depot/config"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 979,
+   "method": "POST",
+   "path": "/api/depot/config",
+   "key": "POST /api/depot/config",
+   "exact": [
+    "POST /api/depot/config"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1025,
+   "method": "POST",
+   "path": "/api/penguin/refresh",
+   "key": "POST /api/penguin/refresh",
+   "exact": [
+    "POST /api/penguin/refresh"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1039,
+   "method": "GET",
+   "path": "/api/penguin/status",
+   "key": "GET /api/penguin/status",
+   "exact": [
+    "GET /api/penguin/status"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1048,
+   "method": "GET",
+   "path": "/api/activity/stages",
+   "key": "GET /api/activity/stages",
+   "exact": [
+    "GET /api/activity/stages"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1053,
+   "method": "POST",
+   "path": "/api/activity/refresh",
+   "key": "POST /api/activity/refresh",
+   "exact": [
+    "POST /api/activity/refresh"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1067,
+   "method": "POST",
+   "path": "/api/activity/stages",
+   "key": "POST /api/activity/stages",
+   "exact": [
+    "POST /api/activity/stages"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1091,
+   "method": "GET",
+   "path": "/api/account_status",
+   "key": "GET /api/account_status",
+   "exact": [
+    "GET /api/account_status"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1165,
+   "method": "GET",
+   "path": "/api/health",
+   "key": "GET /api/health",
+   "exact": [
+    "GET /api/health"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": true,
+   "idx": true
+  },
+  {
+   "line": 1171,
+   "method": "GET",
+   "path": "/api/emulators/diagnose",
+   "key": "GET /api/emulators/diagnose",
+   "exact": [
+    "GET /api/emulators/diagnose"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1200,
+   "method": "GET",
+   "path": "/api/events/list",
+   "key": "GET /api/events/list",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1209,
+   "method": "GET",
+   "path": "/api/events/calendar",
+   "key": "GET /api/events/calendar",
+   "exact": [
+    "GET /api/events/calendar"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1218,
+   "method": "GET",
+   "path": "/api/events/analyze",
+   "key": "GET /api/events/analyze",
+   "exact": [
+    "GET /api/events/analyze"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1227,
+   "method": "GET",
+   "path": "/api/announcements",
+   "key": "GET /api/announcements",
+   "exact": [
+    "GET /api/announcements"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1233,
+   "method": "POST",
+   "path": "/api/announcements/refresh",
+   "key": "POST /api/announcements/refresh",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1239,
+   "method": "GET",
+   "path": "/api/logs/collect_status",
+   "key": "GET /api/logs/collect_status",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1245,
+   "method": "GET",
+   "path": "/api/logs/samples",
+   "key": "GET /api/logs/samples",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1253,
+   "method": "GET",
+   "path": "/api/events_bus",
+   "key": "GET /api/events_bus",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1262,
+   "method": "GET",
+   "path": "/api/debug/state",
+   "key": "GET /api/debug/state",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1309,
+   "method": "GET",
+   "path": "/api/queue",
+   "key": "GET /api/queue",
+   "exact": [
+    "GET /api/queue"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1383,
+   "method": "GET",
+   "path": "/api/shots/list",
+   "key": "GET /api/shots/list",
+   "exact": [
+    "GET /api/shots/list"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1402,
+   "method": "GET",
+   "path": "/api/shots/file",
+   "key": "GET /api/shots/file",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1415,
+   "method": "GET",
+   "path": "/api/logs",
+   "key": "GET /api/logs",
+   "exact": [
+    "GET /api/logs"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1428,
+   "method": "GET",
+   "path": "/api/maa/log",
+   "key": "GET /api/maa/log",
+   "exact": [
+    "GET /api/maa/log"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1500,
+   "method": "GET",
+   "path": "/api/maa/logs_history",
+   "key": "GET /api/maa/logs_history",
+   "exact": [
+    "GET /api/maa/logs_history"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1525,
+   "method": "GET",
+   "path": "/api/stage_checks",
+   "key": "GET /api/stage_checks",
+   "exact": [
+    "GET /api/stage_checks"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1576,
+   "method": "GET",
+   "path": "/api/accounts",
+   "key": "GET /api/accounts",
+   "exact": [
+    "GET /api/accounts"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1612,
+   "method": "GET",
+   "path": "/api/accounts/export",
+   "key": "GET /api/accounts/export",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1634,
+   "method": "POST",
+   "path": "/api/accounts/csv_import",
+   "key": "POST /api/accounts/csv_import",
+   "exact": [
+    "POST /api/accounts/csv_import"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1692,
+   "method": "POST",
+   "path": "/api/accounts/batch_save",
+   "key": "POST /api/accounts/batch_save",
+   "exact": [
+    "POST /api/accounts/batch_save"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1735,
+   "method": "GET",
+   "path": "/api/oplog",
+   "key": "GET /api/oplog",
+   "exact": [
+    "GET /api/oplog"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1739,
+   "method": "GET",
+   "path": "/api/config",
+   "key": "GET /api/config",
+   "exact": [
+    "GET /api/config"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1762,
+   "method": "GET",
+   "path": "/api/settings/smart",
+   "key": "GET /api/settings/smart",
+   "exact": [
+    "GET /api/settings/smart"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1766,
+   "method": "GET",
+   "path": "/api/emulators",
+   "key": "GET /api/emulators",
+   "exact": [
+    "GET /api/emulators"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1771,
+   "method": "GET",
+   "path": "/api/emulator/{idx}",
+   "key": "GET /api/emulator/{v}",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1779,
+   "method": "GET",
+   "path": "/api/account/{idx}/config",
+   "key": "GET /api/account/{v}/config",
+   "exact": [],
+   "prefix": [
+    "GET /api/account/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1784,
+   "method": "GET",
+   "path": "/api/stages",
+   "key": "GET /api/stages",
+   "exact": [
+    "GET /api/stages"
+   ],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1797,
+   "method": "GET",
+   "path": "/api/sse",
+   "key": "GET /api/sse",
+   "exact": [],
+   "prefix": [],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1841,
+   "method": "POST",
+   "path": "/api/sse",
+   "key": "POST /api/sse",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1845,
+   "method": "POST",
+   "path": "/api/node/register",
+   "key": "POST /api/node/register",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1855,
+   "method": "POST",
+   "path": "/api/node/heartbeat",
+   "key": "POST /api/node/heartbeat",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1867,
+   "method": "POST",
+   "path": "/api/account/{idx}/launch",
+   "key": "POST /api/account/{v}/launch",
+   "exact": [
+    "POST /api/account/{v}/launch"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1876,
+   "method": "POST",
+   "path": "/api/account/{idx}/stop",
+   "key": "POST /api/account/{v}/stop",
+   "exact": [
+    "POST /api/account/{v}/stop"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1884,
+   "method": "POST",
+   "path": "/api/config/sync",
+   "key": "POST /api/config/sync",
+   "exact": [
+    "POST /api/config/sync"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1906,
+   "method": "POST",
+   "path": "/api/queue/enqueue",
+   "key": "POST /api/queue/enqueue",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1929,
+   "method": "POST",
+   "path": "/api/queue/dequeue",
+   "key": "POST /api/queue/dequeue",
+   "exact": [
+    "POST /api/queue/dequeue"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 1949,
+   "method": "POST",
+   "path": "/api/queue/clear",
+   "key": "POST /api/queue/clear",
+   "exact": [
+    "POST /api/queue/clear"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1956,
+   "method": "POST",
+   "path": "/api/queue/pause",
+   "key": "POST /api/queue/pause",
+   "exact": [
+    "POST /api/queue/pause"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1964,
+   "method": "POST",
+   "path": "/api/queue/resume",
+   "key": "POST /api/queue/resume",
+   "exact": [
+    "POST /api/queue/resume"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1972,
+   "method": "POST",
+   "path": "/api/account",
+   "key": "POST /api/account",
+   "exact": [
+    "POST /api/account"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 1991,
+   "method": "POST",
+   "path": "/api/account/{idx}/edit",
+   "key": "POST /api/account/{v}/edit",
+   "exact": [
+    "POST /api/account/{v}/edit"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2006,
+   "method": "POST",
+   "path": "/api/account/{idx}/delete",
+   "key": "POST /api/account/{v}/delete",
+   "exact": [
+    "POST /api/account/{v}/delete"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2015,
+   "method": "POST",
+   "path": "/api/account/{idx}/config",
+   "key": "POST /api/account/{v}/config",
+   "exact": [
+    "POST /api/account/{v}/config"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2024,
+   "method": "GET",
+   "path": "/api/account/{idx}/fight_config",
+   "key": "GET /api/account/{v}/fight_config",
+   "exact": [],
+   "prefix": [
+    "GET /api/account/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2039,
+   "method": "POST",
+   "path": "/api/account/{idx}/fight_config",
+   "key": "POST /api/account/{v}/fight_config",
+   "exact": [
+    "POST /api/account/{v}/fight_config"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2057,
+   "method": "POST",
+   "path": "/api/screenshots/{aid}/delete",
+   "key": "POST /api/screenshots/{v}/delete",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2068,
+   "method": "POST",
+   "path": "/api/config",
+   "key": "POST /api/config",
+   "exact": [
+    "POST /api/config"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2086,
+   "method": "POST",
+   "path": "/api/settings/smart",
+   "key": "POST /api/settings/smart",
+   "exact": [
+    "POST /api/settings/smart"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2094,
+   "method": "POST",
+   "path": "/api/ai/analyze",
+   "key": "POST /api/ai/analyze",
+   "exact": [
+    "POST /api/ai/analyze"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2121,
+   "method": "POST",
+   "path": "/api/stages",
+   "key": "POST /api/stages",
+   "exact": [
+    "POST /api/stages"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2128,
+   "method": "POST",
+   "path": "/api/stages/apply",
+   "key": "POST /api/stages/apply",
+   "exact": [
+    "POST /api/stages/apply"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2149,
+   "method": "POST",
+   "path": "/api/action/stop_all",
+   "key": "POST /api/action/stop_all",
+   "exact": [
+    "POST /api/action/stop_all"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2157,
+   "method": "GET",
+   "path": "/api/kill_audit",
+   "key": "GET /api/kill_audit",
+   "exact": [
+    "GET /api/kill_audit"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2165,
+   "method": "GET",
+   "path": "/api/kill_audit/pending",
+   "key": "GET /api/kill_audit/pending",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2174,
+   "method": "POST",
+   "path": "/api/kill_audit/decide",
+   "key": "POST /api/kill_audit/decide",
+   "exact": [
+    "POST /api/kill_audit/decide"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2195,
+   "method": "POST",
+   "path": "/api/maa_remote/task",
+   "key": "POST /api/maa_remote/task",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2210,
+   "method": "GET",
+   "path": "/api/maa_remote",
+   "key": "GET /api/maa_remote",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2234,
+   "method": "POST",
+   "path": "/api/maa_remote/status",
+   "key": "POST /api/maa_remote/status",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2318,
+   "method": "POST",
+   "path": "/api/emulator/batch/{action}",
+   "key": "POST /api/emulator/batch/{v}",
+   "exact": [],
+   "prefix": [
+    "POST /api/emulator/batch/",
+    "POST /api/emulator/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2380,
+   "method": "POST",
+   "path": "/api/emulator/{idx}/{action}",
+   "key": "POST /api/emulator/{v}/{v}",
+   "exact": [],
+   "prefix": [
+    "POST /api/emulator/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2433,
+   "method": "POST",
+   "path": "/api/system/close_popups",
+   "key": "POST /api/system/close_popups",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2439,
+   "method": "POST",
+   "path": "/api/system/open_folder",
+   "key": "POST /api/system/open_folder",
+   "exact": [
+    "POST /api/system/open_folder"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2462,
+   "method": "POST",
+   "path": "/api/system/kill_maa",
+   "key": "POST /api/system/kill_maa",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2480,
+   "method": "POST",
+   "path": "/api/system/restart",
+   "key": "POST /api/system/restart",
+   "exact": [
+    "POST /api/system/restart"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2608,
+   "method": "POST",
+   "path": "/api/action/smart_all",
+   "key": "POST /api/action/smart_all",
+   "exact": [
+    "POST /api/action/smart_all"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2641,
+   "method": "POST",
+   "path": "/api/action/smart_maintenance",
+   "key": "POST /api/action/smart_maintenance",
+   "exact": [
+    "POST /api/action/smart_maintenance"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2664,
+   "method": "POST",
+   "path": "/api/action/smart_fight",
+   "key": "POST /api/action/smart_fight",
+   "exact": [
+    "POST /api/action/smart_fight"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2687,
+   "method": "POST",
+   "path": "/api/action/connect_running_emus",
+   "key": "POST /api/action/connect_running_emus",
+   "exact": [
+    "POST /api/action/connect_running_emus"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2766,
+   "method": "GET",
+   "path": "/api/connect/status",
+   "key": "GET /api/connect/status",
+   "exact": [
+    "GET /api/connect/status"
+   ],
+   "prefix": [
+    "GET /api/connect/"
+   ],
+   "node": true,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2791,
+   "method": "POST",
+   "path": "/api/connect/launch",
+   "key": "POST /api/connect/launch",
+   "exact": [
+    "POST /api/connect/launch"
+   ],
+   "prefix": [
+    "POST /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2825,
+   "method": "POST",
+   "path": "/api/connect/{aid}/stop",
+   "key": "POST /api/connect/{v}/stop",
+   "exact": [],
+   "prefix": [
+    "POST /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2831,
+   "method": "POST",
+   "path": "/api/connect/{aid}/restart",
+   "key": "POST /api/connect/{v}/restart",
+   "exact": [],
+   "prefix": [
+    "POST /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2853,
+   "method": "POST",
+   "path": "/api/connect/batch_stop",
+   "key": "POST /api/connect/batch_stop",
+   "exact": [
+    "POST /api/connect/batch_stop"
+   ],
+   "prefix": [
+    "POST /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2872,
+   "method": "POST",
+   "path": "/api/connect/batch_emu_stop",
+   "key": "POST /api/connect/batch_emu_stop",
+   "exact": [
+    "POST /api/connect/batch_emu_stop"
+   ],
+   "prefix": [
+    "POST /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2902,
+   "method": "GET",
+   "path": "/api/connect/{aid}/log",
+   "key": "GET /api/connect/{v}/log",
+   "exact": [],
+   "prefix": [
+    "GET /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2923,
+   "method": "GET",
+   "path": "/api/connect/{aid}/screenshot",
+   "key": "GET /api/connect/{v}/screenshot",
+   "exact": [],
+   "prefix": [
+    "GET /api/connect/"
+   ],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2964,
+   "method": "POST",
+   "path": "/api/action/smart_login",
+   "key": "POST /api/action/smart_login",
+   "exact": [
+    "POST /api/action/smart_login"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 2987,
+   "method": "POST",
+   "path": "/api/action/smart_annihilation",
+   "key": "POST /api/action/smart_annihilation",
+   "exact": [
+    "POST /api/action/smart_annihilation"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3012,
+   "method": "POST",
+   "path": "/api/action/smart_selected",
+   "key": "POST /api/action/smart_selected",
+   "exact": [
+    "POST /api/action/smart_selected"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 3081,
+   "method": "POST",
+   "path": "/api/instance/rebuild",
+   "key": "POST /api/instance/rebuild",
+   "exact": [
+    "POST /api/instance/rebuild"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3087,
+   "method": "POST",
+   "path": "/api/maa/check_update",
+   "key": "POST /api/maa/check_update",
+   "exact": [
+    "POST /api/maa/check_update"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3135,
+   "method": "POST",
+   "path": "/api/maa/download_update",
+   "key": "POST /api/maa/download_update",
+   "exact": [
+    "POST /api/maa/download_update"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3156,
+   "method": "GET",
+   "path": "/api/maa/download_status",
+   "key": "GET /api/maa/download_status",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3161,
+   "method": "GET",
+   "path": "/api/maa/status",
+   "key": "GET /api/maa/status",
+   "exact": [
+    "GET /api/maa/status"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3199,
+   "method": "POST",
+   "path": "/api/maa/launch_source",
+   "key": "POST /api/maa/launch_source",
+   "exact": [
+    "POST /api/maa/launch_source"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3218,
+   "method": "POST",
+   "path": "/api/maa/check_source",
+   "key": "POST /api/maa/check_source",
+   "exact": [
+    "POST /api/maa/check_source"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3232,
+   "method": "GET",
+   "path": "/api/maa/instances",
+   "key": "GET /api/maa/instances",
+   "exact": [
+    "GET /api/maa/instances"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3264,
+   "method": "GET",
+   "path": "/api/maa/instances/{n}/config",
+   "key": "GET /api/maa/instances/{v}/config",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3317,
+   "method": "POST",
+   "path": "/api/orch/check_update",
+   "key": "POST /api/orch/check_update",
+   "exact": [
+    "POST /api/orch/check_update"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3447,
+   "method": "POST",
+   "path": "/api/orch/hot_reload",
+   "key": "POST /api/orch/hot_reload",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3467,
+   "method": "POST",
+   "path": "/api/orch/update",
+   "key": "POST /api/orch/update",
+   "exact": [
+    "POST /api/orch/update"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3522,
+   "method": "GET",
+   "path": "/api/orch/update_result",
+   "key": "GET /api/orch/update_result",
+   "exact": [
+    "GET /api/orch/update_result"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3535,
+   "method": "POST",
+   "path": "/api/orch/download_update",
+   "key": "POST /api/orch/download_update",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3541,
+   "method": "POST",
+   "path": "/api/config/export",
+   "key": "POST /api/config/export",
+   "exact": [
+    "POST /api/config/export"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3551,
+   "method": "POST",
+   "path": "/api/config/import",
+   "key": "POST /api/config/import",
+   "exact": [
+    "POST /api/config/import"
+   ],
+   "prefix": [],
+   "node": false,
+   "mcp": false,
+   "idx": false
+  },
+  {
+   "line": 3572,
+   "method": "GET",
+   "path": "/api/inspect/link_map",
+   "key": "GET /api/inspect/link_map",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 3675,
+   "method": "GET",
+   "path": "/api/inspect/account/{name}",
+   "key": "GET /api/inspect/account/{v}",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  },
+  {
+   "line": 3764,
+   "method": "GET",
+   "path": "/api/inspect/processes",
+   "key": "GET /api/inspect/processes",
+   "exact": [],
+   "prefix": [],
+   "node": false,
+   "mcp": true,
+   "idx": false
+  }
+ ]
+}
