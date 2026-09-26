@@ -10,6 +10,21 @@
 
 安全原则：只暴露"调度台也有的操作"，Agent 经对话指令触发；危险操作
 （杀进程/改配置/部署）一律不暴露。
+
+例外与写闸门（2026-08-16 前端退役，人工入口整体迁到 MCP）：
+- 守护审计（Kill Audit）的**放行/拦截本身**是例外 —— 它是所有破坏性动作
+  （杀 MAA / 关模拟器 / 回收 / 重启）的确认闸门（models/kill_audit.py），
+  前端退役后若不给 MCP 入口，人工将完全无法放行，观察窗口一到反而变成
+  "超时默认放行"（models/kill_audit.py:129-146），比人工把关更危险。
+- 放行不直接杀进程：kill_audit_decide 只改条目状态，真正动手由守护方在
+  观察到 approved 后执行（models/kill_audit.py:118-126）。
+- 仍然**不暴露**：/api/system/kill_maa（直接 taskkill MAA.exe）、
+  /api/system/restart、/api/system/close_popups、/api/config（改配置）。
+- 写工具契约（kill_audit_decide / emulator_control / emulator_batch /
+  emu_connect_stop / emu_connect_restart / account_launch / account_stop /
+  maa_stop_all / maa_launch_source）：一律带 dry_run 形参且**默认 True** ——
+  True 时只回显将要提交的请求与目标现状，绝不下发；只有显式 dry_run=False
+  才真正执行。
 """
 from __future__ import annotations
 
@@ -85,6 +100,28 @@ class _TokenAuth:
 def build_mcp_app(mw: Any) -> Any:
     """构造挂载到 main_web /mcp 的 ASGI app（streamable-http + token 鉴权）。"""
     mcp = FastMCP("maaorch")
+
+    def _gate(path: str, body: dict, dry_run: bool, preview: Any = None,
+              timeout: int = 30) -> dict:
+        """写操作统一闸门：dry_run=True（默认）只预演，绝不下发请求。
+
+        dry_run=False 时才 POST path（body 一律给 {} 以保证 _call_api 用 POST）。
+        preview 是可选的只读回调，用于在预演时回显目标现状。
+        """
+        if not dry_run:
+            return _call_api(mw, path, body, timeout=timeout)
+        out: dict = {
+            "ok": True,
+            "dry_run": True,
+            "would_call": {"method": "POST", "path": path, "body": body},
+            "hint": "确认无误后显式传 dry_run=False 才会真正执行",
+        }
+        if preview is not None:
+            try:
+                out["preview"] = preview()
+            except Exception as e:  # 预演信息失败不影响闸门判断
+                out["preview_error"] = str(e)
+        return out
 
     # ── 只读：状态/总览 ──────────────────────────────────────────────
 
@@ -258,6 +295,285 @@ def build_mcp_app(mw: Any) -> Any:
         """
         from services import mas_adapter
         return mas_adapter.cleanup(dry_run=bool(dry_run))
+
+    # ── 守护审计放行（Kill Audit）────────────────────────────────────
+    # 前端退役后这是唯一人工放行口（原 Web「守护审计」页）。代理 api_fastapi.py
+    # 的 /api/kill_audit*（不新增 REST 路由）。放行本身不杀进程：decide 只改条目
+    # 状态，破坏性动作由守护方观察到 approved 后执行（models/kill_audit.py:118-126）。
+
+    @mcp.tool()
+    def kill_audit_history(limit: int = 100) -> dict:
+        """【只读】守护审计历史（倒序）+ 各状态计数概览。
+
+        每条含：动作类型 action(kill_maa/close_emu/reclaim_emu/restart_emu)、
+        申请原因 reason、判据快照 evidence、状态 status(pending/approved/
+        rejected/expired/executed)、决定人 decided_by、备注 note/复盘 fix。
+        "谁在什么时候放行了哪次杀、依据是什么"用这个；limit 默认 100。
+        代理 GET /api/kill_audit?limit=（api_fastapi.py:2157-2163）。
+        """
+        return _call_api(mw, f"/api/kill_audit?limit={int(limit)}")
+
+    @mcp.tool()
+    def kill_audit_pending() -> dict:
+        """【只读】列出**待放行**的破坏性动作（先清算超时项再返回，过期项不在此列）。
+
+        条目字段：id、aid、name、action、reason、evidence（真实日志/进程状态/
+        心跳年龄快照）、expire_ts。放行前必须先用它核对 evidence 判据。
+        代理 GET /api/kill_audit/pending（api_fastapi.py:2165-2172）。
+        """
+        return _call_api(mw, "/api/kill_audit/pending")
+
+    @mcp.tool()
+    def kill_audit_decide(entry_id: str, approve: bool, by: str = "mcp-agent",
+                          note: str = "", fix: str = "", dry_run: bool = True) -> dict:
+        """【写操作／会放行破坏性动作】对守护审计条目放行或拦截 —— 唯一人工放行口。
+
+        approve=True → 条目置 approved = **放行**该破坏性动作（kill_maa 杀 MAA /
+        close_emu 关模拟器 / reclaim_emu 回收 / restart_emu 重启），守护方随后执行；
+        approve=False → 拦截。放行前务必先 kill_audit_pending 核对 evidence：
+        误杀代价是重启风暴连锁，漏杀只是多等几分钟，宁可多等不可错杀
+        （models/kill_audit.py:5-10）。
+
+        默认 dry_run=True：只回显将要提交的决策 + 当前待放行项与目标条目，
+        绝不写入；只有显式 dry_run=False 才真正落决策（留痕 by/note/fix）。
+        fix 用于误杀复盘（根因+修复）。
+        代理 POST /api/kill_audit/decide（api_fastapi.py:2174-2191）。
+        """
+        body = {"id": entry_id, "approve": bool(approve), "by": by,
+                "note": note, "fix": fix}
+
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/kill_audit/pending")
+            items = data.get("pending") if isinstance(data, dict) else None
+            if isinstance(items, list):
+                hit = [e for e in items if str(e.get("id")) == str(entry_id)]
+                return {"pending_total": len(items),
+                        "target_found": bool(hit),
+                        "target": hit[0] if hit else None}
+            return data
+
+        return _gate("/api/kill_audit/decide", body, dry_run, _prev)
+
+    # ── 模拟器启停/重启（mumu-cli）────────────────────────────────────
+    # 对应原 Web「模拟器」按钮，代理 api_fastapi.py 的 /api/emulator* 与
+    # /api/connect*（不新增 REST 路由）。索引 idx 即 /api/emulators 里的 index。
+
+    @mcp.tool()
+    def emulators() -> dict:
+        """【只读】全部模拟器实例：index、名称、running（是否在跑）、adb_port、
+        pid 等。启停/重启前先用它确认 index 与当前运行状态。
+        代理 GET /api/emulators（api_fastapi.py:1766-1769）。
+        """
+        return _call_api(mw, "/api/emulators")
+
+    @mcp.tool()
+    def emulator_status(idx: str) -> dict:
+        """【只读】单台模拟器实例详情（按 index）。不存在时返回
+        {"error": "HTTP 404"} 而非抛异常。
+        代理 GET /api/emulator/{idx}（api_fastapi.py:1771-1777）。
+        """
+        return _call_api(mw, f"/api/emulator/{idx}")
+
+    @mcp.tool()
+    def emulator_control(idx: str, action: str, dry_run: bool = True) -> dict:
+        """【写操作】单台模拟器启停重启：action="start" | "stop" | "restart"（按 index）。
+
+        - start：mumu-cli launch + 等 Android 就绪（40s），并写手动启动保护期；
+        - stop / restart：先停该模拟器上的 MAA，再优雅关闭（adb reboot -p →
+          等退出 → shutdown 兜底），restart 随后重新 launch 并等就绪。
+
+        默认 dry_run=True：只回显将要执行的动作与该模拟器现状，绝不下发；
+        只有显式 dry_run=False 才真正启停。stop/restart 会中断该机上正在跑的任务。
+        代理 POST /api/emulator/{idx}/{action}（api_fastapi.py:2380-2431）。
+        """
+        if action not in ("start", "stop", "restart"):
+            return {"error": "action must be 'start', 'stop' or 'restart'"}
+
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/emulators")
+            items = data.get("emulators") if isinstance(data, dict) else None
+            if isinstance(items, list):
+                hit = [e for e in items if str(e.get("index")) == str(idx)]
+                return {"target": hit[0] if hit else None, "target_found": bool(hit)}
+            return data
+
+        return _gate(f"/api/emulator/{idx}/{action}", {}, dry_run, _prev, timeout=180)
+
+    @mcp.tool()
+    def emulator_batch(action: str, indexes: list[str] | None = None,
+                       dry_run: bool = True) -> dict:
+        """【写操作】批量模拟器启停重启：action="start" | "stop" | "restart"。
+
+        indexes 省略/为空时按 REST 默认：start → 全部未运行实例，
+        stop/restart → 全部运行实例。串行执行（每台间隔 1.5s）避免 mumu-cli
+        并发冲突，批量大时耗时较长（单次调用最长等 15 分钟）。
+
+        默认 dry_run=True：只列出**将要受影响**的 index 清单，绝不下发；
+        只有显式 dry_run=False 才真正执行（会中断这些机器上的任务）。
+        代理 POST /api/emulator/batch/{action}（api_fastapi.py:2318-2378）。
+        """
+        if action not in ("start", "stop", "restart"):
+            return {"error": "action must be 'start', 'stop' or 'restart'"}
+        body = {"indexes": [str(x) for x in (indexes or [])]}
+
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/emulators")
+            items = data.get("emulators") if isinstance(data, dict) else None
+            if not isinstance(items, list):
+                return data
+            want = set(body["indexes"])
+            targets = []
+            for e in items:
+                i = str(e.get("index", ""))
+                if want and i not in want:
+                    continue
+                running = bool(e.get("running"))
+                if action == "start" and running:
+                    continue
+                if action in ("stop", "restart") and not running:
+                    continue
+                targets.append(i)
+            return {"would_target": targets, "target_count": len(targets)}
+
+        return _gate(f"/api/emulator/batch/{action}", body, dry_run, _prev, timeout=900)
+
+    @mcp.tool()
+    def connect_status() -> dict:
+        """【只读】连接模式（connect/daily 选配作业）现状：每个在跑模拟器的
+        index、名称、adb_port、maa_running（该机 MAA 是否真在跑）、maa_queued、
+        mode（该机选配模式）。停/重启连接模式 MAA 前先用它确认 aid=emu{index}。
+        代理 GET /api/connect/status（api_fastapi.py:2766-2789）。
+        """
+        return _call_api(mw, "/api/connect/status")
+
+    @mcp.tool()
+    def emu_connect_stop(aid: str, dry_run: bool = True) -> dict:
+        """【写操作】停止某台模拟器的**连接模式 MAA**（aid 形如 "emu0"，即
+        "emu" + 模拟器 index）。只动 connect_accounts，不影响调度账号。
+
+        默认 dry_run=True：只回显该 aid 现状与将要调用的路径，绝不下发；
+        只有显式 dry_run=False 才真正 stop。
+        代理 POST /api/connect/{aid}/stop（api_fastapi.py:2825-2829）。
+        """
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/connect/status")
+            items = data.get("emulators") if isinstance(data, dict) else None
+            if isinstance(items, list):
+                hit = [e for e in items if f"emu{e.get('index')}" == aid]
+                return {"target": hit[0] if hit else None, "target_found": bool(hit)}
+            return data
+
+        return _gate(f"/api/connect/{aid}/stop", {}, dry_run, _prev, timeout=60)
+
+    @mcp.tool()
+    def emu_connect_restart(aid: str, mode: str = "connect", dry_run: bool = True) -> dict:
+        """【写操作】重启某台模拟器的连接模式 MAA：先 stop，再把 aid 重新入队
+        （aid 形如 "emu0"；mode="connect" 空闲待命 | "daily" 跑日常）。
+        模拟器必须处于运行中，否则返回 {"ok": False, "error": "模拟器 #x 未运行"}。
+
+        默认 dry_run=True：只回显该 aid 现状与将要提交的 mode，绝不下发；
+        只有显式 dry_run=False 才真正重启（会中断该机当前连接会话）。
+        代理 POST /api/connect/{aid}/restart（api_fastapi.py:2831-2851）。
+        """
+        if mode not in ("connect", "daily"):
+            return {"error": "mode must be 'connect' or 'daily'"}
+        body = {"mode": mode}
+
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/connect/status")
+            items = data.get("emulators") if isinstance(data, dict) else None
+            if isinstance(items, list):
+                hit = [e for e in items if f"emu{e.get('index')}" == aid]
+                return {"target": hit[0] if hit else None, "target_found": bool(hit)}
+            return data
+
+        return _gate(f"/api/connect/{aid}/restart", body, dry_run, _prev, timeout=60)
+
+    # ── MAA 启停 ─────────────────────────────────────────────────────
+    # 对应原 Web「启动/停止」按钮与 system 面板，代理 api_fastapi.py 的
+    # /api/account/{idx}/launch|stop、/api/action/stop_all、/api/maa/*。
+    # 注意：/api/system/kill_maa（直接 taskkill MAA.exe）**故意不暴露**。
+
+    @mcp.tool()
+    def maa_status() -> dict:
+        """【只读】MAA 运行总览：源 MAA（services/maa/source）是否就绪/版本/是否
+        在跑、实例池（services/maa/instances）总数与存活数、更新包下载状态。
+        代理 GET /api/maa/status（api_fastapi.py:3161-3197）。
+        """
+        return _call_api(mw, "/api/maa/status")
+
+    @mcp.tool()
+    def maa_instances() -> dict:
+        """【只读】MAA 实例池明细（services/maa/instances/<n>/）：每个实例的
+        exe 路径、配置、.pid 与进程是否存活。
+        代理 GET /api/maa/instances（api_fastapi.py:3232-3262）。
+        """
+        return _call_api(mw, "/api/maa/instances")
+
+    @mcp.tool()
+    def account_launch(idx: int, dry_run: bool = True) -> dict:
+        """【写操作】启动指定账号（按 index，0 起）的 MAA 实例（runner.launch）。
+
+        默认 dry_run=True：只回显该账号名与当前是否在跑，绝不下发；
+        只有显式 dry_run=False 才真正启动。
+        代理 POST /api/account/{idx}/launch（api_fastapi.py:1867-1874）。
+        """
+        def _prev() -> dict:
+            return _call_api(mw, f"/api/account/{int(idx)}/status")
+
+        return _gate(f"/api/account/{int(idx)}/launch", {}, dry_run, _prev, timeout=120)
+
+    @mcp.tool()
+    def account_stop(idx: int, dry_run: bool = True) -> dict:
+        """【写操作】停止指定账号（按 index，0 起）正在跑的 MAA 实例（runner.stop）。
+
+        默认 dry_run=True：只回显该账号名与当前是否在跑，绝不下发；
+        只有显式 dry_run=False 才真正停止（会中断该账号当前任务）。
+        代理 POST /api/account/{idx}/stop（api_fastapi.py:1876-1882）。
+        """
+        def _prev() -> dict:
+            return _call_api(mw, f"/api/account/{int(idx)}/status")
+
+        return _gate(f"/api/account/{int(idx)}/stop", {}, dry_run, _prev, timeout=60)
+
+    @mcp.tool()
+    def maa_stop_all(dry_run: bool = True) -> dict:
+        """【写操作】停止全部在跑的 MAA（调度队列 stop_all）—— 相当于调度台
+        "全部停止"按钮，会中断当前所有运行中的账号任务。
+
+        默认 dry_run=True：只回显将被打断的 active 账号清单（读 /api/queue），
+        绝不下发；只有显式 dry_run=False 才真正 stop_all。
+        代理 POST /api/action/stop_all（api_fastapi.py:2149-2153）。
+        """
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/queue")
+            if isinstance(data, dict):
+                return {"active": data.get("active", []),
+                        "active_count": data.get("active_count"),
+                        "pending_count": data.get("pending_count")}
+            return data
+
+        return _gate("/api/action/stop_all", {}, dry_run, _prev, timeout=120)
+
+    @mcp.tool()
+    def maa_launch_source(dry_run: bool = True) -> dict:
+        """【写操作】启动**源 MAA.exe**（services/maa/source/MAA.exe，正常窗口）：
+        用于人工完成首次初始化（协议/热更新）后再关闭窗口。MAA 已在运行或源未
+        安装时 REST 会返回 {"ok": False, "error": ...}。
+
+        默认 dry_run=True：只回显源 MAA 就绪/运行现状（读 /api/maa/status），
+        绝不下发；只有显式 dry_run=False 才真正拉起窗口。
+        代理 POST /api/maa/launch_source（api_fastapi.py:3199-3216）。
+        """
+        def _prev() -> dict:
+            data = _call_api(mw, "/api/maa/status")
+            if isinstance(data, dict):
+                return {"source_ready": data.get("source_ready"),
+                        "source_version": data.get("source_version"),
+                        "source_running": data.get("source_running")}
+            return data
+
+        return _gate("/api/maa/launch_source", {}, dry_run, _prev, timeout=30)
 
     # ── 挂载 ─────────────────────────────────────────────────────────
 

@@ -17,21 +17,26 @@ def load(path, name):
     sys.modules[name] = mod; loader.exec_module(mod); return mod
 
 FILES = ["services/launch_queue.py", "services/runner.py", "services/runtime_health.py"]
+# 版本钉死（HEAD 会继续前进，故不用 HEAD~1 这种相对引用）：
+#   BASE = 改造前（T2/G3 版本）; CUR = T8/T9/T10 提交
+BASE_REV = os.environ.get("VV_BASE", "78ad828")
+CUR_REV = os.environ.get("VV_CUR", "4afd0e1")
 TMP = Path(tempfile.mkdtemp(prefix="task11_"))
 def git_show(rev, path, dst):
     r = subprocess.run(["git", "--no-optional-locks", "show", rev + ":" + path],
                        capture_output=True)
     assert r.returncode == 0, (rev, path, r.stderr[:200])
     dst.write_bytes(r.stdout); return dst
-base = {f: git_show("HEAD~1", f, TMP / ("base_" + Path(f).name)) for f in FILES}
-cur = {f: git_show("HEAD", f, TMP / ("cur_" + Path(f).name)) for f in FILES}
+print("BASE_REV=%s  CUR_REV=%s" % (BASE_REV, CUR_REV))
+base = {f: git_show(BASE_REV, f, TMP / ("base_" + Path(f).name)) for f in FILES}
+cur = {f: git_show(CUR_REV, f, TMP / ("cur_" + Path(f).name)) for f in FILES}
 print("临时目录: %s" % TMP)
-print("=== 完整性：被测字节 == HEAD == 工作区 ===")
+print("=== 完整性：被测字节 == CUR_REV == 工作区 ===")
 def _norm(b): return b.replace(b"\r\n", b"\n")
 for f in FILES:
     a = Path(f).read_bytes()
     ok(_norm(a) == _norm(cur[f].read_bytes()),
-       "%s 工作区 == HEAD（被测对象就是已提交内容；CRLF=%d，按行尾归一后逐字节相等）" % (f, a.count(b"\r\n")))
+       "%s 工作区 == %s（被测对象就是已提交内容；CRLF=%d，按行尾归一后逐字节相等）" % (f, CUR_REV, a.count(b"\r\n")))
 
 # ═══ 1) T8：双入队 改造前 vs 改造后 ═══
 print("\n===== T8-1 双入队（真实 LaunchQueue.enqueue + on_account_finished）=====")

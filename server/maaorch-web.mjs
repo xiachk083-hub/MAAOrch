@@ -264,9 +264,37 @@ const PAGE = `<!doctype html><html lang="zh"><meta charset="utf-8">
  th{background:#18202a;color:#9fb0c3;font-weight:600} code{background:#18202a;padding:1px 5px;border-radius:3px}
  .ok{color:#5ad07a} .warn{color:#e2b93b} .err{color:#e06c75} pre{background:#0b0f13;padding:10px;border-radius:6px;overflow:auto}
 </style>
-<h1>MAAOrch 看板 · Node 版（只读第一版）</h1>
-<div class="sub">跑在 <code>${PORT}</code> · 前端已退役：本页 <code>/status</code> 是唯一人工入口 · 只读不写入</div>
-<h3>产线动作 <span class="sub">（默认 dry-run，勾「真执行」才落刀；每次调用留痕 runtime/node_dashboard_actions.log）</span></h3>
+<h1>MAAOrch 最小运维页 · /status</h1>
+<div class="sub">Node 门面跑在 <code>${PORT}</code> · 前端已退役：本页是唯一人工入口 · 数据来源分两类：<b>真运行态/真队列 = Python 上游</b> <code>${UPSTREAM || '（未开上游透传）'}</code>；<b>日志/产线文件/模拟器/产线动作 = Node 原生</b></div>
+<div id="banner"></div>
+
+<h3>队列 <span class="sub" id="qsrc">（真值：Python）</span></h3>
+<div>
+  <select id="acctSel" style="min-width:220px;background:#0b0f13;color:#dbe4ee;border:1px solid #263140;padding:6px"></select>
+  <button onclick="qact('enqueue')">入队</button>
+  <button onclick="qact('dequeue')">出队</button>
+  <button onclick="qact('pause')">暂停</button>
+  <button onclick="qact('resume')">恢复</button>
+  <button onclick="refreshAll()">刷新</button>
+</div>
+<pre id="qout">（动作结果会显示在这里）</pre>
+<div id="qbody">加载中…</div>
+
+<h3>账号与运行态 <span class="sub" id="ssrc">（真值：Python）</span></h3>
+<div id="sbody">加载中…</div>
+
+<h3>产线今日 / 跑局 / 日报 <span class="sub">（真值：runtime/*.json，Node 原生读）</span></h3>
+<div id="pbody">加载中…</div>
+
+<h3>模拟器 <span class="sub">（Node 原生读 MuMuManager；点按钮才读，避免每 30s 拉子进程）</span></h3>
+<button onclick="loadEmu()">读模拟器</button>
+<div id="emuBody">（未读取）</div>
+
+<h3>日志尾部 <span class="sub">（Node 原生读 logs/debug.log；Python 未启动也可用）</span></h3>
+<div><input id="logN" type="number" value="80" min="10" max="2000" style="width:80px;background:#0b0f13;color:#dbe4ee;border:1px solid #263140;padding:4px"> <button onclick="loadLogs()">刷新日志</button> <span class="sub" id="logsrc"></span></div>
+<pre id="logs" style="max-height:320px">加载中…</pre>
+
+<h3>产线动作 <span class="sub">（Node 原生 → tools/auto_mas_rerun.py；默认 dry-run，勾「真执行」才落刀；留痕 runtime/node_dashboard_actions.log）</span></h3>
 <div>
   <input id="acc" placeholder="账号名，逗号分隔（如 史蒂芬芬,hbznn119-日）" style="width:340px;background:#0b0f13;color:#dbe4ee;border:1px solid #263140;padding:6px">
   <label><input type="checkbox" id="apply"> 真执行</label>
@@ -274,9 +302,6 @@ const PAGE = `<!doctype html><html lang="zh"><meta charset="utf-8">
   <button onclick="act('cleanup')">清空临时补跑队列</button>
 </div>
 <pre id="actout">（动作输出会显示在这里）</pre>
-
-<h3>状态（账号 / 队列 / 产线 / 跑局）</h3>
-<div id="out">加载中…</div>
 <script>
 const T = new URLSearchParams(location.search).get('token') || ${JSON.stringify(TOKEN)};
 const api = async (p) => (await fetch(p + (T ? '?token=' + encodeURIComponent(T) : ''))).json();

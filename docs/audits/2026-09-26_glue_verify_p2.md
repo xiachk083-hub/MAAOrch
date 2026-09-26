@@ -177,4 +177,15 @@
 
 - 未对真机执行 check_health（会真的杀本机进程）：六条路径用 patched subprocess.run + patched psutil 触发，覆盖了分支与参数，**未覆盖** MuMuManager info all 的真实输出解析与真实 taskkill 返回码处理。
 - 未跑 MCP / HTTP 端到端（需起真实服务 + token）；T10 的端口类事实用 models/config.json 与启动脚本静态核对，未真起服务。
-- 差分对比的是 HEAD~1 vs HEAD 两个已提交版本；若 78ad828 之前还有未提交的中间态，不在本次对比范围。
+- 差分对比的是两个已提交版本（见修订记录）；若 78ad828 之前还有未提交的中间态，不在本次对比范围。
+
+---
+
+## 10. 修订记录（报告提交后又落了两个提交）
+
+验证脚本最初用相对引用 HEAD~1 / HEAD 取两版代码；随后 Lead 又提交了 4b507cd、24bd955（前端退役第一步，改了 main_web.pyw / server/maaorch-web.mjs），**相对引用随之失效**（再次运行会把改造后代码当成基线，出现 6 条假 FAIL）。已修正为**钉死版本号**：
+
+    docs/audits/_verify_stubs_p2.py.txt :  BASE_REV = "78ad828"（改造前）  CUR_REV = "4afd0e1"（T8/T9/T10）
+    可用环境变量覆盖：VV_BASE=... VV_CUR=...
+
+修正后重跑：**36/36 PASS**（含完整性断言：工作区字节 == CUR_REV 字节，按行尾归一）。同时复核 24bd955 对 main_web.pyw 的改动未移动本报告引用的行：main_web.pyw **136 / 151 / 181 / 183 / 195 / 215** 与 §2、§4.4 引用一致（订阅者仍是 183 与 195）。由此本报告的结论在 HEAD=24bd955 时依然成立（launch_queue.py / runner.py / runtime_health.py 自 4afd0e1 起未再改动，git status 实测干净）。
