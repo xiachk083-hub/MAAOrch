@@ -33,8 +33,11 @@ class RunStats:
 
     def _save(self) -> None:
         try:
-            self._path.write_text(json.dumps(self._data, ensure_ascii=False, indent=2),
+            # 原子写（2026-09-26 独立复核：原实现直接 write_text，写到一半崩溃会截断状态文件）。
+            tmp = self._path.with_name(self._path.name + ".tmp")
+            tmp.write_text(json.dumps(self._data, ensure_ascii=False, indent=2),
                                   encoding="utf-8")
+            tmp.replace(self._path)
         except Exception as e:
             self._warn(f"写入 stats 失败: {e}")
 

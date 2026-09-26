@@ -1,4 +1,4 @@
-﻿import sys,os,re,shutil,socket
+import sys,os,re,shutil,socket
 import urllib.request
 from pathlib import Path
 from infrastructure.platform_helper import is_admin, run_as_admin, get_platform_key, find_maa_cli as _find_maa_cli

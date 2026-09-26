@@ -43,8 +43,11 @@ class AccountState:
 
     def _save(self) -> None:
         try:
-            self._path.write_text(json.dumps(self._data, ensure_ascii=False, indent=2),
+            # 原子写（同上：原实现非原子）。
+            tmp = self._path.with_name(self._path.name + ".tmp")
+            tmp.write_text(json.dumps(self._data, ensure_ascii=False, indent=2),
                                   encoding="utf-8")
+            tmp.replace(self._path)
         except Exception:
             pass
 

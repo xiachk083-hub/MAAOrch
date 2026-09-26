@@ -129,7 +129,7 @@ async function rankWith(kind, cands, box, level) {
   if (kind === 'gbm') {
     // 预留：tools/train_ranker.py 导出的系数 JSON（纯查表，不需要 ONNX）
     const coef = readJson(join(RT, 'ranker_coef.json'))
-    if (!coef) throw new Error('ranker_coef.json 不存在（先跑 tools/train_ranker.py）')
+    if (!coef) throw new Error('ranker_coef.json 不存在。注意：训练脚本 tools/train_ranker.py 已不在本仓库（2026-09-26 复核确认），需另行找回或改用已有系数文件')
     return cands.map((c) => ({ id: c.id, score: coef.bias + (coef.w_miss ?? 0) * ((c.used || []).length), note: 'gbm' }))
   }
   return cands.map((c) => scoreRule(c, box))
