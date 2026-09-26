@@ -25,6 +25,24 @@ Hermes 直连 = 一调 script/user 家族就把账号口令写进 agent 会话/�
   MAAORCH_MAS_MCP_URL      上游 /mcp 地址；缺省 = services/mas_l3.py 的 API 常量 + /mcp
   MAAORCH_MAS_MCP_TIMEOUT  单次上游调用超时（秒，缺省 30）
   MAAORCH_MAS_SCRUB_KEYS   附加敏感键名（逗号分隔的**字面**键名，大小写不敏感）
+  MAAORCH_MAS_READONLY     只读巡检硬闸：1/true/yes/on = 只读；0/false/no/off = 全量；
+                           **未设置 = 全量（现行为，人工会话不受影响）**；
+                           其它任何值 fail-closed 到只读。
+
+## 只读硬闸（MAAORCH_MAS_READONLY=1）—— 无人值守巡检用
+- tools/list：只返回 READONLY_ALLOWED 里的工具（**精确工具名**，见下），其余全部隐藏。
+- tools/call：**再校验一次**；不在 allowlist（或命中危险动词）→ 直接返回 isError=True 的结构化
+  拒绝，且**在触达上游之前**返回（拒绝 = 零上游调用），所以知道被隐藏的名字也无效。
+- 危险动词按**整词**黑名单（start/stop/close/update/add/delete/import/export/click/sign/dispatch...），
+  同时作为 allowlist 的导入期自检：命中即从 allowlist 丢弃并打警告（fail-closed）。
+- 不影响 scrub 语义：允许的只读工具返回照样脱敏（get_user_* 的 Password/SklandToken 仍被替换）。
+- **默认（不设该 env）= 与以前完全一致**：透明转发 118 个工具；原 auto-mas-scrubbed 人工会话不受影响。
+- 只读 allowlist（10 个，全部对应 REST 只读端点）：
+  get_health_api_core_health_get / get_overview_api_info_get_overview_post /
+  get_git_version_api_info_version_post / get_queues_api_queue_get_post /
+  get_item_api_queue_item_get_post / get_time_set_api_queue_time_get_post /
+  get_script_api_scripts_get_post / get_user_api_scripts_user_get_post /
+  search_history_api_history_search_post / get_history_data_api_history_data_post
 ## 用法
   python tools/mas_scrub_proxy.py             # stdio server（由 Hermes 用 command+args 拉起）
   python tools/mas_scrub_proxy.py --check     # 自检：本地脱敏 + 上游工具数 + 端到端差分断言
@@ -60,6 +78,94 @@ def _sensitive_re() -> re.Pattern:
 
 
 SENSITIVE = _sensitive_re()
+
+
+# ── 只读硬闸（MAAORCH_MAS_READONLY）─────────────────────────────────
+# 用途：无人值守巡检（另一个 MCP entry auto-mas-monitor）。**代码级**只读，不靠 prompt：
+#   ① tools/list 只暴露 allowlist 内的工具；
+#   ② tools/call **再校验一次** —— 即使调用者知道被隐藏的名字也拒绝，
+#      且**在触达上游之前**就返回（拒绝 = 零上游调用）。
+# 用**精确工具名** allowlist，不用 get_* 泛匹配（泛匹配会把 click_image/check_image 之类
+# 动作名也放进来；实测 118 个工具里以 get_ 开头的有 39 个，其中就有 get_screenshot_*）。
+# 取值（大小写不敏感，首尾空白忽略）：
+#   未设置 / 空      -> False（保持现有「人工全量控制」行为，不受影响）
+#   1 true yes on    -> True
+#   0 false no off   -> False
+#   其它任何值        -> True 并打警告（**fail-closed**：不认识就按只读处理）
+READONLY_ENV = "MAAORCH_MAS_READONLY"
+_TRUTHY = {"1", "true", "yes", "on", "enable", "enabled"}
+_FALSY = {"0", "false", "no", "off", "disable", "disabled"}
+
+# 危险动词（按**整词**匹配，避免误伤 get_time_set_* 这种含 "set" 的只读名）
+_DANGER_RE = re.compile(
+    r"(?:^|_)(start|stop|close|update|add|delete|del|remove|import|export|create|kill|restart"
+    r"|reset|clear|write|send|click|login|logout|download|install|upload|cancel|confirm|test"
+    r"|reorder|manual|operate|switch|connect|disconnect|save|qr|sign|dispatch|power|plan)(?:_|$)",
+    re.I)
+
+# 只读 allowlist：精确工具名 <-> 对应 REST 端点（名字取自 2026-09-26 实测 tools/list 真值）
+READONLY_ALLOWLIST: tuple = (
+    "get_health_api_core_health_get",                       # /api/core/health
+    "get_overview_api_info_get_overview_post",              # /api/info/get_overview
+    "get_git_version_api_info_version_post",                # /api/info/version（存活探针）
+    "get_queues_api_queue_get_post",                        # /api/queue/get
+    "get_item_api_queue_item_get_post",                     # /api/queue/item/get
+    "get_time_set_api_queue_time_get_post",                 # /api/queue/time/get
+    "get_script_api_scripts_get_post",                      # /api/scripts/get
+    "get_user_api_scripts_user_get_post",                   # /api/scripts/user/get（凭据仍经 scrub）
+    "search_history_api_history_search_post",               # /api/history/search
+    "get_history_data_api_history_data_post",               # /api/history/data
+)
+
+
+def _sanitize_allowlist(names) -> tuple:
+    """剔除命中危险动词的名字（fail-closed：宁可少放，也不放错）。"""
+    keep = []
+    for n in names:
+        if _DANGER_RE.search(n):
+            print("[readonly] allowlist 中的危险名已丢弃: %s" % n, file=sys.stderr, flush=True)
+            continue
+        keep.append(n)
+    return tuple(keep)
+
+
+READONLY_ALLOWED = _sanitize_allowlist(READONLY_ALLOWLIST)
+
+
+def readonly_enabled() -> bool:
+    """只读模式开关（每次调用都读 env；非法值 fail-closed 到 True）。"""
+    raw = os.environ.get(READONLY_ENV)
+    if raw is None or not str(raw).strip():
+        return False                    # 未设置 = 现行为（手动全量控制）
+    v = str(raw).strip().lower()
+    if v in _TRUTHY:
+        return True
+    if v in _FALSY:
+        return False
+    print("[readonly] %s=%r 不是已知取值 -> fail-closed 按只读处理" % (READONLY_ENV, raw),
+          file=sys.stderr, flush=True)
+    return True
+
+
+def readonly_deny(name: str) -> str:
+    """只读模式下拒绝原因；允许则返回空串。"""
+    if name in READONLY_ALLOWED:
+        if _DANGER_RE.search(name):     # 双保险：allowlist 被改坏也不放行
+            return "命中危险动词"
+        return ""
+    if _DANGER_RE.search(name):
+        return "命中危险动词（写/动作类）"
+    return "不在只读 allowlist 内"
+
+
+def _readonly_deny_result(name: str, reason: str) -> types.CallToolResult:
+    payload = {"ok": False, "error": "readonly mode: tool not allowed", "reason": reason,
+               "tool": name, "mode": "readonly", "env": READONLY_ENV,
+               "hint": "只读巡检模式：只允许 allowlist 内的只读工具；本次调用未触达上游"}
+    print("[readonly] 拒绝工具 tool=%s reason=%s" % (name, reason), file=sys.stderr, flush=True)
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))],
+        isError=True)
 
 
 def _kv_re() -> re.Pattern:      # 非 JSON 文本的兜底：只改「"敏感键名": 值」这种 JSON 片段形态
@@ -202,6 +308,11 @@ async def _handle_list_tools() -> list:
         msg = "MAS MCP 上游不可达（%s）: %s: %s" % (upstream_url(), type(e).__name__, e)
         print("[proxy] " + msg, file=sys.stderr, flush=True)
         raise McpError(types.ErrorData(code=types.INTERNAL_ERROR, message=msg)) from e
+    if readonly_enabled():
+        allowed = [t for t in tools if t.name in READONLY_ALLOWED]
+        print("[readonly] tools/list -> %d/%d（只读模式过滤掉 %d 个非只读工具）" % (
+            len(allowed), len(tools), len(tools) - len(allowed)), file=sys.stderr, flush=True)
+        return allowed
     print("[proxy] tools/list -> %d 个工具（上游 %s）" % (len(tools), upstream_url()),
           file=sys.stderr, flush=True)
     return tools
@@ -209,6 +320,11 @@ async def _handle_list_tools() -> list:
 
 @server.call_tool(validate_input=False)     # 透明代理：参数合法性交给上游判定
 async def _handle_call_tool(name: str, arguments: dict | None) -> types.CallToolResult:
+    if readonly_enabled():
+        _reason = readonly_deny(name)
+        if _reason:
+            # 关键：直接返回，**不触达上游**（隐藏名字也挡得住）
+            return _readonly_deny_result(name, _reason)
     try:
         res = await _upstream_call_tool(name, arguments)
     except Exception as e:                                # noqa: BLE001
@@ -228,6 +344,13 @@ async def _handle_call_tool(name: str, arguments: dict | None) -> types.CallTool
 
 
 async def _serve() -> None:
+    _ro = readonly_enabled()
+    if _ro:
+        server.instructions = (str(server.instructions or "") +
+                               " **本进程处于只读巡检模式（%s）：tools/list 只暴露只读工具，"
+                               "tools/call 对非 allowlist 工具直接拒绝且不触达上游。**" % READONLY_ENV)
+    print("[proxy] 启动：只读模式=%s allowlist=%d 个 上游=%s" % (
+        _ro, len(READONLY_ALLOWED), upstream_url()), file=sys.stderr, flush=True)
     async with stdio_server() as (read, write):
         await server.run(read, write, server.create_initialization_options())
 
@@ -331,6 +454,7 @@ async def _offline_error_case() -> dict:
 async def _check(script_id: str = "") -> int:
     print("== MAS 脱敏代理 --check ==")
     print("upstream =", upstream_url(), "| timeout =", timeout_s(), "s")
+    print("readonly =", readonly_enabled(), "| allowlist =", len(READONLY_ALLOWED), "个")
     fails = []
 
     def report(name, ok, extra=""):
