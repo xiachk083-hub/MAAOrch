@@ -288,6 +288,11 @@ async def _upstream_call_tool(name: str, arguments: dict | None) -> types.CallTo
     async with streamablehttp_client(upstream_url(), timeout=to) as (r, w, _):
         async with ClientSession(r, w, read_timeout_seconds=timedelta(seconds=to)) as s:
             await s.initialize()
+            # 关于空 arguments：曾试过把 {} 原样下发（而非 or None），实测对本用例无效 ——
+            # MAS 自己的 MCP 服务把空 arguments 当作「无 body」，get_queues 仍 422；
+            # 传任何非 UUID 值又会 500 badly formed hexadecimal UUID string。
+            # 这是 MAS 侧 schema 限制（REST 可传 queueId=null，MCP 生成的 schema 不接受 null），
+            # 不在本代理职责内，故保持原样透传。详见 docs/HERMES_MAS_HANDOVER.md §10。
             return await s.call_tool(name, arguments or None)
 
 
