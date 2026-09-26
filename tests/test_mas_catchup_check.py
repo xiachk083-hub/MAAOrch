@@ -106,3 +106,27 @@ def test_read_endpoint_whitelist_is_readonly():
     for p in m.READ_ENDPOINTS:
         assert not re.search(r"add|update|delete|remove|import|export|close|start|stop|reorder|clear|cancel",
                              p, flags=re.I), p
+
+def test_batch_guard_suppresses_all_candidates():
+    # 今日只有 2 个账号有记录，基线 53 => 低于 50% => 全禁
+    hist = {"a1": [{"date": TODAY + " 05:57:15", "status": "DONE"}],
+            "a2": [{"date": TODAY + " 06:02:29", "status": "DONE"}]}
+    out = m.evaluate([row(account="a3"), row(account="a4")], hist, NOW, baseline_accounts=53)
+    assert all(r["eligible"] is False for r in out)
+    assert all(r["batch_guard"] is True for r in out)
+    assert "批次疑似未结束" in out[0]["reason"]
+
+
+def test_batch_guard_off_by_default():
+    out = m.evaluate([row()], {}, NOW)
+    assert out[0]["eligible"] is True
+    assert out[0]["batch_guard"] is False
+
+
+def test_batch_guard_not_tripped_when_day_looks_complete():
+    hist = {("a%d" % i): [{"date": TODAY + " 05:0%d:00" % (i % 10), "status": "DONE"}]
+            for i in range(50)}
+    out = m.evaluate([row(account="missing_one")], hist, NOW, baseline_accounts=53)
+    # 今日 50 个账号有记录，未低于 53*0.5 => 闸不生效，该账号仍是正常候选
+    assert out[0]["batch_guard"] is False
+    assert out[0]["eligible"] is True
