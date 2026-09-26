@@ -123,3 +123,30 @@ runtime/reports/
 ScriptConfig.json
 runtime/mas_ledger.jsonl
 runtime/mas_watch_state.json
+
+# ── 2026-09-26 清理前安全底座（评估 P0）──────────────────────────────
+# 1) 备份副本必须与本体同规则：原来只挡 models/config.json 精确路径，
+#    新建的 .bak-* 副本会绕过它 —— 实测 models/config.json.bak-19997 与
+#    models/config.json.bak-20260921-184914 内含真实 ai_api_key + api_token，
+#    且远端 xiachk083-hub/MAAOrch 为 public。
+models/config.json*
+*.bak-*
+_ams.json
+_remote_s4.b64
+.dsh-meow/
+
+# 2) 工作区灰区（未忽略、未跟踪 → 一次 git add -A 即污染仓库）
+runtime/
+tools/watch/
+tools/emu_maa_tool/maa_instances/
+
+# 3) 二进制/产物全局限定（原来只在仓库根生效 -> 子目录 PNG 会被提交）
+*.png
+*.jpg
+*.jpeg
+*.pptx
+*.log
+*.apk
+
+# 4) 游离的嵌套 git 仓库（无 commit checked out）——会让每一次 git add -A 直接 fatal exit 128
+untitled-project/

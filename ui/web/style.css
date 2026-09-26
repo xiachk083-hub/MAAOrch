@@ -293,3 +293,12 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
   .mobile-more-btn { display: none !important; }
 }
 
+
+/* auto-mas 页顶部 tab */
+.auto-mas-tab {
+  background: none; border: none; cursor: pointer;
+  padding: 8px 16px; font-size: 12px; color: var(--text3);
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+.auto-mas-tab:hover { color: var(--text2); }
+.auto-mas-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: bold; }

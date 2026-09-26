@@ -1,0 +1,9 @@
+0.1 == stage1 begins
+88.9 proj projectButton42 RevTracker
+163.9 proj projectButton1 Improved AutoClippers
+263.9 proj projectButton3 Creativity
+404 proj projectButton6 Limerick
+526 proj projectButton13 Lexical Processing
+638 proj projectButton14 Combinatory Harmonics
+839.3 proj projectButton15 The Hadwiger Problem
+839.4 proj projectButton2 Beg for More Wire

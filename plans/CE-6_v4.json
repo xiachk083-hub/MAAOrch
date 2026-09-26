@@ -1,0 +1,74 @@
+{
+ "stage_name": "CE-6",
+ "stage_id": "wk_melee_6",
+ "title": "CE-6 自研轴 v4：v2 那套编队能编成的六人 + 快速取帧（MaaFwAdb）",
+ "note": "v3 未进战斗就失败：MAA 的 BattleFormationTask 对「圣约送葬人」「仇白」报 reason=Missing（号上实际都有 ✓ 原因未查明 ✗）。而 v2 那次的六人 [重岳,泥岩,年,塞雷娅,玛恩纳,棘刺] 是**实测能编成**的 ✓，所以 v4 用这六个人 + 每组单人（防止 MAA 换人）。更关键的是同时修掉了 v1~v3 失败的真凶：默认 adb 取帧 ~300ms/帧 ⇒ MAA 第一次部署落在开打 +23 秒（首敌 3.2 秒就到）⇒ 开局必漏。已把 maa-cli profile 的 touch_mode 改成 MaaFwAdb（= 启用模拟器 extras 快速取帧）。本局要验证的两个数：① 日志里 ScreencapCost 是否从 ~300ms 降到 ~20ms ② 开打→第一次部署的间隔。",
+ "slots": [
+  {
+   "group": "中路重岳",
+   "opers": [
+    "重岳"
+   ],
+   "location": [
+    2,
+    2
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "左路泥岩",
+   "opers": [
+    "泥岩"
+   ],
+   "location": [
+    2,
+    1
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "右路年",
+   "opers": [
+    "年"
+   ],
+   "location": [
+    2,
+    3
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "中路塞雷娅",
+   "opers": [
+    "塞雷娅"
+   ],
+   "location": [
+    1,
+    2
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "左路玛恩纳",
+   "opers": [
+    "玛恩纳"
+   ],
+   "location": [
+    1,
+    1
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "右路棘刺",
+   "opers": [
+    "棘刺"
+   ],
+   "location": [
+    1,
+    3
+   ],
+   "direction": "Right"
+  }
+ ]
+}

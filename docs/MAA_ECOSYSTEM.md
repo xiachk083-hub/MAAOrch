@@ -26,7 +26,8 @@
 
 | 项目 | 定位 | 什么时候用 |
 |------|------|-----------|
-| **MaaFramework** | MAA 团队出的**通用自动化框架**（不是明日方舟专用，可套任何游戏/应用） | **将来"自己拿 MAA 做自己的事情"的首选**：用它搭新流程，比改 MAA 本体干净 |
+| **MaaFramework** | MAA 团队（MaaXYZ）出的**通用自动化框架**：C++20 图像识别黑盒自动化，**LGPL-3.0**，约 4.4-4.8k★。不是明日方舟专用，可套任何 2D 游戏/应用。绑定齐全：PyPI `MaaFw` / NuGet / npm `@maaxyz/maa-node` / Go / Rust | **"自己拿 MAA 做自己的事情"的首选；2026-09-15 起 = 新游戏的默认路径**。一个 `interface.json`（PI V2）+ pipeline + resource 契约在跑几十个游戏：M9A / MaaEnd / **MaaBD2** / MSBA / MaaYuan / Maa-HBR / MaaGF2Exilium / MaaTOT / MaaFgo… 文档 maafw.com |
+| **MFAAvalonia** | MaaFramework 的**跨平台通用桌面 GUI**（Avalonia+SukiUI，本身不带业务资源，靠项目的 `interface.json` 驱动） | **我们给 M9A 选的就是它的发行版（M9A 的 `...-MFAA.zip`）**。多独立实例 / 定时执行 / 启动批量跑 / CLI 自启 / 通知（钉钉·飞书·TG·Discord·SMTP·WxPusher·OneBot·Server酱·webhook）/ PI V2 tasks-options-presets-pretask-i18n。⚠️ **与 MAAOrch 编排层部分重叠** → 别重复造；护城河在机队运维控制面（见 MULTI_GAME_VISION.md §5） |
 | **MaaAI** | MAA 的深度学习项目（官方方向） | 如果将来真要训练（识别/决策模型），这是官方配套路线 |
 | **maa-cli** | 跨平台命令行版 MAA | 轻量部署/脚本化场景 |
 | MaaPi / 第三方插件 | 社区插件生态（公招识别、仓库截图识别等） | 按需借鉴 |
@@ -40,8 +41,16 @@
 | 与 MAAOrch 集成 | 天然（注入 config） | 需自行桥接（MaaFramework 是独立运行时） |
 | 自定义深度 | 任务链组合（869 任务现成复用） | 从零设计任务图（模板/OCR 要自己准备） |
 | 维护成本 | 跟随 MAA 更新 | 跟随 MaaFramework 更新 |
+| 许可 | MAA 本体 AGPL-3.0 | **MaaFramework 本体 LGPL-3.0**（AGPL 的是 M9A/MaaEnd 这些**应用**，不是框架） |
 
-**建议**：短期继续 A（本工具链即为此服务），只有当需求超出方舟玩法范围（比如自动化别的游戏/软件）时再考虑 B。
+**建议（2026-09-15 更新）**：
+- **方舟继续 A**——MAA 本体**不是** MaaFramework 项目（老一代 MaaCore + WPF），
+  869 任务的成熟度是皇冠，零改动铁律。
+- **方舟以外的游戏直接走 B**：不再是"将来再考虑"，而是默认路径
+  （用户：「用 MaaFW GUI，加上 codex 写脚本理论上可以适配所有 2 游」+「怎么
+  方便怎么来，我又不传播」）。
+- B 的正确形态见 docs/MULTI_GAME_VISION.md §2：**一个契约适配器 + N 份
+  resource**；不做"每引擎一个适配器"，**不逆向解析引擎日志**（吃结构化回调）。
 
 ## 4. 我们的知识资产（本仓库已有的）
 
@@ -53,6 +62,8 @@
 | DeepSeek 逻辑问答 | `services/task_explainer.py` | 问"这个链在干嘛"、生成自定义任务定义 |
 | 任务注入能力 | `services/config_injector.py` | 已能把自定义任务队列写进 MAA 配置 |
 | 事件流+样本库 | `services/log_watcher.py` + `logs/log_samples/` | 运行数据积累（将来训练/规则提炼用） |
+| **AI 攻坚代理** | `services/ai_agent/`（percept / battle_vision / actuator / hud / tile_map） | 2026-09-14 实机只读感知打通（见 docs/AI_AGENT.md）。**本质就是 MaaFramework 的 Custom Recognition / Custom Action** —— 按 Agent 协议包装后可供**任意** MaaFramework 游戏复用，而非只服务方舟 |
+| LLM 写脚本地基 | `tools/vision_translate.py` + `services/task_explainer.py` + `tools/task_graph.py` | 即「codex 写脚本」的同构物；目标 schema 从 MAA `tasks.json` 映射到 MaaFramework Pipeline JSON（更简单）即可 |
 
 ## 5. 来源
 
@@ -60,3 +71,7 @@
 - [MAA 主仓库](https://github.com/MaaAssistantArknights/MaaAssistantArknights)
 - [任务流程协议](https://docs.maa.plus/zh-cn/protocol/task-schema.html)
 - [MAA Task Schema (EN)](https://docs.maa.plus/en-us/protocol/task-schema.html)
+- [MaaFramework（LGPL-3.0 通用框架）](https://github.com/MaaXYZ/MaaFramework) · [maafw.com](https://maafw.com/)
+- [Custom & Agent 机制](https://maafw.com/docs/1.3-Custom&Agent)
+- [MFAAvalonia 通用 GUI](https://github.com/MaaXYZ/MFAAvalonia)
+- [MaaBD2 / sunyink/MFABD2](https://github.com/sunyink/MFABD2)

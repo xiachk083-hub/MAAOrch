@@ -1,0 +1,74 @@
+{
+ "stage_name": "CE-6",
+ "stage_id": "wk_melee_6",
+ "title": "CE-6 自研轴 v6：同一批已证可编成的干员，只把「输出」排到「治疗」之前",
+ "note": "v8 的录像证据：前排三人 + 塞雷娅都落地了，但两个领主（玛恩纳/棘刺）**到死没上场** ✗ —— 累计费用在 1 费/3 秒下不够。v6 唯一改动：把两个领主插到塞雷娅前面（第 4、5 位），让「真输出」在中段就位，治疗留到最后。六人全部来自实测能编成的名单（重岳/泥岩/年/塞雷娅/玛恩纳/棘刺 ✓），不再碰 MAA 报 Missing 的那几个（桃金娘/乌尔比安/圣约送葬人/仇白 ✗）。",
+ "slots": [
+  {
+   "group": "中路重岳",
+   "opers": [
+    "重岳"
+   ],
+   "location": [
+    2,
+    2
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "左路泥岩",
+   "opers": [
+    "泥岩"
+   ],
+   "location": [
+    2,
+    1
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "右路年",
+   "opers": [
+    "年"
+   ],
+   "location": [
+    2,
+    3
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "左路棘刺",
+   "opers": [
+    "棘刺"
+   ],
+   "location": [
+    1,
+    1
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "右路玛恩纳",
+   "opers": [
+    "玛恩纳"
+   ],
+   "location": [
+    1,
+    3
+   ],
+   "direction": "Right"
+  },
+  {
+   "group": "中路塞雷娅",
+   "opers": [
+    "塞雷娅"
+   ],
+   "location": [
+    1,
+    2
+   ],
+   "direction": "Right"
+  }
+ ]
+}

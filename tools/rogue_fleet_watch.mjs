@@ -43,6 +43,7 @@ const PROBE = path.join(ROOT, 'tools', 'rogue_fleet_probe.mjs');
 const LOG = path.join(ROOT, 'runtime', 'rogue_fleet_watch.log');
 const STATE = path.join(ROOT, 'runtime', 'rogue_fleet_state.json');
 const LOCK = path.join(ROOT, 'runtime', 'rogue_fleet_watch.lock');
+const HOLD = path.join(ROOT, 'runtime', 'rogue_hold.flag');   // ⏸ 暂停开关（存在＝人按住的，看守不动手）
 const CASES = path.join(ROOT, 'runtime', 'fleet_cases');
 
 const MACHINES = [
@@ -357,6 +358,16 @@ try {
     dropLock(); process.exit(0);
   }
   log(head);
+  // ⏸ **暂停开关**（2026-09-26 05:5x，用户原话「主要是日常吧 要恢复日常 这肉鸽先往后放放」）：
+  // `runtime/rogue_hold.flag` 存在 ⇒ 看守只记状态与心跳、**完全不动手**（不发车、不收工、不救）。
+  // 删除该文件即恢复自动盯守。用开关而不是"禁用计划任务"：心跳/看板/一页纸都还活着，谁看都知道是"人按住的"。
+  if (fs.existsSync(HOLD)) {
+    const why = (() => { try { return fs.readFileSync(HOLD, 'utf8').trim(); } catch { return ''; } })();
+    log(`  ⏸ 已暂停（${why || '手动'}）⇒ 本轮不动手（删掉 runtime/rogue_hold.flag 即恢复）`);
+    saveState(s);
+    dropLock();
+    process.exit(0);
+  }
 
   // 预算（小时配额）
   const cut = Date.now() - 3600 * 1000;

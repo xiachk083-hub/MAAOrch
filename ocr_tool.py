@@ -89,8 +89,11 @@ def rec_text(img_bgr, region, rec_session, keys):
     prev = -1
     for t, idx in enumerate(indices):
         if idx != prev and idx != 0:  # 0 = blank
-            text += keys[idx - 1]
-            confs.append(float(pred[t, idx]))
+            # 越界就跳过：字符模型（PaddleCharOCR）的输出类别数可能多于它的 keys.txt
+            # （2026-09-19 实测：不守这一下，一条识别直接把整轮 OCR 崩掉 ✗）
+            if 1 <= idx <= len(keys):
+                text += keys[idx - 1]
+                confs.append(float(pred[t, idx]))
         prev = idx
     score = sum(confs) / len(confs) if confs else 0.0
     return text, score

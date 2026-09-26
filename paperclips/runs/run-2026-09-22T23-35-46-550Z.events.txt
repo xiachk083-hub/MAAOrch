@@ -1,0 +1,30 @@
+0.1 == stage1 begins
+116.8 proj projectButton42 RevTracker
+179.3 proj projectButton1 Improved AutoClippers
+266.8 proj projectButton7 Improved Wire Extrusion
+391.8 proj projectButton4 Even Better AutoClippers
+533 proj projectButton8 Optimized Wire Extrusion
+699.6 proj projectButton5 Optimized AutoClippers
+699.6 proj projectButton3 Creativity
+881.1 proj projectButton6 Limerick
+941.1 proj projectButton13 Lexical Processing
+966.2 proj projectButton26 WireBuyer
+1131.6 proj projectButton11 New Slogan
+1231.6 proj projectButton14 Combinatory Harmonics
+1241.7 proj projectButton9 Microlattice Shapecasting
+1416 proj projectButton12 Catchy Jingle
+1482.7 proj projectButton34 Hypno Harmonics
+1673 proj projectButton15 The Hadwiger Problem
+1673.1 proj projectButton16 Hadwiger Clip Diagrams
+1865.7 proj projectButton17 The Tóth Sausage Conjecture
+1882.4 proj projectButton21 Algorithmic Trading
+1882.4 proj projectButton50 Quantum Computing
+2177.7 proj projectButton51 Photonic Chip
+2207.4 proj projectButton10 Spectral Froth Annealment
+2207.4 proj projectButton22 MegaClippers
+2273.2 proj projectButton23 Improved MegaClippers
+2283.8 proj projectButton19 Donkey Space
+2283.9 proj projectButton20 Strategic Modeling
+2336 proj projectButton51 Photonic Chip
+2336 proj projectButton60 New Strategy: A100
+2396.4 proj projectButton24 Even Better MegaClippers

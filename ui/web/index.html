@@ -5,8 +5,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAAOrch</title>
 <link rel="stylesheet" href="style.css?_v=20260816r1">
+<!-- ── 顶部状态条（2026-09-21 由 Node 门面注入）────────────────────────────
+     用户诉求：「我不知道有这些事情 我就不会去处理」⇒ 打开就看这三件事——
+     ① 服务（Node 门面 19999 / Python 上游 19997）活着没；② 最近一局有效还是无效；
+     ③ 今天产线补跑/日报出没出。数据全部来自 Node 自己的 API（读 + 翻译）。 -->
+<style>
+ #maaorch-statusbar{position:sticky;top:0;z-index:9999;display:flex;flex-wrap:wrap;gap:14px;
+   align-items:center;padding:6px 12px;background:#0f1620;color:#dbe4ee;font:12px/1.5 system-ui,"Microsoft YaHei";
+   border-bottom:1px solid #263140}
+ #maaorch-statusbar b{color:#eaf2ff}
+ #maaorch-statusbar .ok{color:#5ad07a} #maaorch-statusbar .warn{color:#e2b93b} #maaorch-statusbar .err{color:#e06c75}
+ #maaorch-statusbar .dim{color:#7f8c9b}
+</style>
 </head>
 <body>
+<script id="maaorch-token" type="application/json"></script>
+<div id="maaorch-statusbar"><span class="dim">状态条加载中…（Node 门面）</span></div>
+<script>
+(async () => {
+  // 默认 token 由 Node 门面在返回本页时注入（见 server/maaorch-web.mjs 的 #maaorch-token 替换）；
+  // 也支持 ?token=xxx 覆盖。这样用户直接开 127.0.0.1:19999 就能看到数据。
+  let T = new URLSearchParams(location.search).get('token') || "";
+  if (!T) {
+    try { T = JSON.parse(document.getElementById('maaorch-token').textContent || '""') || ""; } catch {}
+  }
+  const hdr = T ? { 'x-agent-token': T } : {};
+  const get = async (p) => { try { const r = await fetch(p, { headers: hdr }); return r.ok ? await r.json() : null; } catch { return null; } };
+  const [h, r, p, rg] = await Promise.all([get('/api/health'), get('/api/runs'), get('/api/production'), get('/api/rogue/status')]);
+  const runs = (r && r.runs) || [];
+  const last = runs[0] || {};
+  const verdictCls = /通关/.test(last.gate || '') ? 'ok' : (/无效/.test(last.gate || '') ? 'warn' : (/失败/.test(last.gate || '') ? 'err' : 'dim'));
+  const row = (p && p.rows && p.rows[0]) || {};
+  // 肉鸽看守（#0 + 机队）：一眼看清"在不在刷 / 几台在跑 / 闸门关着还是开着"
+  let rogue = '<span class="dim">肉鸽看守：接口不通</span>';
+  if (rg && rg.ok) {
+    const z = rg.zero || {}, f = rg.fleet || {};
+    const zOk = /按钮=running/.test(z.last || '');
+    const zCls = zOk ? 'ok' : 'err';
+    const m = /游戏=(\w+)/.exec(z.last || '');
+    const gate = /闸门\s*=?\s*(开|关)/.exec(f.last || '');
+    // 闸门原因两种写法都认：机队看守写「闸门=关（…）」；日报里写「闸门关：… ⇒」
+    const why = (/闸门=关（([^）]*)）/.exec(f.last || '') || /闸门关：([^⇒]*)/.exec(f.last || '') || [])[1] || '';
+    rogue = '<span>肉鸽：<b>#0</b> <span class="' + zCls + '">' + (zOk ? '在刷' : '没在刷') + '</span>'
+      + (m ? '<span class="dim">(游戏' + m[1] + ')</span>' : '')
+      + ' · 机队 <b>' + (f.running ?? 0) + '/' + (f.total ?? 5) + '</b>'
+      + (gate ? '<span class="' + (gate[1] === '开' ? 'ok' : 'warn') + '">闸门' + gate[1] + '</span>' : '')
+      + (why ? '<span class="dim">（' + why.replace(/[（(][^）)]*[）)]/g, '').trim().slice(0, 30) + '）</span>' : '')
+      + (rg.stale ? ' <span class="err">⚠看守可能停了</span>' : '')
+      + '</span>';
+  }
+  document.getElementById('maaorch-statusbar').innerHTML =
+    '<b>MAAOrch</b>' +
+    '<span>门面 <b>19999</b> ' + (h ? '<span class="ok">✓ 活着</span>' : '<span class="err">✗ 不通</span>') + '</span>' +
+    '<span class="dim">上游 19997</span>' +
+    '<span>最近一局：<b>' + (last.tag || '—') + '</b> ' +
+      (last.dur ? '<span class="dim">' + last.dur + 's</span> ' : '') +
+      '<span class="' + verdictCls + '">' + (last.gate || '—') + '</span></span>' +
+    '<span>今日产线：日报 <b>' + ((row['已出日报']) || '—') + '</b> · 补跑 <b>' + ((row['补跑数']) ?? 0) + '</b> 个</span>' +
+    rogue +
+    '<span class="dim">' + new Date().toLocaleTimeString() + '</span>' +
+    '<a href="/status" style="color:#7f8c9b;text-decoration:none">运维面板 →</a>';
+})().catch(() => {});
+</script>
 <div id="app">
   <aside id="sidebar">
     <div class="sidebar-header">
@@ -24,6 +84,8 @@
         <a class="nav-item" data-page="accounts">👤 账号</a>
         <a class="nav-item" data-page="depot">🧮 材料规划</a>
         <a class="nav-item" data-page="logs">📋 动态</a>
+        <a class="nav-item" data-page="auto_mas">🤖 auto-mas</a>
+        <a class="nav-item" data-page="copilot_lab">🧪 作业实验室</a>
         <a class="nav-item" data-page="settings">⚙ 设置</a>
         <a class="mobile-more-btn" onclick="toggleMobileMenu()" style="cursor:pointer;font-size:9px;padding:4px 6px;white-space:nowrap;display:none;flex-direction:column;align-items:center;justify-content:center;min-width:48px;border-top:2px solid transparent;flex:1;min-height:44px;color:var(--text2);text-decoration:none">📌 更多</a>
       </div>
@@ -83,5 +145,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script src="app.js?_v=20260816r1"></script>
+<script src="auto_mas.js?_v=20260921r3"></script>
+<script src="copilot_lab.js?_v=20260915r1"></script>
 </body>
 </html>

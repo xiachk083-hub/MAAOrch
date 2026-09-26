@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>推图 Agent · 751737728 · act54side</title>
+<style>
+:root{--bg1:#1a1a1a;--bg2:#2d2d2d;--card:#242424;--line:#3a3a3a;
+  --orange:#FF6B00;--cyan:#00D9FF;--dim:#7a7a7a;--ok:#8fd400;--bad:#e03e3e;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(160deg,var(--bg1),var(--bg2) 70%,#111);
+  color:#eee;font:14px/1.6 "Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  min-height:100vh;padding:26px 30px 60px}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(#ffffff08 1px,transparent 1px),
+    linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:46px 46px}
+h1{font-size:26px;letter-spacing:.14em;font-weight:800}
+h1 small{font-size:12px;letter-spacing:.3em;color:var(--orange);display:block;
+  font-weight:600;margin-bottom:2px}
+.wrap{max-width:1180px;margin:0 auto;position:relative}
+header{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap;
+  border-bottom:2px solid var(--line);padding-bottom:14px}
+.stats{display:flex;gap:26px;margin-left:auto}
+.stat b{font:700 22px/1 ui-monospace,"Cascadia Mono",Consolas,monospace;
+  color:#fff;display:block}
+.stat span{font-size:11px;letter-spacing:.22em;color:var(--dim)}
+section{margin-top:26px}
+section > h2{font-size:13px;letter-spacing:.28em;color:var(--orange);
+  margin-bottom:12px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:12px}
+.node{position:relative;aspect-ratio:1/1.06;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(180deg,#333,#212121);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;border:0;transition:.15s}
+.node:hover{filter:brightness(1.25)}
+.node .id{font:700 15px/1 ui-monospace,monospace;letter-spacing:.06em}
+.node .st{font-size:11px;color:var(--dim);letter-spacing:.06em}
+.node .stars{font-size:12px;letter-spacing:2px}
+.n3 .stars{color:#ffd23f} .n0 .stars{color:#4a4a4a}
+.n3{background:linear-gradient(180deg,#2f3a2a,#1d241b)}
+.n2{background:linear-gradient(180deg,#333a2a,#1e241b)} .n2 .stars{color:#8fd400}
+.nd .id{color:var(--cyan)} .nd{background:linear-gradient(180deg,#20323a,#16232a)}
+.nl{opacity:.45} .nl .id{color:#666}
+.nbad{background:linear-gradient(180deg,#3a2222,#241717)} .nbad .stars{color:#ff8f8f}
+.nbad .st{color:#ff9c9c}
+.nq{background:linear-gradient(180deg,#3a3320,#241f14)} .nq .stars{color:#ffd88a}
+.nq .st{color:#ffd88a}
+.node .rb{margin-top:2px;font:600 10px/1.2 inherit;letter-spacing:.06em;color:#ff9c9c;
+  background:#3a2222;border:1px solid #7a3a3a;padding:2px 8px;cursor:pointer}
+.node .rb:hover{background:#552b2b;color:#fff}
+/* 突袭按钮：琥珀色，跟普通「重打」区分开（2026-09-17 用户点名要的入口） */
+.node .rb.raid{color:#ffcf8a;background:#3a2f1c;border-color:#8a6a2f}
+.node .rb.raid:hover{background:#553f28;color:#fff}
+/* 换作业按钮：青色（沿候选列表轮换，一份份换着试） */
+.node .rb.next{color:#9fd8d8;background:#1e3232;border-color:#3a6a6a}
+.node .rb.next:hover{background:#284444;color:#fff}
+/* 直接打按钮：绿色（人把游戏点到那关详情页再点它，脚本不导航直接开打） */
+.node .rb.here{color:#a8e08a;background:#1f3319;border-color:#4a7a34}
+.node .rb.here:hover{background:#2b4423;color:#fff}
+/* 一键停止：红色（卡在「已有一次运行在进行中」时按它） */
+nav .rb.stop{color:#ff9c9c;background:#3a1f1f;border-color:#8a3a3a;font-weight:700}
+nav .rb.stop:hover{background:#5a2828;color:#fff}
+/* 总开关（目标/路径）与每行的「▶ 打」 */
+nav .sw{display:inline-flex;gap:6px;align-items:center;padding:2px 8px;font-size:12px;background:#1b1b1b;border:1px solid #3a3a3a;color:#bbb}
+nav .sw label{display:inline-flex;gap:3px;align-items:center;cursor:pointer}
+.node .rb.go{color:#eaffd8;background:#2b4a1f;border-color:#5c8a3a;font-weight:700}
+.node .rb.go:hover{background:#3c6428;color:#fff}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.55)}}
+.npulse{animation:pulse 1.1s ease-in-out infinite}
+.row3{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:start}
+.panel{background:var(--card);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+  padding:16px 18px}
+.panel h3{font-size:12px;letter-spacing:.24em;color:var(--cyan);margin-bottom:10px}
+.cur{font-size:17px;font-weight:700;margin-bottom:4px}
+.cur em{color:var(--orange);font-style:normal}
+.mut{color:var(--dim);font-size:12px}
+pre{font:12px/1.7 ui-monospace,"Cascadia Mono",Consolas,monospace;
+  max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+pre .t{color:var(--dim)} pre .x{color:var(--bad)} pre .v{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td,th{text-align:left;padding:6px 8px;border-bottom:1px solid #333}
+th{color:var(--dim);font-weight:600;letter-spacing:.1em;font-size:11px}
+.tag{display:inline-block;padding:1px 8px;font-size:11px;letter-spacing:.06em;
+  background:#33302a;color:#ffbe6b}
+.tag.bad{background:#3a2424;color:#ff8f8f}
+.tag.ok{background:#26331f;color:#b7e08a}
+.fail td:first-child{color:#ff8f8f}
+dialog{background:var(--card);color:#eee;border:1px solid var(--line);max-width:560px;padding:18px}
+.drop{border:1px dashed #4a4a4a;padding:12px;text-align:center;color:var(--dim);font-size:12px}
+</style></head><body><div class="wrap">
+<header>
+  <h1><small>PUSH AGENT</small>推图 Agent · 751737728 · act54side</h1>
+  <div class="stats">
+    <div class="stat"><b>16/16</b><span>进度</span></div>
+    <div class="stat"><b>75</b><span>理智</span></div>
+    <div class="stat"><b>1h23m</b><span>用时</span></div>
+  </div>
+</header>
+<nav style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px;font-size:13px">
+<a href="http://127.0.0.1:8890/" style="padding:6px 12px;border:1px solid;border-radius:6px;text-decoration:none;background:#1b2026;border-color:#39424c;color:#9fb3c8">「1」B服</a>
+<a href="http://127.0.0.1:8891/" style="padding:6px 12px;border:1px solid;border-radius:6px;text-decoration:none;background:#1b2026;border-color:#39424c;color:#9fb3c8">V 官服</a>
+<a href="http://127.0.0.1:8892/" style="padding:6px 12px;border:1px solid;border-radius:6px;text-decoration:none;background:#3a4a22;border-color:#9fbf4f;color:#d9f0a0;font-weight:700">✅ 9036 官服</a>
+<span class="sw" title="打普通还是打突袭（突袭前提：该关普通已通关）">目标：
+  <label><input type="radio" name="mode" value="normal" checked> 普通</label>
+  <label><input type="radio" name="mode" value="raid"> 突袭</label></span>
+<span class="sw" title="自动导航 = 让脚本自己进活动找关；就在这一屏 = 你已把画面摆到能开打的地方（★最快）">路径：
+  <label><input type="radio" name="path" value="nav" checked> 自动导航</label>
+  <label><input type="radio" name="path" value="here"> <b>就在这一屏</b></label></span>
+<button class="rb" onclick="calibrate()" title="用地图上的黄点核对真实通关情况，把假三星翻回未确认">按游戏画面校准</button>
+<button class="rb" onclick="boxread()" title="读这个号的干员 box —— 挑作业靠它（没有 box 就只能瞎试、白花理智）">扫描干员</button>
+<button class="rb stop" onclick="stopall()" title="停掉这台模拟器上正在跑的推图/MAA 运行器并释放锁 —— 卡在「已有一次运行在进行中」时点它">■ 一键停止</button>
+<span class="tag" title="挑作业用的干员名单（越新越好；过期了点左边「扫描干员」重读）">box：391 人 ｜ 09-17 15:24</span>
+</nav>
+
+<section><h2>实时画面</h2>
+  <img id="live" src="/live.png" alt="（还没有画面：先跑 python tools/screen_watch.py）"
+       style="width:100%;max-width:720px;border:1px solid #39424c;border-radius:6px;background:#000">
+  <p class="mut" style="margin-top:6px">每 3 秒自动刷新（源：<code>tools/screen_watch.py</code> 的
+    <code>watch/751737728/latest.png</code>）。上面这行是页面自己的切片，看"这个号此刻在干什么"最快。</p>
+</section>
+
+<section><h2>关卡网格</h2><div class="grid"><div class="node n3" title="SR-1 ｜ 三星 ｜ act54side_01_101746.json ｜ 第 1 次"><span class="id">SR-1</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('SR-1')">▶ 打</button><button class="rb next" onclick="nextjob('SR-1')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="SR-2 ｜ 三星 ｜ act54side_02_101766.json ｜ 第 2 次"><span class="id">SR-2</span><span class="stars">★★★</span><span class="st">三星·2试</span><button class="rb go" onclick="run('SR-2')">▶ 打</button><button class="rb next" onclick="nextjob('SR-2')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="SR-3 ｜ 三星 ｜ act54side_03_101955.json ｜ 第 2 次"><span class="id">SR-3</span><span class="stars">★★★</span><span class="st">三星·2试</span><button class="rb go" onclick="run('SR-3')">▶ 打</button><button class="rb next" onclick="nextjob('SR-3')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="SR-4 ｜ 三星 ｜ 手打（图内剧情 MAA 瘫痪） ｜ 第 5 次"><span class="id">SR-4</span><span class="stars">★★★</span><span class="st">三星·5试</span><button class="rb go" onclick="run('SR-4')">▶ 打</button><button class="rb next" onclick="nextjob('SR-4')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="SR-5 ｜ 三星 ｜ act54side_05_101823.json ｜ 第 2 次"><span class="id">SR-5</span><span class="stars">★★★</span><span class="st">三星·2试</span><button class="rb go" onclick="run('SR-5')">▶ 打</button><button class="rb next" onclick="nextjob('SR-5')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="SR-6 ｜ 三星 ｜ act54side_06_101802.json ｜ 第 1 次"><span class="id">SR-6</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('SR-6')">▶ 打</button><button class="rb next" onclick="nextjob('SR-6')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="SR-7 ｜ 三星 ｜ act54side_07_101814.json ｜ 第 2 次"><span class="id">SR-7</span><span class="stars">★★★</span><span class="st">三星·2试</span><button class="rb go" onclick="run('SR-7')">▶ 打</button><button class="rb next" onclick="nextjob('SR-7')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n2" title="SR-8 ｜ 二星 ｜ act54side_08_101951.json ｜ 第 1 次"><span class="id">SR-8</span><span class="stars">★★☆</span><span class="st">二星</span><button class="rb go" onclick="run('SR-8')">▶ 打</button><button class="rb next" onclick="nextjob('SR-8')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-1 ｜ 三星 ｜ act54side_ex01_102529.json ｜ 第 1 次"><span class="id">EX-1</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-1')">▶ 打</button><button class="rb next" onclick="nextjob('EX-1')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-2 ｜ 三星 ｜ act54side_ex02_102331.json ｜ 第 1 次"><span class="id">EX-2</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-2')">▶ 打</button><button class="rb next" onclick="nextjob('EX-2')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-3 ｜ 三星 ｜ act54side_ex03_102336.json ｜ 第 1 次"><span class="id">EX-3</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-3')">▶ 打</button><button class="rb next" onclick="nextjob('EX-3')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-4 ｜ 三星 ｜ act54side_ex04_102541.json ｜ 第 2 次"><span class="id">EX-4</span><span class="stars">★★★</span><span class="st">三星·2试</span><button class="rb go" onclick="run('EX-4')">▶ 打</button><button class="rb next" onclick="nextjob('EX-4')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-5 ｜ 三星 ｜ act54side_ex05_102549.json ｜ 第 1 次"><span class="id">EX-5</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-5')">▶ 打</button><button class="rb next" onclick="nextjob('EX-5')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-6 ｜ 三星 ｜ act54side_ex06_102597.json ｜ 第 1 次"><span class="id">EX-6</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-6')">▶ 打</button><button class="rb next" onclick="nextjob('EX-6')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-7 ｜ 三星 ｜ act54side_ex07_102351.json ｜ 第 1 次"><span class="id">EX-7</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-7')">▶ 打</button><button class="rb next" onclick="nextjob('EX-7')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div>
+<div class="node n3" title="EX-8 ｜ 三星 ｜ act54side_ex08_102560.json ｜ 第 1 次"><span class="id">EX-8</span><span class="stars">★★★</span><span class="st">三星</span><button class="rb go" onclick="run('EX-8')">▶ 打</button><button class="rb next" onclick="nextjob('EX-8')" title="同设置下换一份作业（连点就沿候选列表一份份换）">↻ 换作业</button></div></div>
+  <p class="mut" style="margin-top:10px">★★★ 三星 · ★★☆ 二星（已通关）· ◈ 通关（星级未核）· ？=未确认（跑完没看到结算页）· 灰=未解锁/未通关</p>
+  <p class="mut" id="status" style="margin-top:4px">失败格 / 二星格上的「重试」= 让 Agent 再打一次（需先跑 python ui/control_server.py）</p></section>
+
+<section class="row3">
+  <div class="panel">
+    <h3>当前</h3>
+    <div class="cur">最近完成：EX-8</div>
+    <div class="mut">状态源 push_state.json ｜ 更新于 2026-09-17 17:59:29</div>
+  </div>
+  <div class="panel">
+    <h3>实时日志</h3>
+    <pre>=== EX-7 ===
+<span class="t">16:25:16</span> <span class="x">act54side_ex07_102448.json 跑完 44s 编队失败=True</span>
+=== EX-8 ===
+=== EX-7 ===
+=== EX-8 ===
+=== EX-7 ===
+=== EX-8 ===
+=== EX-7 ===
+<span class="t">16:51:38</span> <span class="x">act54side_ex07_102448.json 跑完 210s 编队失败=False</span>
+=== EX-8 ===
+=== EX-7 ===
+<span class="t">17:04:23</span> <span class="x">act54side_ex07_102448.json 跑完 360s 编队失败=False</span>
+=== EX-8 ===
+=== EX-7 ===
+<span class="t">17:31:34</span> <span class="x">act54side_ex07_102448.json 跑完 216s 编队失败=False</span>
+=== EX-8 ===
+=== EX-7 ===
+=== EX-7 ===
+<span class="t">17:45:46</span> <span class="x">act54side_ex07_102351.json 跑完 303s 编队失败=False</span>
+=== EX-8 ===
+<span class="t">17:59:13</span> <span class="x">act54side_ex08_102560.json 跑完 615s 编队失败=False</span></pre>
+  </div>
+</section>
+
+<section><h2>尝试历史</h2><div class="panel"><table>
+  <tr><th>关卡</th><th>作业</th><th>结果</th></tr><tr class=''><td>EX-7</td><td>act54side_ex07_102448</td><td><span class='tag ok'>战斗完成</span></td></tr>
+<tr class=''><td>EX-7</td><td>act54side_ex07_102351</td><td><span class='tag ok'>战斗完成</span></td></tr>
+<tr class=''><td>EX-8</td><td>act54side_ex08_102560</td><td><span class='tag ok'>战斗完成</span></td></tr>
+</table></div></section>
+
+<section><h2>数据来源</h2><div class="panel">
+  <div class="mut">生成时间 2026-09-17 18:56 ｜ 数据来自 auto_push / maa_* 日志（页面只读）｜ 重试走 ui/control_server.py 的本机通道</div>
+  <div class="drop" style="margin-top:10px">把 auto_push.log 或 batch54_log.json 拖到这里，可临时查看</div>
+</div></section>
+</div>
+<script>
+const rows=[["", "=== EX-7 ==="], ["16:25:16", "act54side_ex07_102448.json 跑完 44s 编队失败=True"], ["", "=== EX-8 ==="], ["", "=== EX-7 ==="], ["", "=== EX-8 ==="], ["", "=== EX-7 ==="], ["", "=== EX-8 ==="], ["", "=== EX-7 ==="], ["16:51:38", "act54side_ex07_102448.json 跑完 210s 编队失败=False"], ["", "=== EX-8 ==="], ["", "=== EX-7 ==="], ["17:04:23", "act54side_ex07_102448.json 跑完 360s 编队失败=False"], ["", "=== EX-8 ==="], ["", "=== EX-7 ==="], ["17:31:34", "act54side_ex07_102448.json 跑完 216s 编队失败=False"], ["", "=== EX-8 ==="], ["", "=== EX-7 ==="], ["", "=== EX-7 ==="], ["17:45:46", "act54side_ex07_102351.json 跑完 303s 编队失败=False"], ["", "=== EX-8 ==="], ["17:59:13", "act54side_ex08_102560.json 跑完 615s 编队失败=False"]];
+const API = location.protocol === "file:" ? "http://127.0.0.1:8898" : "";  // 文件打开时直连本机通道
+const TOKEN = "";
+async function _post(path, label){
+  // **失败一定要"看得见"**（2026-09-17 用户："我为什么点半天没有反应呢"）:
+  // 原来失败只写进角落那行小状态栏，很容易漏看 ⇒ 现在除了写状态栏还弹窗。
+  const box = document.getElementById("status");
+  box.textContent = `已发起${label} …`;
+  try {
+    const r = await fetch(`${API}${path}`,
+      {method: "POST", headers: {"X-Token": TOKEN}});
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) {
+      box.textContent = `已发起${label}（pid ${j.pid} ｜ 日志 ${j.log}）`;
+    } else {
+      const m = `发起失败：${j.error || r.status}`;
+      box.textContent = m; alert(m);
+    }
+  } catch (e) {
+    const m = `发起失败：连不上通道（${e.message}）—— 先跑 python ui/control_server.py`;
+    box.textContent = m; alert(m);
+  }
+}
+async function retry(stage){ return run(stage); }
+function sw(){
+  // 顶部两个开关：**目标**（普通/突袭）、**路径**（自动导航 / 就在这一屏）
+  return {mode: document.querySelector('input[name=mode]:checked').value,
+          here: document.querySelector('input[name=path]:checked').value === 'here' ? 1 : 0};
+}
+const PICK = {};                    // 每关点了几次「换作业」→ 沿候选列表轮换（同设置换下一份）
+async function run(stage){
+  const o = sw();
+  return _post(`/run/${stage}?mode=${o.mode}&here=${o.here}`,
+               `打 ${stage}（${o.mode === 'raid' ? '突袭' : '普通'}·${o.here ? '就在这一屏' : '自动导航'}）`);
+}
+async function nextjob(stage){
+  const o = sw(); PICK[stage] = (PICK[stage] || 0) + 1;
+  return _post(`/run/${stage}?mode=${o.mode}&here=${o.here}&pick=${PICK[stage]}`,
+               `换作业打 ${stage}（从第 ${PICK[stage] + 1} 份候选起）`);
+}
+async function boxread(){ return _post("/boxread", "扫描干员（读 box）"); }
+async function stopall(){
+  // 一键停止：在跑的进程不一定是我这条通道起的（命令行/上次重启前起的），所以后端按**模拟器**清场
+  if (!confirm("停掉这台模拟器上正在跑的推图 / MAA 运行器，并释放锁？")) return;
+  return _post("/stop", "一键停止");
+}
+async function calibrate(){
+  // 按**游戏画面上的黄点**校准状态：纠正"没打过却记了三星"的假通关
+  // （2026-09-17 用户："已经通关的关卡没办法让他再打吗，有些其实是误判"）
+  const box = document.getElementById("status");
+  box.textContent = "已发起「按游戏画面校准」…（用地图黄点纠正假通关，跑完刷新本页）";
+  try {
+    const r = await fetch(`${API}/calibrate`, {method: "POST", headers: {"X-Token": TOKEN}});
+    const j = await r.json().catch(() => ({}));
+    box.textContent = r.ok ? `校准已启动（pid ${j.pid} ｜ 日志 ${j.log}）—— 跑完刷新本页`
+                           : `校准失败：${j.error || r.status}`;
+  } catch (e) {
+    box.textContent = `校准失败：连不上通道（${e.message}）`;
+  }
+}
+// 实时画面每 3 秒刷一次（加时间戳绕开缓存）——"这个号此刻在干什么"最快的一眼
+setInterval(() => {
+  const el = document.getElementById("live");
+  if (el) el.src = `/live.png?t=${Date.now()}`;
+}, 3000);
+document.querySelector('.drop').addEventListener('dragover',e=>e.preventDefault());
+document.querySelector('.drop').addEventListener('drop',async e=>{
+  e.preventDefault();const f=e.dataTransfer.files[0];if(!f)return;
+  const t=await f.text();const pre=document.querySelector('pre');
+  pre.textContent=t.split('\n').slice(-40).join('\n');
+});
+</script></body></html>

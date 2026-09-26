@@ -1,0 +1,15 @@
+0.1 == stage1 begins
+108.5 proj projectButton42 RevTracker
+155.8 proj projectButton1 Improved AutoClippers
+233.5 proj projectButton7 Improved Wire Extrusion
+358.5 proj projectButton4 Even Better AutoClippers
+533.5 proj projectButton8 Optimized Wire Extrusion
+783.5 proj projectButton5 Optimized AutoClippers
+1133.5 proj projectButton26 WireBuyer
+1508.5 proj projectButton9 Microlattice Shapecasting
+2008.5 proj projectButton21 Algorithmic Trading
+2058.6 proj projectButton3 Creativity
+2583 proj projectButton6 Limerick
+2775 proj projectButton10 Spectral Froth Annealment
+3405 proj projectButton13 Lexical Processing
+3433 proj projectButton11 New Slogan

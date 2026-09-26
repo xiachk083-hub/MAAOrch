@@ -1,0 +1,16 @@
+0.1 == stage1 begins
+108.5 proj projectButton42 RevTracker
+158.5 proj projectButton3 Creativity
+186.3 proj projectButton1 Improved AutoClippers
+230.9 proj projectButton6 Limerick
+254.4 proj projectButton7 Improved Wire Extrusion
+339.3 proj projectButton13 Lexical Processing
+381.4 proj projectButton14 Combinatory Harmonics
+389.8 proj projectButton4 Even Better AutoClippers
+449.3 proj projectButton11 New Slogan
+534.6 proj projectButton15 The Hadwiger Problem
+586.6 proj projectButton17 The Tóth Sausage Conjecture
+592.9 proj projectButton8 Optimized Wire Extrusion
+694.9 proj projectButton19 Donkey Space
+823.5 proj projectButton12 Catchy Jingle
+873.5 proj projectButton5 Optimized AutoClippers

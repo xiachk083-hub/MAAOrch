@@ -1,0 +1,83 @@
+{
+ "_meta": {
+  "stage": "act16side_ex02 (GA-EX-2 限量蒙布朗)",
+  "generated": "2026-09-16",
+  "provenance": "zcode 读数据 + 人判断修正 —— **不是** AI 自主发现。真正泛化能力的判据应是：AI 自己读天赋字段、自己发现补弹来源、自己否掉错误假设。",
+  "sources": [
+   "data/_level_act16side_ex02.json",
+   "data/_enemy_db.json"
+  ]
+ },
+ "icecream_machine": {
+  "grid": [
+   5,
+   3
+  ],
+  "skill_id": "sktok_wpnsts_1",
+  "name": "拉特兰式冰淇淋",
+  "ally_effect": {
+   "text": "周围友方单位每 2 秒回复 1 点技力",
+   "value": "+0.5 SP/s",
+   "source": "sktok_wpnsts_1 技能描述"
+  },
+  "enemy_capture_effect": {
+   "text": "被夺取后立刻对周围所有友方单位造成 1000 点法术伤害并晕眩 5 秒",
+   "value": "1000 法伤 + 5s 晕眩",
+   "source": "sktok_wpnsts_1 技能描述"
+  },
+  "hp": "?",
+  "def": "?",
+  "res": "?",
+  "hp_note": "关卡文件里未找到 traps/devices 字段（该文件只有 runes/routes/waves），此前提到的 25000 血无来源，标为未验证",
+  "refuted_claim": {
+   "claim": "冰淇淋机给敌方炮手回弹药",
+   "verdict": "REFUTED",
+   "evidence": "圣堂射手的补弹来自其自身天赋 AddBulletTrigger.interval=8.0（data/_enemy_db.json）、与外部装置无关；冰淇淋机技能描述里没有任何给敌方补弹的字段",
+   "impact": "若按此因果写策略，资源会投向不存在的因果 —— 已阻止"
+  }
+ },
+ "gunners": {
+  "圣堂射手": {
+   "id": "enemy_10088_hlsnip",
+   "ammo_max": 1,
+   "reload": {
+    "mechanism": "自身天赋，每 8 秒补弹",
+    "interval_s": 8.0,
+    "source": "talentBlackboard.AddBulletTrigger.interval"
+   },
+   "behavior": "未携带弹药时原地装弹（装弹期 delay_add_bullet=4.0s）",
+   "range_radius": 99.0,
+   "range_note": "超远距离攻击",
+   "source": "data/_enemy_db.json → enemy_10088_hlsnip (talentBlackboard / skills)"
+  },
+  "圣堂剑士": {
+   "id": "enemy_10087_hlchgr",
+   "ammo_max": 5,
+   "behavior": "消耗弹药使自身移速与攻击力永久提升",
+   "interval_s": 6.0,
+   "source": "description + blackboard.SkillTrigger.interval"
+  },
+  "萨科塔之眼": {
+   "id": "enemy_10084_hlegle",
+   "behavior": "攻击时尝试夺走目标 1 发弹药；若无法夺走则造成高额物理伤害",
+   "source": "description + blackboard DamageOrBullet.attack@minus_bullet=1.0"
+  }
+ },
+ "decision_priority_verified": [
+  "1. 保/夺冰淇淋机 —— 理由是被证实的两条：周围友军 +0.5 SP/s；避免敌方夺取时的 1000 法伤+5s 晕眩砸高台。**不是**为了断弹药。",
+  "2. 对圣堂射手做装弹窗口压制 —— 上限 1、8 秒补弹、装弹 4 秒，装弹期是它唯一稳定的输出空档。",
+  "3. 堵第一波 → 保费用 → 补位（原策略不变）。"
+ ],
+ "unverified_claims": [
+  {
+   "claim": "敌方会主动夺取冰淇淋机",
+   "why_unverified": "1000 法伤+晕眩是机制描述，不是观察到的敌方行为",
+   "how_to_verify": "跑一局每 5 秒截冰淇淋机区域的图，记录是否变色、变色时刻；并与高台干员阵亡时刻对齐"
+  },
+  {
+   "claim": "冰淇淋机 HP=25000",
+   "why_unverified": "关卡文件无 traps/devices 字段，无来源",
+   "how_to_verify": "实机观察夺取所需时间，或从其他数据源补"
+  }
+ ]
+}

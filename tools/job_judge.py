@@ -28,40 +28,6 @@ import duel_model as DM
 RANGED = ("CASTER", "MEDIC", "SNIPER", "SUPPORT")
 
 
-def _lane_cells(stage, raw, routes, start):
-    """该路的格集合（BFS 路径；飞行为直线近似）。"""
-    for r in raw.get("routes") or []:
-        sp = r.get("startPosition") or {}
-        if (sp.get("col"), sp.get("row")) == start:
-            ep = r.get("endPosition") or {}
-            en = (ep.get("col"), ep.get("row"))
-            break
-    for a, b, p in routes:
-        if a == start:
-            return set(p) if p else set(ES.line_cells(start, en))
-    return set()
-
-
-
-def _lane_order(stage, raw, routes, start):
-    """该路**按行进顺序**的格列表（BFS 路径；飞行为直线近似）。
-
-    用途：算"敌人从出怪口走到某格用了多久" ⇒ 判断挡位来不来得及站在那格前。
-    `_lane_cells` 返回的是集合，没有顺序，不能拿来找下标。
-    """
-    for a, b, p in routes:
-        if a != start:
-            continue
-        if p:
-            return [tuple(c) for c in p]
-        for r in raw.get("routes") or []:
-            sp = r.get("startPosition") or {}
-            if (sp.get("col"), sp.get("row")) == start:
-                ep = r.get("endPosition") or {}
-                return [tuple(c) for c in ES.line_cells(start, (ep.get("col"), ep.get("row")))]
-    return []
-
-
 def judge_full(stage="act16side_ex02", mults=(1.0, 0.5), masteries=(0, 9), verbose=True):
     opts = CM.load_level_options(stage)
     costs, elites = CM.load_char_costs(), CM.load_elites()
@@ -73,18 +39,23 @@ def judge_full(stage="act16side_ex02", mults=(1.0, 0.5), masteries=(0, 9), verbo
     n2t, rng, ops = V.ranges_payload(jobs)
 
     # 每条路的格集合 + 该路的出怪（到达时刻按多套系数算）
+    # ⚠️ 格集合**用该路线自己的路径**（`w["cells"]`，viz_plan 已按 `route_index` 取好）：
+    # 同一出发点的多条路线走向可能完全不同（PA-1 实测起点 (1,0) 有 4 条，11 步 vs 21 步），
+    # 按"起点"查去重表会把别的路线的格子并进来 / 路径与罚站张冠李戴
+    # （2026-09-19 修，同批 bug 见 docs/CLEARING_AGENT.md §8d-2）
     lanes = {}
     for w in waves:
         st = tuple(w["start"])
+        path_cells = [tuple(c) for c in (w.get("cells") or [])]
         if st not in lanes:
-            lanes[st] = {"cells": _lane_cells(stage, raw, routes, st), "spawns": []}
-        cells = lanes[st]["cells"]
+            lanes[st] = {"cells": set(), "spawns": []}
+        lanes[st]["cells"] |= set(path_cells)
         arr = {}
         for m in mults:
-            r = ES.calc_arrival(w["t"] or 0, sorted(cells), w.get("key"), mult=m,
-                                approx=w.get("approx"))
+            r = ES.calc_arrival(w["t"] or 0, path_cells, w.get("key"), mult=m,
+                                approx=w.get("approx"), waits=w.get("wait"))
             arr[m] = r.get("arrival")
-        lanes[st]["spawns"].append({"w": w, "arr": arr,
+        lanes[st]["spawns"].append({"w": w, "arr": arr, "path": path_cells,
                                     "arr_max": max(v for v in arr.values() if v is not None)
                                     if any(v is not None for v in arr.values()) else None})
 
@@ -109,14 +80,23 @@ def judge_full(stage="act16side_ex02", mults=(1.0, 0.5), masteries=(0, 9), verbo
         for st, ln in lanes.items():
             for s in ln["spawns"]:
                 if s["arr_max"] is None:
+                    # **fail-closed**：算不出到门时刻 ⇒ **显式报「判不了」**，绝不静默跳过。
+                    # 静默跳过会让"没判"看起来像"没问题"：修前全量 333 条路里 212 条（64%）就这么消失了
+                    # （与「安全闸必须 fail-closed」同源，2026-09-19 修）
+                    rows.append({"job": jb.get("title"), "src": jb.get("src"), "lane": st,
+                                 "enemy": s["w"].get("name"), "arr": s["arr"],
+                                 "cls": "判不了",
+                                 "why": "到门时刻算不出（%s）：缺路径或缺移速，不能当「没问题」"
+                                        % (s["w"].get("why") or "?")})
                     continue
+                spath = set(s["path"])
                 # 谁能碰到这条路（最早落地时刻）
                 touchers = []
                 for d, act in zip(best, dep_acts):
                     is_melee = (act.get("profession") not in RANGED)
-                    on_path = act.get("location") and tuple(act["location"]) in ln["cells"]
+                    on_path = act.get("location") and tuple(act["location"]) in spath
                     cells = V.range_cells(act, n2t, rng, ops, W, H)
-                    hit = cells & ln["cells"]
+                    hit = cells & spath
                     if (is_melee and on_path) or hit:
                         touchers.append((d, act, on_path, len(hit)))
                 if not touchers:
@@ -170,10 +150,9 @@ def judge_full(stage="act16side_ex02", mults=(1.0, 0.5), masteries=(0, 9), verbo
                                                  (V.load_box().get(act["name"]) or {}).get("level"))
                     if not bop or not (bop.get("block_cnt") or 0):
                         continue
-                    # 敌人在该格前落地才挡得住
+                    # 敌人在该格前落地才挡得住（用**该路线自己**的格序列找下标）
                     try:
-                        idx = [c for c in _lane_order(stage, raw, routes, st)].index(
-                            tuple(act["location"]))
+                        idx = list(s["path"]).index(tuple(act["location"]))
                     except (ValueError, TypeError):
                         idx = 0
                     spd = ES.get_speed(s["w"].get("key"), mult=min(mults))

@@ -159,6 +159,18 @@ def find_adb() -> str | None:
         except: pass
     return None
 
+def local_mumu_vms_dir() -> str:
+    """本机 MuMu 的 vms 目录 —— 从 MuMuManager.exe 的位置反推（<安装目录>/nx_main/MuMuManager.exe）。
+
+    反推比写死路径通用（目标机装在哪都能命中）；写死的 D:\\Xiach\\MuMuPlayer\\vms 只是本机兜底。
+    """
+    cli = find_mumu_cli()
+    if cli:
+        cand = Path(cli).resolve().parent.parent / "vms"
+        if cand.is_dir():
+            return str(cand)
+    return r"D:\Xiach\MuMuPlayer\vms"
+
 def detect_emu_adb(emu_idx) -> str:
     """直接检测模拟器 ADB 端口（MuMuManager 单查实际值 — 不用公式）。
 
@@ -167,30 +179,70 @@ def detect_emu_adb(emu_idx) -> str:
     mumu-cli 在 MuMu 12 上索引错位（返回别的模拟器端口），不可用。
     返回 "127.0.0.1:<port>" 或 ""（检测失败）。
     """
+    # 先走经过生产验证的批量探测（`info --vmindex all` + errors="replace"）。
+    # 2026-09-14 实测: 本机（MuMuManager 装在 D:\Xiach\MuMuPlayer，不在下面的候选路径里）
+    # 单查这条路会落到 `where MuMuManager.exe`，它把中文提示写进 stderr（GBK），
+    # text=True 严格解码抛 UnicodeDecodeError → 被 except 吞掉 → 静默返回 ""。
+    # 后果: GET /api/account/{idx}/screenshot 拿不到 adb 端口（画面空白），
+    # 且没有任何报错线索。批量探测那条路不带这个坑。
+    try:
+        for e in detect_emu_instances():
+            if str(e.get("index", "")) == str(emu_idx) and e.get("adb_port"):
+                return "127.0.0.1:" + str(e["adb_port"])
+    except Exception:
+        pass
     try:
         import subprocess as _sp
-        mm = None
-        cand = Path(os.environ.get("LOCALAPPDATA", "")) / "MuMuPlayerGlobal-12.0" / "shell" / "MuMuManager.exe"
+        # 先用已经验证过的定位器（它会扫盘，本机能找到 D:\Xiach\MuMuPlayer\nx_main）；
+        # 下面这份硬编码候选里没有本机路径，只用它当第二选择。
+        mm = Path(find_mumu_cli()) if find_mumu_cli() else None
         for base in ("E:/MuMu Player 12/nx_main",
                      "D:/MuMu Player 12/nx_main",
                      "E:/Program Files/MuMu Player 12/nx_main",
                      "D:/Program Files/MuMu Player 12/nx_main"):
+            if mm is not None:
+                break
             p = Path(base) / "MuMuManager.exe"
             if p.exists():
                 mm = p
                 break
         if mm is None:
-            r = _sp.run(["where", "MuMuManager.exe"], capture_output=True, text=True, timeout=5)
+            # errors="replace" 必须有 —— 否则中文 Windows 上 stderr 的 GBK 提示会
+            # 让 text=True 严格解码抛异常，被下面的 except 吞成"检测失败"
+            r = _sp.run(["where", "MuMuManager.exe"], capture_output=True, text=True,
+                        timeout=5, encoding="utf-8", errors="replace")
             if r.returncode == 0 and r.stdout.strip():
                 mm = Path(r.stdout.strip().splitlines()[0])
-        if mm is None:
-            return ""
-        r = _sp.run([str(mm), "info", "-v", str(emu_idx)],
-                    capture_output=True, text=True, timeout=8,
-                    creationflags=CF, encoding="utf-8", errors="replace")
-        if r.returncode == 0:
-            d = json.loads(r.stdout.lstrip(chr(0xFEFF)).strip())
-            port = d.get("adb_port")
+        if mm is not None:
+            # **注意别在这里 return ""**（2026-09-17 修）: 原来 mm 找不到就直接 return，
+            # 于是下面那条"读 vm_config.json"的兜底永远不会执行。
+            r = _sp.run([str(mm), "info", "-v", str(emu_idx)],
+                        capture_output=True, text=True, timeout=8,
+                        creationflags=CF, encoding="utf-8", errors="replace")
+            if r.returncode == 0:
+                d = json.loads(r.stdout.lstrip(chr(0xFEFF)).strip())
+                port = d.get("adb_port")
+                if port:
+                    return "127.0.0.1:" + str(port)
+    except Exception:
+        pass
+    # 最后一道网：直接读实例配置里的真实端口映射（2026-09-17 实测必需）。
+    # 本机 MuMu 12 的 `MuMuManager info -v N` / `info -v all` 只返回 11 个元数据字段、
+    # **不含 adb_port**（端口在 vm_config.json 的 vm.nat.port_forward.adb.host_port），
+    # 而 detect_emu_instances() 拿到 CLI 输出就提前 return、走不到目录扫描，
+    # 目录扫描的候选目录里又没有本机的 D:\Xiach\MuMuPlayer\vms
+    # ⇒ 三条路全空、detect_emu_adb 恒返回 ""、maa_copilot_run.py 直接退
+    #   "取不到模拟器 adb 端口（MuMuManager）"，MAA 一秒没跑就结束（日志只有那一行）。
+    # 这里读的是**配置里写明的转发映射**，不是会漂移的公式端口（16384+32*idx）。
+    try:
+        for base in (local_mumu_vms_dir(), *MUMU_INSTANCE_DIRS):
+            p = Path(base) / f"MuMuPlayer-12.0-{emu_idx}" / "configs" / "vm_config.json"
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            port = ((d.get("vm") or {}).get("nat") or {}).get("port_forward", {}) \
+                .get("adb", {}).get("host_port")
             if port:
                 return "127.0.0.1:" + str(port)
     except Exception:

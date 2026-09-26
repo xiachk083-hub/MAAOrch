@@ -38,8 +38,14 @@ def _create_instance(inst: Path, source: Path) -> bool:
             src_sub = source / sub
             dst_sub = inst / sub
             if src_sub.exists() and not dst_sub.exists():
-                _sp.run(["cmd", "/c", "mklink", "/J", str(dst_sub), str(src_sub)],
-                        capture_output=True, timeout=5, creationflags=_sp.CREATE_NO_WINDOW)
+                r = _sp.run(["cmd", "/c", "mklink", "/J", str(dst_sub), str(src_sub)],
+                            capture_output=True, timeout=5, creationflags=_sp.CREATE_NO_WINDOW)
+                # junction 必须真建成：mklink rc=0 且 dst 是目录。失败时实例是半成品
+                # （MAA.exe 已复制、externals/Python 缺失），会被 (inst/"MAA.exe").exists()
+                # 误判为可用实例 → 抛错走下方统一清理，绝不返回成功。
+                if r.returncode != 0 or not dst_sub.is_dir():
+                    raise RuntimeError(
+                        f"mklink /J {sub} 失败 (rc={r.returncode}, dir={dst_sub.is_dir()})")
         # resource 物理复制（不用 junction — 2026-08-14 凌晨根因）：
         # MAA 6.16 启动时把 cache 里 ETag 下载的新资源「移动」到 resource/
         # （Moved cache\resource\tasks.json → resource\tasks.json）。junction
@@ -85,6 +91,16 @@ def _create_instance(inst: Path, source: Path) -> bool:
                     pass
         return True
     except Exception:
+        # 创建中途失败 → 清掉这个半成品实例（只删本实例，不碰 source / 其他实例池），
+        # 否则重试时 MAA.exe 还在、junction 已缺失，被 (inst/"MAA.exe").exists()
+        # 误判为「已就绪」。rmtree 被占用挡住时，退一步拿掉 MAA.exe 这个就绪标志。
+        try:
+            shutil.rmtree(str(inst))
+        except Exception:
+            try:
+                (inst / "MAA.exe").unlink(missing_ok=True)
+            except Exception:
+                pass
         return False
 
 
@@ -164,12 +180,15 @@ def _delete_instances(pool: Path) -> None:
         pid_file = inst_dir / ".pid"
         running = False
         if pid_file.exists():
+            # An existing marker is inconclusive until tasklist confirms the PID is gone.
+            running = True
             try:
                 pid = int(pid_file.read_text().strip())
                 r = _sp.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
                             capture_output=True, text=True, timeout=2,
                             creationflags=_sp.CREATE_NO_WINDOW)
-                running = str(pid) in r.stdout
+                if r.returncode == 0 and isinstance(r.stdout, str) and r.stdout.strip():
+                    running = str(pid) in r.stdout
             except Exception:
                 pass
         if running:

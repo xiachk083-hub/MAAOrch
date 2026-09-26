@@ -1,0 +1,2050 @@
+{
+    "instances": [
+        {
+            "uid": "613f6094-a3bc-4f08-bc57-4a3e31bf7597",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "62ad979c-e754-4662-bd41-bb6e5ef7d845",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "906ad3dc-4f62-4cab-99c5-6fb7b7c22acf",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "3ae71a5e-fad8-496c-877b-920f5d48aace",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "15dda9a2-f0d0-4ff7-8d9c-1a11829c1732",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "425a4917-9bbf-4af2-8e52-a14aa54c6133",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "18ae7c1e-6245-490e-abc9-c35f6c890502",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "bb6db695-dd9d-43d1-9a22-cca5b8dbdf2d",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "25f3fa7d-79e3-4514-b49d-08c96b3080b3",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "12e0d7dd-11d4-4479-a076-2e1deb2e3306",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "9c11f966-7f17-4aac-8872-b11a81202948",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "0d784092-722d-458f-a45a-7e090bca3630",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "3398596a-24ae-4279-93a9-841964bbaa64",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "e1ec0fb2-7699-42eb-9280-0e7f2018080d",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "bd94bfb1-6b9f-477d-9d78-f1d0ea32d89a",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "e7b53f17-83e4-4e04-802c-058f6eae3d10",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "93c52617-fd92-4fac-9051-7503e2e34b37",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "e07ad454-d00a-4d71-a7bb-b262a8cce9d9",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "53b45397-3be7-4c07-bbf6-b3b897f54068",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "5b092557-71b4-4ef3-9b22-67e262745b38",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "be064043-a9ed-4fbf-9d2d-a559c89a0c29",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "e67efe37-40e0-4d39-97bb-387f0c7a8a4d",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "519b5de8-4baa-4657-9d46-e0addbab4598",
+            "type": "QueueConfig"
+        },
+        {
+            "uid": "3aca0f4e-a26b-4cde-b127-1734f6332a8a",
+            "type": "QueueConfig"
+        }
+    ],
+    "613f6094-a3bc-4f08-bc57-4a3e31bf7597": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时1",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "369e6fef-3da2-4383-94c0-b8a563521649",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "fb97b96e-837a-4085-820a-18a6e639dd52",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "ec7f0014-8e38-4d34-9f01-8e916808d4ee",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "2a5662a0-ab87-4e54-8a61-e90f7bc65b13",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "eabf0491-e5dd-4eb5-b62c-7df1faeca149",
+                        "type": "QueueItem"
+                    }
+                ],
+                "369e6fef-3da2-4383-94c0-b8a563521649": {
+                    "Info": {
+                        "ScriptId": "fdbf292f-16dc-487b-8950-b638b0ed39d7"
+                    }
+                },
+                "fb97b96e-837a-4085-820a-18a6e639dd52": {
+                    "Info": {
+                        "ScriptId": "b81efdbb-b23b-44bc-8c6a-9fd99cf6f381"
+                    }
+                },
+                "ec7f0014-8e38-4d34-9f01-8e916808d4ee": {
+                    "Info": {
+                        "ScriptId": "3caa906d-f317-4079-bde9-751608911697"
+                    }
+                },
+                "2a5662a0-ab87-4e54-8a61-e90f7bc65b13": {
+                    "Info": {
+                        "ScriptId": "0de3f480-ed82-43c4-ac96-e4c18957d968"
+                    }
+                },
+                "eabf0491-e5dd-4eb5-b62c-7df1faeca149": {
+                    "Info": {
+                        "ScriptId": "37b7aa5d-0378-4985-8d63-d6ff0f36a4f9"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "16812bdf-7b7f-498e-843d-5a0d33577a75",
+                        "type": "TimeSet"
+                    }
+                ],
+                "16812bdf-7b7f-498e-843d-5a0d33577a75": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:00"
+                    }
+                }
+            }
+        }
+    },
+    "62ad979c-e754-4662-bd41-bb6e5ef7d845": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:03"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时2",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "072acdaa-72e5-47f7-a5e1-81c7dfa41bbd",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "d1bd5f70-257f-44b6-8ca2-23b3e7069217",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "960d6c9e-1f22-40c2-8bdc-28e088d8b140",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "8fac0f61-738f-471f-85b5-633e1bfd4f72",
+                        "type": "QueueItem"
+                    }
+                ],
+                "072acdaa-72e5-47f7-a5e1-81c7dfa41bbd": {
+                    "Info": {
+                        "ScriptId": "400ef5d6-fc7e-44c7-bb2a-bd0125b5a603"
+                    }
+                },
+                "d1bd5f70-257f-44b6-8ca2-23b3e7069217": {
+                    "Info": {
+                        "ScriptId": "7f2725f0-d2b1-478a-ae95-510f25057876"
+                    }
+                },
+                "960d6c9e-1f22-40c2-8bdc-28e088d8b140": {
+                    "Info": {
+                        "ScriptId": "874d6abd-bc2b-4e99-a60e-50bf88be5a2e"
+                    }
+                },
+                "8fac0f61-738f-471f-85b5-633e1bfd4f72": {
+                    "Info": {
+                        "ScriptId": "3f2702e6-565f-4643-aa4c-f7bad2041122"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "3bbab3e4-9d81-40ba-a17c-ef8d4b07b13d",
+                        "type": "TimeSet"
+                    }
+                ],
+                "3bbab3e4-9d81-40ba-a17c-ef8d4b07b13d": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:03"
+                    }
+                }
+            }
+        }
+    },
+    "906ad3dc-4f62-4cab-99c5-6fb7b7c22acf": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:06"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时3",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "ce0cdad3-4f57-455b-a974-c0f3274b0177",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "db194227-e6b5-4292-9c43-b9ed46728609",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "37a16fd6-d446-49ef-bda8-81447e60a64b",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "d32d56fe-2b89-4fdf-89cc-c7b36b3ffde4",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "28d7a8e1-df7a-4cc5-aa25-f9db56296857",
+                        "type": "QueueItem"
+                    }
+                ],
+                "ce0cdad3-4f57-455b-a974-c0f3274b0177": {
+                    "Info": {
+                        "ScriptId": "02473d14-f083-4dcd-b694-aa6b18bfc04f"
+                    }
+                },
+                "db194227-e6b5-4292-9c43-b9ed46728609": {
+                    "Info": {
+                        "ScriptId": "c324cd54-52c7-4cb4-aa8e-397ef31c30e9"
+                    }
+                },
+                "37a16fd6-d446-49ef-bda8-81447e60a64b": {
+                    "Info": {
+                        "ScriptId": "9a8d767c-6712-42c3-bd1a-56af8a29071b"
+                    }
+                },
+                "d32d56fe-2b89-4fdf-89cc-c7b36b3ffde4": {
+                    "Info": {
+                        "ScriptId": "32c6915e-fd12-441b-b4f9-3fbab3f7d843"
+                    }
+                },
+                "28d7a8e1-df7a-4cc5-aa25-f9db56296857": {
+                    "Info": {
+                        "ScriptId": "785155e5-7338-4475-9669-745abffa3459"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "017f27f7-ca80-4257-a3d9-2e794805f5c3",
+                        "type": "TimeSet"
+                    }
+                ],
+                "017f27f7-ca80-4257-a3d9-2e794805f5c3": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:06"
+                    }
+                }
+            }
+        }
+    },
+    "3ae71a5e-fad8-496c-877b-920f5d48aace": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:09"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时4",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "82e4eaf0-ac5c-4656-8a80-6f55ac108541",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "f3d1f6c2-88ae-4ae8-95b0-c8a194fcf6d5",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "df55239f-9c4b-4700-bdc1-eb2badbeb109",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "dc510a65-4e60-4d71-83f8-9dafdb40efea",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "5e791419-9fe7-4402-9615-cea2589e2f80",
+                        "type": "QueueItem"
+                    }
+                ],
+                "82e4eaf0-ac5c-4656-8a80-6f55ac108541": {
+                    "Info": {
+                        "ScriptId": "b53648bb-279b-4ceb-845d-83025e0bf44e"
+                    }
+                },
+                "f3d1f6c2-88ae-4ae8-95b0-c8a194fcf6d5": {
+                    "Info": {
+                        "ScriptId": "b9468547-be98-490c-bfed-293b8ad6e3e1"
+                    }
+                },
+                "df55239f-9c4b-4700-bdc1-eb2badbeb109": {
+                    "Info": {
+                        "ScriptId": "c3f07722-7151-4b19-9e40-230cd92d52a9"
+                    }
+                },
+                "dc510a65-4e60-4d71-83f8-9dafdb40efea": {
+                    "Info": {
+                        "ScriptId": "6f22664f-c716-4152-ad3b-ce4ee48585bb"
+                    }
+                },
+                "5e791419-9fe7-4402-9615-cea2589e2f80": {
+                    "Info": {
+                        "ScriptId": "dd5053ce-e711-4b04-9776-6151be1cd6e4"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "f0f681a0-a4a2-4c41-988a-cdb2f111b2aa",
+                        "type": "TimeSet"
+                    }
+                ],
+                "f0f681a0-a4a2-4c41-988a-cdb2f111b2aa": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:09"
+                    }
+                }
+            }
+        }
+    },
+    "15dda9a2-f0d0-4ff7-8d9c-1a11829c1732": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:12"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时5",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "8fe97521-8fa3-4c1f-b188-aa6907f673c6",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "64f98701-f8fa-4813-82ed-2aee15a6ee50",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "ca4c2956-b3a6-4a3e-8716-5a23a57aed94",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "da2534d5-262e-45cd-a3b2-298adecefb69",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "08100396-ac76-4f52-964c-b3168625a01f",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "5d822b54-f094-4891-a178-120957ff2fbf",
+                        "type": "QueueItem"
+                    }
+                ],
+                "8fe97521-8fa3-4c1f-b188-aa6907f673c6": {
+                    "Info": {
+                        "ScriptId": "8e075acb-b051-418d-8054-ecba3d58a34f"
+                    }
+                },
+                "64f98701-f8fa-4813-82ed-2aee15a6ee50": {
+                    "Info": {
+                        "ScriptId": "52dee0e6-35dd-4f96-b05e-b6ce626f0c14"
+                    }
+                },
+                "ca4c2956-b3a6-4a3e-8716-5a23a57aed94": {
+                    "Info": {
+                        "ScriptId": "2d7cb709-0c7f-41ba-ba13-961cc5c6fa7b"
+                    }
+                },
+                "da2534d5-262e-45cd-a3b2-298adecefb69": {
+                    "Info": {
+                        "ScriptId": "c849948a-8774-4dff-ad82-0528b02eb32e"
+                    }
+                },
+                "08100396-ac76-4f52-964c-b3168625a01f": {
+                    "Info": {
+                        "ScriptId": "1e3e1082-68ed-4197-8fed-d5df24822c3a"
+                    }
+                },
+                "5d822b54-f094-4891-a178-120957ff2fbf": {
+                    "Info": {
+                        "ScriptId": "2627949f-6e12-4cce-b109-0b41d95e046b"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "eacf88bf-9a79-4de3-a122-1082d39aec0f",
+                        "type": "TimeSet"
+                    }
+                ],
+                "eacf88bf-9a79-4de3-a122-1082d39aec0f": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:12"
+                    }
+                }
+            }
+        }
+    },
+    "425a4917-9bbf-4af2-8e52-a14aa54c6133": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:15"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时6",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "ec0e2cfc-b97b-43a0-b828-7e2571ae69fb",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "ff305600-d901-413b-a4a7-7b84ed3c554f",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "ef234f23-9fa5-4197-843b-7188b80b8572",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "347a0e02-6762-4fbb-a47d-ccefa23c0da6",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "456a122d-619e-4126-8870-704025be93f8",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "26c8dd67-bebc-421d-bd75-fb21affabc0c",
+                        "type": "QueueItem"
+                    }
+                ],
+                "ec0e2cfc-b97b-43a0-b828-7e2571ae69fb": {
+                    "Info": {
+                        "ScriptId": "bfd6d8e0-8771-4bfe-9a82-ef1931371f2a"
+                    }
+                },
+                "ff305600-d901-413b-a4a7-7b84ed3c554f": {
+                    "Info": {
+                        "ScriptId": "032db978-d5a9-418a-87bb-14c55af9a8c5"
+                    }
+                },
+                "ef234f23-9fa5-4197-843b-7188b80b8572": {
+                    "Info": {
+                        "ScriptId": "3ccad418-ae1b-4822-8ce3-d780b3fcdd4d"
+                    }
+                },
+                "347a0e02-6762-4fbb-a47d-ccefa23c0da6": {
+                    "Info": {
+                        "ScriptId": "faa9e433-2b45-49ea-a13a-840183c94c68"
+                    }
+                },
+                "456a122d-619e-4126-8870-704025be93f8": {
+                    "Info": {
+                        "ScriptId": "92f4204b-618d-4324-b1f1-22b1f0370918"
+                    }
+                },
+                "26c8dd67-bebc-421d-bd75-fb21affabc0c": {
+                    "Info": {
+                        "ScriptId": "c44dd923-52b3-467c-bc1d-f63bf2732de7"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "f3a77ccc-a5ab-44b3-be83-559f67f2718c",
+                        "type": "TimeSet"
+                    }
+                ],
+                "f3a77ccc-a5ab-44b3-be83-559f67f2718c": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:15"
+                    }
+                }
+            }
+        }
+    },
+    "18ae7c1e-6245-490e-abc9-c35f6c890502": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:18"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时7",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "b5bcbdfb-354b-43af-beb0-8c5aad02c41e",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "6093c2d4-7d4e-47eb-94c2-c9266863d9fe",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "62daeb59-3016-47bf-9405-7f65acb56e6a",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "1be50b4e-eb70-4f0f-9227-63f68034b1a1",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "caca579e-1484-405e-a74c-d9a152d99e14",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "78cc133f-56ff-44dd-935a-2bdccd442928",
+                        "type": "QueueItem"
+                    }
+                ],
+                "b5bcbdfb-354b-43af-beb0-8c5aad02c41e": {
+                    "Info": {
+                        "ScriptId": "d507691a-a6a6-47cd-b47e-89c036bc49bf"
+                    }
+                },
+                "6093c2d4-7d4e-47eb-94c2-c9266863d9fe": {
+                    "Info": {
+                        "ScriptId": "203e363a-faea-4ae8-9c7e-545f2263c970"
+                    }
+                },
+                "62daeb59-3016-47bf-9405-7f65acb56e6a": {
+                    "Info": {
+                        "ScriptId": "2f9085b3-92e7-4751-acb8-e0c2e04c33b0"
+                    }
+                },
+                "1be50b4e-eb70-4f0f-9227-63f68034b1a1": {
+                    "Info": {
+                        "ScriptId": "014a17a7-32d7-4238-971f-28c4700e4e51"
+                    }
+                },
+                "caca579e-1484-405e-a74c-d9a152d99e14": {
+                    "Info": {
+                        "ScriptId": "ba7c53dc-652e-454c-889f-cf8cd778f504"
+                    }
+                },
+                "78cc133f-56ff-44dd-935a-2bdccd442928": {
+                    "Info": {
+                        "ScriptId": "dfb6452e-7230-46be-ad6b-a71165790bb6"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "f0ff5102-989d-45a5-8c84-6d3168745259",
+                        "type": "TimeSet"
+                    }
+                ],
+                "f0ff5102-989d-45a5-8c84-6d3168745259": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:18"
+                    }
+                }
+            }
+        }
+    },
+    "bb6db695-dd9d-43d1-9a22-cca5b8dbdf2d": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:21"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时8",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "710a1014-3c23-4a18-9327-bb3cd6382be3",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "800656dd-be59-44f5-b67d-73971102dcce",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "0818b368-9ec8-41ad-adba-cbb49f926748",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "7036255e-58f1-492b-8881-29efc3292c6a",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "16379007-fb8a-4780-b728-5c2fdd364923",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "50395dcc-15aa-4ae7-8e60-c48c8768b487",
+                        "type": "QueueItem"
+                    }
+                ],
+                "710a1014-3c23-4a18-9327-bb3cd6382be3": {
+                    "Info": {
+                        "ScriptId": "4947cf62-8570-4c20-8190-9a3740278906"
+                    }
+                },
+                "800656dd-be59-44f5-b67d-73971102dcce": {
+                    "Info": {
+                        "ScriptId": "f2c01938-a5e1-4d2e-8596-8461af480593"
+                    }
+                },
+                "0818b368-9ec8-41ad-adba-cbb49f926748": {
+                    "Info": {
+                        "ScriptId": "072a500c-aa37-4d76-b897-821f3d1857e3"
+                    }
+                },
+                "7036255e-58f1-492b-8881-29efc3292c6a": {
+                    "Info": {
+                        "ScriptId": "7c8f3d00-8212-4dec-8958-8d0f44266095"
+                    }
+                },
+                "16379007-fb8a-4780-b728-5c2fdd364923": {
+                    "Info": {
+                        "ScriptId": "3594e496-7963-48cb-b9c3-32a5c3539927"
+                    }
+                },
+                "50395dcc-15aa-4ae7-8e60-c48c8768b487": {
+                    "Info": {
+                        "ScriptId": "e3ee1af6-9835-44f6-b29b-c555ea6b5dd4"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "d7a8280b-cc46-41cd-850c-6e80edc245ed",
+                        "type": "TimeSet"
+                    }
+                ],
+                "d7a8280b-cc46-41cd-850c-6e80edc245ed": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:21"
+                    }
+                }
+            }
+        }
+    },
+    "25f3fa7d-79e3-4514-b49d-08c96b3080b3": {
+        "Data": {
+            "LastTimedStart": "2026-08-23 19:54"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "日常定时9",
+            "StartUpEnabled": false,
+            "TimeEnabled": false
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": []
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "a1f7c0e4-a4e4-4b7b-9205-9ead960e38e1",
+                        "type": "TimeSet"
+                    }
+                ],
+                "a1f7c0e4-a4e4-4b7b-9205-9ead960e38e1": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:24"
+                    }
+                }
+            }
+        }
+    },
+    "12e0d7dd-11d4-4479-a076-2e1deb2e3306": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:30"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-肉鸽-l-4",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "32e90fe7-3e22-465d-b084-27fec9e478b1",
+                        "type": "QueueItem"
+                    }
+                ],
+                "32e90fe7-3e22-465d-b084-27fec9e478b1": {
+                    "Info": {
+                        "ScriptId": "0e12fe1e-a8da-42da-8e35-68a90cca73e8"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "4ae4c433-9d8a-45fe-bdc7-6455ba1b7f4e",
+                        "type": "TimeSet"
+                    },
+                    {
+                        "uid": "68924bfd-eff7-4a15-9a5a-c3289807f05a",
+                        "type": "TimeSet"
+                    }
+                ],
+                "4ae4c433-9d8a-45fe-bdc7-6455ba1b7f4e": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:30"
+                    }
+                },
+                "68924bfd-eff7-4a15-9a5a-c3289807f05a": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "20:30"
+                    }
+                }
+            }
+        }
+    },
+    "9c11f966-7f17-4aac-8872-b11a81202948": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:33"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-肉鸽-l-6",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "df03649d-a249-40f6-9a46-ce03a4826bd8",
+                        "type": "QueueItem"
+                    }
+                ],
+                "df03649d-a249-40f6-9a46-ce03a4826bd8": {
+                    "Info": {
+                        "ScriptId": "ec5e46a7-f6c2-498d-9c33-fb19b2d2a4d5"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "0721f8a5-575b-4b44-a6ed-e4b5c185bb5d",
+                        "type": "TimeSet"
+                    },
+                    {
+                        "uid": "ac2a4479-5f52-42a1-ade7-a4abdb0bb60c",
+                        "type": "TimeSet"
+                    }
+                ],
+                "0721f8a5-575b-4b44-a6ed-e4b5c185bb5d": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:33"
+                    }
+                },
+                "ac2a4479-5f52-42a1-ade7-a4abdb0bb60c": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "20:33"
+                    }
+                }
+            }
+        }
+    },
+    "0d784092-722d-458f-a45a-7e090bca3630": {
+        "Data": {
+            "LastTimedStart": "2026-08-24 05:36"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-肉鸽-l-7",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "4275321b-6b65-4e1b-afd6-fc799f860e26",
+                        "type": "QueueItem"
+                    }
+                ],
+                "4275321b-6b65-4e1b-afd6-fc799f860e26": {
+                    "Info": {
+                        "ScriptId": "0c0c71c9-d6ed-41f3-8bb1-3d8dc1dc7dc3"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "20611dae-0708-418f-9c88-cf2c2efb9b5d",
+                        "type": "TimeSet"
+                    },
+                    {
+                        "uid": "ce6d3c73-3906-477c-82fb-6d106cbb35aa",
+                        "type": "TimeSet"
+                    }
+                ],
+                "20611dae-0708-418f-9c88-cf2c2efb9b5d": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:36"
+                    }
+                },
+                "ce6d3c73-3906-477c-82fb-6d106cbb35aa": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "20:36"
+                    }
+                }
+            }
+        }
+    },
+    "3398596a-24ae-4279-93a9-841964bbaa64": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-补清-1",
+            "StartUpEnabled": false,
+            "TimeEnabled": false
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "d52126dd-7894-493e-93e4-4d2153e24d8e",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "851a6596-b7b1-4bc0-a19b-6b5b8d5acb47",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "ff885a8c-c766-4605-8e20-5847260faade",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "42e98acd-a469-400e-804c-992b4249fab8",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "d988b5a9-4ff8-44c1-a627-509bf426cd82",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "cf10ad7b-22d3-439c-aaea-3d17caa19eab",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "076ab7f0-5b6b-4b03-9b9b-b4f1c816dc11",
+                        "type": "QueueItem"
+                    }
+                ],
+                "d52126dd-7894-493e-93e4-4d2153e24d8e": {
+                    "Info": {
+                        "ScriptId": "1e3e1082-68ed-4197-8fed-d5df24822c3a"
+                    }
+                },
+                "851a6596-b7b1-4bc0-a19b-6b5b8d5acb47": {
+                    "Info": {
+                        "ScriptId": "faa9e433-2b45-49ea-a13a-840183c94c68"
+                    }
+                },
+                "ff885a8c-c766-4605-8e20-5847260faade": {
+                    "Info": {
+                        "ScriptId": "b53648bb-279b-4ceb-845d-83025e0bf44e"
+                    }
+                },
+                "42e98acd-a469-400e-804c-992b4249fab8": {
+                    "Info": {
+                        "ScriptId": "6f22664f-c716-4152-ad3b-ce4ee48585bb"
+                    }
+                },
+                "d988b5a9-4ff8-44c1-a627-509bf426cd82": {
+                    "Info": {
+                        "ScriptId": "ba7c53dc-652e-454c-889f-cf8cd778f504"
+                    }
+                },
+                "cf10ad7b-22d3-439c-aaea-3d17caa19eab": {
+                    "Info": {
+                        "ScriptId": "52dee0e6-35dd-4f96-b05e-b6ce626f0c14"
+                    }
+                },
+                "076ab7f0-5b6b-4b03-9b9b-b4f1c816dc11": {
+                    "Info": {
+                        "ScriptId": "203e363a-faea-4ae8-9c7e-545f2263c970"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": []
+            }
+        }
+    },
+    "e1ec0fb2-7699-42eb-9280-0e7f2018080d": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-补清-2",
+            "StartUpEnabled": false,
+            "TimeEnabled": false
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "af8e84e3-9e33-4064-8241-dd2c0224d9c2",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "b976bcd4-1e7a-411f-9bd1-4b81ba1ecb15",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "82292e1d-e990-4bec-999f-8fac5b76307b",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "a66abc7c-58bf-4160-b198-fd7f6c7080ad",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "3e52f737-714d-4fb7-b330-bd7c1e26bf3d",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "64dba378-095a-447c-b147-43bd4d897e03",
+                        "type": "QueueItem"
+                    }
+                ],
+                "af8e84e3-9e33-4064-8241-dd2c0224d9c2": {
+                    "Info": {
+                        "ScriptId": "d507691a-a6a6-47cd-b47e-89c036bc49bf"
+                    }
+                },
+                "b976bcd4-1e7a-411f-9bd1-4b81ba1ecb15": {
+                    "Info": {
+                        "ScriptId": "9a8d767c-6712-42c3-bd1a-56af8a29071b"
+                    }
+                },
+                "82292e1d-e990-4bec-999f-8fac5b76307b": {
+                    "Info": {
+                        "ScriptId": "3caa906d-f317-4079-bde9-751608911697"
+                    }
+                },
+                "a66abc7c-58bf-4160-b198-fd7f6c7080ad": {
+                    "Info": {
+                        "ScriptId": "072a500c-aa37-4d76-b897-821f3d1857e3"
+                    }
+                },
+                "3e52f737-714d-4fb7-b330-bd7c1e26bf3d": {
+                    "Info": {
+                        "ScriptId": "dd5053ce-e711-4b04-9776-6151be1cd6e4"
+                    }
+                },
+                "64dba378-095a-447c-b147-43bd4d897e03": {
+                    "Info": {
+                        "ScriptId": "f2c01938-a5e1-4d2e-8596-8461af480593"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": []
+            }
+        }
+    },
+    "bd94bfb1-6b9f-477d-9d78-f1d0ea32d89a": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时1",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "9fb2c496-044b-41dd-bdde-84279131f0d6",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "77422fdc-3f2c-4a91-8a9e-4e10ac3fb638",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "4bac923e-e7f7-4877-a430-d0af07a32edb",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "59356918-f1af-44c2-911d-05749b1d903e",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "b00953aa-51e9-44c6-85b8-35af488c65ba",
+                        "type": "QueueItem"
+                    }
+                ],
+                "9fb2c496-044b-41dd-bdde-84279131f0d6": {
+                    "Info": {
+                        "ScriptId": "37b7aa5d-0378-4985-8d63-d6ff0f36a4f9"
+                    }
+                },
+                "77422fdc-3f2c-4a91-8a9e-4e10ac3fb638": {
+                    "Info": {
+                        "ScriptId": "0de3f480-ed82-43c4-ac96-e4c18957d968"
+                    }
+                },
+                "4bac923e-e7f7-4877-a430-d0af07a32edb": {
+                    "Info": {
+                        "ScriptId": "3caa906d-f317-4079-bde9-751608911697"
+                    }
+                },
+                "59356918-f1af-44c2-911d-05749b1d903e": {
+                    "Info": {
+                        "ScriptId": "b81efdbb-b23b-44bc-8c6a-9fd99cf6f381"
+                    }
+                },
+                "b00953aa-51e9-44c6-85b8-35af488c65ba": {
+                    "Info": {
+                        "ScriptId": "fdbf292f-16dc-487b-8950-b638b0ed39d7"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "d98c6e21-8c6a-4e77-b76d-57da47b9e891",
+                        "type": "TimeSet"
+                    }
+                ],
+                "d98c6e21-8c6a-4e77-b76d-57da47b9e891": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:30"
+                    }
+                }
+            }
+        }
+    },
+    "e7b53f17-83e4-4e04-802c-058f6eae3d10": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时2",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "674049f8-7fc7-43d2-bce4-2d2f15823b94",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "a78790a7-a7e8-4ec7-b41f-0c84ea3aa463",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "d8802ad3-f6d3-4421-8daa-30690d4bcff4",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "63e83ef3-43fa-469b-98e7-5e8599d3c0a8",
+                        "type": "QueueItem"
+                    }
+                ],
+                "674049f8-7fc7-43d2-bce4-2d2f15823b94": {
+                    "Info": {
+                        "ScriptId": "3f2702e6-565f-4643-aa4c-f7bad2041122"
+                    }
+                },
+                "a78790a7-a7e8-4ec7-b41f-0c84ea3aa463": {
+                    "Info": {
+                        "ScriptId": "874d6abd-bc2b-4e99-a60e-50bf88be5a2e"
+                    }
+                },
+                "d8802ad3-f6d3-4421-8daa-30690d4bcff4": {
+                    "Info": {
+                        "ScriptId": "7f2725f0-d2b1-478a-ae95-510f25057876"
+                    }
+                },
+                "63e83ef3-43fa-469b-98e7-5e8599d3c0a8": {
+                    "Info": {
+                        "ScriptId": "400ef5d6-fc7e-44c7-bb2a-bd0125b5a603"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "39e2c8f6-f417-4ea0-8a69-17c4ce47ddf5",
+                        "type": "TimeSet"
+                    }
+                ],
+                "39e2c8f6-f417-4ea0-8a69-17c4ce47ddf5": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:33"
+                    }
+                }
+            }
+        }
+    },
+    "93c52617-fd92-4fac-9051-7503e2e34b37": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时3",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "d45e58ad-a88e-45a4-9841-a32a230df22a",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "bf5c9f6c-3d61-454f-b322-34bda6b685db",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "af9c423f-15d5-4d35-a9ca-199f946b7153",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "b1ec6677-8fda-459c-bc5f-ec8061845102",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "26718832-6f76-42a5-bd4c-145fbc3c500b",
+                        "type": "QueueItem"
+                    }
+                ],
+                "d45e58ad-a88e-45a4-9841-a32a230df22a": {
+                    "Info": {
+                        "ScriptId": "785155e5-7338-4475-9669-745abffa3459"
+                    }
+                },
+                "bf5c9f6c-3d61-454f-b322-34bda6b685db": {
+                    "Info": {
+                        "ScriptId": "32c6915e-fd12-441b-b4f9-3fbab3f7d843"
+                    }
+                },
+                "af9c423f-15d5-4d35-a9ca-199f946b7153": {
+                    "Info": {
+                        "ScriptId": "9a8d767c-6712-42c3-bd1a-56af8a29071b"
+                    }
+                },
+                "b1ec6677-8fda-459c-bc5f-ec8061845102": {
+                    "Info": {
+                        "ScriptId": "c324cd54-52c7-4cb4-aa8e-397ef31c30e9"
+                    }
+                },
+                "26718832-6f76-42a5-bd4c-145fbc3c500b": {
+                    "Info": {
+                        "ScriptId": "02473d14-f083-4dcd-b694-aa6b18bfc04f"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "cc38898f-6c8b-47cc-8242-fd7c9bbeff87",
+                        "type": "TimeSet"
+                    }
+                ],
+                "cc38898f-6c8b-47cc-8242-fd7c9bbeff87": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:36"
+                    }
+                }
+            }
+        }
+    },
+    "e07ad454-d00a-4d71-a7bb-b262a8cce9d9": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时4",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "128bda35-759e-4bac-a5bc-67ff44d2cf2d",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "87d20ae0-77dc-4362-a64b-f2514cd7812a",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "e5aefd44-3452-49d8-9a5a-9d807093fce9",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "9668aebc-ce1b-4fea-ae84-3e978d6b4b03",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "8206c05e-b867-41dd-a390-44c14e9ba875",
+                        "type": "QueueItem"
+                    }
+                ],
+                "128bda35-759e-4bac-a5bc-67ff44d2cf2d": {
+                    "Info": {
+                        "ScriptId": "dd5053ce-e711-4b04-9776-6151be1cd6e4"
+                    }
+                },
+                "87d20ae0-77dc-4362-a64b-f2514cd7812a": {
+                    "Info": {
+                        "ScriptId": "6f22664f-c716-4152-ad3b-ce4ee48585bb"
+                    }
+                },
+                "e5aefd44-3452-49d8-9a5a-9d807093fce9": {
+                    "Info": {
+                        "ScriptId": "c3f07722-7151-4b19-9e40-230cd92d52a9"
+                    }
+                },
+                "9668aebc-ce1b-4fea-ae84-3e978d6b4b03": {
+                    "Info": {
+                        "ScriptId": "b9468547-be98-490c-bfed-293b8ad6e3e1"
+                    }
+                },
+                "8206c05e-b867-41dd-a390-44c14e9ba875": {
+                    "Info": {
+                        "ScriptId": "b53648bb-279b-4ceb-845d-83025e0bf44e"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "7312725f-fda8-41ae-bfc4-9a614904eef8",
+                        "type": "TimeSet"
+                    }
+                ],
+                "7312725f-fda8-41ae-bfc4-9a614904eef8": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:39"
+                    }
+                }
+            }
+        }
+    },
+    "53b45397-3be7-4c07-bbf6-b3b897f54068": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时5",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "f671317e-aafd-45ca-bb50-b723743bcdc5",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "69be3c50-1b67-4c6a-ae04-278f2aa7df63",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "d3b1ea6b-003c-4a5e-a6d7-7ad971d0a94a",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "4c227b89-a973-4978-b3d8-e6d067b0a508",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "bb451310-cc47-4ff5-8d6c-4e88855a5cb5",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "3cddf83c-7e0d-4402-b986-851124eedb61",
+                        "type": "QueueItem"
+                    }
+                ],
+                "f671317e-aafd-45ca-bb50-b723743bcdc5": {
+                    "Info": {
+                        "ScriptId": "2627949f-6e12-4cce-b109-0b41d95e046b"
+                    }
+                },
+                "69be3c50-1b67-4c6a-ae04-278f2aa7df63": {
+                    "Info": {
+                        "ScriptId": "1e3e1082-68ed-4197-8fed-d5df24822c3a"
+                    }
+                },
+                "d3b1ea6b-003c-4a5e-a6d7-7ad971d0a94a": {
+                    "Info": {
+                        "ScriptId": "c849948a-8774-4dff-ad82-0528b02eb32e"
+                    }
+                },
+                "4c227b89-a973-4978-b3d8-e6d067b0a508": {
+                    "Info": {
+                        "ScriptId": "2d7cb709-0c7f-41ba-ba13-961cc5c6fa7b"
+                    }
+                },
+                "bb451310-cc47-4ff5-8d6c-4e88855a5cb5": {
+                    "Info": {
+                        "ScriptId": "52dee0e6-35dd-4f96-b05e-b6ce626f0c14"
+                    }
+                },
+                "3cddf83c-7e0d-4402-b986-851124eedb61": {
+                    "Info": {
+                        "ScriptId": "8e075acb-b051-418d-8054-ecba3d58a34f"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "a5e68e0b-dcab-4083-866d-71b254ec3ebf",
+                        "type": "TimeSet"
+                    }
+                ],
+                "a5e68e0b-dcab-4083-866d-71b254ec3ebf": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:42"
+                    }
+                }
+            }
+        }
+    },
+    "5b092557-71b4-4ef3-9b22-67e262745b38": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时6",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "cec0dbee-6afa-432d-a4c7-f1fd0bc4842d",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "0ad0a986-6675-47ea-98cd-0a372d93d5f8",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "d96a50a0-789f-470f-8db6-72b4ad7a7e30",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "61042799-c9a2-4e54-a8f4-aa9f0e419857",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "f8079c4d-9de8-4c17-8119-2af1025d33d2",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "64605804-2b60-4c3f-8c89-b0f58e0d73f6",
+                        "type": "QueueItem"
+                    }
+                ],
+                "cec0dbee-6afa-432d-a4c7-f1fd0bc4842d": {
+                    "Info": {
+                        "ScriptId": "c44dd923-52b3-467c-bc1d-f63bf2732de7"
+                    }
+                },
+                "0ad0a986-6675-47ea-98cd-0a372d93d5f8": {
+                    "Info": {
+                        "ScriptId": "92f4204b-618d-4324-b1f1-22b1f0370918"
+                    }
+                },
+                "d96a50a0-789f-470f-8db6-72b4ad7a7e30": {
+                    "Info": {
+                        "ScriptId": "faa9e433-2b45-49ea-a13a-840183c94c68"
+                    }
+                },
+                "61042799-c9a2-4e54-a8f4-aa9f0e419857": {
+                    "Info": {
+                        "ScriptId": "3ccad418-ae1b-4822-8ce3-d780b3fcdd4d"
+                    }
+                },
+                "f8079c4d-9de8-4c17-8119-2af1025d33d2": {
+                    "Info": {
+                        "ScriptId": "032db978-d5a9-418a-87bb-14c55af9a8c5"
+                    }
+                },
+                "64605804-2b60-4c3f-8c89-b0f58e0d73f6": {
+                    "Info": {
+                        "ScriptId": "bfd6d8e0-8771-4bfe-9a82-ef1931371f2a"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "bb436948-f66a-4795-b65b-d10c6b4f1a99",
+                        "type": "TimeSet"
+                    }
+                ],
+                "bb436948-f66a-4795-b65b-d10c6b4f1a99": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:45"
+                    }
+                }
+            }
+        }
+    },
+    "be064043-a9ed-4fbf-9d2d-a559c89a0c29": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时7",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "3df68e6f-ed2b-40bd-9311-df8d8bd3d5d2",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "b1b5f71b-0831-4034-95c8-dafcfc08ac95",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "187f2e51-22ec-403e-b95f-b576519d6202",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "c9607b5d-ca34-498b-a1c9-919bb925ad02",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "6dbdf05e-3e50-43b8-a5a4-216cb9b1ff6b",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "eed1ddb5-c79c-4939-8d75-8403eea497de",
+                        "type": "QueueItem"
+                    }
+                ],
+                "3df68e6f-ed2b-40bd-9311-df8d8bd3d5d2": {
+                    "Info": {
+                        "ScriptId": "dfb6452e-7230-46be-ad6b-a71165790bb6"
+                    }
+                },
+                "b1b5f71b-0831-4034-95c8-dafcfc08ac95": {
+                    "Info": {
+                        "ScriptId": "ba7c53dc-652e-454c-889f-cf8cd778f504"
+                    }
+                },
+                "187f2e51-22ec-403e-b95f-b576519d6202": {
+                    "Info": {
+                        "ScriptId": "014a17a7-32d7-4238-971f-28c4700e4e51"
+                    }
+                },
+                "c9607b5d-ca34-498b-a1c9-919bb925ad02": {
+                    "Info": {
+                        "ScriptId": "2f9085b3-92e7-4751-acb8-e0c2e04c33b0"
+                    }
+                },
+                "6dbdf05e-3e50-43b8-a5a4-216cb9b1ff6b": {
+                    "Info": {
+                        "ScriptId": "203e363a-faea-4ae8-9c7e-545f2263c970"
+                    }
+                },
+                "eed1ddb5-c79c-4939-8d75-8403eea497de": {
+                    "Info": {
+                        "ScriptId": "d507691a-a6a6-47cd-b47e-89c036bc49bf"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "430f334e-3e62-4954-b1c1-78b4a6fcfde6",
+                        "type": "TimeSet"
+                    }
+                ],
+                "430f334e-3e62-4954-b1c1-78b4a6fcfde6": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:48"
+                    }
+                }
+            }
+        }
+    },
+    "e67efe37-40e0-4d39-97bb-387f0c7a8a4d": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "晚班定时8",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "babbea2e-e5bd-4c19-a3b8-5ba9a674d289",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "fa58464f-035b-4eeb-ba50-294f514a21bf",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "2d6b92fe-30e8-4bd3-9375-2d1e394d1ca6",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "b5caed9b-a4b3-4a25-b71d-408e3b2faad6",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "b7f5ecbe-9c1e-49b3-9992-c6195ae2eb08",
+                        "type": "QueueItem"
+                    },
+                    {
+                        "uid": "6274435e-3b37-4184-a003-7cd1929d7108",
+                        "type": "QueueItem"
+                    }
+                ],
+                "babbea2e-e5bd-4c19-a3b8-5ba9a674d289": {
+                    "Info": {
+                        "ScriptId": "e3ee1af6-9835-44f6-b29b-c555ea6b5dd4"
+                    }
+                },
+                "fa58464f-035b-4eeb-ba50-294f514a21bf": {
+                    "Info": {
+                        "ScriptId": "3594e496-7963-48cb-b9c3-32a5c3539927"
+                    }
+                },
+                "2d6b92fe-30e8-4bd3-9375-2d1e394d1ca6": {
+                    "Info": {
+                        "ScriptId": "7c8f3d00-8212-4dec-8958-8d0f44266095"
+                    }
+                },
+                "b5caed9b-a4b3-4a25-b71d-408e3b2faad6": {
+                    "Info": {
+                        "ScriptId": "072a500c-aa37-4d76-b897-821f3d1857e3"
+                    }
+                },
+                "b7f5ecbe-9c1e-49b3-9992-c6195ae2eb08": {
+                    "Info": {
+                        "ScriptId": "f2c01938-a5e1-4d2e-8596-8461af480593"
+                    }
+                },
+                "6274435e-3b37-4184-a003-7cd1929d7108": {
+                    "Info": {
+                        "ScriptId": "4947cf62-8570-4c20-8190-9a3740278906"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "dd57a3f4-82e7-4c1e-9896-e295ff40da16",
+                        "type": "TimeSet"
+                    }
+                ],
+                "dd57a3f4-82e7-4c1e-9896-e295ff40da16": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "19:51"
+                    }
+                }
+            }
+        }
+    },
+    "519b5de8-4baa-4657-9d46-e0addbab4598": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-肉鸽-l-5",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "3ce5cc7c-1c12-4d7e-bb9e-3862f15f87fa",
+                        "type": "QueueItem"
+                    }
+                ],
+                "3ce5cc7c-1c12-4d7e-bb9e-3862f15f87fa": {
+                    "Info": {
+                        "ScriptId": "a3e72775-33ac-47ca-a901-6f3ca33eb9dc"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "b25f66d7-e1c2-464b-a478-122739dbab3f",
+                        "type": "TimeSet"
+                    },
+                    {
+                        "uid": "a5146c92-0eb2-4c63-aadf-88ee4709f529",
+                        "type": "TimeSet"
+                    }
+                ],
+                "b25f66d7-e1c2-464b-a478-122739dbab3f": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:39"
+                    }
+                },
+                "a5146c92-0eb2-4c63-aadf-88ee4709f529": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "20:39"
+                    }
+                }
+            }
+        }
+    },
+    "3aca0f4e-a26b-4cde-b127-1734f6332a8a": {
+        "Data": {
+            "LastTimedStart": "2000-01-01 00:00"
+        },
+        "Info": {
+            "AfterAccomplish": "NoAction",
+            "Name": "临时-肉鸽-l-3",
+            "StartUpEnabled": false,
+            "TimeEnabled": true
+        },
+        "SubConfigsInfo": {
+            "QueueItem": {
+                "instances": [
+                    {
+                        "uid": "4283dcad-c0fd-4603-9f69-b0d880655dfc",
+                        "type": "QueueItem"
+                    }
+                ],
+                "4283dcad-c0fd-4603-9f69-b0d880655dfc": {
+                    "Info": {
+                        "ScriptId": "23e84e77-17f9-4481-9c53-0f4417d3224d"
+                    }
+                }
+            },
+            "TimeSet": {
+                "instances": [
+                    {
+                        "uid": "e68ebb6e-6dea-48c9-bc4b-b1406e0776b2",
+                        "type": "TimeSet"
+                    },
+                    {
+                        "uid": "83c131ab-2293-460a-93a3-b5c7d69cd93d",
+                        "type": "TimeSet"
+                    }
+                ],
+                "e68ebb6e-6dea-48c9-bc4b-b1406e0776b2": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "05:42"
+                    }
+                },
+                "83c131ab-2293-460a-93a3-b5c7d69cd93d": {
+                    "Info": {
+                        "Days": [
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday"
+                        ],
+                        "Enabled": true,
+                        "Time": "20:42"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+ "_note": "由 tools/rules_db.py 从各账号工作区的修改树聚合；不含账号标识。应用口径：作业当前状态 == from 才改成 to。",
+ "stats": {
+  "nodes": 34,
+  "human_nodes": 0,
+  "changes": 0,
+  "stages": 0
+ },
+ "rules": {},
+ "lineup": {}
+}

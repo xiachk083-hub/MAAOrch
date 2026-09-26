@@ -30,6 +30,9 @@ sys.path.insert(0, str(PROJ))
 from infrastructure.ocr import ocr_boxes                       # noqa: E402
 from services.ai_agent.fastshot import find_adb                # noqa: E402
 
+# Windows：不带这个标志，子进程（adb/ssh/ping）会**闪一个 cmd 黑窗** ✗
+NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 BOX_DIR = PROJ / "data" / "boxes"
 
 
@@ -60,9 +63,9 @@ def cap(adb: str, serial: str, timeout: float = 25.0):
 
 def ensure_device(adb: str, serial: str) -> None:
     st = subprocess.run([adb, "-s", serial, "get-state"], capture_output=True,
-                        text=True, timeout=20).stdout.strip()
+                        text=True, timeout=20, creationflags=NOWIN).stdout.strip()
     if st != "device":
-        subprocess.run([adb, "connect", serial], capture_output=True, timeout=25)
+        subprocess.run([adb, "connect", serial], capture_output=True, timeout=25, creationflags=NOWIN)
         time.sleep(2)
 
 
@@ -90,7 +93,7 @@ def read_uid(adb: str, serial: str, wait_lobby: float = 60.0) -> str:
             raise SystemExit(f"[闸] 画面上的 UID 候选不唯一：{uniq} ⇒ 请用 `--uid <真实UID>` 指定"
                              f"（宁可人工给，也不猜错——猜错等于给 box 挂错标签）")
         time.sleep(3)
-    raise SystemExit("[闸] 等了 60 秒没看到主界面 ⇒ 先把游戏停到大厅（首页）再跑："
+    raise SystemExit(f"[闸] 等了 {int(wait_lobby)} 秒没看到主界面 ⇒ 先把游戏停到大厅（首页）再跑："
                      "本脚本只读画面、不碰导航")
 
 
@@ -103,13 +106,19 @@ def read_box(emu: str, uid: str, timeout: float) -> dict:
     r = subprocess.run([sys.executable, str(PROJ / "tools" / "box_read_when_free.py"),
                         "--emu", emu, "--uid", uid, "--timeout", str(timeout)],
                        capture_output=True, text=True, encoding="utf-8",
-                       errors="replace", timeout=timeout + 180)
+                       errors="replace", timeout=timeout + 180, creationflags=NOWIN)
     print((r.stdout or "").strip()[-300:])
-    cands = sorted((PROJ / "data").glob(f"operbox_{uid}_*.json"),
-                   key=lambda x: x.stat().st_mtime)
-    if not cands:
-        raise SystemExit(f"[闸] 没落下 box（找过 data/operbox_{uid}_*.json）—— 看上面的输出")
-    return json.loads(cands[-1].read_text(encoding="utf-8"))
+    # **只认"刚刚读出来的"那一份**（2026-09-18 实测漏洞）：读被身份闸拒绝时，这里如果退而
+    # 拿上一次的旧文件，就会把旧 box 复制成 `data/boxes/box_<uid>.json` ⇒ **看起来像扫成功了** ✗。
+    # 判据：文件必须是这几分钟内落下的（读一次最多几分钟）。
+    import time as _t
+    fresh = [f for f in (PROJ / "data").glob(f"operbox_{uid}_*.json")
+             if _t.time() - f.stat().st_mtime < 600]
+    if not fresh:
+        raise SystemExit("[闸] 这次没有**新读出**的 box（读被拒或没落盘）⇒ 什么都不写，"
+                         "别拿旧文件冒充（看上面的输出：多半是画面上的账号与 --uid 不符）")
+    f = max(fresh, key=lambda x: x.stat().st_mtime)
+    return json.loads(f.read_text(encoding="utf-8"))
 
 
 def main() -> None:

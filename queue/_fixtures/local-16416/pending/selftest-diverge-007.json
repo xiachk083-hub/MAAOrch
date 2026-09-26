@@ -1,0 +1,31 @@
+{
+  "ts": "2026-09-24T21:40:00+08:00",
+  "host": "local-16416",
+  "action": "maa.task",
+  "task_type": "刷关",
+  "approved_by": "user",
+  "prev": "",
+  "sha256": "3f1cd639e157cb15a8ec279fa40f62cf53ddf342b09bb9341ff11dbab40f3c0f",
+  "precondition": "campaign_quiesced",
+  "params": {
+    "stage": "OF-F1",
+    "mode": "普通",
+    "times": 1
+  },
+  "cost": {
+    "sanity": 9,
+    "sanity_source": "table"
+  },
+  "anchor": {
+    "adb_port": 16416,
+    "uid": "751737728",
+    "server": "官服",
+    "uid_source": "lobby_ocr"
+  },
+  "evidence": {
+    "ocr_uid_png": "runtime/_ce6/lobby.png",
+    "fg_package": "com.hypergryph.arknights",
+    "fg_read_raw": "mCurrentFocus=Window{35dd6ad u0 com.hypergryph.arknights/com.u8.sdk.U8UnityContext}"
+  },
+  "id": "selftest-diverge-007"
+}

@@ -41,6 +41,9 @@ check('19:50（晚班爬坡中）仍在让位区', inYieldZone(19.83), true);
 check('20:20（晚班还在发车）仍在让位区', inYieldZone(20.33), true);
 check('20:40 出让位区（晚班 12 队已发完、产线自己在跑，闸靠"产线在跑"关）', inYieldZone(20.66), false);
 check('凌晨 04:00 已出夜窗（给 05:00 早班让路）', inWindow(4), false);
+check('05:00（早班第一槽刚发）仍在让位区', inYieldZone(5), true);
+check('05:33（早班最后一槽爬坡中）仍在让位区', inYieldZone(5.55), true);
+check('05:40 出让位区（早班 12 槽已发完、产线自己在跑，闸靠"产线在跑"关）', inYieldZone(5.66), false);
 check('内存 20G ⇒ 一轮可发 2 台', startPerRound(20), 2);
 check('内存 12G ⇒ 一轮只发 1 台', startPerRound(12), 1);
 

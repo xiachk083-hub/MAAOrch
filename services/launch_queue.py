@@ -1094,6 +1094,15 @@ class LaunchQueue:
 
     def _reclaim_idle_emus(self) -> None:
         """Shutdown emulators whose accounts are neither running nor queued."""
+        # ★★ 2026-09-23 用户拍板「焊死」（原话：「一直有东西在关我这台的模拟器」）★★
+        #    回收器总闸默认**关闭**：config `emu_reclaim_enabled` 缺省即 False。
+        #    历史：2026-09-21 就是这里把关手动开的 #0 连关三次（时间戳默认值 bug）。
+        #    总闸关掉后，无论谁把 Python 平台拉起来，都绝不会再关用户/产线的模拟器。
+        try:
+            if not self.ctx.config.get("emu_reclaim_enabled", False):
+                return
+        except Exception:
+            return   # 读不到配置 = 不安全 = 不动它（默认值绝不退化成"超时"）
         # ── _reclaim_idle_emus 段落导航（2026-08-15 整理，360 行）──
         #   ① v2 并存开关      L1057 emu_v2_reclaim=True 时跳过（Phase 1）
         #   ② 枚举在线模拟器   L1093 psutil VMM 扫描（MuMuManager 超时兜底）
@@ -1356,7 +1365,12 @@ class LaunchQueue:
                     # 闲置久了也该回收：测试残留/忘关的清理。正常使用
                     # 30 分钟内不被误关 — emu_external_reclaim_min 可配置）
                     _ext_min = int(self.ctx.config.get("emu_external_reclaim_min", 30) or 30)
-                    _st_since = 0.0
+                    # 2026-09-21 修 bug：这里原来默认 0.0，而 v2 回收服务默认关闭时
+                    # 取不到 state_since ⇒ time.time()-0 ≈ 17 亿秒，永远大于阈值 ⇒
+                    # **用户手动开的模拟器每次扫描都被判"闲置超时"直接关机**
+                    # （BI 攻关期间用户手动开 #0 登录日服，被连关三次）。
+                    # 语义修正：拿不到时间戳 = 视为"刚开始"，即受 _ext_min 保护。
+                    _st_since = time.time()
                     try:
                         _v2 = getattr(getattr(self.ctx, "_mw", None), "emu_service_v2", None)
                         if _v2:

@@ -59,8 +59,17 @@ ALIASES = {
 _CN = {0: "零", 1: "一", 2: "二", 3: "三"}
 
 
-def norm(name: str) -> str:
-    return ALIASES.get(name.strip(), name.strip())
+def norm(name) -> str:
+    """干员/组名归一。**None 安全**（2026-09-24 修）。
+
+    作业里有些 action **没有 name**（如 `{"type":"SpeedUp"}`，或显式 `"name": null`）⇒
+    调用点写的 `a.get("name","")` 会返回 **None**（`dict.get` 的默认值只在 key 缺失时生效），
+    `name.strip()` 立刻 `AttributeError: 'NoneType' object has no attribute 'strip'`；
+    而 CLI 只在最后才写产物 ⇒ **一崩整批全丢**（planner-1 拉 H8-1 那批就是这么丢的）。
+    这里把 None/非字符串统一兜住，8 个调用点全都自动安全。
+    """
+    s = str(name or "").strip()
+    return ALIASES.get(s, s)
 
 
 def get(url: str, retry: int = 3) -> dict:
@@ -345,7 +354,10 @@ def screen(stage: str, owned: dict, top: int = 8, full: int = 4) -> list[dict]:
                      "views": it.get("views") or 0, "title": title, "stage_name": stage,
                      "missing": miss, "under": under, "requirements": reqs, "used": used, "warn": warn,
                      "actions": len(acts), "can_run": (not miss) and (not under),
-                     "clean": (not miss) and (not under) and (not reqs)})
+                     "clean": (not miss) and (not under) and (not reqs),
+                     # 作业难度（prts 语义）：0=当前难度 / 1=普通 / 2=突袭 / 3=普通+突袭通用。
+                     # 2026-09-22 补：没有它就没法给「突袭」挑作业 —— 挑到 difficulty=1 的会在突袭页面上跑普通轴。
+                     "difficulty": body.get("difficulty") if isinstance(body.get("difficulty"), int) else None})
     # 排序：能不能跑 > 作者有没有打警示 > 社区验证度（见 _rank_key）
     rows.sort(key=_rank_key)
     return rows

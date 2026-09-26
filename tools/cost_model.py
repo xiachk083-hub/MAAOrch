@@ -174,13 +174,18 @@ def check_leaks(stage="act16side_ex02", mult=None):
     opts = load_level_options(stage)
     costs, elites = load_char_costs(), load_elites()
     prof = V.professions()
-    W, H, key, bt, routes, waves = V.level(stage)
+    W, H, key, bt, routes, waves = V.level(stage, all_routes=True)
     raw = json.loads((PROJ / "data" / ("_level_%s.json" % stage)).read_text(encoding="utf-8"))
     rts = raw["routes"]
 
     # 每条路线的格集合 + 该路线上每条出怪的到达时刻
-    path_of = {a: p for a, b, p in routes}
-    fly = {a for a, b, p in routes if p and _is_fly(rts, a)}
+    # ⚠️ 路径**按 raw `routeIndex` 取该路线自己的**（2026-09-19 修，同批 bug 见 §8d-2）：
+    # 原来 `path_of={起点: 路径}`（viz 的**去重后**清单）+ 用**未翻转**的 `(col,row)` 去查
+    # ⇒ 两套行号约定不一致、几乎永远查不到 ⇒ `ES.line_cells` 直线兜底（实测偏差 −1s ~ −55s）；
+    # 且同一出发点的多条路线走向可能完全不同（PA-1: 11 步 vs 21 步）⇒ 按起点取会张冠李戴。
+    ri2path = {getattr(p, "route_index", None): (a, b, p)
+               for a, b, p in routes if getattr(p, "route_index", None) is not None}
+    missing = []
     lanes = {}
 
     def lane_key(st, en):
@@ -193,13 +198,24 @@ def check_leaks(stage="act16side_ex02", mult=None):
                     continue
                 rt = rts[a["routeIndex"]]
                 sp, ep = rt.get("startPosition") or {}, rt.get("endPosition") or {}
-                st = (sp.get("col"), sp.get("row"))
-                en = (ep.get("col"), ep.get("row"))
-                if st == en:
+                st_raw = (sp.get("col"), sp.get("row"))
+                en_raw = (ep.get("col"), ep.get("row"))
+                if st_raw == en_raw:
                     continue
-                p = path_of.get(st) or ES.line_cells(st, en)
+                hit = ri2path.get(a["routeIndex"])
+                if not hit:
+                    # **fail-closed**：查不到路径 ⇒ 记进 missing、arrival=None（不猜、不直线兜底）
+                    missing.append({"route_index": a["routeIndex"], "key": a.get("key"),
+                                    "t": a.get("preDelay"), "reason": "path_missing"})
+                    lanes.setdefault(st_raw, {"cells": set(), "spawns": []})
+                    lanes[st_raw]["spawns"].append({
+                        "t": a.get("preDelay") or 0, "n": a.get("count", 1),
+                        "arrival": None, "why": "path_missing",
+                        "name": (ES.get_speed(a.get("key"), mult=mult) or {}).get("name") or a.get("key")})
+                    continue
+                st, _end, p = hit                 # st = **翻转后**的网格起点（viz 口径）
                 arr = ES.calc_arrival(a.get("preDelay") or 0, p, a.get("key"),
-                                      mult=mult, approx=st in fly)
+                                      mult=mult, approx=bool(getattr(p, "approx", False)))
                 lanes.setdefault(st, {"cells": set(p), "spawns": []})
                 lanes[st]["spawns"].append({
                     "t": a.get("preDelay") or 0, "n": a.get("count", 1),
@@ -214,6 +230,13 @@ def check_leaks(stage="act16side_ex02", mult=None):
         for st, ln in lanes.items():
             for s in ln["spawns"]:
                 if s["arrival"] is None:
+                    # **fail-closed**：到门时刻算不出 ⇒ 显式报「判不了」，不静默跳过
+                    # （与 job_judge 同源修法，2026-09-19）
+                    rows.append({"job": jb.get("title"), "src": jb.get("src"), "lane": st,
+                                 "enemy": s.get("name"), "spawn": s.get("t"), "arrival": None,
+                                 "verdict": "判不了",
+                                 "by": None, "by_time": None,
+                                 "why": "到门时刻算不出（%s）" % (s.get("why") or "?")})
                     continue
                 by = [d for d in dts if d["time"] is not None and d["time"] <= s["arrival"]]
                 # 覆盖判定：站在路径上（挡）或射程盖到路径（打）
@@ -240,14 +263,6 @@ def check_leaks(stage="act16side_ex02", mult=None):
 def _xy(loc):
     """作业里 location 是 [x,y]；路径是 (x,y)。"""
     return (loc[0], loc[1])
-
-
-def _is_fly(rts, st):
-    for r in rts:
-        sp = r.get("startPosition") or {}
-        if (sp.get("col"), sp.get("row")) == st:
-            return (r.get("motionMode") or "").upper() == "FLY"
-    return False
 
 
 def _act_of(jb, d):

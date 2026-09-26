@@ -76,3 +76,16 @@ python tools/deploy.py                             # 全量
 - Python 3.10+、FastAPI、uvicorn
 - MuMu 12（MuMuManager.exe）、ADB
 - MAA（MaaAssistantArknights 6.16.x）
+
+## 改 Python 的四步验证
+
+本项目用字符串/整段替换改代码时，**每一步都抓到过别的步骤抓不到的错**（2026-09-16 一晚六次补丁事故）：
+
+| 步骤 | 抓什么 | 漏什么 |
+|---|---|---|
+| `ast.parse` | 语法 / 结构错误 | `NameError`、函数被删（语法照样合法） |
+| **函数清单对比**（替换前后 `[n.name for n in ast.parse(src).body if isinstance(n, ast.FunctionDef)]`） | 函数被误删 / 被相邻区间覆盖 | 运行时逻辑 |
+| 真 `import` | `NameError`、属性丢失 | 运行时逻辑 |
+| 最小 smoke test | 运行时逻辑（预算写反、拒绝没接上） | — |
+
+**四步全做**，顺序如上。整段替换尤其必须做第 2 步——「替换区间没对准函数边界」会静默吃掉相邻函数。

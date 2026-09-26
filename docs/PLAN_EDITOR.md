@@ -2,6 +2,12 @@
 
 > 单文件 HTML；双击/浏览器打开即用；手机上也能开、能编辑。
 > 生成器：`tools/viz_plan.py`
+>
+> **本文讲"一关怎么画、怎么改"；"一个账号一次生成整个活动（工作区）"见
+> [`WORKSPACE.md`](WORKSPACE.md)** —— 那边管账号/活动导航、候选作业、`cleared.json` 落盘与跨账号差异对比。
+> 工作区生成的页面比本文的页面多一条横条（`D.ws` 注入）+ 左列「修改树」面板 + 行内「换人」按钮；
+> 单关模式（`--stage` / `--ingest`）的行为与产物**与此前完全一致**，两条路径共用 `build_payload`。
+> 闭环（修改树/规则入库/反哺）、关卡逻辑、账号分组见 [`JOB_SYSTEM.md`](JOB_SYSTEM.md)。
 
 ---
 
@@ -178,6 +184,10 @@ python tools/viz_plan.py --stage act16side_08 data/copilot/ga_derived/act16side_
 # ④ 收编导出的 edited JSON（不给路径 = 取下载目录里最新的 <stage>__*.json），收编后自动重画
 python tools/viz_plan.py --ingest
 python tools/viz_plan.py --ingest "C:\Users\xiach\Downloads\act16side_ex02__xxx__20260916.json"
+
+# ⑤ 工作区模式：一个账号一次生成整个活动（每关一个编辑器页 + 候选作业 + cleared/备注）
+python tools/viz_plan.py --workspace 9036 --activity act54side
+#    详见 docs/WORKSPACE.md（含可写服务 tools/ws_server.py 与差异工具 tools/job_diff.py）
 ```
 
 > **为什么要 ①**：下拉以前只装"生成时命令行传进去的那几份"，池子里有 33 份而页面上只有 2 份，
@@ -239,7 +249,10 @@ python tools/viz_plan.py --ingest        # 自动取 ~/Downloads 里最新的 <s
 3. **组名/占位符无法验证**：prts 作业里的"组名"（如"奶盾"）没有成员名单 → 图上不会判它，
    这类干员的职业列会显示 `?`；
 4. 图上的朝向箭头与序号是**部署信息**，不是战斗中的实时状态；
-5. 编辑只存**本浏览器**（`localStorage`）；跨设备请用「导出 JSON」；
+5. 编辑只存**本浏览器**（`localStorage`）；跨设备请用「导出 JSON」。
+   **工作区页面例外**：那条横条上的「保存为 cleared」能把当前编辑写成这一关的
+   `cleared.json`（需 `tools/ws_server.py`；静态托管下自动退回导出+`--save-cleared` 收编），
+   见 [`WORKSPACE.md`](WORKSPACE.md)；
 6. **右列只渲染 `Deploy` / `Retreat` / `Skill` 三类动作**：`SpeedUp` 这类会被丢掉（导出时会自动补回）。
    字段名实测口径：MAA 作业里延时是 **`pre_delay`（蛇形）**，不是 `preDelay`——早期读错键名，
    导致右列的 `+Ns` 角标从来没显示过，已修；

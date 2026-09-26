@@ -240,6 +240,13 @@ class EmulatorService:
         EXTERNAL/BUSY/CLOSING 由转移表拒绝（不回收）。
         并存期开关: emu_v2_reclaim=false 时只管理状态不回收（旧回收继续
         跑 — 9 道保护未全迁前不双重回收）。"""
+        # ★★ 2026-09-23 用户拍板「焊死」：回收器总闸默认关闭（config emu_reclaim_enabled，
+        #    缺省即 False）。与 launch_queue._reclaim_idle_emus 同一道闸，谁都别想关模拟器。
+        try:
+            if not self.ctx.config.get("emu_reclaim_enabled", False):
+                return
+        except Exception:
+            return
         try:
             if not self.ctx.config.get("emu_v2_reclaim", False):
                 return

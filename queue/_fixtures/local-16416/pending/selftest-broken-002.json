@@ -1,0 +1,14 @@
+{
+  "action": "刷关：CE-6（消耗体力）",
+  "device": {
+    "adb": "127.0.0.1:16416",
+    "emulator_label": "#1",
+    "instance_id": 1,
+    "server": "official"
+  },
+  "evidence": {
+    "maa_account": "官服",
+    "preflight": "read-only"
+  },
+  "approved_by": "user"
+}

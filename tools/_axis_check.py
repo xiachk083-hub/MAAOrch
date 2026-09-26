@@ -72,10 +72,10 @@ def cover_of(act, n2t, rng, ops, W, H):
 
 def analyse(stage, files, label):
     W, H, key, bt, routes, waves = V.level(stage)
-    right = next(p for a, b, p in routes if a == (10, 1))
-    mid = next(p for a, b, p in routes if a == (4, 6))
-    left = next(p for a, b, p in routes if a == (2, 6))
-    fly = line_cells((6, 6), (0, 1))          # BFS 跨不过第 3 列 ⇒ 按直线
+    right = next(p for a, b, p in routes if a == (10, 5))   # 右路（修正后坐标）
+    mid = next(p for a, b, p in routes if a == (4, 0))     # 中路（修正后坐标）
+    left = next(p for a, b, p in routes if a == (2, 0))    # 左路（修正后坐标）
+    fly = line_cells((6, 0), (0, 5))          # BFS 跨不过第 3 列 ⇒ 按直线（修正后坐标）
     col6 = [c for c in mid if c[0] == 6]
     SR, SM, SL, SF = set(right), set(mid), set(left), set(fly)
 
@@ -171,7 +171,12 @@ def main():
             if c & set(TH[0]): tags.append("右路%d格" % len(c & set(TH[0])))
             if c & set(TH[2]): tags.append("左路%d格" % len(c & set(TH[2])))
             if c & set(TH[4]): tags.append("中路6列%d格" % len(c & set(TH[4])))
-            if c & {DEV}: tags.append("★打冰淇淋机[5,3]")
+            # ⚠️ 与五条判据同一口径：**医疗只治疗**，它的射程框住装置 ≠ 打得到
+            # （判据里 `best(..., exclude=HEAL)` 已排；这里原先把医药也算上，明细与判据自相矛盾）
+            # 🐛 2026-09-16 实测崩：循环变量是 `a`（`for i, a, c in covs`），这里写成 `act` ⇒ NameError。
+            # 只有"射程覆盖装置格 [5,3]"的部署才会走到这行（`and` 短路），所以看起来像"跑了大半才崩"。
+            if c & {DEV} and a.get("profession") not in HEAL:
+                tags.append("★打冰淇淋机[5,3]")
             if c & set(TH[3]): tags.append("飞行线%d格" % len(c & set(TH[3])))
             print("   %d. %-10s %-9s [%d,%d] %-5s 射程%-5s %2d格  %s"
                   % (i, a["name"], a.get("profession") or "占位", a["location"][0],
@@ -187,11 +192,14 @@ DEV = (5, 3)
 if __name__ == "__main__":
     _W, _H, _k, _b, _r, _w = V.level("act16side_ex02")
     DEV = tuple(V.device_info("act16side_ex02")[0][0][:2])
-    TH = (next(p for a, b, p in _r if a == (10, 1)),
-          next(p for a, b, p in _r if a == (4, 6)),
-          next(p for a, b, p in _r if a == (2, 6)),
-          line_cells((6, 6), (0, 1)),
-          [c for c in next(p for a, b, p in _r if a == (4, 6)) if c[0] == 6])
+    # ⚠️ 路线的"起点格"按**修正后的坐标系**写（2026-09-16：route 的行与 map 的行序相反，
+    # 已在 viz_plan.level() 里按 H-1-row 换算过，所以现在的起点是 (10,5)/(4,0)/(2,0)/(6,0)）。
+    # 老坐标 (10,1)/(4,6)/(2,6)/(6,6) 在修正后会 StopIteration（起点根本不存在）。
+    TH = (next(p for a, b, p in _r if a == (10, 5)),        # 右路
+          next(p for a, b, p in _r if a == (4, 0)),         # 中路
+          next(p for a, b, p in _r if a == (2, 0)),         # 左路
+          line_cells((6, 0), (0, 5)),                       # 御4（飞行的起终点直线近似）
+          [c for c in next(p for a, b, p in _r if a == (4, 0)) if c[0] == 6])
     _jobs, _ = V.load_jobs(sorted(glob.glob("data/copilot/ga_derived/act16side_ex02_derived*.json"))
                            + sorted(glob.glob("data/copilot/act16side_ex02/*.json")),
                            V.professions(), "act16side_ex02")

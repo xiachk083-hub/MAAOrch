@@ -20,6 +20,9 @@ import subprocess
 import sys
 import time
 
+# Windows：不带这个标志，子进程（adb/ssh/ping）会**闪一个 cmd 黑窗** ✗
+NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 PROJ = pathlib.Path(r"D:\1-2\MAAOrch")
 SR54 = pathlib.Path(r"C:\Users\xiach\.codex\visualizations\2026\09\16"
                     r"\01a0aaf9-9a07-7931-b068-f38e4064ea0f\sr54")
@@ -114,7 +117,7 @@ def main() -> None:
         p = subprocess.run([sys.executable, str(PROJ / "tools" / "maa_operbox.py"),
                             "--emu", str(args.emu), "--instance", str(int(args.emu) + 1), "--tag", tag],
                            capture_output=True, text=True, encoding="utf-8",
-                           errors="replace", timeout=600)
+                           errors="replace", timeout=600, creationflags=NOWIN)
         out = (p.stdout or "") + (p.stderr or "")
         # 把身份**写进 box 文件本身**（文件名可以被改，文件内的 uid 是证据）
         try:

@@ -1,0 +1,12 @@
+0.1 stage1 begins: trust=2
+31 project projectButton2 (Beg for More Wire )
+58.4 project projectButton2 (Beg for More Wire )
+81 project projectButton42 (RevTracker )
+81.3 project projectButton2 (Beg for More Wire )
+156 project projectButton1 (Improved AutoClippers )
+187 project projectButton2 (Beg for More Wire )
+256 project projectButton3 (Creativity )
+270.4 project projectButton2 (Beg for More Wire )
+386.7 project projectButton2 (Beg for More Wire )
+396.1 project projectButton6 (Limerick )
+402.3 project projectButton2 (Beg for More Wire )

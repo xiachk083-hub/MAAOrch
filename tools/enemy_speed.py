@@ -21,6 +21,16 @@
     方向上是"左路更早到"，不改变它"开局顺序错了"的结论，但数字要按数据。
 
 缺失一律标注、绝不猜（`reason` 字段：speed_missing / path_missing / motion_unsupported）。
+
+2026-09-19 修正（根因见 docs/CLEARING_AGENT.md §8d-1）:
+  · `reconcile()` 原来用**未翻转**的 raw 行号 `(col,row)` 去查 `viz_plan` 的路径表，而那张表的端点是
+    `(col, H-1-row)`（viz_plan.py:124）—— 两套约定不一致 ⇒ 查不到 ⇒ **静默退回直线近似**，
+    全量 1068 条出怪里 **0 条**用对路径（322 条张冠李戴 + 746 条直线近似，误差中位 7.5s、42% 超 10s）。
+  · 修法：改走 `V.level(stage, all_routes=True)` 并**按 `route_index` 对号**（顺带解决"同起点不同路径"
+    的张冠李戴），保留"翻转行号"作退化路线的二级查找；**查不到就记进 `LAST_MISSING` 并跳过，不返回近似值**
+    （fail-closed，与"安全闸必须 fail-closed"同源）。
+  · 修后验收：32 关 333 个起点的最早到门**全部与真路径一致**（0 缺失、0 不一致）；1068 条出怪 100% 拿到真路径。
+    罚站随真路径自动带上（御4 从 T+17.5 修正为 T+52.5）。
 """
 import json
 import pathlib
@@ -30,6 +40,10 @@ DB = PROJ / "data" / "_enemy_db.json"
 
 # 见模块 docstring：1.0 是实测出来的，不是默认值
 MULT = 1.0
+
+# `reconcile()` 最近一次跑出来的"路径缺失"清单（fail-closed：缺了就跳过、不给近似值）。
+# 调用方想看"这关有没有查不到路径的出怪"读它即可，不必解析 stdout。
+LAST_MISSING: list = []
 
 _cache = {}
 
@@ -140,16 +154,27 @@ def steps_of(path):
     return len(path) - 1
 
 
-def calc_arrival(spawn_t, path, enemy_key, level=0, speeds=None, approx=False, mult=None):
+def calc_arrival(spawn_t, path, enemy_key, level=0, speeds=None, approx=False, mult=None,
+                 waits=None):
     """到达时间。返回 dict：
 
-        {arrival, steps, speed_used, enemy_name, reason, approx}
+        {arrival, steps, speed_used, enemy_name, reason, approx, wait, travel}
         arrival 为 None 时 reason 说明缺什么（speed_missing / path_missing），**不猜时间**。
+
+    **停留时间在这个出口就算进去**（2026-09-16 口径统一）：`WAIT_FOR_SECONDS` 是敌人**原地罚站**
+    （实测 637 处、最长 240s、涉及 23 关），到门时刻 = 步数 / 移速 **+ 停留**。
+    原来这个加法散在调用方 —— `viz_plan` 自己加了一次，于是**把路线拍平成格列表的调用方
+    （`job_judge`）静默少算**，同一条路两个口径。现在只在这里加一次。
+
+    `waits=None` → 从 `path` 上取（`viz_plan` 的 `RoutePath.waits`）；
+    调用方已经把路线拍平成普通 list（拿不到属性）时，显式给 `waits=<秒>`。
     """
     sp = get_speed(enemy_key, level, speeds=speeds, mult=mult)
     steps = steps_of(path)
+    wait_s = float((getattr(path, "waits", 0) or 0) if waits is None else (waits or 0))
     base = {"spawn_t": spawn_t, "enemy_key": enemy_key, "steps": steps,
-            "approx": approx, "enemy_name": sp.get("name") if sp else None}
+            "approx": approx, "enemy_name": sp.get("name") if sp else None,
+            "wait": wait_s}
     if sp is None:
         return dict(base, arrival=None, speed_used=None, reason="speed_missing")
     base["speed_used"] = sp["speed"]
@@ -158,9 +183,10 @@ def calc_arrival(spawn_t, path, enemy_key, level=0, speeds=None, approx=False, m
         return dict(base, arrival=None, reason="path_missing")
     if not sp["speed"]:
         return dict(base, arrival=None, reason="speed_zero")
-    return dict(base, arrival=round(spawn_t + steps / sp["speed"], 2),
-                reason=None,
-                pos=round(steps / sp["speed"], 2))
+    travel = steps / sp["speed"]
+    return dict(base, arrival=round(spawn_t + travel + wait_s, 2),
+                reason=None, travel=round(travel, 2),
+                pos=round(travel, 2))       # pos/travel 语义不变（纯走路时长），只加 wait
 
 
 def reconcile(stage="act16side_ex02", verbose=True):
@@ -173,34 +199,63 @@ def reconcile(stage="act16side_ex02", verbose=True):
     import sys
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
     import viz_plan as V
-    W, H, key_fn, bt, routes, waves = V.level(stage)
+    # ⚠️ **必须 all_routes=True**（2026-09-19 修）：默认会按"起点格"去重，
+    # 而出怪表的 `routeIndex` 索引的是 raw `routes[]` —— 同一出发点下的多条路线走向可能完全不同
+    # （PA-1 实测：起点 (1,0) 有 4 条，11 步 vs 21 步）。去重表会把别的路线的路径/罚站套上来。
+    W, H, key_fn, bt, routes, waves = V.level(stage, all_routes=True)
     raw = json.loads((PROJ / "data" / ("_level_%s.json" % stage)).read_text(encoding="utf-8"))
     rts = raw["routes"]
-    walk = {}
+    # 两条查到路径的路：① 按 route_index 对号（正解，绕开下面那套行号约定）；
+    # ② 退化路线（起点==终点被 viz_plan 跳过）时退回"**翻转后**的起点"查表。
+    by_ri, by_start = {}, {}
     for a, b, p in routes:
-        walk[a] = (p, False)
+        if not p:
+            continue
+        if getattr(p, "route_index", None) is not None:
+            by_ri[p.route_index] = (a, b, p)
+        by_start.setdefault(a, (b, p))
     speeds = load_enemy_speeds()
     best = {}
+    global LAST_MISSING
+    LAST_MISSING = []
+
+    def _resolve(i):
+        """routeIndex → (起点格, 路径)。查不到返回 (None, None)（**不猜**）。"""
+        rt = by_ri.get(i)
+        if rt:
+            return rt[0], rt[2]
+        # ② 翻转行号重试。**旧代码这里用的是 `(col, row)` 未翻转**，而 viz_plan 的路径端点是
+        # `(col, H-1-row)`（viz_plan.py:124）—— 两套约定不一致 ⇒ 几乎永远查不到 ⇒ 静默退回
+        # 直线近似（实测 1068 条里 0 条用对路径）。这条 flip 就是 P0-1 的修法。
+        r = rts[i] if isinstance(i, int) and 0 <= i < len(rts) else None
+        sp = (r or {}).get("startPosition") or {}
+        if not sp:
+            return None, None
+        hit = by_start.get((sp.get("col"), H - 1 - sp.get("row")))
+        return (hit[0], hit[1]) if hit else (None, None)
+
     for w in raw.get("waves") or []:
         for fr in w.get("fragments") or []:
             for a in fr.get("actions") or []:
                 if a.get("actionType") != "SPAWN":
                     continue
                 i = a.get("routeIndex")
-                sp, ep = rts[i].get("startPosition") or {}, rts[i].get("endPosition") or {}
-                st = (sp.get("col"), sp.get("row"))
-                en = (ep.get("col"), ep.get("row"))
-                if st == en:
-                    continue
-                # 地面走 BFS 路径；**BFS 为 None 就是飞行**（跨不过地形），改用直线近似。
-                # 注意 level() 会把飞行路线也放进 routes（path=None），所以不能只看 "st in walk"，
-                # 否则御4 这类会被当"路径缺失"静默丢掉。
-                path, approx = walk.get(st, (None, False))
+                start, path = _resolve(i)
                 if not path:
-                    path, approx = line_cells(st, en), True
-                r = calc_arrival(a.get("preDelay") or 0, path, a.get("key"), speeds=speeds, approx=approx)
-                if r["arrival"] is None:
+                    # **P0-2（fail-closed）**：查不到就是查不到 —— 记进 LAST_MISSING + 标明原因，
+                    # **绝不**退回直线近似给一个"看起来正常"的数（与"安全闸必须 fail-closed"同源）。
+                    # 调用方看到 LAST_MISSING / reason="path_missing" 自行决定跳过还是显式标注近似。
+                    LAST_MISSING.append({"route_index": i, "key": a.get("key"),
+                                         "t": a.get("preDelay"), "reason": "path_missing"})
                     continue
+                # 罚站（WAIT_FOR_SECONDS）在路径对象上（`RoutePath.waits`），calc_arrival 会自动带上
+                r = calc_arrival(a.get("preDelay") or 0, path, a.get("key"), speeds=speeds,
+                                 approx=bool(getattr(path, "approx", False)))
+                if r["arrival"] is None:
+                    LAST_MISSING.append({"route_index": i, "key": a.get("key"),
+                                         "t": a.get("preDelay"), "reason": r.get("reason")})
+                    continue
+                st = start
                 if st not in best or r["arrival"] < best[st]["arrival"]:
                     best[st] = r
     if verbose:
@@ -208,6 +263,10 @@ def reconcile(stage="act16side_ex02", verbose=True):
             print("起点 %-9s 首到 T+%-6s (%s, %s格/秒, %d步%s)"
                   % (str(st), r["arrival"], r["enemy_name"], r["speed_used"], r["steps"],
                      ", 直线近似" if r["approx"] else ""))
+        if LAST_MISSING:
+            print("⚠️ 路径缺失 %d 条（**未给近似值**，按 fail-closed 跳过）：" % len(LAST_MISSING))
+            for m in LAST_MISSING[:8]:
+                print("   ", m)
     return best
 
 

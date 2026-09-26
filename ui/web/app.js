@@ -144,7 +144,7 @@ function renderPage() {
                 gallery: renderGallery, chronicle: renderChronicle, nodes: renderNodes,
                 emus: renderEmus, connect: renderConnect, events: renderEvents,
                 depot: renderDepot, audit: renderAudit, shots: renderShots,
-                maalog: renderMaaLog };
+                maalog: renderMaaLog, auto_mas: renderAutoMas, copilot_lab: renderCopilotLab };
   if (fns[state.page]) fns[state.page](c);
   else { c.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">页面未找到，请 Ctrl+F5 强刷更新前端</div>`; }
 }

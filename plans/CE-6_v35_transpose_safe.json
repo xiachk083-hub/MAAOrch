@@ -1,0 +1,14 @@
+{
+ "stage_name": "CE-6",
+ "stage_id": "wk_melee_6",
+ "title": "CE-6 对照实验 v35：转置不变的四格墙（同时覆盖两种坐标约定）",
+ "note": "背景：v30/v31/v34 都是开打后约 8-25 秒 3 点掉光，而 v34a 的战斗画面里 HUD 显示 0/41 击杀、只落地 2 人 ⇒ 现象是『敌人完全没被挡』。已验证 MAA 的格子->屏幕映射本身没问题（红出怪口落在 col≈7），所以怀疑『location [a,b] 到底是 (col,row) 还是 (row,col)』这一层约定 —— 原报告只验过落点是否可部署（本关整片可部署，转置也照样合法），验不出转置。本作业把墙放在 {(2,2),(2,3),(3,2),(3,3)}：这个集合在**转置下不变**，两种约定都必然同时盖住两条车道。若这局能明显撑更久/通关 ⇒ 就是坐标约定问题；若依旧秒失败 ⇒ 排除该假设。",
+ "slots": [
+  {"group": "墙A星熊", "opers": ["星熊", "年", "黍"], "location": [2, 2], "direction": "Right"},
+  {"group": "墙B塞雷娅", "opers": ["塞雷娅", "黍", "涤火杰西卡"], "location": [2, 3], "direction": "Right"},
+  {"group": "墙C凛御银灰", "opers": ["凛御银灰", "推进之王"], "location": [3, 2], "direction": "Right"},
+  {"group": "墙D焰尾", "opers": ["焰尾", "极境"], "location": [3, 3], "direction": "Right"},
+  {"group": "中后琴柳", "opers": ["琴柳", "渡桥"], "location": [1, 1], "direction": "Right"},
+  {"group": "中后伊内丝", "opers": ["伊内丝", "晓歌"], "location": [4, 1], "direction": "Right"}
+ ]
+}

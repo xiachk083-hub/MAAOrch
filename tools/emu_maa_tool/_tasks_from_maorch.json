@@ -1,0 +1,918 @@
+[
+  {
+    "name": "明日方舟-b-2",
+    "game_client": "Bilibili",
+    "emu_instance_index": "1",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-8"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-3",
+    "game_client": "Bilibili",
+    "emu_instance_index": "2",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-9",
+    "game_client": "Bilibili",
+    "emu_instance_index": "3",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-33",
+    "game_client": "Official",
+    "emu_instance_index": "4",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-4",
+      "TO-9",
+      "TO-8"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-7",
+    "game_client": "Bilibili",
+    "emu_instance_index": "5",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-22",
+    "game_client": "Official",
+    "emu_instance_index": "6",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-4",
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-11",
+    "game_client": "Bilibili",
+    "emu_instance_index": "7",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-10",
+    "game_client": "Bilibili",
+    "emu_instance_index": "8",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-1-1-7",
+    "game_client": "Official",
+    "emu_instance_index": "9",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-4",
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-日-2",
+    "game_client": "YoStarJP",
+    "emu_instance_index": "10",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": true
+  },
+  {
+    "name": "明日方舟-官-23",
+    "game_client": "Official",
+    "emu_instance_index": "11",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-4",
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-日-4",
+    "game_client": "YoStarJP",
+    "emu_instance_index": "12",
+    "farm_tag": "resource",
+    "fight_default": "CE-6",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-10",
+    "game_client": "Official",
+    "emu_instance_index": "13",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "1-7": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4
+    },
+    "stages": [
+      "TO-4",
+      "LS-6",
+      "TO-5",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-2",
+    "game_client": "Official",
+    "emu_instance_index": "14",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-4",
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-3-搓玉",
+    "game_client": "Official",
+    "emu_instance_index": "15",
+    "farm_tag": "orundum",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-5",
+    "game_client": "Bilibili",
+    "emu_instance_index": "16",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-7",
+    "game_client": "Official",
+    "emu_instance_index": "17",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-8",
+    "game_client": "Official",
+    "emu_instance_index": "18",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-5",
+    "game_client": "Official",
+    "emu_instance_index": "19",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-6",
+    "game_client": "Official",
+    "emu_instance_index": "20",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-14",
+    "game_client": "Official",
+    "emu_instance_index": "21",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "TO-8"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-12",
+    "game_client": "Bilibili",
+    "emu_instance_index": "22",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-9",
+    "game_client": "Official",
+    "emu_instance_index": "23",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-日-1",
+    "game_client": "YoStarJP",
+    "emu_instance_index": "24",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-11",
+    "game_client": "Official",
+    "emu_instance_index": "26",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-12",
+    "game_client": "Official",
+    "emu_instance_index": "27",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-8",
+    "game_client": "Bilibili",
+    "emu_instance_index": "28",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-15",
+    "game_client": "Official",
+    "emu_instance_index": "29",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "1-7": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4
+    },
+    "stages": [
+      "TO-5",
+      "LS-6",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-16",
+    "game_client": "Official",
+    "emu_instance_index": "30",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [],
+    "suspended": true
+  },
+  {
+    "name": "明日方舟-官-19",
+    "game_client": "Official",
+    "emu_instance_index": "33",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "1-7": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4
+    },
+    "stages": [
+      "TO-5",
+      "LS-6",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-17",
+    "game_client": "Official",
+    "emu_instance_index": "35",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-25",
+    "game_client": "Official",
+    "emu_instance_index": "37",
+    "farm_tag": "material",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": true
+  },
+  {
+    "name": "明日方舟-官-26",
+    "game_client": "Official",
+    "emu_instance_index": "38",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-b-1",
+    "game_client": "Bilibili",
+    "emu_instance_index": "39",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": true
+  },
+  {
+    "name": "明日方舟-官-21",
+    "game_client": "Official",
+    "emu_instance_index": "40",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-47",
+    "game_client": "Official",
+    "emu_instance_index": "42",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-24",
+    "game_client": "Official",
+    "emu_instance_index": "43",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-13",
+    "game_client": "Official",
+    "emu_instance_index": "45",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-37",
+    "game_client": "Official",
+    "emu_instance_index": "46",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": true
+  },
+  {
+    "name": "明日方舟-官-4",
+    "game_client": "Official",
+    "emu_instance_index": "47",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "1-7": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4
+    },
+    "stages": [
+      "TO-5",
+      "LS-6",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-38",
+    "game_client": "Official",
+    "emu_instance_index": "48",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-日-3",
+    "game_client": "YoStarJP",
+    "emu_instance_index": "53",
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-41",
+    "game_client": "Official",
+    "emu_instance_index": "56",
+    "farm_tag": "material",
+    "fight_default": "TO-5",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {
+      "TO-5": 10,
+      "TO-8": 8,
+      "CE-6": 6,
+      "LS-6": 4,
+      "1-7": 2
+    },
+    "stages": [
+      "1-7",
+      "TO-9"
+    ],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-27",
+    "game_client": "Official",
+    "emu_instance_index": 36,
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-20",
+    "game_client": "Official",
+    "emu_instance_index": 50,
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "明日方舟-官-28",
+    "game_client": "Official",
+    "emu_instance_index": 51,
+    "farm_tag": "orundum",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "l-4-Buling",
+    "game_client": "Official",
+    "emu_instance_index": "31",
+    "farm_tag": "material",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  },
+  {
+    "name": "l-6-桃溪路年丰",
+    "game_client": "Official",
+    "emu_instance_index": "25",
+    "farm_tag": "material",
+    "fight_default": "1-7",
+    "fight_stage": "",
+    "task_pipeline": "",
+    "fight_priority": {},
+    "stages": [],
+    "suspended": false
+  }
+]

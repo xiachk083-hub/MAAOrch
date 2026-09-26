@@ -1,0 +1,29 @@
+{
+  "id": "selftest-nofg-006",
+  "ts": "2026-09-24T21:20:00+08:00",
+  "host": "local-16416",
+  "action": "maa.task",
+  "task_type": "刷关",
+  "approved_by": "user",
+  "prev": "",
+  "sha256": "9fdc7e939314d62095b67bfbe78edea5be1e428da97620d800b4f40a1cd76cc2",
+  "params": {
+    "stage": "CE-6",
+    "mode": "普通",
+    "times": 1
+  },
+  "cost": {
+    "sanity": 36,
+    "sanity_source": "table"
+  },
+  "anchor": {
+    "adb_port": 16416,
+    "uid": "751737728",
+    "server": "官服",
+    "uid_source": "lobby_ocr"
+  },
+  "evidence": {
+    "ocr_uid_png": "runtime/_ce6/lobby.png"
+  },
+  "precondition": "campaign_quiesced"
+}

@@ -1,0 +1,102 @@
+{
+ "EX-4": [
+  {
+   "code": "maa://102640",
+   "title": "[SR-EX-4] 望单核 仅普通 挂件兼容高中低配",
+   "miss": 0,
+   "acts": 200
+  },
+  {
+   "code": "maa://102610",
+   "title": "[SR-EX-4] 望单核(3-6潜版) 仅突袭 挂件兼容高中低配",
+   "miss": 0,
+   "acts": 203
+  },
+  {
+   "code": "maa://102658",
+   "title": "[SR-EX-4] 望单核(1-2潜版) 仅突袭 挂件兼容高中低配",
+   "miss": 0,
+   "acts": 213
+  },
+  {
+   "code": "maa://102511",
+   "title": "[SR-EX-4] 望单核(1-2潜版) 仅突袭 挂件兼容高中低配",
+   "miss": 0,
+   "acts": 213
+  },
+  {
+   "code": "maa://102783",
+   "title": "SR-EX-4突袭",
+   "miss": 0,
+   "acts": 0
+  },
+  {
+   "code": "maa://102624",
+   "title": "SR-EX-4（半成品）前20杀",
+   "miss": 0,
+   "acts": 101
+  },
+  {
+   "code": "maa://102413",
+   "title": "SR-EX-4 - 反刍之堂 - 三核",
+   "miss": 1,
+   "acts": 14
+  },
+  {
+   "code": "maa://102751",
+   "title": "SR-EX-4 - 反刍之堂 - 三核",
+   "miss": 1,
+   "acts": 14
+  }
+ ],
+ "EX-1": [
+  {
+   "code": "maa://102323",
+   "title": "SR-EX-1",
+   "miss": 0,
+   "acts": 5
+  },
+  {
+   "code": "maa://102404",
+   "title": "SR-EX-1 - 欲求之础",
+   "miss": 0,
+   "acts": 5
+  },
+  {
+   "code": "maa://102325",
+   "title": "[SR-EX-1] 圣聆初雪单核 挂件兼容高中低配",
+   "miss": 0,
+   "acts": 11
+  },
+  {
+   "code": "maa://102523",
+   "title": "SR-EX-1 - 欲求之础",
+   "miss": 0,
+   "acts": 6
+  },
+  {
+   "code": "maa://102529",
+   "title": "老干员＋借新 SR-EX-1",
+   "miss": 0,
+   "acts": 4
+  },
+  {
+   "code": "maa://102494",
+   "title": "SR-EX-1 - 欲求之础",
+   "miss": 0,
+   "acts": 7
+  },
+  {
+   "code": "maa://102383",
+   "title": "SR-EX-1 - 欲求之础",
+   "miss": 0,
+   "acts": 6
+  },
+  {
+   "code": "maa://102352",
+   "title": "SR-EX-1 - 欲求之础",
+   "miss": 0,
+   "acts": 4
+  }
+ ]
+}

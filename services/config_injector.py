@@ -353,9 +353,18 @@ class ConfigService:
         # 自己有按钮；ReportStatus 上报任务结果 SUCCESS/FAILED = MAA 自己
         # 报错。MAAOrch 端点 /api/maa_remote/*）
         rc = gui.setdefault("RemoteControl", {})
+        # 2026-09-21：端口不再硬编码 19999 —— 看板要迁到 Node（Node 占 19999），
+        # Python 退到 config.api_port（19997）。MAA 的回调必须打到"真正实现这两个
+        # 端点的那个服务"，所以这里读配置，避免 Python 挪走后回调打到 Node 的代理上。
+        _rc_port = 19999
+        try:
+            _cfg = getattr(self.mw, "config", None) or {}
+            _rc_port = int(_cfg.get("api_port", 19999) or 19999)
+        except Exception:
+            pass
         rc.update({
-            "RemoteControlGetTaskEndpointUri": "http://127.0.0.1:19999/api/maa_remote/task",
-            "RemoteControlReportStatusUri": "http://127.0.0.1:19999/api/maa_remote/status",
+            "RemoteControlGetTaskEndpointUri": f"http://127.0.0.1:{_rc_port}/api/maa_remote/task",
+            "RemoteControlReportStatusUri": f"http://127.0.0.1:{_rc_port}/api/maa_remote/status",
             "RemoteControlUserIdentity": str(ac.get("id", "")),
             "RemoteControlDeviceIdentity": str(emu_idx),
             "RemoteControlPollIntervalMs": 1000,

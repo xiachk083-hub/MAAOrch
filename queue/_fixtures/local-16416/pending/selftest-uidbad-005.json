@@ -1,0 +1,32 @@
+{
+  "id": "selftest-uidbad-005",
+  "ts": "2026-09-24T21:20:00+08:00",
+  "host": "local-16416",
+  "action": "maa.task",
+  "task_type": "刷关",
+  "approved_by": "user",
+  "prev": "",
+  "sha256": "2970212644ea93412c719ebdb637955a945788be049327aeb35e415d2a4fd45f",
+  "params": {
+    "stage": "CE-6",
+    "mode": "普通",
+    "times": 1
+  },
+  "cost": {
+    "sanity": 36,
+    "sanity_source": "table"
+  },
+  "anchor": {
+    "adb_port": 16416,
+    "uid": "751737728",
+    "server": "官服",
+    "uid_source": "lobby_ocr"
+  },
+  "evidence": {
+    "ocr_uid_png": "_lobby_5554_uid.png",
+    "fg_package": "com.hypergryph.arknights",
+    "fg_read_raw": "mCurrentFocus=Window{35dd6ad u0 com.hypergryph.arknights/com.u8.sdk.U8UnityContext}",
+    "account_switch": "MAA 切换账号 189****9036"
+  },
+  "precondition": "campaign_quiesced"
+}

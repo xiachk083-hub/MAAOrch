@@ -1,0 +1,30 @@
+{
+  "ts": "2026-09-24T22:00:00+08:00",
+  "host": "local-16416",
+  "action": "maa.task",
+  "task_type": "刷关",
+  "approved_by": "user",
+  "prev": "",
+  "sha256": "660795160f1139a73269a5ebc3bc8b5f6579961cab64e73c90ccd06b42a210b3",
+  "precondition": "campaign_quiesced",
+  "params": {
+    "stage": "10-10",
+    "mode": "突袭",
+    "times": 1
+  },
+  "cost": {
+    "sanity": 24,
+    "sanity_source": "table"
+  },
+  "anchor": {
+    "adb_port": 16416,
+    "uid": "751737728",
+    "server": "官服",
+    "uid_source": "lobby_ocr"
+  },
+  "evidence": {
+    "ocr_uid_png": "runtime/_ce6/lobby.png",
+    "fg_package": "com.hypergryph.arknights"
+  },
+  "id": "selftest-maintough-012"
+}

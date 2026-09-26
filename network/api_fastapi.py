@@ -716,6 +716,24 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
         from services.stats_aggregator import available_periods
         return available_periods(mw.accounts)
 
+    # ── L3 产线工作台（/api/mas/*）────────────────────────────────────
+    # 数据源见 services/mas_l3.py：主机实时快照（SSH）+ AUTO-MAS 历史聚合 + 本地留痕。
+    # 两个动作都复用已有 CLI 工具，不在这里重写发车逻辑。
+    @app.get("/api/mas/status")
+    def handle_mas_status(days: int = 7, refresh: int = 0):
+        from services.mas_l3 import collect_status
+        return collect_status(days=max(1, min(int(days or 7), 30)), refresh=bool(refresh))
+
+    @app.post("/api/mas/rerun")
+    def handle_mas_rerun(body: dict = None):
+        from services.mas_l3 import rerun_async
+        return rerun_async((body or {}).get("accounts") or [])
+
+    @app.post("/api/mas/cleanup")
+    def handle_mas_cleanup(body: dict = None):
+        from services.mas_l3 import cleanup
+        return cleanup()
+
     # ── Stage probe（关卡检测 — docs/STAGE_PROBE.md）──
     _probe_results: dict = {}
     _probe_lock = threading.Lock()
@@ -3658,6 +3676,18 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
     def inspect_account(name: str):
         """单个账号深挖：配置 + 模拟器 + MAA 实例 + 当前任务 + asst.log 最近错误。"""
         import re as _re
+        try:
+            return _inspect_account_impl(mw, name)
+        except Exception as _e:
+            import traceback as _tb
+            _tb.print_exc()
+            try:
+                mw._log(f"[inspect] {name} 异常: {_e}")
+            except Exception:
+                pass
+            raise HTTPException(500, f"inspect error: {_e}")
+
+    def _inspect_account_impl(mw: Any, name: str) -> dict:
         ac = next((x for x in mw.accounts
                    if x.get("name", "").replace("明日方舟-", "") == name), None)
         if not ac:
@@ -3798,6 +3828,12 @@ def start_server(mw: Any, port: int = 19999) -> None:
     cert = mw.config.get("ssl_cert", "") if hasattr(mw, 'config') else ""
     key = mw.config.get("ssl_key", "") if hasattr(mw, 'config') else ""
     app = create_app(mw)
+    # 作业实验室（prts 作业筛选 + 跑不了就自动换下一份）—— 独立模块，挂不上不影响主服务
+    try:
+        from network import copilot_api as _copilot_api
+        _copilot_api.register(app)
+    except Exception as _e:
+        print("[copilot_api] register failed:", _e)
     config = uvicorn.Config(app, host=bind, port=port, log_level="info",
                             ssl_certfile=cert if cert and key else None,
                             ssl_keyfile=key if cert and key else None)
