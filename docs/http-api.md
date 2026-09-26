@@ -806,10 +806,14 @@ HTTP 状态码遵循 REST 语义：
 
 ## 集成示例
 
+> 📌 **端口说明**：Python API 端口 = `models/config.json` 的 `api_port`（本机 2026-09-26 实测 **19997**）。
+> **19999 是 Node 门面**（`server/maaorch-web.mjs`），它把存活端点透传给 Python，所以直打 19999 对存活端点**也能用**，
+> 但**权威地址是 Python API**。下文示例统一写成**可覆盖**形式：设环境变量 `MAAORCH_API` 即可切换地址/端口。
+
 ### Node.js 轮询监控
 
 ```js
-const ORCH = "http://127.0.0.1:19999"
+const ORCH = process.env.MAAORCH_API || "http://127.0.0.1:19997"  // ← 权威地址 = Python API（models/config.json → api_port）
 const opts = {
   headers: { "x-agent-token": process.env.ORCH_TOKEN }
 }
@@ -827,9 +831,9 @@ setInterval(async () => {
 ### Python 定时启动
 
 ```python
-import requests, time
+import os, requests, time
 
-ORCH = "http://127.0.0.1:19999"
+ORCH = os.environ.get("MAAORCH_API", "http://127.0.0.1:19997")  # ← 权威地址 = Python API（models/config.json → api_port）
 HEADERS = {"x-agent-token": "my-token"}
 
 while True:
@@ -846,9 +850,9 @@ while True:
 > ⚠️ **已于 2026-09-26 删除**：`GET /api/sse` 不再存在（Node 门面亦不提供 SSE），本示例不可运行。
 
 ```python
-import requests, json
+import os, requests, json
 
-ORCH = "http://127.0.0.1:19999"
+ORCH = os.environ.get("MAAORCH_API", "http://127.0.0.1:19997")  # ← 权威地址 = Python API（models/config.json → api_port）
 r = requests.get(f"{ORCH}/api/sse", stream=True)  # ⚠️ （已于 2026-09-26 前端退役时删除）
 for line in r.iter_lines():
     if line.startswith(b"data: "):
