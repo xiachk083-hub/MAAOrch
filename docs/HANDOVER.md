@@ -67,6 +67,7 @@ main_web.pyw (可选 PySide6) → WebContext → AccountRunner / LaunchQueue
 
 - 任务结束（任何退出路径）归档 `asst.log` + `gui.log` 到 `logs/maa_history/{aid}/`（每账号 30 次运行）
 - 日志页「📁 历史」面板：选账号 → 文件列表 → 查看内容（`GET /api/maa/logs_history`）
+  - **2026-09-26 变更**：`GET /api/maa/logs_history` 与日志页随**前端整体退役**一并删除（路由 140→49）。归档文件仍落在 `logs/maa_history/{aid}/`，改由直接读文件或 MCP 查询，不再是 Web 功能。
 - `logs/maa_history` 已加入 manager 部署保留列表
 
 ### 2.5 截图性能（防限流/防过载）

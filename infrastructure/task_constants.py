@@ -183,7 +183,8 @@ def detect_emu_adb(emu_idx) -> str:
     # 2026-09-14 实测: 本机（MuMuManager 装在 D:\Xiach\MuMuPlayer，不在下面的候选路径里）
     # 单查这条路会落到 `where MuMuManager.exe`，它把中文提示写进 stderr（GBK），
     # text=True 严格解码抛 UnicodeDecodeError → 被 except 吞掉 → 静默返回 ""。
-    # 后果: GET /api/account/{idx}/screenshot 拿不到 adb 端口（画面空白），
+    # 后果: GET /api/account/{idx}/screenshot（该端点已于 2026-09-26 前端退役时删除，此处为历史记录）
+    # 拿不到 adb 端口（画面空白），
     # 且没有任何报错线索。批量探测那条路不带这个坑。
     try:
         for e in detect_emu_instances():

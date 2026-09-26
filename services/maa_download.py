@@ -9,12 +9,13 @@ _RELEASE_API = "https://api.github.com/repos/MaaAssistantArknights/MaaRelease/re
 _RELEASE_PAGE = "https://github.com/MaaAssistantArknights/MaaRelease/releases/latest"
 _USER_AGENT = "MAAOrch"
 
-# Global lock: ensure_maa_available may be called from the startup background
-# thread AND the /api/maa/download_update endpoint concurrently. Without this,
+# Global lock: ensure_maa_available 由启动后台线程调用（main_web.pyw:162,167）。
+# 原并发方 /api/maa/download_update 已于 2026-09-26 前端退役时删除；本锁保留作防御。Without this,
 # two threads can rmtree()/rebuild maa/source at the same time, corrupting it.
 _MAA_LOCK = threading.Lock()
 
-# Download progress state — queried by /api/maa/download_status for the UI.
+# Download progress state — 现经 GET /api/maa/status 回显（api_fastapi.py:1828）；
+# 原 /api/maa/download_status 已于 2026-09-26 前端退役时删除。
 # {state: idle|downloading|extracting|init|done|error, pct, downloaded, total, version, error, message}
 _dl_status: dict = {"state": "idle", "pct": 0, "downloaded": 0, "total": 0,
                     "version": "", "error": "", "message": ""}

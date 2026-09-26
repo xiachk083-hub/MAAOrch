@@ -2039,7 +2039,8 @@ class AccountRunner:
         # 不再做全局弹窗扫描 — 2026-08-10 用户指出：窗口只要动一下（位置/尺寸
         # 变化）就可能被识别为弹窗处理，误伤正常窗口。弹窗只应在我们自己的
         # 主动关闭流程内处理（_downgrade_stage 的 WM_CLOSE 闭环、stop_all、
-        # /api/system/close_popups 手动端点），不做无人值守的全窗口扫描。
+        # 原 /api/system/close_popups 手动端点 —— 该端点已于 2026-09-26 前端退役时删除），
+        # 不做无人值守的全窗口扫描。
         for aid in list(self._procs.keys()):
             self._check_one(aid)
 

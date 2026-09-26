@@ -173,7 +173,7 @@ exit_code 处理:
 | 📊 表格模式 | 勾选关卡列 |
 | 📋 CSV 编辑 | Excel 改 0/1 → 导入 |
 | 账号详情页 | 关卡管理标签 |
-| API | `POST /api/stages/apply` |
+| API | `POST /api/stages/apply` **（2026-09-26 前端退役时删除）** |
 
 ## 实例池
 
@@ -215,7 +215,7 @@ ensure_maa_instances_async()
 
 | API 端点 | 记录内容 |
 |----------|---------|
-| `POST /api/action/smart_all` | "一键调度: N 个账号" |
+| `POST /api/action/smart_all` **（2026-09-26 前端退役时删除）** | "一键调度: N 个账号" |
 | `POST /api/action/smart_selected` | "调度选中: N 个账号" |
 
 通过 `GET /api/oplog` 查看审计日志。

@@ -7,7 +7,8 @@
     三星检测     → 复用 `tools/clear_runner.py` 的 `_verify_stars()`（→ `maa_job_fallback.verify_three_star`）
     关卡间导航   → 复用 `clear_runner.go_terminal/safe_tap/wait_state`、`ga_ex_drive` 的"失败立刻换下一份"
     失败处理     → 本文件只定**策略**（跳过 + 记录 + 每关最多 1 次重试 + 绝不阻塞）
-    实时流       → 本文件新增（JSONL 落盘 + 带时间戳的 stdout；SSE 可后接 `/api/events_bus`）
+    实时流       → 本文件新增（JSONL 落盘 + 带时间戳的 stdout；原可后接 SSE `/api/events_bus`，
+                   该端点已于 2026-09-26 前端退役时删除，不再可用）
 
 🔴 **两道闸**（默认不越线，必须显式开）：
   1. **默认 dry-run**：不给 `--live` 就只读工作区、只打印计划，**不碰任何机器**。

@@ -37,7 +37,7 @@
    MuMuManager 装在非候选路径（`D:\Xiach\MuMuPlayer`）时，代码会落到
    `where MuMuManager.exe`，该调用把中文提示写进 stderr（GBK），`text=True` 严格解码
    抛 `UnicodeDecodeError` → 被宽 `except` 吞掉 → 返回 `""`。
-   **连带影响**：`GET /api/account/{idx}/screenshot`（前端实时画面）拿不到 adb 端口，
+   **连带影响**：`GET /api/account/{idx}/screenshot`（该端点已于 2026-09-26 前端退役时删除，本段为历史事故记录）（前端实时画面）拿不到 adb 端口，
    画面空白且无任何报错线索。已改为先走批量探测（生产验证过的那条路），
    并给 `where` 调用补 `errors="replace"`。
 

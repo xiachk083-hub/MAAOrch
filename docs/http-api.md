@@ -1,4 +1,4 @@
-﻿# HTTP API 接口文档
+# HTTP API 接口文档
 
 ## 概述
 
@@ -9,7 +9,7 @@ MAAOrch 启动后自动在 `127.0.0.1` 开启 HTTP REST 服务，供 Web UI 面�
 | 项目 | 说明 |
 |------|------|
 | 地址 | `http://127.0.0.1:{port}` |
-| 默认端口 | `19999`（可在设置中修改） |
+| 默认端口 | Python API = **`models/config.json → api_port`**（2026-09-26 实测 **19997**）；**19999 是 Node 门面**（`server/maaorch-web.mjs`，它把 /api/* 透传给 Python）。历史默认值 19999 已不再指代本 API。 |
 | 鉴权 | Header `x-agent-token: {token}`（空字符串则不验证 Web UI 请求） |
 | Content-Type | `application/json` |
 | 监听范围 | 仅 `127.0.0.1`（可通过 `bind_address` 配置修改） |
@@ -83,6 +83,8 @@ Response 404 (index 越界):
 
 **`GET /api/node/info`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 返回节点信息、版本、资源概览。
 
 ```
@@ -150,6 +152,8 @@ Response 200:
 
 **`GET /api/account/{index}/screenshot`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 截图。返回 PNG 图片（Content-Type: image/png）。
 
 ```
@@ -190,6 +194,8 @@ Response 200:
 
 **`POST /api/account`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 创建新账号。
 
 ```
@@ -212,6 +218,8 @@ Response 200:
 
 **`POST /api/account/{index}/edit`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 编辑账号字段。
 
 ```
@@ -226,6 +234,8 @@ Response 200:
 
 **`POST /api/account/{index}/delete`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 删除账号。
 
 ```
@@ -239,6 +249,8 @@ Response 200:
 
 **`GET /api/account/{index}/config`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 返回账号的任务设置。
 
 ```
@@ -249,6 +261,8 @@ Response 200:
 ---
 
 **`POST /api/account/{index}/config`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 保存账号的任务设置。
 
@@ -369,6 +383,8 @@ Response 200:
 
 **`POST /api/action/smart_all`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 一键调度所有可用账号入队。
 
 ```
@@ -429,6 +445,8 @@ Response 200:
 
 **`GET /api/account/{index}/stats`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 返回单个账号的完整运行统计。
 
 ```
@@ -452,6 +470,8 @@ Response 200:
 ---
 
 **`GET /api/stats`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 返回全部账号统计汇总。
 
@@ -493,6 +513,8 @@ Response 200:
 
 **`GET /api/maa/log?aid={id}&lines=100`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 读取指定账号的 MAA 运行日志（asst.log）。
 
 ```
@@ -505,6 +527,8 @@ Response 200:
 ### 配置
 
 **`GET /api/config`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 获取全部配置。
 
@@ -525,6 +549,8 @@ Response 200:
 
 **`POST /api/config`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 保存配置。
 
 ```
@@ -538,6 +564,8 @@ Response 200:
 ---
 
 **`POST /api/config/sync`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 下发 MAA `gui.json` 配置到指定账号，覆盖目标账号的 `gui.json` 和 `gui.new.json`。
 
@@ -619,6 +647,8 @@ Response 200:
 
 **`POST /api/kill_maa`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 杀死所有 MAA.exe 进程。
 
 ```
@@ -630,6 +660,8 @@ Response 200:
 
 **`POST /api/system/restart`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 重启 MAAOrch 服务。
 
 ```
@@ -640,6 +672,8 @@ Response 200:
 ---
 
 **`POST /api/system/close_popups`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 关闭 MuMu 异常弹窗。
 
@@ -654,6 +688,8 @@ Response 200:
 
 **`GET /api/maa/check_update`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 检查 MAA 更新。
 
 ```
@@ -665,6 +701,8 @@ Response 200:
 
 **`POST /api/maa/download_update`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 后台下载 MAA 更新。
 
 ```
@@ -675,6 +713,8 @@ Response 200:
 ---
 
 **`POST /api/orch/check_update`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 检查 MAAOrch 更新。
 
@@ -689,6 +729,8 @@ Response 200:
 
 **`GET /api/sse`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 服务端推送事件流，每秒推送当前状态。
 
 ```
@@ -698,7 +740,7 @@ data: {"ok":true,"accounts":[...],"queue":{"count":0},"notifications":[],"ai_ins
 客户端示例：
 
 ```js
-const es = new EventSource('/api/sse');
+const es = new EventSource('/api/sse');  // ⚠️ （已于 2026-09-26 前端退役时删除）
 es.onmessage = e => {
   const data = JSON.parse(e.data);
   updateUI(data.accounts, data.queue);
@@ -711,6 +753,8 @@ es.onmessage = e => {
 
 **`POST /api/config/export`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
+
 导出账号配置和部分全局配置。
 
 ```
@@ -721,6 +765,8 @@ Response 200:
 ---
 
 **`POST /api/config/import`**
+
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点当前不存在，本节仅作历史留存；现行端点见本文档中未标注失效横幅的条目。
 
 导入账号配置。
 
@@ -789,18 +835,21 @@ HEADERS = {"x-agent-token": "my-token"}
 while True:
     status = requests.get(f"{ORCH}/api/status", headers=HEADERS).json()
     if not status.get("running"):
-        r = requests.post(f"{ORCH}/api/action/smart_all", headers=HEADERS)
+        # ⚠️ /api/action/smart_all 已于 2026-09-26 删除；等价能力现由 MCP 工具 smart_dispatch 提供
+        r = requests.post(f"{ORCH}/api/action/smart_all", headers=HEADERS)  # ⚠️ （已于 2026-09-26 前端退役时删除）
         print("已调度")
     time.sleep(300)
 ```
 
 ### SSE 实时订阅
 
+> ⚠️ **已于 2026-09-26 删除**：`GET /api/sse` 不再存在（Node 门面亦不提供 SSE），本示例不可运行。
+
 ```python
 import requests, json
 
 ORCH = "http://127.0.0.1:19999"
-r = requests.get(f"{ORCH}/api/sse", stream=True)
+r = requests.get(f"{ORCH}/api/sse", stream=True)  # ⚠️ （已于 2026-09-26 前端退役时删除）
 for line in r.iter_lines():
     if line.startswith(b"data: "):
         data = json.loads(line[6:])
@@ -812,8 +861,8 @@ for line in r.iter_lines():
 `api_fastapi.py` 基于 **FastAPI + uvicorn** 实现，运行在守护线程中：
 
 - 异步事件驱动：uvicorn 负责请求分发，全部处理器同步执行
-- SSE 推送：`/api/sse` 使用 `StreamingResponse` + `async for` 实现实时状态推送
+- SSE 推送：`/api/sse` 使用 `StreamingResponse` + `async for` 实现实时状态推送（该端点已于 2026-09-26 删除）
 - 限流器：200 req/min/IP（`127.0.0.1` 豁免）
 - 鉴权：`x-agent-token` header 对比（hmac.compare_digest），空 token 时 Web UI 免登
-- 静态文件：catch-all 路由兜底到 `ui/web/`，SPA 单页入口
+- 静态文件：catch-all 路由兜底到 `ui/web/`，SPA 单页入口 **（已于 2026-09-26 前端退役时删除：`GET /{full_path:path}` 与 `ui/web/` 均不再存在；人工入口改为 Node 门面的 `/status`）**
 - 旧版 `api_server.py` 保留备用（基于 `BaseHTTPRequestHandler`）

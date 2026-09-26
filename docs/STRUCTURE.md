@@ -31,7 +31,7 @@ main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.
 - `app/backups/`、`services/accounts/` — 空目录（后者的 stats 扫描路径已从 dynamic_params 移除）
 
 ### 2026-08-15 整理（瘦身）
-- 删 `services/update_service.py` — Qt 时代 MAA 更新器（import PySide6，运行时死代码；API 层自研 /api/maa/check_update 替代）
+- 删 `services/update_service.py` — Qt 时代 MAA 更新器（import PySide6，运行时死代码；当时由 API 层自研 /api/maa/check_update 替代 —— 该端点已于 2026-09-26 前端退役时删除）
 - 移 `services/backfill_stats.py` / `backfill_account_state.py` / `task_explainer.py` → `tools/scripts/`（一次性脚本/诊断工具，非运行时模块）
 - deploy.py 清单校正：移除僵尸项 `log_parser`（文件不存在）；补运行时缺失 `event_bus.py`/`shot_collector.py`/`daily_batch_scheduler.py`（在 main_web/api 使用但原不在清单）
 - 大方法段落导航注释：`runner._check_one`（538 行，10 段）、`launch_queue._tick`/`_clean_stale_emus`/`_reclaim_idle_emus`（263/172/360 行）、`api_fastapi` 域分区表

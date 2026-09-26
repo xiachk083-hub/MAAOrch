@@ -113,12 +113,12 @@ pytest tests/ -x -q
 |------|------|
 | `GET /api/status` | 全部账号状态 |
 | `GET /api/accounts` | 账号列表（含 stages / smart_annihilation） |
-| `POST /api/accounts/batch_save` | 批量保存（只更新传了的字段） |
-| `GET /api/accounts/export` | 导出 CSV |
-| `POST /api/accounts/csv_import` | 导入 CSV |
-| `POST /api/accounts/batch_save` | 表格模式批量保存 |
-| `POST /api/action/smart_all` | 一键调度（逐账号判断剿灭） |
-| `GET /api/sse` | SSE 实时推送 |
+| `POST /api/accounts/batch_save` | 批量保存（只更新传了的字段） **（2026-09-26 前端退役时删除）** |
+| `GET /api/accounts/export` | 导出 CSV **（2026-09-26 前端退役时删除）** |
+| `POST /api/accounts/csv_import` | 导入 CSV **（2026-09-26 前端退役时删除）** |
+| `POST /api/accounts/batch_save` | 表格模式批量保存 **（2026-09-26 前端退役时删除）** |
+| `POST /api/action/smart_all` | 一键调度（逐账号判断剿灭） **（2026-09-26 前端退役时删除；等价能力见 MCP 工具 smart_dispatch）** |
+| `GET /api/sse` | SSE 实时推送 **（2026-09-26 前端退役时删除）** |
 
 ## MAA 配置注入机制（血泪教训）
 
@@ -160,4 +160,4 @@ pytest tests/ -x -q
 
 ### 诊断端点
 
-`GET /api/maa/instances/{n}/config` — 看 MAA 实际读的配置：`gui_connect`（Gui.ConnectSettings）/ `gui_startup`（Gui.StartUpSettings）/ `gui_postactions` / `connect`（扁平键）/ dir_files（含 bak）/ task_queue / global。
+`GET /api/maa/instances/{n}/config` **（该端点已于 2026-09-26 前端退役时删除，以下描述为历史记录）** — 看 MAA 实际读的配置：`gui_connect`（Gui.ConnectSettings）/ `gui_startup`（Gui.StartUpSettings）/ `gui_postactions` / `connect`（扁平键）/ dir_files（含 bak）/ task_queue / global。

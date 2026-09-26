@@ -235,7 +235,7 @@ Gui.StartUpSettings:
 
 ### 7.1 诊断端点
 
-`GET /api/maa/instances/{n}/config`（只读）返回：
+`GET /api/maa/instances/{n}/config` **（已于 2026-09-26 前端退役时删除；以下为历史字段说明）**（只读）返回：
 
 | 字段 | 说明 |
 |------|------|

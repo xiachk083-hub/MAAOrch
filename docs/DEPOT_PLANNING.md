@@ -51,12 +51,14 @@
 
 ## 5. API
 
+> ⚠️ 下表除 `GET /api/depot/plan` 外，其余端点已于 2026-09-26 前端整体退役时删除（140→49 路由）。
+
 | 端点 | 说明 |
 |------|------|
-| `POST /api/depot/scan` | `{account_ids: [...]}` 异步串行扫描 |
-| `GET /api/depot/status` | 各账号快照/计划时间 + 扫描状态 |
+| `POST /api/depot/scan` | `{account_ids: [...]}` 异步串行扫描 **（2026-09-26 前端退役时删除）** |
+| `GET /api/depot/status` | 各账号快照/计划时间 + 扫描状态 **（2026-09-26 前端退役时删除）** |
 | `GET /api/depot/plan?account_id=` | 最近一次计划（多日排程 JSON） |
-| `GET/POST /api/depot/config` | 水位/预算/定时配置读写 |
+| `GET/POST /api/depot/config` | 水位/预算/定时配置读写 **（2026-09-26 前端退役时删除）** |
 
 ## 6. 代理预检（全权委托实测 — 2026-08-13）
 

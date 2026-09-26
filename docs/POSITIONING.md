@@ -45,7 +45,7 @@ MAAOrch 明确不做：
 | # | 结构保证点 | 位置 | 机制 |
 |---|---|---|---|
 | S1 | MCP 挂载点单点鉴权 | `_TokenAuth`（mcp_server.py:70-97） | `_TokenAuth` 包装整个 `/mcp` ASGI app；`x-agent-token` 或 `Authorization: Bearer`，`hmac.compare_digest`（mcp_server.py:88），不符直接 401，**在工具可见之前** |
-| S2 | 工具白名单 + 写闸门 | 写闸门 `_gate()`（mcp_server.py:104-124）/ 工具区（mcp_server.py:126-576） | 只暴露"调度台也有的操作"。**直接杀进程**（`/api/system/kill_maa`，taskkill MAA.exe）、服务重启（`/api/system/restart`）、`close_popups`、改配置（`/api/config`）**依然没有工具**；启停类工具（模拟器 / MAA）全部 `dry_run=True` 默认，dry_run 预演只走只读 GET、绝不下发。唯一例外见 S7 |
+| S2 | 工具白名单 + 写闸门 | 写闸门 `_gate()`（mcp_server.py:104-124）/ 工具区（mcp_server.py:126-576） | 只暴露"调度台也有的操作"。**直接杀进程**（`/api/system/kill_maa`，taskkill MAA.exe）、服务重启（`/api/system/restart`）、`close_popups`、改配置（`/api/config`）**MCP 依然没有工具**，且这四个端点在 **2026-09-26 前端退役时已从 api_fastapi.py 整体删除**（140→49 路由）；启停类工具（模拟器 / MAA）全部 `dry_run=True` 默认，dry_run 预演只走只读 GET、绝不下发。唯一例外见 S7 |
 | S3 | 写操作复用同一校验层 | `_call_api` → `/api/*` | 不自建旁路；`api_fastapi.py:198-228` 再校验一次 token + 参数校验 |
 | S4 | MAS 写路径唯一门面 | mas_adapter.py:172-207 | `rerun()`/`cleanup()` `dry_run=True` 默认；预演分支**根本不 import mas_l3**，物理上碰不到远端 |
 | S5 | CLI 落盘需显式开关 | `tools/auto_mas_*.py` | `--apply`（add_slots/flatten/rerun）、`--dry-run` 默认（toggle_user）；不加开关只打印计划 |
@@ -87,8 +87,8 @@ MCP 工具清单（`@mcp.tool()` 实测 **41** 个，工具区 mcp_server.py:126
 | `pause` | MCP `queue_control("pause")` → `POST /api/queue/pause` → launch_queue.py:168 `pause()` | **待补**（无全局暂停；近似 = `auto_mas_queue_times.py` 改 `Info.TimeEnabled=False`，只作用于定时层） | MAA ✅ / MAS ❌ |
 | `resume` | MCP `queue_control("resume")` → `POST /api/queue/resume` → launch_queue.py:172 `resume()` | **待补**（同上，`TimeEnabled=True`） | MAA ✅ / MAS ❌ |
 | `rerun` | 无独立补跑动词；等价 = `smart_dispatch` → `POST /api/action/smart_selected`（api_fastapi.py:3012），任务内容由账号配置决定 | `tools/auto_mas_rerun.py --apply`；services/mas_l3.py:270 `rerun_async()` → MCP `mas_rerun`（默认 dry_run） | 语义不等价，需在 Harness 侧区分 |
-| `set_slots` | `POST /api/config {"parallel_max": N}`（api_fastapi.py:2068/2070）→ `services/instance_pool.py:203 ensure_maa_instances_async`（按 `parallel_max+1` 备实例；调用点 api_fastapi.py:2082、3083、3149） | `tools/auto_mas_add_slots.py --to N --apply`（槽位 = `日常定时N`/`晚班定时N`，错峰 05:00 / 19:30 各 +3min）；配平 `tools/auto_mas_flatten.py --apply` | 两侧均**未暴露给 Harness** ❌ |
-| `toggle_account` | 账号级 `suspended` 只能全量写 `POST /api/accounts/batch_save`（api_fastapi.py:1692；字段见 1708-1713 挂起审计） | `tools/auto_mas_toggle_user.py --name X [--enable]`（写 `ScriptConfig.json` `Info.Status`，锁感知 + 三重校验） | 两侧均**未暴露** ❌ |
+| `set_slots` | `POST /api/config {"parallel_max": N}` **（该端点已于 2026-09-26 删除；历史链路 api_fastapi.py:2068/2070）** → `services/instance_pool.py:203 ensure_maa_instances_async`（按 `parallel_max+1` 备实例；调用点 api_fastapi.py:2082、3083、3149） | `tools/auto_mas_add_slots.py --to N --apply`（槽位 = `日常定时N`/`晚班定时N`，错峰 05:00 / 19:30 各 +3min）；配平 `tools/auto_mas_flatten.py --apply` | 两侧均**未暴露给 Harness** ❌ |
+| `toggle_account` | 账号级 `suspended` 原只能全量写 `POST /api/accounts/batch_save` **（该端点已于 2026-09-26 删除）**（历史：api_fastapi.py:1692；字段见 1708-1713 挂起审计） | `tools/auto_mas_toggle_user.py --name X [--enable]`（写 `ScriptConfig.json` `Info.Status`，锁感知 + 三重校验） | 两侧均**未暴露** ❌ |
 | `probe_stage` | MCP `probe_stage` → `POST /api/probe/stage` → `services/stage_probe.py` | **待补**（MAS 侧无关卡检测；probe 只针对本机模拟器） | MAA ✅ / MAS N/A |
 
 ## 5. 现状差距清单（G1–G6）

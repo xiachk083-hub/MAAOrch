@@ -345,8 +345,8 @@ CLOSING 进入 → 关闭链（优雅 → shutdown → taskkill，现有 _body�
 ### 9.3.2 前端 UI 接入
 
 - 模拟器页/连接页直接渲染 `emu_state`：state → 文案/颜色映射（PREWARMING=启动中/READY=就绪/BUSY=刷关中/IDLE=空闲待回收/CLOSING=关闭中/RECOVERING=恢复中/EXTERNAL=手动）
-- SSE 推送状态变化事件（现有 /api/sse 扩展）——前端增量更新（不做全量轮询——吸收连接页闪烁修复教训）
-- `/api/emulators/diagnose` 改读状态机快照（health 只读）
+- SSE 推送状态变化事件（现有 /api/sse 扩展）——前端增量更新（不做全量轮询——吸收连接页闪烁修复教训）**（历史规划：`/api/sse` 已于 2026-09-26 删除）**
+- `/api/emulators/diagnose` 改读状态机快照（health 只读）**（历史规划：该端点已于 2026-09-26 删除）**
 
 ### 9.3.3 API 幂等性
 
