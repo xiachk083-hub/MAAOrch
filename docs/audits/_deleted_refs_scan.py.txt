@@ -1,0 +1,110 @@
+# -*- coding: utf-8 -*-
+"""task-15：删除的 91 条路由 + 前端文件的引用差集扫描（独立于 api-curator）。
+优化版：先整体预筛（合并正则），只对命中的文件做逐条归属。
+跑法：python docs/audits/_deleted_refs_scan.py.txt
+"""
+import ast, re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+EXTS = {".py", ".pyw", ".mjs", ".js", ".bat", ".ps1", ".psm1", ".cmd", ".json", ".yaml", ".yml",
+        ".toml", ".ini", ".cfg", ".html", ".css"}
+SKIP_DIRS = {".git", "node_modules", ".opencode", ".dsh-synapse-src", ".mimosa", "__pycache__",
+             "_trash", ".venv", "venv", "site-packages", "paperclips", "docs", "data", "runtime",
+             "screenshots", "logs", "debug"}
+
+def collect():
+    out = []
+    for p in ROOT.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in EXTS:
+            continue
+        rel = p.relative_to(ROOT)
+        if any(part in SKIP_DIRS for part in rel.parts):
+            continue
+        try:
+            if p.stat().st_size > 1_500_000:
+                continue
+            out.append((rel, p.read_text(encoding="utf-8", errors="replace")))
+        except Exception:
+            pass
+    return out
+
+deleted = [ln.split(" ", 1) for ln in Path("docs/audits/_deleted_routes.txt").read_text(encoding="utf-8").splitlines() if ln.strip()]
+HTTP = {"get", "post", "put", "delete", "patch", "head", "options"}
+tree = ast.parse(Path("network/api_fastapi.py").read_text(encoding="utf-8"))
+alive = set()
+for n in ast.walk(tree):
+    if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        for d in n.decorator_list:
+            if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr.lower() in HTTP \
+               and isinstance(d.func.value, ast.Name) and d.func.value.id == "app" \
+               and d.args and isinstance(d.args[0], ast.Constant):
+                alive.add(d.args[0].value)
+
+def rx_for(path):
+    out = []
+    for seg in re.split(r"(\{[^}]*\})", path):
+        out.append("[A-Za-z0-9_$#.%-]+" if seg.startswith("{") else re.escape(seg))
+    return "".join(out)
+
+pat = {p: re.compile(rx_for(p)) for _, p in deleted}
+combined = re.compile("|".join("(?:%s)" % v.pattern for v in pat.values()))
+files = collect()
+print("扫描文件数 = %d；删除路由 = %d" % (len(files), len(deleted)))
+
+def cl(line):
+    s = line.strip()
+    return s.startswith("#") or s.startswith("//") or s.startswith("*") or s.startswith('"""') or s.startswith("'''")
+
+cand = [(rel, t) for rel, t in files if combined.search(t)]
+print("预筛命中文件 = %d: %s" % (len(cand), [str(r) for r, _ in cand][:20]))
+print("\n=== A) 已删路由的路径引用 ===")
+used = 0
+for method, path in deleted:
+    rx = pat[path]
+    hs = []
+    for rel, t in cand:
+        for i, line in enumerate(t.splitlines(), 1):
+            if rx.search(line):
+                hs.append((rel, i, line.strip()[:140], cl(line)))
+    if hs:
+        live = [h for h in hs if not h[3]]
+        if live: used += 1
+        print("  %-5s %-42s 命中%d 非注释%d" % (method, path, len(hs), len(live)))
+        for rel, i, line, cm in hs[:5]:
+            print("        %s:%d%s %s" % (rel, i, " [注释]" if cm else "", line))
+print("  → 有**非注释**命中的删除路由 = %d / %d" % (used, len(deleted)))
+
+def prefix2(p):
+    segs = [s for s in p.split("/") if s]
+    return "/" + "/".join(segs[:2]) if segs else p
+only = sorted({prefix2(p) for _, p in deleted} - {prefix2(p) for p in alive})
+print("\n=== B) 已删独有前缀（%d 个）的引用 ===" % len(only))
+for pref in only:
+    rx = re.compile(re.escape(pref) + r"(?![A-Za-z0-9_-])")
+    hs = [(rel, i, line.strip()[:130], cl(line))
+          for rel, t in files for i, line in enumerate(t.splitlines(), 1) if rx.search(line)]
+    if hs:
+        print("  ⚠ %-22s 命中%d 非注释%d" % (pref, len(hs), sum(1 for h in hs if not h[3])))
+        for rel, i, line, cm in hs[:6]:
+            print("        %s:%d%s %s" % (rel, i, " [注释]" if cm else "", line))
+
+print("\n=== C) 已删前端文件裸名 ===")
+PATS = {
+    "ui/web 目录": r"ui[/\\]web",
+    "app.js": r"['\"/\\]app\.js",
+    "auto_mas.js": r"['\"/\\]auto_mas\.js",
+    "copilot_lab.js": r"['\"/\\]copilot_lab\.js",
+    "onboarding.html": r"['\"/\\]onboarding\.html",
+    "style.css": r"['\"/\\]style\.css",
+    "ui/index.html": r"ui[/\\]index\.html",
+    "web_dir": r"web_dir",
+}
+for name, p in PATS.items():
+    rx = re.compile(p)
+    hs = [(rel, i, line.strip()[:130], cl(line))
+          for rel, t in files for i, line in enumerate(t.splitlines(), 1) if rx.search(line)]
+    live = [h for h in hs if not h[3]]
+    print("  %-16s 命中=%-3d 非注释=%-3d" % (name, len(hs), len(live)))
+    for rel, i, line, cm in (live or hs)[:6]:
+        print("        %s:%d%s %s" % (rel, i, " [注释]" if cm else "", line))

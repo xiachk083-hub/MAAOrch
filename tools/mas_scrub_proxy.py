@@ -26,13 +26,23 @@ Hermes 直连 = 一调 script/user 家族就把账号口令写进 agent 会话/�
   MAAORCH_MAS_MCP_TIMEOUT  单次上游调用超时（秒，缺省 30）
   MAAORCH_MAS_SCRUB_KEYS   附加敏感键名（逗号分隔的**字面**键名，大小写不敏感）
   MAAORCH_MAS_READONLY     只读巡检硬闸：1/true/yes/on = 只读；0/false/no/off = 全量；
-                           **未设置 = 全量（现行为，人工会话不受影响）**；
-                           其它任何值 fail-closed 到只读。
+                           1/true/yes/on/enable/enabled = 只读；
+                           · 0/false/no/off/disable/disabled = 全量；
+                           · **未设置或空串 = 全量**（人工会话条目靠这个，不被误伤）；
+                           · 其它任何非空值 = fail-closed 按只读处理。
+                           注意 F9：空串是**全量**而非只读，别把空串当安全默认；
+                           原句『其它任何值 fail-closed』漏了空串这条例外，已更正。
+                           （本行已被上面的逐条语义取代，留此仅为避免空白差异导致编辑失败。）
 
 ## 只读硬闸（MAAORCH_MAS_READONLY=1）—— 无人值守巡检用
 - tools/list：只返回 READONLY_ALLOWED 里的工具（**精确工具名**，见下），其余全部隐藏。
 - tools/call：**再校验一次**；不在 allowlist（或命中危险动词）→ 直接返回 isError=True 的结构化
-  拒绝，且**在触达上游之前**返回（拒绝 = 零上游调用），所以知道被隐藏的名字也无效。
+  拒绝，所以知道被隐藏的名字也无效。
+- 『拒绝时是否触达上游』（F2，2026-09-26 实测并已修）：mcp SDK 在 tools/call 前无条件预热工具缓存，
+  miss 时回调本进程 list_tools → 再去上游 initialize+tools/list；只读模式隐藏了工具，隐藏名永远 miss，
+  于是**修复前每次被拒调用都会先向上游发一次 initialize+tools/list**（写调用本身没发出去，
+  但连接发起了，且拒绝原因会被掩盖成『上游不可达』）。
+  现改为：只读模式缓存上游工具清单并在启动时预热 —— 被拒调用实测**零上游请求**，返回 readonly 原因。
 - 危险动词按**整词**黑名单（start/stop/close/update/add/delete/import/export/click/sign/dispatch...），
   同时作为 allowlist 的导入期自检：命中即从 allowlist 丢弃并打警告（fail-closed）。
 - 不影响 scrub 语义：允许的只读工具返回照样脱敏（get_user_* 的 Password/SklandToken 仍被替换）。
@@ -67,7 +77,14 @@ from mcp.server.stdio import stdio_server
 from mcp.shared.exceptions import McpError
 
 PLACEHOLDER = "<scrubbed>"
-DEFAULT_SENSITIVE = ("password", "sklandtoken", "token", "secret", "credential", "cookie")
+DEFAULT_SENSITIVE = (
+    "password", "passwd", "pass_word", "pwd", "sklandtoken", "token", "secret",
+    "credential", "cookie", "authorization", "apikey", "api_key", "auth_key",
+    "authkey", "private_key", "session_id", "sessionid",
+)
+# 2026-09-26 独立对抗性验证（F7）：原集合漏了 pass_word / pwd / apiKey / Authorization / auth_key，
+# 这些键名下的值会原样外泄。注意代价（F8）：子串匹配会**过度脱敏** token_count 这类计数键，
+# 但那是有意的取舍 —— 这是安全闸，宁可多脱不可漏脱；需要放行可用 MAAORCH_MAS_SCRUB_KEYS 覆盖说明。
 
 
 def _sensitive_re() -> re.Pattern:
@@ -305,10 +322,31 @@ server = Server(
 )
 
 
+_TOOLS_CACHE: list | None = None
+
+
+async def _upstream_list_tools_cached() -> list:
+    """只读模式下缓存上游工具清单。
+
+    原因（F2，实测）：mcp SDK 在 tools/call 里会**无条件先预热工具缓存**，miss 时回调本进程的
+    list_tools 处理器 -> 再去上游 initialize+tools/list。只读模式把隐藏工具过滤掉后，
+    隐藏名永远 cache miss，于是**每次被拒调用都会先向上游发一次 initialize+tools/list** ——
+    原先注释里写的『拒绝 = 不触达上游』并不成立（写调用确实没发出去，但连接发起了）。
+    缓存后：只读模式下第二次起不再触达上游；并在启动时预热，使被拒调用走缓存。
+    """
+    global _TOOLS_CACHE
+    if readonly_enabled() and _TOOLS_CACHE is not None:
+        return _TOOLS_CACHE
+    tools = await _upstream_list_tools()
+    if readonly_enabled():
+        _TOOLS_CACHE = tools
+    return tools
+
+
 @server.list_tools()
 async def _handle_list_tools() -> list:
     try:
-        tools = await _upstream_list_tools()
+        tools = await _upstream_list_tools_cached()
     except Exception as e:                                # noqa: BLE001
         msg = "MAS MCP 上游不可达（%s）: %s: %s" % (upstream_url(), type(e).__name__, e)
         print("[proxy] " + msg, file=sys.stderr, flush=True)
@@ -333,7 +371,9 @@ async def _handle_call_tool(name: str, arguments: dict | None) -> types.CallTool
     try:
         res = await _upstream_call_tool(name, arguments)
     except Exception as e:                                # noqa: BLE001
-        payload = {"ok": False, "error": "%s: %s" % (type(e).__name__, e),
+        # F3（独立验证）：异常消息可能带上游返回的原文（含凭据），必须同样过脱敏，
+        # 否则会把上游错误里的敏感值原样回显给调用方。
+        payload = {"ok": False, "error": scrub_text("%s: %s" % (type(e).__name__, e)),
                    "upstream": upstream_url(), "tool": name}
         print("[proxy] 上游调用失败 tool=%s %s" % (name, payload["error"]), file=sys.stderr, flush=True)
         return types.CallToolResult(
@@ -354,6 +394,13 @@ async def _serve() -> None:
         server.instructions = (str(server.instructions or "") +
                                " **本进程处于只读巡检模式（%s）：tools/list 只暴露只读工具，"
                                "tools/call 对非 allowlist 工具直接拒绝且不触达上游。**" % READONLY_ENV)
+    if _ro:
+        # 预热工具缓存：否则 SDK 的 tools/call 预热水会让每次被拒调用都先打一次上游（F2）。
+        try:
+            await _upstream_list_tools_cached()
+        except Exception as e:                                # noqa: BLE001
+            print("[proxy] 只读模式预热工具清单失败（不阻塞启动）: %s: %s" % (type(e).__name__, e),
+                  file=sys.stderr, flush=True)
     print("[proxy] 启动：只读模式=%s allowlist=%d 个 上游=%s" % (
         _ro, len(READONLY_ALLOWED), upstream_url()), file=sys.stderr, flush=True)
     async with stdio_server() as (read, write):

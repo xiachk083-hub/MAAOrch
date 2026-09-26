@@ -722,7 +722,20 @@ def create_app(mw: Any) -> FastAPI:
         """该账号最近一次扫描生成的规划（models/accounts/<id>/plan.json）。"""
         if not account_id:
             raise HTTPException(400, "account_id required")
-        p = Path(__file__).parent.parent / "models" / "accounts" / account_id / "plan.json"
+        # 2026-09-26 安全修复（P1 路径穿越）：原先直接把 account_id 拼进路径、且只做 exists()，
+        # account_id="../../.." 即可读到仓库外的 <任意路径>/plan.json（后缀固定，故非原 P0 级）。
+        # 双重防护：① 拒绝一切分隔符/NUL/相对段；② resolve() 后断言仍落在 accounts 目录内
+        # （resolve 会解掉符号链接，因此也挡住软链逃逸）。
+        if ("/" in account_id or "\\" in account_id or "\x00" in account_id
+                or account_id in (".", "..")):
+            raise HTTPException(400, "account_id 非法")
+        accounts_dir = (Path(__file__).parent.parent / "models" / "accounts").resolve()
+        try:
+            p = (accounts_dir / account_id / "plan.json").resolve()
+        except Exception:
+            raise HTTPException(400, "account_id 非法")
+        if p.parent.parent != accounts_dir:
+            raise HTTPException(400, "account_id 非法")
         if not p.exists():
             raise HTTPException(404, "该账号还没有规划，先扫描仓库")
         try:

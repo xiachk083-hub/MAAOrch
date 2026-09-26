@@ -496,6 +496,9 @@ Response 200:
 
 **`GET /api/logs?lines=100`**
 
+> ⚠️ **已于 2026-09-26 前端整体退役时删除**（路由 140→49）：该端点在 **Python API（19997）** 上不存在，本节仅作历史留存。
+> 注：Node 门面（19999）另有原生 `/api/logs`（server/maaorch-web.mjs:934），在 19999 上仍可用；本文档以 Python API 为对象。
+
 读取 `debug.log` 最近 N 行（默认 50）。
 
 ```
