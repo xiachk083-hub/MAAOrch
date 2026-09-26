@@ -343,12 +343,21 @@ class LaunchQueue:
             self._tick()
             return
         
+        # ★ 2026-09-26 R1 双入队修复（docs/AUTO_REQUEUE_LIFECYCLE.md:33-35 改动点 1）：
+        #   重试路径的 3 处 enqueue 必须带上原始 slot —— 否则重试条目键是
+        #   (aid, "")，而 API/dispatch 的条目键是 (aid, slot)，enqueue 只吸收
+        #   「同 account_id + 同 slot」的旧条目（见本文件 L249）→ 两个生产者
+        #   各留一条 → 同账号 pending 2 条 → 失败场景多跑一轮。带着原 slot 入队
+        #   即与另一生产者同键，被去重吸收。slot 来源：_do_launch L839
+        #   found["_slot"] = entry.slot（每次启动写入，退出时仍是本次任务的 slot）。
+        _slot = ac.get("_slot", "") or ""
+
         # Timeout (exit -3): re-enqueue at tail
         if exit_code == -3:
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
             self.enqueue(account_id, "retry", priority=max_prio + 1,
-                        persist_plan=ac.get("_persist_plan", False))
+                        persist_plan=ac.get("_persist_plan", False), slot=_slot)
             self.ctx.log(f"⏱ {ac.get('name', account_id)} 超时重排，位置 #{max_prio + 2}")
             self._tick()
             return
@@ -371,7 +380,7 @@ class LaunchQueue:
             import heapq as _hq
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
             self.enqueue(account_id, "retry", priority=max_prio + 1,
-                        persist_plan=ac.get("_persist_plan", False))
+                        persist_plan=ac.get("_persist_plan", False), slot=_slot)
             self.ctx.log(f"[ADB] {ac.get('name', account_id)} 模拟器已重启，重排")
             self._tick()
             return
@@ -397,7 +406,7 @@ class LaunchQueue:
             max_prio = max((e.sort_key[0] for e in self._pending), default=0)
             self.enqueue(account_id, "retry", priority=max_prio + 1,
                         not_before=datetime.now() + timedelta(seconds=delay),
-                        persist_plan=ac.get("_persist_plan", False))
+                        persist_plan=ac.get("_persist_plan", False), slot=_slot)
             self.ctx.log(f"[重试] {ac.get('name', account_id)} {delay}s 后重试 (exp backoff {failures})")
             self._tick()
             return

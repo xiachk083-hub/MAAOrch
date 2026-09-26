@@ -283,7 +283,25 @@ class AccountRunner:
     def emit_started(self, aid: str) -> None:
         for cb in self._started_callbacks: cb(aid)
     def emit_finished(self, data: tuple) -> None:
-        for cb in self._finished_callbacks: cb(data)
+        # ★ 2026-09-26 R1 释放缺口修复（G5 把 _release_emu_mark 移到本调用之后
+        #   2026-09-26 runner.py L3222，使本方法的异常会吃掉其后的
+        #   _release_emu_mark + 自动重启 + 统计落盘）：
+        #   逐个订阅者 try/except —— ① 任一订阅者抛异常，其余订阅者照常收到通知
+        #   （整体 try/except 做不到这一点）；② 异常不再冒泡出 _cleanup，
+        #   「任何退出路径都释放」的语义在任何订阅者崩溃时都成立。
+        #   选「逐个隔离」而非「release 放 finally」：finally 只能保证 _cleanup
+        #   自己的收尾顺序，无法隔离订阅者之间，也无法阻止异常向外传播到
+        #   _on_process_exit 的调用线程（监控线程可能因此静默死亡）。
+        for cb in self._finished_callbacks:
+            try:
+                cb(data)
+            except Exception as e:
+                try:
+                    self._log.warn(
+                        f"[回调] finished 订阅者异常（已隔离）: "
+                        f"{getattr(cb, '__qualname__', repr(cb))}: {e}")
+                except Exception:
+                    pass
 
     # ── Public API ──
 
@@ -3151,8 +3169,13 @@ class AccountRunner:
             plan_log = f" 🧠 {plan}" if plan else ""
             self.emit_log(f"[完成] {name} 退出码={exit_code} 耗时={duration//60}m{duration%60}s{plan_log}")
             self._log.info(f"[清理] {name} exit={exit_code}")
-            from services.dispatch_pool import remove_dispatch
-            remove_dispatch(ac.get("dispatch_id", ""))
+            # ★ 2026-09-26 R1：remove_dispatch 原为裸调（同类缺口）——抛异常会
+            #   吃掉其后的 emit_finished / _release_emu_mark / 自动重启 / 统计落盘。
+            try:
+                from services.dispatch_pool import remove_dispatch
+                remove_dispatch(ac.get("dispatch_id", ""))
+            except Exception as e:
+                self._log.warn(f"[清理] {name} remove_dispatch 失败（已忽略）: {e}")
             ac["dispatch_id"] = ""
             mode = self.ctx.config.get("schedule_mode", "daily")
             if exit_code == 0:

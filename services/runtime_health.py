@@ -73,6 +73,49 @@ def _running_emulators() -> dict[str, dict]:
     return out
 
 
+# ─────────────────────────────────────────────────────────────────────
+# ★★ 总闸（2026-09-26 G3 → 2026-09-27 T9 全量收口）★★
+# GET /api/health（= MCP health 工具）过去有 6 条真实杀进程路径：
+#   ① 僵尸 MAA（.pid 活 + 账号不在运行）
+#   ② 幽灵 MAA（.pid 活但 .meta 缺失）
+#   ③ 无主 MAA 系统级扫描（MAA.exe 不在任何实例 .pid 里）
+#   ④ 卡死 adb 命令进程（PowerShell Stop-Process）
+#   ⑤ 模拟器崩溃弹窗 MuMuNxCrashReporter.exe
+#   ⑥ 僵尸 VMM MuMuVMMHeadless.exe
+# 首页加载即调它；改由 Harness 定时巡检后触发更频繁，而这些杀动作都落在
+# 「用户可能正在用 MAA / 手动开了模拟器」的时机上（尤其 ③：判据是"不在
+# .pid 表里"，INSTANCES 缺失或 MAA 刚 spawn 尚未写 .pid 时会误杀）。
+# 统一由同一个键 config `emu_reclaim_enabled` 管辖（与回收器总闸同语义：
+# services/launch_queue.py 的 _reclaim_idle_emus / services/emu_service_v2.py
+# 的 _force_reclaim_memory），缺省 False = 读不到就一律不动，且每处跳过都
+# 留日志（不静默）。
+# 闸开（True）时：杀什么 / 判据 / 顺序 / 调用参数与加闸前逐字一致 —— T9 只在
+# 每个动作外包一层 if，不改任何既有条件与参数。
+def _kill_gate(mw, lq) -> bool:
+    """总闸取值。主源与 G3 相同：lq.ctx.config["emu_reclaim_enabled"]。"""
+    _cfg = getattr(getattr(lq, "ctx", None), "config", None)
+    if not isinstance(_cfg, dict):
+        # 仅当 lq 源整体缺失（无队列/旧调用方）才回退 mw.config —— 实机上
+        # lq.ctx.config 与 mw.config 是同一个 dict（app/web_context.py 的
+        # config 字段 ← app/service_context.py 的 ServiceContext.config），
+        # 故该回退不改变闸开路径的判定。
+        _cfg = getattr(mw, "config", None)
+    if not isinstance(_cfg, dict):
+        return False
+    try:
+        return bool(_cfg.get("emu_reclaim_enabled", False))
+    except Exception:
+        return False
+
+
+def _gate_skip(mw, what: str) -> None:
+    """闸关不静默：每处跳过都留痕（日志不可用也不抛）。"""
+    try:
+        mw._log(f"已跳过{what}（emu_reclaim_enabled=False）")
+    except Exception:
+        pass
+
+
 def check_health(mw) -> dict:
     """mw: WebContext with .accounts / .runner / .launch_queue."""
     issues: list[dict] = []
@@ -82,6 +125,8 @@ def check_health(mw) -> dict:
 
     accounts = getattr(mw, "accounts", []) or []
     lq = getattr(mw, "launch_queue", None)
+    # T9：总闸只解析一次，下方六处杀进程路径共用（见 _kill_gate 上方说明）
+    _kill_gate_on = _kill_gate(mw, lq)
 
     # ── running / queued ──
     active_ids = set(getattr(lq, "_active_emus", {}).values()) if lq else set()
@@ -120,18 +165,27 @@ def check_health(mw) -> dict:
             name = next((a.get("name", aid) for a in accounts if a.get("id") == aid), aid)
             # 自动清理（2026-08-11: 僵尸不再手动清 — 检测到即 taskkill + 清标记。
             # 根因已修: _cleanup 占位符路径跳过杀逻辑；此清理为历史遗留兜底）
-            try:
-                subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                               capture_output=True, timeout=5,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                pid_file.unlink(missing_ok=True)
-                meta_file.unlink(missing_ok=True)
-                counts["zombie_killed"] = counts.get("zombie_killed", 0) + 1
-                issues.append({"severity": "error", "category": "zombie_maa",
-                               "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行，已自动清理"})
-            except Exception:
+            # T9 总闸：判据（.pid 活 + 账号不在 active_ids）本身可靠，但
+            # active_ids 源自 lq._active_emus —— lq 缺失/队列尚未装载时它是
+            # 空集，会把正在跑的 MAA 全判僵尸。故纳闸（缺省不动），闸关时
+            # 只报告不清理（.pid/.meta 保留，检测仍可见）。
+            if not _kill_gate_on:
+                _gate_skip(mw, f"僵尸 MAA 清理（实例 {inst_dir.name} PID={pid}）")
                 issues.append({"severity": "error", "category": "zombie_maa",
                                "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
+            else:
+                try:
+                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                                   capture_output=True, timeout=5,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    pid_file.unlink(missing_ok=True)
+                    meta_file.unlink(missing_ok=True)
+                    counts["zombie_killed"] = counts.get("zombie_killed", 0) + 1
+                    issues.append({"severity": "error", "category": "zombie_maa",
+                                   "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行，已自动清理"})
+                except Exception:
+                    issues.append({"severity": "error", "category": "zombie_maa",
+                                   "detail": f"僵尸 MAA: 实例 {inst_dir.name} ({name}) — 账号不在运行"})
         elif not aid:
             # 幽灵 MAA（2026-08-14）: .pid 存活但 .meta 缺失/为空。正常流程
             # meta 先于 pid 写入（_do_launch → _spawn_instance），meta 缺失 =
@@ -139,18 +193,25 @@ def check_health(mw) -> dict:
             # meta 等）→ 该 MAA 无主（不属任何账号），dashboard 会显示成
             # "MAA-xxxx" 占位。无主进程不清理会永久占实例 → 模拟器少 MAA 多。
             counts["ghost_maa"] = counts.get("ghost_maa", 0) + 1
-            try:
-                subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                               capture_output=True, timeout=5,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                pid_file.unlink(missing_ok=True)
-                meta_file.unlink(missing_ok=True)
-                counts["ghost_maa_killed"] = counts.get("ghost_maa_killed", 0) + 1
-                issues.append({"severity": "error", "category": "ghost_maa",
-                               "detail": f"幽灵 MAA: 实例 {inst_dir.name} PID={pid} 无账号归属，已清理"})
-            except Exception:
+            # T9 总闸：判据是"meta 先于 pid 写入"这一时序假设，并发启动/
+            # 自动重启/cleanup 竞态下会误报（代码注释自认）。纳闸（缺省不动）。
+            if not _kill_gate_on:
+                _gate_skip(mw, f"幽灵 MAA 清理（实例 {inst_dir.name} PID={pid}）")
                 issues.append({"severity": "error", "category": "ghost_maa",
                                "detail": f"幽灵 MAA: 实例 {inst_dir.name} PID={pid} 无账号归属"})
+            else:
+                try:
+                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                                   capture_output=True, timeout=5,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    pid_file.unlink(missing_ok=True)
+                    meta_file.unlink(missing_ok=True)
+                    counts["ghost_maa_killed"] = counts.get("ghost_maa_killed", 0) + 1
+                    issues.append({"severity": "error", "category": "ghost_maa",
+                                   "detail": f"幽灵 MAA: 实例 {inst_dir.name} PID={pid} 无账号归属，已清理"})
+                except Exception:
+                    issues.append({"severity": "error", "category": "ghost_maa",
+                                   "detail": f"幽灵 MAA: 实例 {inst_dir.name} PID={pid} 无账号归属"})
 
     # ── 1a2. 无主 MAA 系统级扫描（2026-08-15）──
     # 上面只扫实例池 .pid 文件 — 若 cleanup 已删 .pid 但 MAA 进程仍活着
@@ -180,16 +241,24 @@ def check_health(mw) -> dict:
                 continue  # 有 .pid 归属 — 由 zombie/ghost 分支管
             # 无 .pid 归属 = 无主 MAA（正常流程 .pid 与进程同生共死）
             counts["ghost_maa"] = counts.get("ghost_maa", 0) + 1
-            try:
-                subprocess.run(["taskkill", "/F", "/PID", str(_mpid)],
-                               capture_output=True, timeout=5,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                counts["ghost_maa_killed"] = counts.get("ghost_maa_killed", 0) + 1
-                issues.append({"severity": "error", "category": "ghost_maa",
-                               "detail": f"无主 MAA: PID={_mpid} 无实例 .pid 归属，已清理"})
-            except Exception:
+            # T9 总闸：此处判据最不可靠 —— INSTANCES 目录缺失时 _known_pids
+            # 为空集，系统里所有 MAA.exe 都会被判"无主"；刚 spawn 但 .pid 尚未
+            # 落盘的 MAA 同样被误杀。纳闸（缺省不动）。
+            if not _kill_gate_on:
+                _gate_skip(mw, f"无主 MAA 清理（PID={_mpid}）")
                 issues.append({"severity": "error", "category": "ghost_maa",
                                "detail": f"无主 MAA: PID={_mpid} 无实例 .pid 归属"})
+            else:
+                try:
+                    subprocess.run(["taskkill", "/F", "/PID", str(_mpid)],
+                                   capture_output=True, timeout=5,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    counts["ghost_maa_killed"] = counts.get("ghost_maa_killed", 0) + 1
+                    issues.append({"severity": "error", "category": "ghost_maa",
+                                   "detail": f"无主 MAA: PID={_mpid} 无实例 .pid 归属，已清理"})
+                except Exception:
+                    issues.append({"severity": "error", "category": "ghost_maa",
+                                   "detail": f"无主 MAA: PID={_mpid} 无实例 .pid 归属"})
     except Exception:
         pass
 
@@ -214,21 +283,28 @@ def check_health(mw) -> dict:
             n_adb_stuck = 0
         if n_adb_stuck >= 5:
             counts["adb_stuck"] = n_adb_stuck
-            # 自动清理（卡死的 connect/disconnect/devices 命令进程 — 非 server，
-            # 杀了不影响已建立连接；server 进程（fork-server）和活跃会话
-            # （shell/exec-out/screencap）保留）
-            try:
-                subprocess.run(
-                    ["powershell", "-NoProfile", "-Command",
-                     "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect| devices' -and $_.CommandLine -notmatch 'shell|exec-out|screencap' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
-                    capture_output=True, text=True, timeout=15,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-                counts["adb_stuck_killed"] = n_adb_stuck
+            # T9 总闸：判据（命令行匹配 + 数量 ≥5）本身可靠，但杀的是用户/其他
+            # 工具自己挂着的 adb 命令进程 —— 健康巡检不该替用户决定，纳闸。
+            if not _kill_gate_on:
+                _gate_skip(mw, f"卡死 adb 命令进程清理 ×{n_adb_stuck}")
                 issues.append({"severity": "warn", "category": "adb_stuck",
-                               "detail": f"清理 adb 僵尸命令进程 ×{n_adb_stuck}（连接超时堆积，已自动清理）"})
-            except Exception:
-                issues.append({"severity": "error", "category": "adb_stuck",
-                               "detail": f"adb 僵尸命令进程 {n_adb_stuck} 个（清理失败）"})
+                               "detail": f"adb 僵尸命令进程 {n_adb_stuck} 个（未清理）"})
+            else:
+                # 自动清理（卡死的 connect/disconnect/devices 命令进程 — 非 server，
+                # 杀了不影响已建立连接；server 进程（fork-server）和活跃会话
+                # （shell/exec-out/screencap）保留）
+                try:
+                    subprocess.run(
+                        ["powershell", "-NoProfile", "-Command",
+                         "Get-CimInstance Win32_Process -Filter \"Name='adb.exe'\" | Where-Object { $_.CommandLine -match 'disconnect|connect| devices' -and $_.CommandLine -notmatch 'shell|exec-out|screencap' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+                        capture_output=True, text=True, timeout=15,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    counts["adb_stuck_killed"] = n_adb_stuck
+                    issues.append({"severity": "warn", "category": "adb_stuck",
+                                   "detail": f"清理 adb 僵尸命令进程 ×{n_adb_stuck}（连接超时堆积，已自动清理）"})
+                except Exception:
+                    issues.append({"severity": "error", "category": "adb_stuck",
+                                   "detail": f"adb 僵尸命令进程 {n_adb_stuck} 个（清理失败）"})
         elif n_adb_stuck:
             counts["adb_stuck"] = n_adb_stuck
     except Exception:
@@ -245,12 +321,19 @@ def check_health(mw) -> dict:
         n_crash = r.stdout.count("MuMuNxCrashReporter.exe")
         if n_crash:
             counts["crash_reporter"] = n_crash
-            # 自动关弹窗（崩溃上报无价值，用户不需要）
-            subprocess.run(["taskkill", "/F", "/IM", "MuMuNxCrashReporter.exe"],
-                           capture_output=True, timeout=5,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            issues.append({"severity": "warn", "category": "emulator_crash",
-                           "detail": f"模拟器崩溃弹窗 ×{n_crash}（已自动清理）"})
+            # T9 总闸：判据（镜像名精确计数 > 0）可靠、代价小，但它仍是用户
+            # 机器上可见的窗口 —— 纳闸（缺省不动），闸关时只报告不关弹窗。
+            if not _kill_gate_on:
+                _gate_skip(mw, f"模拟器崩溃弹窗清理 ×{n_crash}")
+                issues.append({"severity": "warn", "category": "emulator_crash",
+                               "detail": f"模拟器崩溃弹窗 ×{n_crash}（未清理）"})
+            else:
+                # 自动关弹窗（崩溃上报无价值，用户不需要）
+                subprocess.run(["taskkill", "/F", "/IM", "MuMuNxCrashReporter.exe"],
+                               capture_output=True, timeout=5,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                issues.append({"severity": "warn", "category": "emulator_crash",
+                               "detail": f"模拟器崩溃弹窗 ×{n_crash}（已自动清理）"})
     except Exception:
         pass
 
@@ -264,18 +347,11 @@ def check_health(mw) -> dict:
     # 原实现会在这里 taskkill 用户手动开的模拟器（idx 无账号映射也照杀）。
     # 与 launch_queue._reclaim_idle_emus / _force_reclaim_memory 同语义：
     # ①总闸关 → 绝不动；②idx 无账号映射（手动开的 / l- 系列）→ 不碰。
-    try:
-        _vmm_gate = bool((getattr(getattr(lq, "ctx", None), "config", None) or {}).get(
-            "emu_reclaim_enabled", False))
-    except Exception:
-        _vmm_gate = False  # 读不到配置 = 不安全 = 不动（默认绝不退化成"杀"）
-    if not _vmm_gate:
-        # 不静默：闸关必须留痕
-        _vmm_gate_msg = "已跳过僵尸 VMM 清理（emu_reclaim_enabled=False）"
-        try:
-            mw._log(_vmm_gate_msg)
-        except Exception:
-            pass
+    # T9：闸值改由 check_health 顶部 _kill_gate 统一解析（同一表达式、同一
+    # 缺省），此处不再重复读配置；闸关日志文案与 G3 完全一致（"已跳过僵尸
+    # VMM 清理（emu_reclaim_enabled=False）"）。
+    if not _kill_gate_on:
+        _gate_skip(mw, "僵尸 VMM 清理")
     else:
         try:
             _running = _running_emulators()
