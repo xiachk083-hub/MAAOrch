@@ -323,7 +323,6 @@ pause
             a["dispatch_id"] = create_dispatch(plan.split(","))
 
     port = config.get("api_port", 19999)
-    token = config.get("api_token", "")
     import mimetypes
     for ext, ct in {".css":"text/css; charset=utf-8", ".html":"text/html; charset=utf-8", ".htm":"text/html; charset=utf-8", ".js":"application/javascript; charset=utf-8", ".json":"application/json; charset=utf-8", ".txt":"text/plain; charset=utf-8", ".svg":"image/svg+xml; charset=utf-8"}.items():
         mimetypes.add_type(ct, ext)

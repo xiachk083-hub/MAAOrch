@@ -484,19 +484,6 @@ class LaunchQueue:
         except Exception:
             pass
 
-    def on_maa_task_finished(self, account_id: str, status: str) -> None:
-        """Called when MAA reports task completion via reportStatus.
-        Does NOT release the slot — that happens when MAA.exe exits (on_account_finished)."""
-        ac = next((a for a in self.ctx.accounts if a["id"] == account_id), None)
-        if not ac:
-            return
-        if status == "FAILED":
-            failures = ac.get("consecutive_failures", 0)
-            ac["consecutive_failures"] = failures + 1
-        else:
-            ac["consecutive_failures"] = 0
-        self._tick()
-
     def batch_enqueue_all(self) -> None:
         """Enqueue all accounts for the daily batch run."""
         if not self.ctx.config.get("daily_batch_time", ""):

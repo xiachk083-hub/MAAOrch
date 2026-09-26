@@ -183,10 +183,8 @@ class AccountRunner:
     def __init__(self, ctx: ServiceContext) -> None:
         # Callback lists (replaces Qt Signals for PySide6-free operation)
         self._log_msg_callbacks: list[Callable[[str], None]] = []
-        self._status_msg_callbacks: list[Callable[[str], None]] = []
         self._started_callbacks: list[Callable[[str], None]] = []
         self._finished_callbacks: list[Callable[[tuple], None]] = []
-        self._error_callbacks: list[Callable[[str, str], None]] = []
         self.ctx = ctx
         self._active: dict[str, dict] = {}
         self._progs: dict[str, list[dict]] = {}
@@ -282,14 +280,10 @@ class AccountRunner:
 
     def emit_log(self, msg: str) -> None:
         for cb in self._log_msg_callbacks: cb(msg)
-    def emit_status(self, msg: str) -> None:
-        for cb in self._status_msg_callbacks: cb(msg)
     def emit_started(self, aid: str) -> None:
         for cb in self._started_callbacks: cb(aid)
     def emit_finished(self, data: tuple) -> None:
         for cb in self._finished_callbacks: cb(data)
-    def emit_error(self, aid: str, err: str) -> None:
-        for cb in self._error_callbacks: cb(aid, err)
 
     # ── Public API ──
 
@@ -1190,7 +1184,6 @@ class AccountRunner:
         except Exception as e:
             self._log.error(f"[启动] {ac.get('name', aid)} 启动失败: {e}")
             self.emit_log(f"启动失败: {e}")
-            self.emit_error(aid, str(e))
             self._cleanup(aid, -1, [])
 
     def _launch_core_daily(self, ac: dict, inst_dir: str) -> bool:
@@ -2191,8 +2184,6 @@ class AccountRunner:
                                         tasks, sanity, drops = self._parse_log(aid)
                                         self._cleanup(aid, -8, tasks, sanity, drops)
                                         return
-                                    else:
-                                        self._log.info(f"[守护审计] {name} 模拟器失联杀暂缓（待确认）")
                                 # 第 1 次失联 → 只记嫌疑，下一轮确认（5s 后）
                                 self._emu_lost_suspect[aid] = time.time()
                                 name = ac.get("name", aid)
@@ -2235,8 +2226,6 @@ class AccountRunner:
                         tasks, sanity, drops = self._parse_log(aid)
                         self._cleanup(aid, -8, tasks, sanity, drops)
                         return
-                    else:
-                        self._log.info(f"[守护审计] {name} 心跳断杀暂缓（待确认）")
         except Exception:
             pass
         if ac and emu_pid and aid not in self._stopping and not self._probe_running.get(aid):
@@ -2414,8 +2403,6 @@ class AccountRunner:
                                         tasks, sanity, drops = self._parse_log(aid)
                                         self._cleanup(aid, -9, tasks, sanity, drops)
                                         return
-                                    else:
-                                        self._log.info(f"[守护审计] {ac.get('name', aid)} PRTS 卡死终止暂缓（待确认）")
                             else:
                                 ac.pop("_prts_stall_since", None)  # 日志活跃 = 正常刷关，重置
                         else:
@@ -2436,8 +2423,6 @@ class AccountRunner:
                             tasks, sanity, drops = self._parse_log(aid)
                             self._cleanup(aid, -9, tasks, sanity, drops)
                             return
-                        else:
-                            self._log.info(f"[守护审计] {ac.get('name', aid)} 任务卡死终止暂缓（待确认）")
                 started = self._start_times.get(aid, 0)
                 if started and time.time() - started > 3600:
                     self.emit_log(f"⏱ {ac.get('name', aid)} 运行超时")
@@ -2449,8 +2434,6 @@ class AccountRunner:
                         tasks, sanity, drops = self._parse_log(aid)
                         self._cleanup(aid, -3, tasks, sanity, drops)
                         return
-                    else:
-                        self._log.info(f"[守护审计] {ac.get('name', aid)} 运行超时终止暂缓（待确认）")
             # Error threshold: ≥3 consecutive errors → kill MAA + restart emulator
             # 启动宽限 2 分钟（2026-08-14 凌晨：_err_count 跨启动粘滞 + 启动期
             # asst.log 正常重试 [ERR] 累积 → 健康启动 3 秒就被「连续异常」误杀
@@ -2493,8 +2476,6 @@ class AccountRunner:
                         except: pass
                         self._cleanup(aid, -8, [])
                         return
-                    else:
-                        self._log.info(f"[守护审计] {ac.get('name', aid)} 连续异常清理暂缓（待确认）")
             # Stuck at startup / idle hang cleanup:
             # - daily/schedule: no tasks 120s after launch → stuck, kill
             # - daily/schedule: tasks done but MAA hangs (asst.log silent 5min) → release instance
@@ -2528,8 +2509,6 @@ class AccountRunner:
                                 except: pass
                                 self._cleanup(aid, -3, [])
                                 return
-                            else:
-                                self._log.info(f"[守护审计] {ac.get('name', aid)} 无任务清理暂缓（待确认）")
                     # Tasks exist → MAA likely finished and is idling. asst.log keeps
                     # getting written while tasks run; 5min silence = done/hung.
                     _inst_path = getattr(p, '_inst_path', None)
@@ -2590,8 +2569,6 @@ class AccountRunner:
                                 except: pass
                                 self._cleanup(aid, -3, tasks)
                                 return
-                            else:
-                                self._log.info(f"[守护审计] {ac.get('name', aid)} StartUp 卡加载杀暂缓（待确认）")
             # ADB keepalive — log only, don't kill MAA。
             # ⚠️ 原实现每 5s 逐账号 `adb -s <addr> shell echo ping` — adb server
             # 是串行的，10 台并发 ping + MAA 自身操作 → server 排队超时（3s）
