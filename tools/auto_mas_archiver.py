@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AUTO-MAS 历史数据本地存档（防目标机数据丢失 + 前端增量读取）。
+"""AUTO-MAS 历史数据本地存档（防目标机数据丢失；2026-09-26 前端退役后不再有前端读取方）。
 
 把 AUTO-MAS 的每次运行记录拉到本地 data/auto_mas_history.json：
 - 索引（日期/账号/状态/用时/错误信息）增量更新（已有存档只拉新日期）
@@ -56,13 +56,17 @@ def load_archive() -> dict:
 def save_archive(arch: dict) -> None:
     ARCHIVE.parent.mkdir(parents=True, exist_ok=True)
     ARCHIVE.write_text(json.dumps(arch, ensure_ascii=False, indent=1), encoding="utf-8")
-    # 复制一份到 ui/web/data/，供前端静态读取（秒开 + 目标机丢失可恢复）
-    web_arch = pathlib.Path(__file__).resolve().parent.parent / "ui" / "web" / "data" / "auto_mas_history.json"
+    # 归档副本到 ui/retired_web_data/。
+    # 2026-09-26（前端整体退役）：旧目标 ui/web/data/ 会把刚清掉的目录重新长出来，故改到本目录。
+    # grep 核实（auto_mas_history / retired_web_data）结果：**本副本当前无任何读取方** ——
+    # 前端 ui/web/auto_mas.js 已随前端删除；规范档仍是上面的 data/auto_mas_history.json。
+    # 因此这里只作「目标机数据丢失后的历史备份」，不参与任何读取链路。
+    web_arch = pathlib.Path(__file__).resolve().parent.parent / "ui" / "retired_web_data" / "auto_mas_history.json"
     try:
         web_arch.parent.mkdir(parents=True, exist_ok=True)
         web_arch.write_text(json.dumps(arch, ensure_ascii=False), encoding="utf-8")
     except Exception as e:
-        print(f"[警告] 复制到 ui/web/data 失败: {e}")
+        print(f"[警告] 复制到 ui/retired_web_data 失败: {e}")
 
 
 def fetch_day(ds: str) -> dict:

@@ -83,9 +83,8 @@ DEFAULT_FILES = [
     "infrastructure/utils.py",
     "network/api_fastapi.py",
     "network/mcp_server.py",
-    "ui/web/app.js",
-    "ui/web/index.html",
-    "ui/web/style.css",
+    # 2026-09-26 前端退役：原 "ui/web/app.js" / "ui/web/index.html" / "ui/web/style.css"
+    # 三份已删除，从清单移除；若再列 ui/* 静态文件，deploy.py:217-219 只会打印 SKIP 后 continue。
     "manager/manager.py",
     "config/material_water_levels.json",
     "config/farm_stages.json",
