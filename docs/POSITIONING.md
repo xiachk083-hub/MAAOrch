@@ -1,7 +1,7 @@
 # MAAOrch 定位契约
 
-> 核查时间 **2026-09-26 15:11**（本机）。本文所有行号/数字来自当次读代码，不引用旧文档结论。
-> 行数口径 = 非空行（`Get-Content | Measure-Object -Line`）；文中代码位置引用的是**物理行号**，会随改动漂移，定位请按符号名检索。本仓文件正被并发改动；
+> 核查时间 **2026-09-26 15:49**（本机；task-21 复核：工具计数与 §2.4 门面行号按 task-17 后的代码重核）。本文所有行号/数字来自当次读代码，不引用旧文档结论。
+> 行数口径 = 非空行（`Get-Content | Measure-Object -Line`）；文中代码位置引用的是**物理行号**，会随改动漂移，定位请按符号名检索（§2.4 门面引用已改为「符号 + 物理行号」双写）。本仓文件正被并发改动；
 > 与本文冲突时**以代码为准并回写本节**。配套：`docs/SINGLE_SOURCE_CONVERGENCE.md`（单点收敛总纲）、
 > `docs/MAS_RUNBOOK.md`、`docs/http-api.md`、`docs/STRUCTURE.md`。
 
@@ -30,7 +30,7 @@ MAAOrch 明确不做：
 
 ### 2.2 命令翻译（意图 → 两个引擎各自的方言）
 
-- MAA：MCP 工具 → `network/mcp_server.py:25 _call_api`（本机 HTTP，带 `api_token`）→ `network/api_fastapi.py` 端点 → services 层。
+- MAA：MCP 工具 → `network/mcp_server.py:40 _call_api()`（本机 HTTP，带 `api_token`）→ `network/api_fastapi.py` 端点 → services 层。
 - MAS：MCP 工具 → 进程内 `services.mas_adapter` → `services.mas_l3` → `tools/auto_mas_*.py` CLI 或远端 `:36163` API。
 - Harness 只说动词；SSH / HTTP / CLI / DPAPI / 锁感知一律不越过这一层。
 
@@ -44,19 +44,23 @@ MAAOrch 明确不做：
 
 | # | 结构保证点 | 位置 | 机制 |
 |---|---|---|---|
-| S1 | MCP 挂载点单点鉴权 | mcp_server.py:55-82 | `_TokenAuth` 包装整个 `/mcp` ASGI app；`x-agent-token` 或 `Authorization: Bearer`，`hmac.compare_digest`，不符直接 401，**在工具可见之前** |
-| S2 | 工具白名单 | mcp_server.py:89-260 | 只暴露"调度台也有的操作"；杀进程 / 改配置 / 部署 / 删文件**没有对应工具**，agent 无法通过 MCP 触达 |
+| S1 | MCP 挂载点单点鉴权 | `_TokenAuth`（mcp_server.py:70-97） | `_TokenAuth` 包装整个 `/mcp` ASGI app；`x-agent-token` 或 `Authorization: Bearer`，`hmac.compare_digest`（mcp_server.py:88），不符直接 401，**在工具可见之前** |
+| S2 | 工具白名单 + 写闸门 | 写闸门 `_gate()`（mcp_server.py:104-124）/ 工具区（mcp_server.py:126-576） | 只暴露"调度台也有的操作"。**直接杀进程**（`/api/system/kill_maa`，taskkill MAA.exe）、服务重启（`/api/system/restart`）、`close_popups`、改配置（`/api/config`）**依然没有工具**；启停类工具（模拟器 / MAA）全部 `dry_run=True` 默认，dry_run 预演只走只读 GET、绝不下发。唯一例外见 S7 |
 | S3 | 写操作复用同一校验层 | `_call_api` → `/api/*` | 不自建旁路；`api_fastapi.py:198-228` 再校验一次 token + 参数校验 |
 | S4 | MAS 写路径唯一门面 | mas_adapter.py:172-207 | `rerun()`/`cleanup()` `dry_run=True` 默认；预演分支**根本不 import mas_l3**，物理上碰不到远端 |
 | S5 | CLI 落盘需显式开关 | `tools/auto_mas_*.py` | `--apply`（add_slots/flatten/rerun）、`--dry-run` 默认（toggle_user）；不加开关只打印计划 |
 | S6 | 降级不抛异常 | mas_adapter.py:83-112 | 主机不可达统一 `{ok:False, degraded:True, degrade_reason}`，不让一端故障升级为整体崩溃 |
+| S7 | kill_audit 确认闸门（S2 的唯一例外） | `kill_audit_decide`（mcp_server.py:326-355）→ `POST /api/kill_audit/decide`（api_fastapi.py:2174） | 放行 ≠ 直接杀进程：`decide()` 只把条目置 approved / rejected（models/kill_audit.py:118-126），破坏性动作由守护方观察到 approved 后执行。前端退役后若不给 MCP 入口，会退化成 `expire_all()` 的"超时默认放行"（models/kill_audit.py:129-146），比人工把关更危险 |
 
-MCP 工具清单（`@mcp.tool()` 实测 **25** 个，mcp_server.py:91-260）：
+MCP 工具清单（`@mcp.tool()` 实测 **41** 个，工具区 mcp_server.py:126-576）：
 
 - 只读 13（MAA）：`link_map, inspect_account, processes, status, dashboard, queue, account_status, events, stats_dashboard, health, depot_plan, activity_stages, probe_status`
 - 写 5（MAA）：`enqueue, dequeue, queue_control, smart_dispatch, probe_stage`
 - 只读 5（MAS）：`mas_snapshot, mas_status, mas_history, mas_ledger, mas_rerun_state`
 - 写 2（MAS）：`mas_rerun, mas_cleanup`（均 `dry_run=True` 默认）
+- 只读 7（运维）：`kill_audit_history, kill_audit_pending, emulators, emulator_status, connect_status, maa_status, maa_instances`
+- 写 9（运维，全部 `dry_run=True` 默认）：`kill_audit_decide, emulator_control, emulator_batch, emu_connect_stop, emu_connect_restart, account_launch, account_stop, maa_stop_all, maa_launch_source`
+- 合计 13 + 5 + 7 + 9 + 5 + 2 = **41**（运维 16 = 原 Web「守护审计放行 / 模拟器启停 / MAA 启停」三块按钮，2026-09-26 task-17 迁入；机制见 S2/S7）
 
 > 口径澄清：`20 个工具 / MAS 侧 MCP 工具数 = 0` 是 2026-09-26 上午的旧状态。15:10 的改动
 > 新增了 `mas_adapter` 门面与 7 个 MAS 工具，MAS 侧已不是 0。
@@ -89,12 +93,12 @@ MCP 工具清单（`@mcp.tool()` 实测 **25** 个，mcp_server.py:91-260）：
 
 ## 5. 现状差距清单（G1–G6）
 
-- **G1 MAS 写动词覆盖率低**：25 个工具里 MAS 写只有 `mas_rerun`/`mas_cleanup`；`set_slots`/`toggle_account`/`pause`/`resume`/`dequeue` 在 MAS 侧**只有 CLI**，无 adapter 入口、无 MCP 工具。
+- **G1 MAS 写动词覆盖率低**：41 个工具里 MAS 写只有 `mas_rerun`/`mas_cleanup`；`set_slots`/`toggle_account`/`pause`/`resume`/`dequeue` 在 MAS 侧**只有 CLI**，无 adapter 入口、无 MCP 工具。
 - **G2 MAA 侧账号级动词缺失**：`toggle_account`（挂起）与 `set_slots` 未暴露；前者必须走全量 `batch_save`（覆盖风险，见 1710 注释），后者改配置会触发实例重建，均不适合 agent 直接裸调。
 - **G3 事件归一未覆盖 MAS**：`event_bus` 只装本机事件，`services/mas_l3.py` 对 `event_bus` 引用数 **0**；远端只有 `runtime/mas_ledger.jsonl`。Harness 想知道"远端刚发生什么"只能轮询 `mas_status`。
 - **G4 双事实源风险（读取面）**：MAS 真相有 4 条并行读路径 —— `mas_l3.host_snapshot`(SSH)、`mas_l3.history`(`:36163`)、`tools/mas_dashboard.py`（自读 `MAS_ROOT=E:\AUTO-MAS`）、`tools/mas_accounts.py`（现取 `ScriptConfig.json`）。`mas_adapter` 已是唯一门面，但 dashboard/accounts 仍自带聚合口径。
 - **G5 端口 / 入口漂移（高危）**：MCP 挂在 Python FastAPI（`app.mount("/mcp")`，2026-09-26 实测 api_fastapi.py:**3807**；G6 插入 13 行后由 3794 漂到此处，**行号会继续漂移，请按 `build_mcp_app` / `app.mount` 符号检索**），实际端口 = `models/config.json → api_port`，**当前实测 19997**；外部入口通常由 Node 看板承接（**端口可配**：脚本传 `--port 19999`，mjs:65 默认 19998）且**不代理 `/mcp`**（`server/maaorch-web.mjs` 无 mcp 关键字）。外部配置写 `19999/mcp` 会打不到 MCP。
-- **G6 写默认不一致 + 空 token 不鉴权**：MAA 侧写工具直接执行（无 `dry_run`），MAS 侧默认 `dry_run=True`，调用方要记两套语义；且 `api_token` 为空时 MCP 挂载点（mcp_server.py:65）与 `/api/*`（api_fastapi.py:218）**都不鉴权**，属误配风险。
+- **G6 写默认不一致 + 空 token 不鉴权**：MAA 侧写工具**分两半** —— 遗留 5 个（`enqueue/dequeue/queue_control/smart_dispatch/probe_stage`）直接执行（无 `dry_run`），2026-09-26 新增的 9 个运维写工具默认 `dry_run=True`；MAS 侧 2 个默认 `dry_run=True`。运维侧已统一、遗留 5 个未统一，调用方仍需记两套语义；且 `api_token` 为空时 MCP 挂载点（mcp_server.py:80）与 `/api/*`（api_fastapi.py:218）**都不鉴权**，属误配风险。
 
 ### 接入片段（Hermes `mcp_servers`）
 
