@@ -13,7 +13,9 @@ DEFAULT_CONFIG: dict = {"version":5,"appearance_mode":"Dark","window_geometry":"
     "parallel_max":1,"daily_batch_time":"",
     "schedule":{"enabled":False,"type":"daily","time":"08:00","days_of_week":[]},"webhook_url":"",
     "schedule_mode":"daily",
-    "queue":[],"api_port":19999,"api_token":"","warehouse":[],"groups":[],"accounts":[],
+    # ★ 2026-09-26 安全收紧：默认只听本机（范式 = ui/control_server.py:738「默认 127.0.0.1」）。
+    # 需要局域网访问必须显式配置 bind_address="0.0.0.0"（且 api_token 必须非空）。
+    "queue":[],"api_port":19999,"bind_address":"127.0.0.1","api_token":"","warehouse":[],"groups":[],"accounts":[],
     "maa_version":"","maa_instances":0,"maa_instances_version":"",
     "ai_provider":"openai","ai_api_key":"","ai_endpoint":"","ai_model":"","ai_auto_analyze":False,
     "tg_token":"","tg_chat_id":"",
@@ -86,6 +88,9 @@ def load_config() -> dict:
                 data.setdefault("maa_version", "")
                 data.setdefault("maa_instances", 0)
                 data.setdefault("schedule_mode", "daily")
+                # ★ 2026-09-26：把缺省绑定显式写进运行配置（老 config.json 无此键
+                #   → 现在收紧为 127.0.0.1；要局域网访问改这里为 "0.0.0.0"）。
+                data.setdefault("bind_address", DEFAULT_CONFIG["bind_address"])
                 data.setdefault("smart_global", dict(DEFAULT_CONFIG["smart_global"]))
                 sg = data["smart_global"]
                 sg["post_action"] = DEFAULT_CONFIG["smart_global"]["post_action"]

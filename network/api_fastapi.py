@@ -1748,7 +1748,7 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
             "api_port": cfg.get("api_port", 19999),
             "smart_global": cfg.get("smart_global", {}),
             "webhook_url": cfg.get("webhook_url", ""),
-            "bind_address": cfg.get("bind_address", "0.0.0.0"),
+            "bind_address": cfg.get("bind_address", "127.0.0.1"),  # ★ 2026-09-26 与 main_web.pyw:332 同缺省
             "api_token": cfg.get("api_token", ""),
             "ai_provider": cfg.get("ai_provider", "openai"),
             "ai_api_key": cfg.get("ai_api_key", ""),
@@ -3837,7 +3837,10 @@ th{{color:#888;font-weight:normal}}tr:hover{{background:#2a2a2a}}</style>
 
 
 def start_server(mw: Any, port: int = 19999) -> None:
-    bind = mw.config.get("bind_address", "0.0.0.0") if hasattr(mw, 'config') else "0.0.0.0"
+    # ★ 2026-09-26 安全收紧：缺省只听本机（同 main_web.pyw:332）。注意本函数
+    #   目前无调用方（实际绑定在 main_web.pyw:343 自建 uvicorn.Config），
+    #   保留一致缺省以防将来回归/误用。
+    bind = mw.config.get("bind_address", "127.0.0.1") if hasattr(mw, 'config') else "127.0.0.1"
     cert = mw.config.get("ssl_cert", "") if hasattr(mw, 'config') else ""
     key = mw.config.get("ssl_key", "") if hasattr(mw, 'config') else ""
     app = create_app(mw)

@@ -329,7 +329,11 @@ pause
     from network.api_fastapi import create_app, start_server
     import uvicorn, threading as _th
     _fastapi_app = create_app(ctx._mw)
-    _bind = config.get("bind_address", "0.0.0.0")
+    # ★ 2026-09-26 安全收紧：缺省只听本机（范式 = ui/control_server.py:738-750；
+    #   与 docs/http-api.md:15「监听范围：仅 127.0.0.1」对齐 —— 此前代码缺省
+    #   "0.0.0.0" 与文档矛盾）。局域网访问 = 显式 bind_address="0.0.0.0"
+    #   且 api_token 非空；空 token + 0.0.0.0 = 未鉴权暴露全部 REST+MCP 工具。
+    _bind = config.get("bind_address", "127.0.0.1")
     if _console_mode:
         # uvicorn 自带日志转发进仪表盘日志区；访问日志关闭（避免每请求刷屏）
         import logging as _logging
