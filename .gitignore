@@ -159,3 +159,11 @@ docs/audits/snapshot/
 .opencode/
 _sanity_check/
 _anni_check/
+
+# ── 2026-09-28 入库基线复核（t_1ca5e9ee）─────────────────────────────
+# 1) 根级 scratch（探针脚本/取证件/从主机拉回的副本，含原始 MAA 配置副本）
+#    ——过程材料，不是项目内容；`git add -A` 地雷面（实测 500+ 文件）
+/tmp/
+# 2) 凭据暴露审计的原始扫描堆（300MB+；preview 字段含真实凭据前缀，属敏感面）
+#    人读脱敏报告见 docs/CREDENTIAL_EXPOSURE_AUDIT.md；本目录仅本地留证
+docs/audits/2026-09-28_cred_exposure/
