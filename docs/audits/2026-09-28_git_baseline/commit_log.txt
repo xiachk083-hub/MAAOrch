@@ -1,3 +1,18 @@
+3a03c65 chore(snapshot): 收尾快照3（event_calendar 巡检产物终态）
+ _verify_done.py                                    |   35 +
+ all_done.json                                      | 3926 ++++++++++++++++++++
+ blk.json                                           |   60 +
+ docs/audits/2026-09-28_event_calendar_wiring.json  |   79 +-
+ .../smoke_orch_seam_20260928.txt                   |    8 +
+ done_tmp.json                                      | 3898 +++++++++++++++++++
+ 6 files changed, 7969 insertions(+), 37 deletions(-)
+1714edf chore: 去跟踪误入库的一次性任务转储 done_tmp.json（文件留盘，非项目内容）
+ done_tmp.json | 3898 ---------------------------------------------------------
+ 1 file changed, 3898 deletions(-)
+59568fe docs: 收尾证据定版终（status_after / commit_log）
+ docs/audits/2026-09-28_git_baseline/commit_log.txt   | 10 ++++++++++
+ docs/audits/2026-09-28_git_baseline/status_after.txt |  6 +-----
+ 2 files changed, 11 insertions(+), 5 deletions(-)
 378348e chore(snapshot): 收尾末次快照2（event_calendar 巡检产物）
  ...8_event_calendar_wiring.inspection_run2_full.md |   93 +
  docs/audits/2026-09-28_event_calendar_wiring.json  |  301 ++
