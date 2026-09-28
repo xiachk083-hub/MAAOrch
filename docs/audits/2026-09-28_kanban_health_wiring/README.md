@@ -13,6 +13,7 @@
 | CLI 面探针（line/json/错板/双板/selftest 45/45） | ✅ | `11_cli_probes.txt` |
 | 工具注册可见 + 关→开刷新后实调 | ✅ | `13_live_call.json`：ok=true / status=CRIT / 0.8s；config `enabled=true`；11:17-18 服务重起日志 |
 | 巡检 prompt 接线（v4） | ✅ 由 t_403cd83b 收口 | 活体快照 `live_prompt_now.txt`（7246 chars / sha16 `9b41eaa33303614e`）= 现场九检第 9 项 + 主表 16 行 |
+| **端到端巡检轮（v4 生效后首轮）** | ✅ | `16_round_after_v4.txt`：fire≈11:46 → 11:51:58 报告主表 `KANBAN_HEALTH=ts=20260928_114619,…,P2=4,status=WARN`（**真实值**）+ `AUDIT_STATUS=OK` + `UPCOMING=…`；证据行按第 9 项口径点名 docs/KANBAN_HEALTH.md |
 | 关键文件哈希 | ✅ 4/4 | `14_hashes.txt`（sha256sum -c 通过） |
 
 ## 2. 单一真源与接口契约（MCP 层只搬运，不重算）

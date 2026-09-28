@@ -55,7 +55,9 @@ owner 口径（统一）：工具参数/`--lease-owner` > `MAAORCH_LEASE_OWNER` 
 | 5 | 同主续租（orchestrator 场景） | owner `t_p1_2_orch` 持有；`run_profile --dry-run --lease-owner t_p1_2_orch` rc=0（`自己的`）；对照 `--lease-owner t_other` rc=2 拒 —— 修复所依赖的语义实测成立 |
 | 6 | 六工具 dry-run 语义抽样 | `mas_probe_farm --account 烤箱 --stage 1-7`（默认 dry-run）rc=0，内层 `farm-dry-run rc=0`，语义未变 |
 
-**顺带发现（非本卡范围，记录备查）**：`mas_preflight` 对 `E:\MAA-Multi\MAA_12` 报 `[FAIL] 5 注入闸门 VIOLATION` —— 与租约无关的既有问题（第 2/3 步冒烟都在，未触碰）。
+**第 7 步（追加）编排器全链活体尝试**：`mas_farm_orchestrator --account 烤箱 --stage 1-7 --dry-run --owner t_p1_2_orch_live` → 编排器自身 preflight 首闸 `config_gate` 未过 ⇒ 链路在 ④b/⑥ 之前 rc=2 停下，**未覆盖到 --lease-owner 透传的活体证据**（见 `smoke_orch_seam_20260928.txt`）。替代证明：(a) 机制级活体 = 本表第 5 行（同主续租 rc=0 / 异主 rc=2）；(b) 命令级 = selftest `t_farm_cmd_lease_owner`（④b/⑥ 两条命令都带 `--lease-owner`，25/25 绿）。
+
+**顺带发现（非本卡范围，记录备查）**：`mas_preflight` 对 `E:\MAA-Multi\MAA_12` 报 `[FAIL] 5 注入闸门 VIOLATION`，同一现象正是编排器 `config_gate` 拒发的原因（第 2/3 步冒烟与第 7 步都命中）。既有问题、与租约无关、本卡未触碰；但**它会挡住任何落在 MAA_12 上的真跑**（含编排器 apply 链），建议 lead 单开一条排查（先判「人改配置 vs 基线漂移」，再决定重签基线还是回滚配置）。
 
 ### 4) 终验（`selftests_final_20260928.txt`，Python312，2026-09-28 11:48）
 

@@ -1,0 +1,40 @@
+# 端到端验收摘录：v4 生效后首轮巡检（源：cron/output/52b88b0ffca0/2026-09-28_11-51-58.md）
+# 抓取 @ 2026-09-28 11:55:37；KANBAN_HEALTH 工具调用 ts=20260928_114619（fire≈11:46 → 完成 11:51:58）
+
+== 提示词生效证明（关键行：现场九检 / 23 次 / 第9项 / 16 行主表）==
+你是 AUTO-MAS 的**巡检补漏员兼班次调度补位员**。一轮巡检 = 全量体检：①隔离自检；②班次对账；③现场九检+审计水位（切号闸门/补丁闸门/错误聚合/客户端状态/身份留痕/磁盘与空转/打断源治理/看板治理/审计水位）；④失败定因；⑤必要时补位发车 + 账号级补漏。
+【硬性预算】最多 23 次工具调用；禁止逐队列遍历；同一工具重复不超过 2 次（mas_rerun 预演+确认 ≤2；dispatch_due 预演+确认 ≤2；triage_error ≤2；error_daily ≤1；patch_guard ≤1；interrupt_guard ≤1；event_calendar ≤1；kanban_health ≤1；audit_waterline ≤1）；不要用 tool_search 去扩工具面。
+【第三步 现场九检（每项 1 次）】
+9) `mas_kanban_health()`（看板治理体检，t_4cd871de/t_67915887 产物；等价 `tools/kanban_health.py --line --no-write`，纯只读）⇒ 原样引用返回的 line 整行：`KANBAN_HEALTH=ts=…,boards=…,cards=…,running=…,dup=…,zombie=…,blocked_stale=…,fail=…,orphan=…,P1=…,P2=…,P3=…,status=OK|WARN|CRIT`；ok=false 或取不到行 ⇒ `KANBAN_HEALTH=UNKNOWN:<原因>`。WARN/CRIT 只报告不处置（**不许**归档 / 重派 / 改卡；治理动作归 lead）；证据行（若 ≤3 行还空着）指名一句「看 docs/KANBAN_HEALTH.md 的 P1/P2 清单，由 lead/人工处置」。调 1 次、别重试。工具面未提供 ⇒ `KANBAN_HEALTH=UNKNOWN:工具面未提供（mas-observe 未接线 mas_kanban_health）`，不许顶替。
+【第六步 汇报（固定格式：先 16 行主表，再 ≤3 行证据/处置；每行都必须有本轮工具返回直接支撑，写不出就 UNKNOWN:<原因>）】
+
+== 主表与证据/处置（74-93，含 KANBAN_HEALTH=/AUDIT_STATUS=/UPCOMING=）==
+
+MCP_API_TOOL_COUNT=38 | ISOLATION=PASS
+SCHEDULE=OK（日常12/12已发；晚班未到点；due/late/drift=无）
+SWITCH_GATE=VIOLATION:MAA_10,MAA_12
+PATCH_GUARD=OK
+KANBAN_HEALTH=ts=20260928_114619,boards=2,cards=194,running=6,dup=0,zombie=0,blocked_stale=1,fail=3,orphan=0,P1=0,P2=4,P3=1,status=WARN
+CLIENT_STATE=未知×3、正常:标题页×1（异常 3：idx24=未知；idx25=未知；idx28=未知）
+ERR_SUMMARY=88 条，Top=客户端未就绪
+DISPATCH_ALERT=无
+UPCOMING=国际服 周切：剿灭周额度重置 + 周任务刷新:2026-09-28 19:00（约 7.2 小时后）；B服 矢量突破#3「拟生态」开启:2026-09-29 16:00（约 28.2 小时后）；B服 「资源收集」全关卡全天开放开启:2026-09-29 16:00（约 28.2 小时后）；国服 矢量突破#3「拟生态」开启:2026-09-29 16:00（约 28.2 小时后）；国服 「资源收集」全关卡全天开放开启:2026-09-29 16:00（约 28.2 小时后）；日服 サイドストーリー「人々、我々」结束:2026-09-30 02:59（约 39.2 小时后）；等另有 6 项在窗内
+IDENTITY=一致（red_rounds=0）
+DISK=C:30G/238G ⚠、E:147G/1863G ⚠
+POWER=0 建议=无（参考：在飞 MAA=1）
+INTERRUPT_RISK=无
+WIKI_GOV=UNKNOWN:工具面未提供（mas-wiki 未接线）
+AUDIT_STATUS=OK live=0.6MB archives=0 report_hours=1.8 rot=no
+结论=疑似批次未结束（晨班收尾中：1 台补跑在飞、5 个队列项未跑；发车无缺口）
+证据/处置：① 后端就绪=ready=true（background=ready）；在飞 MAA=1（idx24=hb***-日 补跑执行中，日志活动=11:48）；晨班队列完成 52/57；盘位低水位 ⚠（C:30G/238G、E:147G/1863G）。
+② 今日账号=有记录 52（成功 22/retry 29/失败 1；11:10 补跑 4/5 已转 Success）；never_ran=6；ERROR_TRIAGE=hb***-日:recruit_confirm_failed(info)——招聘许可=0、不影响其它链、不补跑。
+③ 补位=无（due/late=空、无告警）；补跑=未执行（唯一失败号=资源类按规则排除；其 11:10 补跑仍在飞）——本轮零写操作；KB=未接线；SWITCH_GATE VIOLATION(MAA_10/12) 与 KANBAN WARN(P2=4) 只报告：看 docs/KANBAN_HEALTH.md 的 P1/P2 清单，由 lead/人工处置。
+
+== 头部 ==
+# Cron Job: mas-readonly-inspection
+
+**Job ID:** 52b88b0ffca0
+**Run Time:** 2026-09-28 11:51:58
+**Schedule:** every 30m
+
+## Prompt
