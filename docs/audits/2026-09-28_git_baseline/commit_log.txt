@@ -1,3 +1,11 @@
+6568129 chore(snapshot): 收尾末次快照（kanban_conflict_guard 文档）
+ docs/KANBAN_CONFLICT_GUARD.md  | 127 +++++++++++++++++++++++++++++++++++++++++
+ docs/KANBAN_DISPATCH_POLICY.md |  13 +++++
+ 2 files changed, 140 insertions(+)
+3d8dc3c docs: 收尾证据终版（status_after / commit_log）
+ docs/audits/2026-09-28_git_baseline/commit_log.txt   | 11 ++++++++++-
+ docs/audits/2026-09-28_git_baseline/status_after.txt | 10 +++-------
+ 2 files changed, 13 insertions(+), 8 deletions(-)
 e532e85 chore(snapshot): 收尾微快照（kanban_conflict_guard 取证 / 租约文档最新态）
  .../real_scan.json                                 | 139 +++++++++++++++++++++
  .../2026-09-28_kanban_conflict_guard/real_scan.txt | 118 +++++++++++++++++
