@@ -1,0 +1,139 @@
+{
+ "schema": "maaorch.kanban_conflict_guard/1",
+ "ts": "2026-09-28 11:51:46",
+ "board": "maa-parallel-benchmark-20260926",
+ "db": "C:\\Users\\xiach\\AppData\\Local\\hermes\\kanban\\boards\\maa-parallel-benchmark-20260926\\kanban.db",
+ "scope": [
+  "running",
+  "ready",
+  "todo"
+ ],
+ "mode": "board",
+ "ok": true,
+ "status": "WARN",
+ "conflicts": [
+  {
+   "cards": [
+    "t_1ca5e9ee",
+    "t_1df99ae5"
+   ],
+   "shared": [
+    "docs/TOOLING_AUDIT.md"
+   ],
+   "suggest": "串行/错峰：docs/TOOLING_AUDIT.md 的当前持有者 = t_1ca5e9ee(running)、t_1df99ae5(running)；等其收口再派 本卡，或先把 本卡 的范围改到无冲突文件（真并发写 = 后写覆盖前写）"
+  },
+  {
+   "cards": [
+    "t_1df99ae5",
+    "t_9ed6574c"
+   ],
+   "shared": [
+    "tools/mas_run_profile.py"
+   ],
+   "suggest": "串行/错峰：tools/mas_run_profile.py 的当前持有者 = t_1df99ae5(running)、t_9ed6574c(running)；等其收口再派 本卡，或先把 本卡 的范围改到无冲突文件（真并发写 = 后写覆盖前写）"
+  },
+  {
+   "cards": [
+    "t_403cd83b",
+    "t_4cd871de"
+   ],
+   "shared": [
+    "tools/mas_observe_mcp.py"
+   ],
+   "suggest": "串行/错峰：tools/mas_observe_mcp.py 的当前持有者 = t_403cd83b(running)、t_4cd871de(running)；等其收口再派 本卡，或先把 本卡 的范围改到无冲突文件（真并发写 = 后写覆盖前写）"
+  },
+  {
+   "cards": [
+    "t_403cd83b",
+    "t_9ed6574c"
+   ],
+   "shared": [
+    "tools/mas_observe_mcp.py"
+   ],
+   "suggest": "串行/错峰：tools/mas_observe_mcp.py 的当前持有者 = t_403cd83b(running)、t_9ed6574c(running)；等其收口再派 本卡，或先把 本卡 的范围改到无冲突文件（真并发写 = 后写覆盖前写）"
+  },
+  {
+   "cards": [
+    "t_4cd871de",
+    "t_9ed6574c"
+   ],
+   "shared": [
+    "docs/KANBAN_DISPATCH_POLICY.md",
+    "docs/KANBAN_HEALTH.md",
+    "tools/kanban_health.py",
+    "tools/mas_observe_mcp.py"
+   ],
+   "suggest": "串行/错峰：docs/KANBAN_DISPATCH_POLICY.md、docs/KANBAN_HEALTH.md、tools/kanban_health.py… 的当前持有者 = t_4cd871de(running)、t_9ed6574c(running)；等其收口再派 本卡，或先把 本卡 的范围改到无冲突文件（真并发写 = 后写覆盖前写）"
+  }
+ ],
+ "cards_scanned": 5,
+ "cards": [
+  {
+   "id": "t_1ca5e9ee",
+   "status": "running",
+   "priority": 1,
+   "files": [
+    "tools/git_baseline_check.py",
+    "docs/TOOLING_AUDIT.md",
+    "docs/CREDENTIAL_EXPOSURE_AUDIT.md",
+    "tools/mas_scrub.py",
+    "docs/GIT_BASELINE.md"
+   ]
+  },
+  {
+   "id": "t_1df99ae5",
+   "status": "running",
+   "priority": 1,
+   "files": [
+    "docs/TOOLING_AUDIT.md",
+    "tools/mas_run_profile.py",
+    "docs/MAS_INSTANCE_LEASE.md",
+    "tools/mas_instance_lease.py",
+    "tools/tests/test_regression.py",
+    "docs/REGRESSION.md"
+   ]
+  },
+  {
+   "id": "t_403cd83b",
+   "status": "running",
+   "priority": 2,
+   "files": [
+    "tools/event_calendar.py",
+    "docs/EVENT_CALENDAR.md",
+    "tools/mas_shift_report.py",
+    "tools/mas_observe_mcp.py",
+    "docs/HERMES_MAS_HANDOVER.md"
+   ]
+  },
+  {
+   "id": "t_4cd871de",
+   "status": "running",
+   "priority": 3,
+   "files": [
+    "tools/kanban_health.py",
+    "tools/mas_observe_mcp.py",
+    "docs/KANBAN_DISPATCH_POLICY.md",
+    "docs/KANBAN_HEALTH.md",
+    "docs/MCP_TOOL_ROADMAP.md"
+   ]
+  },
+  {
+   "id": "t_9ed6574c",
+   "status": "running",
+   "priority": 2,
+   "files": [
+    "tools/kanban_conflict_guard.py",
+    "docs/KANBAN_DISPATCH_POLICY.md",
+    "tools/mas_observe_mcp.py",
+    "tools/mas_run_profile.py",
+    "tools/mas_probe_farm.py",
+    "tools/kanban_health.py",
+    "docs/KANBAN_HEALTH.md",
+    "docs/KANBAN_TASK_TEMPLATE.md",
+    "tools/x.py",
+    "docs/KANBAN_CONFLICT_GUARD.md"
+   ]
+  }
+ ],
+ "line": "KANBAN_CONFLICT=WARN:5 conflicts=t_1ca5e9ee:t_1df99ae5(shared=docs/TOOLING_AUDIT.md),t_1df99ae5:t_9ed6574c(shared=tools/mas_run_profile.py),t_403cd83b:t_4cd871de(shared=tools/mas_observe_mcp.py),t_403cd83b:t_9ed6574c(shared=tools/mas_observe_mcp.py),t_4cd871de:t_9ed6574c(shared=docs/KANBAN_DISPATCH_POLICY.md+docs/KANBAN_HEALTH.md+tools/kanban_health.py+tools/mas_observe_mcp.py)"
+}
