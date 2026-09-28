@@ -1,3 +1,13 @@
+d5265f1 chore: 去跟踪根级一次性转储（done_tmp/all_done/blk/_verify_done；文件留盘，t_e17a7209 过程件）
+ _verify_done.py |   35 -
+ all_done.json   | 3926 -------------------------------------------------------
+ blk.json        |   60 -
+ done_tmp.json   | 3898 ------------------------------------------------------
+ 4 files changed, 7919 deletions(-)
+4d89535 docs: 收尾证据定版终极（status_after / commit_log）
+ docs/audits/2026-09-28_git_baseline/commit_log.txt   | 15 +++++++++++++++
+ docs/audits/2026-09-28_git_baseline/status_after.txt | 18 ++++++++++++++++++
+ 2 files changed, 33 insertions(+)
 3a03c65 chore(snapshot): 收尾快照3（event_calendar 巡检产物终态）
  _verify_done.py                                    |   35 +
  all_done.json                                      | 3926 ++++++++++++++++++++

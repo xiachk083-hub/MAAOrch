@@ -1,6 +1,18 @@
  M docs/audits/2026-09-28_git_baseline/status_after.txt
-GIT_BASELINE=DRIFT:1
+ M docs/audits/2026-09-28_kanban_health_wiring/README.md
+ M docs/audits/2026-09-28_p1_2_lease_consumers/README.md
+ M docs/audits/2026-09-28_p1_2_lease_consumers/smoke_orch_seam_20260928.txt
+?? _verify_done.py
+?? all_done.json
+?? blk.json
+?? docs/audits/2026-09-28_kanban_health_wiring/16_round_after_v4.txt
+?? done_tmp.json
+GIT_BASELINE=DRIFT:5
+  untracked   docs/audits/2026-09-28_kanban_health_wiring/16_round_after_v4.txt
   uncommitted docs/audits/2026-09-28_git_baseline/status_after.txt
+  uncommitted docs/audits/2026-09-28_kanban_health_wiring/README.md
+  uncommitted docs/audits/2026-09-28_p1_2_lease_consumers/README.md
+  uncommitted docs/audits/2026-09-28_p1_2_lease_consumers/smoke_orch_seam_20260928.txt
 {
   "root": "D:/1-2/MAAOrch",
   "paths": [
@@ -12,10 +24,31 @@ GIT_BASELINE=DRIFT:1
     "network",
     "app"
   ],
-  "untracked_count": 0,
-  "changed_count": 0,
-  "drift_count": 0,
-  "status": "OK",
-  "items": [],
-  "out_of_scope_count": 0
+  "untracked_count": 1,
+  "changed_count": 4,
+  "drift_count": 5,
+  "status": "DRIFT",
+  "items": [
+    {
+      "status": "untracked",
+      "path": "docs/audits/2026-09-28_kanban_health_wiring/16_round_after_v4.txt"
+    },
+    {
+      "status": "uncommitted",
+      "path": "docs/audits/2026-09-28_git_baseline/status_after.txt"
+    },
+    {
+      "status": "uncommitted",
+      "path": "docs/audits/2026-09-28_kanban_health_wiring/README.md"
+    },
+    {
+      "status": "uncommitted",
+      "path": "docs/audits/2026-09-28_p1_2_lease_consumers/README.md"
+    },
+    {
+      "status": "uncommitted",
+      "path": "docs/audits/2026-09-28_p1_2_lease_consumers/smoke_orch_seam_20260928.txt"
+    }
+  ],
+  "out_of_scope_count": 4
 }
