@@ -1,0 +1,8 @@
+## 7) 编排器全链 dry-run（真链路，验证 ④b/⑥ 的 --lease-owner 透传不再自锁）
+-- 11:54:51 cmd: mas_farm_orchestrator --account 烤箱 --stage 1-7 --dry-run --owner t_p1_2_orch_live --
+[11:54:52] 目标：烤箱 × 1-7 ⇒ 脚本 明日方舟-官-12（E:\MAA-Multi\MAA_12，实例 27）
+[11:55:04] preflight：NO-GO（不过项：['config_gate']）
+⇒ rc=2 ｜ 卡在 preflight（rc=2）
+报告：D:\1-2\MAAOrch\runtime\reports\farm_run_20260928_115451_烤箱.md
+run 目录：D:\1-2\MAAOrch\runtime\farm_orchestrator\fo_20260928_115451_烤箱
+rc=2
