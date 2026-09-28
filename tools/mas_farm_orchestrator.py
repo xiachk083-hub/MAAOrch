@@ -9,7 +9,7 @@ r"""mas_farm_orchestrator.py —— 端到端刷关编排器（一句话入口�
     ③ unknown（或 --force-probe）⇒ 试探 1 场（mas_probe_farm --probe-only）
     ④ 生成计划（本工具生成 run_profile profile + 校验 + 干跑预览，拒绝项 fail-closed）
     ⑤ 取实例租约（mas_instance_lease；拿不到就停，零写）
-    ⑥ 执行（mas_run_profile --apply；内含备份→写配置→preflight→发车→读回→等完→还原）
+    ⑥ 执行（mas_run_profile --apply；内含备份→写配置→preflight→发车→读回→等完→还原；`--lease-owner` 透传本工具持有者）
     ⑦ 读回校验（run_profile L1/L2 结果 + 本工具独立复核 run 状态）
     ⑧ 还原复核（run 是否 restored + 临时计划表是否删净 + StageMode 是否回写）
     ⑨ 写报告（runtime/reports/farm_run_<ts>.md）+ 审计（mas_ledger.jsonl / 本工具 jsonl）
@@ -308,17 +308,26 @@ def deps_probe(args, script_name: str, stage: str, medicine: int, timeout_s: int
     return rec
 
 
-def deps_plan_preview(profile_path: str, timeout: float = 900) -> dict:
-    """④b 计划干跑预览（run_profile 无 --apply：只读 REST，零写）。"""
-    rec = _run_cmd([pick_py(), RUN_PROFILE, "--profile", profile_path, "--json"], timeout=timeout)
+def deps_plan_preview(profile_path: str, timeout: float = 900, lease_owner: str | None = None) -> dict:
+    """④b 计划干跑预览（run_profile 无 --apply：只读 REST，零写；带上本工具的租约持有者口径）。"""
+    cmd = [pick_py(), RUN_PROFILE, "--profile", profile_path, "--json"]
+    if lease_owner:
+        cmd += ["--lease-owner", str(lease_owner)]
+    rec = _run_cmd(cmd, timeout=timeout)
     rec["summary"] = _parse_last_json(rec["out"], "mas_run_profile")
     return rec
 
 
 def deps_farm(profile_path: str, args, farm_max_wait: float, run_dir: str) -> dict:
-    """⑥ 执行：mas_run_profile --apply（备份/写/发车/读回/等完/还原全在里面）。"""
+    """⑥ 执行：mas_run_profile --apply（备份/写/发车/读回/等完/还原全在里面）。
+
+    `--lease-owner` 必须带上本工具的持有者：步骤 ⑤ 已经以它取过租，run_profile 的 G3L
+    按「同主=续租」认它（否则会被当成别人占着而拒发）；run_profile 收尾释放后，
+    本工具 ⑨b 的 release 会读到「本来就没有」——幂等，属预期。
+    """
     cmd = [pick_py(), RUN_PROFILE, "--profile", profile_path, "--apply", "--json",
-           "--write-mode", args.write_mode, "--max-wait-seconds", str(float(farm_max_wait))]
+           "--write-mode", args.write_mode, "--max-wait-seconds", str(float(farm_max_wait)),
+           "--lease-owner", str(args.owner)]
     if args.disable_others:
         cmd += ["--disable-others"]
     if args.all_accounts:
@@ -718,7 +727,7 @@ def run(args, deps=None, runtime_dir: str = None) -> tuple:
         return finish(2)
     summary["plan"] = {"profile": scrub(prof), "path": prof_path, "warnings": warns,
                        "series": str(args.times), "medicine": int(args.medicine)}
-    prev = d["plan_preview"](prof_path)
+    prev = d["plan_preview"](prof_path, lease_owner=args.owner)
     psum = prev.get("summary") or {}
     refusals = psum.get("refusals") or []
     summary["plan"]["preview"] = {"rc": prev.get("rc"), "refusals": scrub(refusals),
@@ -1043,7 +1052,7 @@ def selftest() -> dict:
                                 "ledger_update": {"before_status": "unknown", "after_status": "success", "rc": 0},
                                 "triage": None}}
 
-        def plan_preview(profile_path, timeout=900):
+        def plan_preview(profile_path, timeout=900, lease_owner=None):
             calls.append("preview")
             return {"rc": 0, "summary": {"tool": "mas_run_profile", "refusals": [],
                                          "warnings": [], "expected": {"uid1": {"payload": {"Stage": "1-7"},
@@ -1244,6 +1253,28 @@ def selftest() -> dict:
             chk(os.path.exists(p))
         chk(not os.path.exists(p))
 
+    def t_farm_cmd_lease_owner():
+        """⑥/④b 必须把本工具的租约持有者透给 run_profile——否则 G3L 同族自锁（把自己当外人占着而拒发）。"""
+        seen = []
+
+        def fake(cmd, timeout, cwd=None):
+            seen.append([str(c) for c in cmd])
+            return {"cmd": " ".join(str(c) for c in cmd), "rc": 0, "timeout": False, "out": "", "err": "",
+                    "seconds": 0, "summary": None}
+
+        real = globals()["_run_cmd"]
+        globals()["_run_cmd"] = fake
+        try:
+            deps_farm("P.json", ns(apply=True), 60.0, "run_dir")
+            deps_plan_preview("P.json", lease_owner="t_selftest")
+        finally:
+            globals()["_run_cmd"] = real
+        chk(len(seen) == 2, seen)
+        chk("--apply" in seen[0] and "--lease-owner" in seen[0] and "t_selftest" in seen[0],
+           "⑥ farm 命令应带 --lease-owner：%r" % seen[0])
+        chk("--lease-owner" in seen[1] and "t_selftest" in seen[1] and "--apply" not in seen[1],
+           "④b 预览命令应带 --lease-owner（仍无 --apply）：%r" % seen[1])
+
     def t_times_domain():
         chk("6" in TIMES_OK and "9" not in TIMES_OK)
 
@@ -1270,6 +1301,7 @@ def selftest() -> dict:
     case("闸门：剿灭拒绝", t_stage_annihilation_refused)
     case("报告：关键小节齐全", t_report_render)
     case("锁：创建/释放", t_lock_semantics)
+    case("租约：⑥/④b 命令带 --lease-owner（同族不自锁）", t_farm_cmd_lease_owner)
     case("取值域：times", t_times_domain)
     passed = sum(1 for c in cases if c["ok"])
     return {"ok": passed == len(cases), "passed": passed, "failed": len(cases) - passed, "cases": cases}
