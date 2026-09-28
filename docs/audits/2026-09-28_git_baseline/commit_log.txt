@@ -1,3 +1,7 @@
+2b85081 docs: 收尾证据定版（终）——status_after / commit_log
+ docs/audits/2026-09-28_git_baseline/commit_log.txt | 10 ++++++
+ .../2026-09-28_git_baseline/status_after.txt       | 38 +++++-----------------
+ 2 files changed, 19 insertions(+), 29 deletions(-)
 a5e266d chore(snapshot): 收尾快照4（kanban_health 第4轮 / 租约冒烟最新态）
  .../16_round_after_v4.txt                          | 40 ++++++++++++++++++++++
  .../2026-09-28_kanban_health_wiring/README.md      |  1 +
@@ -582,3 +586,4 @@ b2d7700 feat(tools): Hermes 期工具链入库（mas_* 只读/发车/巡检族�
 d7e964d chore(gitignore): 入库基线复核补充（/tmp/ 与 cred_exposure 原始扫描堆排除）
  .gitignore | 8 ++++++++
  1 file changed, 8 insertions(+)
+（commit_log 截至本文件提交前一刻；本卡全量提交见 git log 62feab6..HEAD）
