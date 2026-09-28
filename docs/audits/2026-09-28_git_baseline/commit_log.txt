@@ -1,3 +1,13 @@
+e532e85 chore(snapshot): 收尾微快照（kanban_conflict_guard 取证 / 租约文档最新态）
+ .../real_scan.json                                 | 139 +++++++++++++++++++++
+ .../2026-09-28_kanban_conflict_guard/real_scan.txt | 118 +++++++++++++++++
+ .../2026-09-28_kanban_conflict_guard/selftest.txt  |  27 ++++
+ .../2026-09-28_p1_2_lease_consumers/README.md      |  50 +++++++-
+ 4 files changed, 333 insertions(+), 1 deletion(-)
+c671972 docs: 收尾证据刷新（status_after / commit_log 补齐快照批次）
+ docs/audits/2026-09-28_git_baseline/commit_log.txt | 29 +++++++++++++++++
+ .../2026-09-28_git_baseline/status_after.txt       | 36 +++++-----------------
+ 2 files changed, 36 insertions(+), 29 deletions(-)
 82efdfc chore(snapshot): 运行中卡产物第二批快照（补齐首扫 fresh 跳过项：audit_wire/租约/kanban_health 等）
  .agents/skills/maaorch-project-brain/SKILL.md      |   70 +
  docs/HERMES_PROJECT_BRAIN.md                       |  306 ++
@@ -519,4 +529,3 @@ b2d7700 feat(tools): Hermes 期工具链入库（mas_* 只读/发车/巡检族�
 d7e964d chore(gitignore): 入库基线复核补充（/tmp/ 与 cred_exposure 原始扫描堆排除）
  .gitignore | 8 ++++++++
  1 file changed, 8 insertions(+)
-H3(self) 见 git log -1

@@ -1,9 +1,5 @@
  M docs/audits/2026-09-28_git_baseline/status_after.txt
- M docs/audits/2026-09-28_p1_2_lease_consumers/README.md
-?? docs/audits/2026-09-28_kanban_conflict_guard/
-GIT_BASELINE=DRIFT:5
-  untracked   docs/audits/2026-09-28_kanban_conflict_guard/real_scan.json
-  untracked   docs/audits/2026-09-28_kanban_conflict_guard/real_scan.txt
-  untracked   docs/audits/2026-09-28_kanban_conflict_guard/selftest.txt
+?? docs/KANBAN_CONFLICT_GUARD.md
+GIT_BASELINE=DRIFT:2
+  untracked   docs/KANBAN_CONFLICT_GUARD.md
   uncommitted docs/audits/2026-09-28_git_baseline/status_after.txt
-  uncommitted docs/audits/2026-09-28_p1_2_lease_consumers/README.md
