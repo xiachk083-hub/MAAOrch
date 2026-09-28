@@ -114,6 +114,18 @@
 3. 契约/基线类最先发（被引用面最广）。
 4. 反面教材：20:35–20:37 重复波 12 张（全部 archive，白烧 2,572s/171 调用）；20:31–20:32 一发 11 张同时开跑。
 
+### 2.6 文件级互斥闸（派发前必跑；2026-09-28 起）
+
+- **规则**：发波/补派前，对在队卡跑一次 `python tools/kanban_conflict_guard.py`
+  （工具与口径见 `docs/KANBAN_CONFLICT_GUARD.md`）；末行 **`KANBAN_CONFLICT=` 非 `OK` ⇒ 不得同批派发**——
+  改「串行（等持有者收口）」、或 `hermes kanban link <父=先跑者> <子>` 挂依赖、或把那张卡的范围改到无冲突文件。
+- **为什么**：2026-09-28 实测同批 running 里 2 对同文件并发写（`tools/mas_observe_mcp.py`；
+  `tools/mas_run_profile.py` 工作树同时含两卡的改动族，mtime 11:39）；而宿主并发阀门（`max_in_progress` 等）
+  全为不限（§2.1）—— **文件级冲突此前没有任何机器判据拦**。真并发写 = 后写覆盖前写，白烧的是两张卡。
+- **建卡前预检**：`--body-file 草稿.md`（或先建 todo 卡再 `--card t_xxx`）；命中 ⇒ 建卡时就把 `parents` / 范围写对。
+- **做与不做**：本闸只出「冲突对 + 串行建议」，**不改卡、不调度、零写盘**；并发阀门仍按 §7 待 lead 批准后配置。
+- **回滚**：删本段 + `docs/KANBAN_CONFLICT_GUARD.md` + `tools/kanban_conflict_guard.py` + `docs/audits/2026-09-28_kanban_conflict_guard/`。
+
 ---
 
 ## 3. 优先级与依赖
@@ -290,6 +302,7 @@ env -u HERMES_DELEGATED_CHILD_CONTEXT hermes kanban list --json \
 - [ ] 同题查重完成（§6.2）
 - [ ] 周期卡带 `idempotency_key`
 - [ ] 资源类卡与本波其它卡不冲突；班次窗口内无资源类卡
+- [ ] 冲突闸完成（§2.6）：`KANBAN_CONFLICT=` 为 `OK`；WARN ⇒ 串行 / `link` / 改范围后再发；新卡用 `--body-file` 预检过
 - [ ] 每张卡过一遍 §1.1 七段自检
 
 ---
