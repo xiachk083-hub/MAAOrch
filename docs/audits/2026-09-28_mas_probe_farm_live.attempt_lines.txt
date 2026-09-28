@@ -1,0 +1,17 @@
+[2026-09-28 08:47:04.462][INF][FightSettingsUserControlModel] <2> UpdateStageList Enter
+  [2026-09-28 08:47:04.468][INF][FightSettingsUserControlModel] <2> UpdateStageList Exit, 5 ms
+  [2026-09-28 08:47:04.469][INF][DepotMaintainTaskUserControlModel] <2> UpdateStageList Enter
+  [2026-09-28 08:47:04.470][INF][DepotMaintainTaskUserControlModel] <2> UpdateStageList Exit, 1 ms
+  [2026-09-28 08:47:06.544][INF][HttpResponseLoggingExtension] <2> HTTP: NotModified GET https://api.maa.plus/MaaAssistantArknights/api/gui/StageActivityV2.json "6ab1366d-25b1" Mon, 21 Sep 2026 13:51:41 GMT 2064.583ms
+  [2026-09-28 08:47:06.557][INF][FightSettingsUserControlModel] <2> UpdateStageList Enter
+  [2026-09-28 08:47:06.558][INF][FightSettingsUserControlModel] <2> UpdateStageList Exit, 0 ms
+  [2026-09-28 08:47:06.558][INF][DepotMaintainTaskUserControlModel] <2> UpdateStageList Enter
+  [2026-09-28 08:47:06.558][INF][DepotMaintainTaskUserControlModel] <2> UpdateStageList Exit, 0 ms
+  [2026-09-28 08:47:19.452][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+  [2026-09-28 08:47:19.453][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-5"], selected null
+  [2026-09-28 08:47:19.453][INF][TaskQueueViewModel]     <2> 关卡计划内没有当日开放的关卡
+  [2026-09-28 08:47:19.456][INF][TaskQueueViewModel]     <2> 理智作战: 理智作战 任务跳过
+=== 今日各关成功者（看哪些关今天真开放） ===
+今天有成功记录的关（= 当日开放/可刷）:
+  1-7            45 个号  e.g. 145三月初发货、Gitano、LAZA
+  Annihilation   43 个号  e.g. 145三月初发货、Gitano、LAZA

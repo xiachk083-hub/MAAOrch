@@ -1,0 +1,13 @@
+T|\Microsoft\Windows\UpdateOrchestrator\Reboot_AC|Disabled||1999-11-30 00:00:00|267011|%systemroot%\system32\MusNotification.exe /RunOnAC RebootDialog
+T|\Microsoft\Windows\UpdateOrchestrator\Reboot_Battery|Disabled||1999-11-30 00:00:00|267011|%systemroot%\system32\MusNotification.exe /RunOnBattery RebootDialog
+T|\Microsoft\Windows\UpdateOrchestrator\Report policies|Queued||2026-08-13 02:25:25|2147943467|%systemroot%\system32\usoclient.exe ReportPolicies
+T|\Microsoft\Windows\UpdateOrchestrator\Schedule Scan|Ready|2026-09-28 12:53:53|2026-09-27 16:39:39|0|%systemroot%\system32\usoclient.exe StartScan
+T|\Microsoft\Windows\UpdateOrchestrator\Schedule Scan Static Task|Ready||2026-09-28 06:06:06|0|%systemroot%\system32\usoclient.exe StartScan
+T|\Microsoft\Windows\UpdateOrchestrator\Schedule Work|Disabled||2025-06-14 02:39:39|0|%systemroot%\system32\usoclient.exe StartWork
+T|\Microsoft\Windows\UpdateOrchestrator\UpdateModelTask|Ready||2025-06-18 13:25:25|0|%systemroot%\system32\usoclient.exe StartModelUpdates
+T|\Microsoft\Windows\UpdateOrchestrator\USO_UxBroker|Ready|2026-09-29 07:30:30|2026-09-28 04:10:10|2147943460|%systemroot%\system32\MusNotification.exe 
+T|\Microsoft\Windows\WindowsUpdate\Refresh Group Policy Cache|Ready||2025-05-09 18:52:52|2147746132| 
+T|\Microsoft\Windows\WindowsUpdate\Scheduled Start|Ready||2025-06-19 19:36:36|1060|C:\Windows\system32\sc.exe start wuauserv
+T|\Microsoft\Windows\WindowsUpdate\RUXIM\PLUGScheduler|Ready|2026-09-29 09:34:34|2026-09-28 04:01:01|2147942402|"%ProgramFiles%\RUXIM\PLUGscheduler.exe" 
+PROBE-END
+

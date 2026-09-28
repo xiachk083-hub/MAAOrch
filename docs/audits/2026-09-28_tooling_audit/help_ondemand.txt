@@ -1,0 +1,36 @@
+CMD: mas_ondemand.py --help
+RC=0 SECS=1.0
+------------------------------------------------------------
+--- stdout ---
+usage: mas_ondemand.py [-h]
+                       [--queue QUEUE | --script SCRIPT | --account ACCOUNT | --wake WAKE | --stop STOP | --list-running | --cleanup [CLEANUP]
+                       | --release RELEASE | --selftest] [--apply] [--force]
+                       [--skip-preflight] [--json] [--events EVENTS]
+                       [--timeout TIMEOUT]
+                       [--preflight-timeout PREFLIGHT_TIMEOUT]
+
+按需发车（AUTO-MAS）：队列 / 脚本 / 单号 / 唤醒 / 停任务 / 看在跑
+
+options:
+  -h, --help            show this help message and exit
+  --queue QUEUE         按队列发（队列名或 uid）
+  --script SCRIPT       按脚本发（脚本名或 uid；跑该脚本全部启用号）
+  --account ACCOUNT     按单号发（账号名，逗号分隔）——自动建 临时-按需-* 队列
+  --wake WAKE           ManualReview 只唤醒（脚本名或 uid；不改配置、不跑链）
+  --stop STOP           停任务（必须是 /api/dispatch/start 返回的 task_uid；ALL 需
+                        --force）
+  --list-running        只读：在跑的 MAA 槽位/任务/实例
+  --cleanup [CLEANUP]   删本工具建的 临时-按需-* 队列（可给名字/uid；默认 dry-run）
+  --release RELEASE     人工确认跑完后放行：目标名或 run_id（默认 dry-run）
+  --selftest            离线自测（假传输，不碰网络/runtime）
+  --apply               真发车/真停/真删（缺省 dry-run）
+  --force               显式放行被拦的闸门（记账 force=true；含 stop ALL / wake）
+  --skip-preflight      跳过 preflight（记账；不推荐）
+  --json                单行 JSON 输出
+  --events EVENTS       --list-running：app.log 事件条数（默认 80）
+  --timeout TIMEOUT     ssh 快照超时秒（默认 240）
+  --preflight-timeout PREFLIGHT_TIMEOUT
+                        preflight 子进程超时秒（默认 900）
+
+--- stderr ---
+

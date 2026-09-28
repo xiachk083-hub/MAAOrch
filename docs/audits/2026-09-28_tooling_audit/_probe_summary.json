@@ -1,0 +1,200 @@
+[
+ {
+  "name": "help_ondemand",
+  "cmd": "mas_ondemand.py --help",
+  "rc": "0",
+  "secs": "1.0"
+ },
+ {
+  "name": "help_ondemand_mcp",
+  "cmd": "mas_ondemand_mcp.py --help",
+  "rc": "0",
+  "secs": "10.0"
+ },
+ {
+  "name": "help_plan_builder",
+  "cmd": "mas_plan_builder.py --help",
+  "rc": "0",
+  "secs": "0.5"
+ },
+ {
+  "name": "help_probe_farm",
+  "cmd": "mas_probe_farm.py --help",
+  "rc": "0",
+  "secs": "1.3"
+ },
+ {
+  "name": "help_run_profile",
+  "cmd": "mas_run_profile.py --help",
+  "rc": "0",
+  "secs": "1.1"
+ },
+ {
+  "name": "help_stage_capability",
+  "cmd": "stage_capability.py --help",
+  "rc": "0",
+  "secs": "0.8"
+ },
+ {
+  "name": "ondemand_cleanup_dry",
+  "cmd": "mas_ondemand.py --cleanup --json",
+  "rc": "0",
+  "secs": "0.8"
+ },
+ {
+  "name": "ondemand_dryrun_account",
+  "cmd": "mas_ondemand.py --account y9Flipped --json",
+  "rc": "2",
+  "secs": "5.1"
+ },
+ {
+  "name": "ondemand_dryrun_script",
+  "cmd": "mas_ondemand.py --script 明日方舟-官-1-1-7 --json",
+  "rc": "2",
+  "secs": "2.2"
+ },
+ {
+  "name": "ondemand_list_running",
+  "cmd": "mas_ondemand.py --list-running --json",
+  "rc": "0",
+  "secs": "2.3"
+ },
+ {
+  "name": "ondemand_mcp_check",
+  "cmd": "mas_ondemand_mcp.py --check",
+  "rc": "0",
+  "secs": "10.4"
+ },
+ {
+  "name": "ondemand_wake_dry",
+  "cmd": "mas_ondemand.py --wake 明日方舟-官-1-1-7 --json",
+  "rc": "2",
+  "secs": "2.4"
+ },
+ {
+  "name": "plan_builder_dryrun",
+  "cmd": "mas_plan_builder.py --account y9Flipped --json --out-dir D:\\1-2\\MAAOrch\\docs\\audits\\2026-09-28_tooling_audit\\pb_out",
+  "rc": "0",
+  "secs": "1.3"
+ },
+ {
+  "name": "plan_builder_list_accounts",
+  "cmd": "mas_plan_builder.py --list-accounts",
+  "rc": "0",
+  "secs": "0.6"
+ },
+ {
+  "name": "probe_farm_dryrun",
+  "cmd": "mas_probe_farm.py --account y9Flipped --stage 1-7 --times 2",
+  "rc": "0",
+  "secs": "3.9"
+ },
+ {
+  "name": "probe_farm_dryrun_json",
+  "cmd": "mas_probe_farm.py --account y9Flipped --stage 1-7 --times 2 --json",
+  "rc": "0",
+  "secs": "8.5"
+ },
+ {
+  "name": "probe_farm_list_unknown",
+  "cmd": "mas_probe_farm.py --list unknown",
+  "rc": "0",
+  "secs": "3.4"
+ },
+ {
+  "name": "run_profile_docclaim_dryrun_flag",
+  "cmd": "mas_run_profile.py --profile runtime/templates/run_profile.example.json --dry-run",
+  "rc": "2",
+  "secs": "0.6"
+ },
+ {
+  "name": "run_profile_dryrun",
+  "cmd": "mas_run_profile.py --profile runtime/templates/run_profile.example.json",
+  "rc": "0",
+  "secs": "1.4"
+ },
+ {
+  "name": "run_profile_dryrun_json",
+  "cmd": "mas_run_profile.py --profile runtime/templates/run_profile.example.json --json",
+  "rc": "0",
+  "secs": "2.1"
+ },
+ {
+  "name": "run_profile_list_plans",
+  "cmd": "mas_run_profile.py --list-plans",
+  "rc": "0",
+  "secs": "1.7"
+ },
+ {
+  "name": "run_profile_reconcile_dry",
+  "cmd": "mas_run_profile.py --reconcile --json",
+  "rc": "0",
+  "secs": "0.7"
+ },
+ {
+  "name": "run_profile_restore_run_bogus",
+  "cmd": "mas_run_profile.py --restore-run rp_nonexistent --json",
+  "rc": "2",
+  "secs": "0.6"
+ },
+ {
+  "name": "run_profile_status",
+  "cmd": "mas_run_profile.py --status --json",
+  "rc": "0",
+  "secs": "1.1"
+ },
+ {
+  "name": "selftest_ondemand",
+  "cmd": "mas_ondemand.py --selftest",
+  "rc": "0",
+  "secs": "1.7"
+ },
+ {
+  "name": "selftest_ondemand_mcp",
+  "cmd": "mas_ondemand_mcp.py --selftest",
+  "rc": "0",
+  "secs": "16.2"
+ },
+ {
+  "name": "selftest_plan_builder",
+  "cmd": "mas_plan_builder.py --selftest",
+  "rc": "0",
+  "secs": "1.3"
+ },
+ {
+  "name": "selftest_probe_farm",
+  "cmd": "mas_probe_farm.py --selftest",
+  "rc": "0",
+  "secs": "0.8"
+ },
+ {
+  "name": "selftest_run_profile",
+  "cmd": "mas_run_profile.py --selftest",
+  "rc": "0",
+  "secs": "24.7"
+ },
+ {
+  "name": "selftest_stage_capability",
+  "cmd": "stage_capability.py --selftest",
+  "rc": "0",
+  "secs": "0.6"
+ },
+ {
+  "name": "stagecap_account",
+  "cmd": "stage_capability.py --account y9Flipped --json",
+  "rc": "0",
+  "secs": "0.5"
+ },
+ {
+  "name": "stagecap_check",
+  "cmd": "stage_capability.py --check",
+  "rc": "0",
+  "secs": "7.7"
+ },
+ {
+  "name": "stagecap_rebuild_local_nowrite",
+  "cmd": "stage_capability.py --rebuild-local --no-write",
+  "rc": "0",
+  "secs": "0.8"
+ }
+]

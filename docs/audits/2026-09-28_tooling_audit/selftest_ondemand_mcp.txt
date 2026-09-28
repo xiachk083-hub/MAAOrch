@@ -1,0 +1,8 @@
+CMD: mas_ondemand_mcp.py --selftest
+RC=0 SECS=16.2
+------------------------------------------------------------
+--- stdout ---
+mas_ondemand_mcp --selftest: OK (18/18)
+
+--- stderr ---
+

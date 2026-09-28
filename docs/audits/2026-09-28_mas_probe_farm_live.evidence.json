@@ -1,0 +1,57 @@
+{
+ "day": "2026-09-28",
+ "host_now": "2026-09-28 08:57:45",
+ "attempts_new": [
+  {
+   "file": "明日方舟-官-19-04-46-53.json",
+   "mt": "2026-09-28 08:57:21",
+   "size": 157,
+   "result": "任务被用户手动中止",
+   "drops": [],
+   "bad": false,
+   "lines": [
+    "GetFightStage: from [\"LS-5\"], selected null",
+    "理智作战: 理智作战 任务跳过",
+    "正在运行中……"
+   ]
+  },
+  {
+   "file": "明日方舟-官-19-04-42-24.json",
+   "mt": "2026-09-28 08:57:21",
+   "size": 191,
+   "result": "Success!",
+   "drops": [],
+   "bad": false,
+   "lines": [
+    "Index 1, Type \"Fight\", Name 剿灭作战, IsEnable true",
+    "GetFightStage: from [\"Annihilation\"], selected Annihilation",
+    "正在运行中……",
+    "开始任务: 剿灭作战",
+    "Start Task Chain: Fight, Task ID: 2",
+    "开始行动 1 次, -25理智",
+    "炎国 掉落统计:",
+    "剿灭模式 : 660 / 1800",
+    "完成任务: 剿灭作战",
+    "Completed Task Chain: Fight, Task ID: 2",
+    "任务已全部完成！"
+   ]
+  }
+ ],
+ "attempts_all_n": 4,
+ "scan_ok": true,
+ "scan_error": "",
+ "asst": {
+  "lines_n": 0,
+  "window_lines": 0,
+  "params": null,
+  "params_ts": "",
+  "counts": {},
+  "sanity_remain": null,
+  "sanity_cost": null,
+  "series_core": null,
+  "notes": [],
+  "ok": true,
+  "error": ""
+ },
+ "clock_offset_s": 902
+}

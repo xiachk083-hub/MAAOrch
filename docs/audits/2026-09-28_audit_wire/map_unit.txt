@@ -1,0 +1,28 @@
+-- ① 分派（本地表 / 家族兜底 / 未知兜底）
+OK  run_profile                -> tool:mas_run_profile/profile.apply bridge=profile.apply 同口径✓
+OK  run_profile_restore        -> tool:mas_run_profile/profile.restore
+OK  run_profile_refused        -> tool:mas_run_profile/profile.refuse
+OK  probe_farm                 -> tool:mas_probe_farm/farm.probe bridge=farm.probe 同口径✓
+OK  probe_farm_refused         -> tool:mas_probe_farm/farm.refuse
+OK  farm_orchestrator          -> tool:mas_farm_orchestrator/farm.run bridge=farm.run 同口径✓
+OK  stage_fix                  -> tool:mas_stage_fix/stage.fix bridge=stage.fix 同口径✓
+OK  watch                      -> tool:mas_watch/run.watch
+OK  activity_switch_restore    -> tool:activity_switch/account.activity_switch
+OK  run_profile_lease_done     -> tool:mas_run_profile/profile.lease_done
+OK  probe_stage                -> tool:mas_probe_farm/stage.probe
+OK  unknown_junk               -> tool:ledger/ledger.unknown_junk
+-- ② 真写一遍（隔离流 C:\Users\xiach\AppData\Local\Temp\audit_wire_map_cr5iv_jz\audit\mas_audit.jsonl）
+   隔离流行数=12
+   tool:mas_run_profile           profile.apply              ok
+   tool:mas_run_profile           profile.restore            ok
+   tool:mas_run_profile           profile.refuse             fail
+   tool:mas_probe_farm            farm.probe                 ok
+   tool:mas_probe_farm            farm.refuse                fail
+   tool:mas_farm_orchestrator     farm.run                   ok
+   tool:mas_stage_fix             stage.fix                  ok
+   tool:mas_watch                 run.watch                  ok
+   tool:activity_switch           account.activity_switch    ok
+   tool:mas_run_profile           profile.lease_done         ok
+   tool:mas_probe_farm            stage.probe                ok
+   tool:ledger                    ledger.unknown_junk        ok
+MAP_UNIT=OK bad=0

@@ -1,0 +1,13 @@
+=== selftest ===
+PASS state roundtrip                        got='2.7.71' want='2.7.71'
+PASS state keeps first_seen                 got=True want=True
+selftest: OK (0 失败)
+=== check (2026-09-28 10:43:29) ===
+[重启] host  在飞 MAA=0 boot=2026-09-28 04:01:18；待重启标记=无；重启类任务 2 条
+        DailyRestart0400         Ready    next=2026-09-29 04:00:00 last=2026-09-28 04:00:00 rc=0 [shutdown /r /f /t 30]
+        DailyRestart1900         Ready    next=2026-09-28 19:00:00 last=2026-09-27 19:00:00 rc=0 [shutdown /r /f /t 30]
+        WU 完成重启通道：Reboot_AC=Disabled、Reboot_Battery=Disabled
+[重启] local 在飞 MAA=0 boot=2026-09-28 09:39:27；待重启标记=无；重启类任务 0 条
+        最近：host  DailyRestart1900 @ 2026-09-28 19:00:00（496 分钟后）
+        最近：host  DailyRestart0400 @ 2026-09-29 04:00:00（1036 分钟后）
+INTERRUPT_RISK=无

@@ -1,0 +1,70 @@
+{
+ "at": "2026-09-28 08:42:29",
+ "account": "LEUNG",
+ "script": {
+  "sid": "0e44e417-2ee9-4f6e-afff-b287bb8023b5",
+  "name": "明日方舟-官-19",
+  "dir": "E:\\MAA-Multi\\MAA_5",
+  "emu": "33"
+ },
+ "user": {
+  "name": "LEUNG",
+  "status": true,
+  "mode": "简洁",
+  "server": "Official",
+  "stage_mode": "Fixed",
+  "remained_day": -1,
+  "mask": "131****1206"
+ },
+ "seven_keys_fixed": {
+  "MedicineNumb": 0,
+  "SeriesNumb": "0",
+  "Stage": "SR-7",
+  "Stage_1": "1-7",
+  "Stage_2": "-",
+  "Stage_3": "-",
+  "Stage_Remain": "1-7"
+ },
+ "task_keys": {
+  "IfActivityFirst": false,
+  "ActivityMedicineNumb": 0
+ },
+ "plans": [
+  {
+   "id": "3ccdcc07-66ec-4cb5-b134-c10af1e9fa4c",
+   "name": "新 MAA 计划表",
+   "mode": "ALL"
+  },
+  {
+   "id": "a18f167e-3d92-4998-a57d-34a76ef20237",
+   "name": "非活动刷取计划",
+   "mode": "Weekly"
+  },
+  {
+   "id": "5bec53b1-59eb-4f7e-a45f-3a2325964f82",
+   "name": "拍前看简介-重装芯片/AT-6周计划",
+   "mode": "Weekly"
+  },
+  {
+   "id": "487297dd-2ae4-43d5-bdb4-6d4deb0e3b64",
+   "name": "Yeee CE-6/LS-6 周轮换",
+   "mode": "Weekly"
+  },
+  {
+   "id": "c6684b55-adfe-49ab-b8d7-7c4cae1fdb31",
+   "name": "练号计划",
+   "mode": "Weekly"
+  }
+ ],
+ "effective_7keys": {
+  "MedicineNumb": 0,
+  "SeriesNumb": "0",
+  "Stage": "SR-7",
+  "Stage_1": "1-7",
+  "Stage_2": "-",
+  "Stage_3": "-",
+  "Stage_Remain": "1-7"
+ },
+ "effective_source": "Fixed",
+ "open_runs": []
+}

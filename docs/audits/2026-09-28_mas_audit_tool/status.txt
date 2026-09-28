@@ -1,0 +1,18 @@
+# status（2026-09-28 10:25:50 CST）
+
+统一流：D:\1-2\MAAOrch\runtime\audit\mas_audit.jsonl（928 bytes）｜归档 0 份（0 bytes）｜合计 0.9 KiB
+旧日志（未迁移，--legacy 可桥接查询）：
+  ledger    mas_ledger.jsonl                 存在     18463 B  39 行
+  dispatch  mas_dispatch_log.jsonl           存在     25064 B  64 行
+  ondemand  mas_ondemand_log.jsonl           存在     11760 B  35 行
+  profile   mas_run_profile_log.jsonl        存在     48379 B  52 行
+  probe     mas_probe_farm_log.jsonl         存在      1650 B  6 行
+  farm      mas_farm_orchestrator_log.jsonl  存在       310 B  2 行
+  plan      mas_plan_builder_log.jsonl       存在      8684 B  11 行
+  snapshot  mas_config_snapshot_log.jsonl    存在      3753 B  16 行
+  patch     mas_patch_guard_log.jsonl        存在      3360 B  10 行
+看板库：C:\Users\xiach\AppData\Local\hermes\kanban\boards\maa-parallel-benchmark-20260926\kanban.db（存在 2.2 MiB）
+轮转阈值：8.0MB / 7.0 天；本次判定：阈值未到（size=0.0MB<8.0, age=0.00d<7.0）
+保留期：90 天（prune 默认；至少留最新 3 份归档）
+AUDIT_STATUS=OK live=928B archives=0 legacy=9
+rc=0

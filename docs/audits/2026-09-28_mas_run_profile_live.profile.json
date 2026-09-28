@@ -1,0 +1,32 @@
+{
+  "_doc": [
+    "实机最小验证 profile（t_b2a74be1 §7.3 证据用）。",
+    "目标：明日方舟-官-6 / 许大胖子（MAA 目录 E:\\MAA-Multi\\MAA_8，模拟器实例 20）。",
+    "选择理由：MAA_8 槽位所属队列「日常定时8」07:37:35 任务结束（app.log），白天无后续排班；",
+    "首选 官-28 因 emu 51 在 MuMuManager 无有效记录被 preflight 否掉（NO-GO，未发车），故换 官-6。",
+    "最小语义：只写 1-7 / Series=1（连战 1）/ 不用药；活动优先与目标掉落关闭（实机无这两层字段，工具会拒绝）。",
+    "restore_after=timeout:600s：读回校验通过后最多等到 600s，超时按策略 /api/dispatch/stop 止损再还原。"
+  ],
+  "target": {
+    "script": "明日方舟-官-6",
+    "account": "许大胖子"
+  },
+  "stage_plan": ["1-7"],
+  "series": 1,
+  "medicine": {
+    "use": false,
+    "count": 0,
+    "use_expiring": false
+  },
+  "activity_priority": {
+    "enabled": false,
+    "medicine": 0
+  },
+  "target_drop": {
+    "enabled": false,
+    "drop_id": "",
+    "count": 0
+  },
+  "keep_remain_sanity_task": true,
+  "restore_after": "timeout:600s"
+}

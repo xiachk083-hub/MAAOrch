@@ -1,0 +1,14 @@
+打断源治理（只读）  2026-09-28 09:59:15
+[版本] 运行中实例 2 台（读得 2 项）：一致 0 / 变化 0 / 新 2 / 不可读 0
+        idx=14  com.hypergryph.arknights     2.7.71       lastUpdate=2026-09-04 21:56:56   （无基线）
+        idx=25  com.YoStarJP.Arknights       36.7.22      lastUpdate=2026-08-13 23:10:59   （无基线）
+        基线已更新 → D:\1-2\MAAOrch\runtime\interrupt_guard_state.json
+[重启] host  在飞 MAA=1 boot=2026-09-28 04:01:18；待重启标记=无；重启类任务 2 条
+        DailyRestart0400         Ready    next=2026-09-29 04:00:00 last=2026-09-28 04:00:00 rc=0 [shutdown /r /f /t 30]
+        DailyRestart1900         Ready    next=2026-09-28 19:00:00 last=2026-09-27 19:00:00 rc=0 [shutdown /r /f /t 30]
+[重启] local 在飞 MAA=0 boot=2026-09-28 09:39:27；待重启标记=无；重启类任务 0 条
+        最近：host  DailyRestart1900 @ 2026-09-28 19:00:00（541 分钟后）
+        最近：host  DailyRestart0400 @ 2026-09-29 04:00:00（1081 分钟后）
+  - 注意：idx14 com.hypergryph.arknights 无基线（首次见到，建议 --record 建基线）
+  - 注意：idx25 com.YoStarJP.Arknights 无基线（首次见到，建议 --record 建基线）
+INTERRUPT_RISK=无

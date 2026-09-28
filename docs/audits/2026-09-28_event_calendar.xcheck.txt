@@ -1,0 +1,28 @@
+# event_calendar xcheck（日历 vs 快照 + SERVER_EVENTS.md 锚点）· 2026-09-28 · t_5f2e36b2
+# 2026-09-28 10:11:57 +0800
+
+PASS  窗内快照事件逐条落表（cn_official）
+PASS  窗内快照事件逐条落表（cn_bilibili）
+PASS  窗内快照事件逐条落表（jp）
+PASS  窗内快照事件逐条落表（kr）
+PASS  窗内快照事件逐条落表（tw）
+PASS  窗内快照事件逐条落表（en）
+PASS  锚点 cn_official/矢量突破#3 start = 2026-09-29 16:00
+PASS  锚点 cn_official/资源收集 start = 2026-09-29 16:00
+PASS  锚点 cn_official/逐影集趣 end = 2026-09-30 03:59
+PASS  锚点 cn_official/锦枫映月 end = 2026-09-30 03:59
+PASS  锚点 cn_official/稳态测定 end = 2026-10-08 03:59
+PASS  锚点 jp/人々 end = 2026-09-30 02:59
+PASS  锚点 kr/사람들 end = 2026-09-30 02:59
+PASS  锚点 en/PEOPLE, A PEOPLE end = 2026-09-30 18:59
+PASS  截止锚点 cn_official/矢量突破#3 = 2026-10-23 03:59
+PASS  截止锚点 cn_official/逐影集趣 = 2026-10-03 03:59
+PASS  周切结构（cn_official：本地周一 04:00 = BJT 04:00）
+PASS  周切结构（cn_bilibili：本地周一 04:00 = BJT 04:00）
+PASS  周切结构（jp：本地周一 04:00 = BJT 03:00）
+PASS  周切结构（kr：本地周一 04:00 = BJT 03:00）
+PASS  周切结构（tw：本地周一 04:00 = BJT 04:00）
+PASS  周切结构（en：本地周一 04:00 = BJT 19:00）
+PASS  CN 09-29 全开放从 16:00 起（此前按周表）
+PASS  CN 09-30 起天天全开放
+XCHECK=PASS 24/24（SKIP 0）

@@ -1,0 +1,7 @@
+现场 diff（10:34 `mas_stage_fix.py --verify` 输出）：["StageMode:'Fixed'->bc659275-698d-4371-9f1a-ad0f4888a1b0"]
+现场采样时刻：2026-09-28 10:34:04
+
+[① 10:34 采样窗口（run 未还原）] 台账 status=dispatched → 判「在飞」=True（实例租约在租（idx=2）；现租约 idx=2）
+      L3 结论：PASS（在飞核销，认领 run=rp_20260928_102708_-b-3，指针=bc659275-698d-4371-9f1a-ad0f4888a1b0）
+[② 已还原但指针还在（= 真残留假设）] 台账 status=restored → 判「在飞」=None（None；现租约 idx=None）
+      L3 结论：FAIL（未核销的差异 ⇒ 真违例）；未核销=["StageMode:'Fixed'->bc659275-698d-4371-9f1a-ad0f4888a1b0"]

@@ -1,0 +1,19 @@
+2026年09月28日 11:05:32
+==== mas_run_profile --status ====
+run_id                           status          task_uid     script                 ts
+rp_20260928_074523_--6           restored        bf40d8d6     明日方舟-官-6               2026-09-28 07:45:23
+rp_20260928_084243_--19          restored        e863a52c     明日方舟-官-19              2026-09-28 08:42:43
+rp_20260928_100854_-b-3          restored        a92bed94     明日方舟-b-3               2026-09-28 10:08:54
+rp_20260928_102708_-b-3          restored        7da40355     明日方舟-b-3               2026-09-28 10:27:08
+
+==== mas_run_profile --list-plans（看临时表有没有删净）====
+487297dd-2ae4-43d5-bdb4-6d4deb0e3b64  name='Yeee CE-6/LS-6 周轮换' mode=Weekly ALL={"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "LS-6", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "1-7"}
+5bec53b1-59eb-4f7e-a45f-3a2325964f82  name='拍前看简介-重装芯片/AT-6周计划' mode=Weekly ALL={"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "AT-6", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "-"}
+3ccdcc07-66ec-4cb5-b134-c10af1e9fa4c  name='新 MAA 计划表' mode=ALL ALL={"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "-", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "-"}
+c6684b55-adfe-49ab-b8d7-7c4cae1fdb31  name='练号计划' mode=Weekly ALL={"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "CE-6", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "1-7"}
+a18f167e-3d92-4998-a57d-34a76ef20237  name='非活动刷取计划' mode=Weekly ALL={"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "CE-6", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "1-7"}
+
+==== mas_stage_fix --verify --json ====
+[11:05:37] API 46/46 通过；落盘待 flush 0；落盘异常 0
+STAGE_FIX_VERIFY_JSON={"api": "http://100.79.173.69:36163", "api_ok": 46, "api_total": 46, "bad": [], "failures": [], "fallback_stage": "1-7", "generated": "2026-09-27T23:36:40", "ok": true, "pending": [], "plan": "D:\\1-2\\MAAOrch\\runtime\\reports\\stage_fix_20260927_233640\\plan.json"}
+rc=0

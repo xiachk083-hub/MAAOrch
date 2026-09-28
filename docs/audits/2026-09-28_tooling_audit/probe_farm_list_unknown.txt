@@ -1,0 +1,75 @@
+CMD: mas_probe_farm.py --list unknown
+RC=0 SECS=3.4
+------------------------------------------------------------
+--- stdout ---
+台账 D:\1-2\MAAOrch\runtime\reports\stage_capability.json（built_at 2026-09-28 08:58:21，窗口 2026-08-30~2026-09-28）｜筛选=unknown ｜ 6 条
+  unknown      Raiz                     1-7        last_ok=-          last_fail=-          fail=  脚本=明日方舟-台-1/E:\MAA-Multi\MAA_10
+  unknown      v                        LS-6       last_ok=-          last_fail=-          fail=  脚本=明日方舟-官-5/E:\MAA-Multi\MAA_4（未启用）
+  unknown      寻找勇者的大魔王                 LS-6       last_ok=-          last_fail=-          fail=  脚本=明日方舟-官-2-4-47/E:\MAA-Multi\MAA_2
+  unknown      摸摸摸摸鱼                    LS-6       last_ok=-          last_fail=-          fail=  脚本=明日方舟-b-10/E:\MAA-Multi\MAA_9
+  unknown      河清灯_别寄圆通                 CA-5       last_ok=-          last_fail=-          fail=fight_error_net  脚本=明日方舟-日-4/E:\MAA-Multi\MAA_4
+  unknown      用户_173920298             LS-6       last_ok=-          last_fail=-          fail=  脚本=明日方舟-b-3/E:\MAA-Multi\MAA_9
+  unknown池 145三月初发货               试过没成=CA-5 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-37/E:\MAA-Multi\MAA_1
+  unknown池 Gitano                 试过没成=SR-5 从未尝试=AT-4、AT-6、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-7、SR-8  脚本=明日方舟-官-3-搓玉/E:\MAA-Multi\MAA_3
+  unknown池 LAZA                   试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-日-2/E:\MAA-Multi\MAA_4
+  unknown池 LEUNG                  试过没成=LS-5、SR-7 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-19/E:\MAA-Multi\MAA_5
+  unknown池 MikuKong               试过没成=— 从未尝试=AT-4、AT-6、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-2/E:\MAA-Multi\MAA_9
+  unknown池 PAGI                   试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-11/E:\MAA-Multi\MAA_7
+  unknown池 Raiz                   试过没成=1-7 从未尝试=AT-4、AT-6、AT-8、CA-5、LS-5、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-台-1/E:\MAA-Multi\MAA_10
+  unknown池 Yeee                   试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-30/E:\MAA-Multi\MAA_11
+  unknown池 badwxxx                试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-16/E:\MAA-Multi\MAA_8
+  unknown池 emmmmmm                试过没成=— 从未尝试=AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-32/E:\MAA-Multi\MAA_3
+  unknown池 hbznn119-官             试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-28/E:\MAA-Multi\MAA_8
+  unknown池 hbznn119-日             试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-日-1/E:\MAA-Multi\MAA_7
+  unknown池 him                    试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-1-1-7/E:\MAA-Multi\MAA_6
+  unknown池 rzzz                   试过没成=— 从未尝试=AT-6、AT-8、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-24/E:\MAA-Multi\MAA_12
+  unknown池 tbNick_2l3vf           试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7  脚本=明日方舟-官-1-1-7/E:\MAA-Multi\MAA_6
+  unknown池 tbNick_h56zy           试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-12/E:\MAA-Multi\MAA_10
+  unknown池 v                      试过没成=LS-6、SR-7 从未尝试=AT-6、AT-8、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-5/E:\MAA-Multi\MAA_4
+  unknown池 x7                     试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-11/E:\MAA-Multi\MAA_11
+  unknown池 y9Flipped              试过没成=— 从未尝试=AT-4、AT-6、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-2-4-47/E:\MAA-Multi\MAA_2
+  unknown池 ૮ต蓝熹ตა                 试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、Annihilation、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-27/E:\MAA-Multi\MAA_1
+  unknown池 不要加班了                  试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=l-7-不要加班了/E:\MAA-Multi\MAA_12
+  unknown池 以七                     试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-13/E:\MAA-Multi\MAA_1
+  unknown池 古茶七心红                  试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-2-4-47/E:\MAA-Multi\MAA_2
+  unknown池 史蒂芬芬                   试过没成=— 从未尝试=AT-4、AT-6、AT-8、Annihilation、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-台-2/E:\MAA-Multi\MAA_3
+  unknown池 喵喵喵喵                   试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-7  脚本=明日方舟-官-29/E:\MAA-Multi\MAA_8
+  unknown池 寻找勇者的大魔王               试过没成=LS-6 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-2-4-47/E:\MAA-Multi\MAA_2
+  unknown池 小熊附体                   试过没成=SR-7 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-9/E:\MAA-Multi\MAA_4
+  unknown池 岁岁iyou                 试过没成=— 从未尝试=AT-4、AT-6、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-7、SR-8  脚本=明日方舟-官-7/E:\MAA-Multi\MAA_5
+  unknown池 帝国猛虎                   试过没成=SR-7、SR-8 从未尝试=AT-4、AT-6、LS-5、PR-A-2、SR-5  脚本=明日方舟-官-38/E:\MAA-Multi\MAA_6
+  unknown池 拍前看简介                  试过没成=AT-6 从未尝试=AT-4、AT-8、LS-5、SR-5、SR-8  脚本=明日方舟-b-1/E:\MAA-Multi\MAA_9
+  unknown池 排前联系我有的不能发             试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-日-3/E:\MAA-Multi\MAA_8
+  unknown池 摸摸摸摸鱼                  试过没成=LS-6 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-10/E:\MAA-Multi\MAA_9
+  unknown池 是我MillerSAMA哒！         试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8
+  unknown池 柠檬汽水                   试过没成=— 从未尝试=AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-7、SR-8
+  unknown池 檀丝江喜                   试过没成=CA-5、LS-6 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-14/E:\MAA-Multi\MAA_5
+  unknown池 欧哈呦学妹                  试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-日-5/E:\MAA-Multi\MAA_11
+  unknown池 汐影月k                   试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、Annihilation、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-1-1-7/E:\MAA-Multi\MAA_6
+  unknown池 河清灯_别寄圆通               试过没成=CA-5 从未尝试=AT-4、AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-日-4/E:\MAA-Multi\MAA_4
+  unknown池 潮响                     试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5  脚本=明日方舟-官-1-1-7/E:\MAA-Multi\MAA_6
+  unknown池 烤箱                     试过没成=SR-7 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-12/E:\MAA-Multi\MAA_12
+  unknown池 爱尔奎特我老婆                试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、Annihilation、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-20/E:\MAA-Multi\MAA_3
+  unknown池 狂暴组长出物版                试过没成=SR-7 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-23/E:\MAA-Multi\MAA_1
+  unknown池 用户_173920298           试过没成=LS-6、SR-7 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-3/E:\MAA-Multi\MAA_9
+  unknown池 白桑_                    试过没成=SR-7 从未尝试=AT-4、AT-6、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-33/E:\MAA-Multi\MAA_10
+  unknown池 白海雾                    试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-5/E:\MAA-Multi\MAA_12
+  unknown池 皮埃尔商店                  试过没成=CA-5 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-41/E:\MAA-Multi\MAA_4
+  unknown池 看看我看看我啊啊啊啊             试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-22/E:\MAA-Multi\MAA_5
+  unknown池 睡个大鸡蛋                  试过没成=— 从未尝试=AT-4、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-31/E:\MAA-Multi\MAA_4
+  unknown池 石头城修行的深海鳗              试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-日-6/E:\MAA-Multi\MAA_11
+  unknown池 祝你祝我天天开心               试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-21/E:\MAA-Multi\MAA_3
+  unknown池 笙笙wzh                  试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-7、SR-8  脚本=明日方舟-官-8/E:\MAA-Multi\MAA_7
+  unknown池 糖古的美丽王国                试过没成=— 从未尝试=AT-6、AT-8、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8
+  unknown池 肉鸽业务机（MAAOrch 纳管）      试过没成=— 从未尝试=1-7、AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8
+  unknown池 舒7ucky                 试过没成=— 从未尝试=AT-4、AT-6、AT-8、Annihilation、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=l-2-舒7ucky/E:\MAA-Multi\MAA_2
+  unknown池 许大胖子                   试过没成=— 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-6/E:\MAA-Multi\MAA_8
+  unknown池 评估苹果                   试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-18/E:\MAA-Multi\MAA_7
+  unknown池 酸酸酸酸                   试过没成=— 从未尝试=AT-4、AT-6、AT-8、Annihilation、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-7、SR-8  脚本=l-1-酸酸酸酸/E:\MAA-Multi\MAA_1
+  unknown池 门外蹲着只狗                 试过没成=SR-7 从未尝试=AT-4、AT-6、AT-8、CA-5、CE-6、LS-5、LS-6、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-15/E:\MAA-Multi\MAA_7
+  unknown池 阿仄仄仄                   试过没成=SR-7 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-b-7/E:\MAA-Multi\MAA_10
+  unknown池 音乐厅生动的深海鱼              试过没成=— 从未尝试=AT-4、AT-6、AT-8、CA-5、LS-5、PR-A-2、SR-5、SR-7、SR-8  脚本=明日方舟-官-2-4-47/E:\MAA-Multi\MAA_2
+  unknown池 骰子                     试过没成=SR-7 从未尝试=AT-6、AT-8、LS-5、PR-A-2、SR-5、SR-8  脚本=明日方舟-官-9/E:\MAA-Multi\MAA_5
+
+--- stderr ---
+

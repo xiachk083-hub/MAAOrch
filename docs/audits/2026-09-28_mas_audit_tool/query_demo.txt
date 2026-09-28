@@ -1,0 +1,34 @@
+# 桥接查询实况（2026-09-28 10:25:50 CST；--legacy = 只读桥接，不写任何旧日志）
+
+$ $PY312 tools/mas_audit.py query --legacy --since 7d --limit 12
+源： ledger=39, dispatch=64, ondemand=35, profile=52, probe=6, farm=2, plan=11, snapshot=16, patch=10, board=2174
+2026-09-28 10:25:55  info    tool:board                 board.heartbeat        card:t_97f99a59              卡=t_97f99a59 kanban
+2026-09-28 10:25:52  ok      tool:board                 board.completed        card:t_8fe7a5a1              卡=t_8fe7a5a1 kanban
+2026-09-28 10:25:39  info    tool:board                 board.heartbeat        card:t_1df99ae5              卡=t_1df99ae5 kanban
+2026-09-28 10:25:38  info    tool:board                 board.heartbeat        card:t_d3d472ac              卡=t_d3d472ac kanban
+2026-09-28 10:25:36  info    tool:board                 board.heartbeat        card:t_8fe7a5a1              卡=t_8fe7a5a1 kanban
+2026-09-28 10:25:36  info    tool:board                 board.commented        card:t_8fe7a5a1              卡=t_8fe7a5a1 kanban
+2026-09-28 10:25:36  info    tool:board                 board.comment          card:t_8fe7a5a1              卡=t_8fe7a5a1 kanban 原因=hotspot: docs/GLOSSARY.md — 同板并行班共用工作区（本卡执行期间另有 21 张 mas 卡在跑），本卡第 2 轮期间该文件被 t_eb…
+2026-09-28 10:25:35  info    tool:board                 board.heartbeat        card:t_ee50913f              卡=t_ee50913f kanban
+2026-09-28 10:25:30  info    tool:board                 board.heartbeat        card:t_8fe7a5a1              卡=t_8fe7a5a1 kanban
+2026-09-28 10:25:27  info    tool:board                 board.heartbeat        card:t_76b88661              卡=t_76b88661 kanban
+2026-09-28 10:25:27  info    tool:board                 board.heartbeat        card:t_67915887              卡=t_67915887 kanban
+2026-09-28 10:25:23  info    tool:board                 board.heartbeat        card:t_94c7e90e              卡=t_94c7e90e kanban
+AUDIT_QUERY=12条 scanned=2 legacy=2409
+
+$ ... query --legacy --limit 0 --json | grep counts
+"counts": {"unified": 2, "legacy": 2409, "scanned": 2, "bad": 0, "legacy_scanned": 235, "legacy_skipped": 0, "legacy_ts_bad": 0}
+
+$ ... query --legacy dispatch --action 'dispatch.start' --result ok --limit 3
+源： dispatch=64
+2026-09-28 07:33:57  ok      tool:legacy                dispatch.start         wake:明日方舟-官-2-4-47           run=550fc698-4ce0-456e-bc87-cd02 mas_dispatch_log.jsonl
+2026-09-28 06:31:28  ok      tool:legacy                dispatch.start         account:帝国猛虎                 run=52e50bf7-1e2f-427d-a039-3d0c mas_dispatch_log.jsonl
+2026-09-28 05:33:05  ok      tool:legacy                dispatch.start         -                            run=e210e176-3b11-428b-93e5-f33e mas_dispatch_log.jsonl
+AUDIT_QUERY=3条 scanned=2 legacy=64
+
+$ ... query --legacy board --limit 3
+源： board=2174
+2026-09-28 10:25:56  info    tool:board                 board.heartbeat        card:t_cf3946dc              卡=t_cf3946dc kanban
+2026-09-28 10:25:55  info    tool:board                 board.heartbeat        card:t_97f99a59              卡=t_97f99a59 kanban
+2026-09-28 10:25:52  ok      tool:board                 board.completed        card:t_8fe7a5a1              卡=t_8fe7a5a1 kanban
+AUDIT_QUERY=3条 scanned=2 legacy=2174

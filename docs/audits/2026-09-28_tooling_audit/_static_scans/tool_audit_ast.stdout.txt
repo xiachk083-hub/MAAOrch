@@ -1,0 +1,49 @@
+WROTE D:\1-2\MAAOrch\docs\audits\2026-09-28_tooling_audit\_static_scans\tool_audit_ast.json
+======================================================================
+tools/mas_run_profile.py 124791 bytes 2454 lines
+  bare_except: 0 []
+  broad_except: 13 [(303, 'except Exception as e:  # noqa: BLE001'), (328, 'except Exception as e:  # noqa: BLE001'), (345, 'except Exception as e:  # noqa: BLE001'), (362, 'except Exception as e:  # noqa: BLE001'), (389, 'except Exception as e:  # noqa: BLE001')]
+  except_pass: 1 [(1315, 'except TransportError:')]
+  exit_codes: 1 ['main()']
+  n_args: 22
+  kw: {'dry_run': 4, 'dry-run': 14, '--apply': 9, 'ledger': 11, 'lock': 16, 'urllib.request': 4, 'subprocess': 6, 'argparse': 3, 'json': 102, 'preflight': 44, 'restore': 80, 'backup': 13}
+======================================================================
+tools/mas_ondemand.py 106925 bytes 1979 lines
+  bare_except: 0 []
+  broad_except: 13 [(177, 'except Exception as e:  # noqa: BLE001'), (691, 'except Exception as e:  # noqa: BLE001'), (1072, 'except Exception as e:  # noqa: BLE001'), (1092, 'except Exception as e:  # noqa: BLE001'), (1171, 'except Exception as e:  # noqa: BLE001')]
+  except_pass: 1 [(1928, 'except Exception:  # noqa: BLE001')]
+  exit_codes: 1 ['main()']
+  n_args: 16
+  kw: {'dry_run': 9, 'dry-run': 16, '--apply': 10, 'ledger': 37, 'lock': 22, 'urllib.request': 3, 'subprocess': 7, 'argparse': 3, 'json': 64, 'preflight': 61}
+======================================================================
+tools/mas_plan_builder.py 87592 bytes 1578 lines
+  bare_except: 0 []
+  broad_except: 5 [(1407, 'except Exception as e:  # noqa: BLE001'), (1546, 'except Exception as e:  # noqa: BLE001'), (609, 'except Exception as e:  # noqa: BLE001'), (694, 'except Exception:  # noqa: BLE001'), (629, 'except Exception as e:  # noqa: BLE001')]
+  except_pass: 1 [(545, 'except ValueError:')]
+  exit_codes: 1 ['main()']
+  n_args: 27
+  kw: {'dry_run': 5, 'dry-run': 10, '--apply': 13, 'urllib.request': 4, 'subprocess': 2, 'argparse': 2, 'json': 118, 'preflight': 8, 'restore': 7}
+======================================================================
+tools/mas_ondemand_mcp.py 86978 bytes 1540 lines
+  bare_except: 0 []
+  broad_except: 29 [(108, 'except Exception:  # noqa: BLE001  掩码是锦上添花，导入失败不拖垮 server'), (243, 'except Exception as e:  # noqa: BLE001'), (276, 'except Exception:  # noqa: BLE001'), (290, 'except Exception:  # noqa: BLE001'), (307, 'except Exception as e:  # noqa: BLE001')]
+  except_pass: 4 [(819, 'except Exception:  # noqa: BLE001'), (131, 'except Exception:  # noqa: BLE001'), (897, 'except Exception:  # noqa: BLE001'), (903, 'except Exception:  # noqa: BLE001')]
+  exit_codes: 2 ['_check()', '_cmd_selftest()']
+  n_args: 0
+  kw: {'dry_run': 12, 'dry-run': 17, '--apply': 2, 'ledger': 37, 'lock': 14, 'subprocess': 8, 'json': 44, 'preflight': 43, 'asyncio': 2}
+======================================================================
+tools/mas_probe_farm.py 76151 bytes 1433 lines
+  bare_except: 0 []
+  broad_except: 11 [(318, 'except Exception as e:  # noqa: BLE001'), (359, 'except Exception as e:  # noqa: BLE001'), (394, 'except Exception as e:  # noqa: BLE001'), (571, 'except Exception as e:  # noqa: BLE001'), (587, 'except Exception as e:  # noqa: BLE001')]
+  except_pass: 2 [(424, 'except ValueError:'), (448, 'except ValueError:')]
+  exit_codes: 1 ['main()']
+  n_args: 26
+  kw: {'dry_run': 1, 'dry-run': 10, '--apply': 8, 'ledger': 66, 'lock': 13, 'subprocess': 10, 'argparse': 2, 'json': 82, 'restore': 16}
+======================================================================
+tools/stage_capability.py 50245 bytes 989 lines
+  bare_except: 0 []
+  broad_except: 1 [(836, 'except Exception as e:  # noqa: BLE001')]
+  except_pass: 0 []
+  exit_codes: 1 ['main()']
+  n_args: 12
+  kw: {'--apply': 1, 'subprocess': 4, 'argparse': 2, 'json': 34}

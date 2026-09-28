@@ -1,0 +1,147 @@
+# 主机健康巡检 —— 基线实测证据（任务 t_eb81df77 交付）
+
+- 时间：2026-09-28 09:37–09:49（CST）｜ 执行：mas（调度机 DESKTOP-L1OEMR3 / git-bash）
+- 主机：MRFZ-0000 / 100.79.173.69（`ssh -i ~/.ssh/maaorch_target Administrator@…`，全程只读）
+- 解释器：python 3.14.7 ｜ 工具：`tools/host_health.py`（**本轮仅工具自测；未接任何 cron**）
+- 内容：① `--selftest` 全量 ② `--check` 实跑 ③ `--json --no-log` 实跑 ④ 温度来源核查结论
+- 注意：② / ③ 的退出码 = **2（WARN）**属预期——当前 `diskC_low`（C: 29.7G < 35G 黄线）是唯一黄灯。
+
+== ① python tools/host_health.py --selftest（rc=0）==
+
+PASS parse cpu/mem                      got=(20, 65400, 44607) want=(20, 65400, 44607)
+PASS parse mem_used_pct                 got=31.8 want=31.8
+PASS parse disks                        got=(118.3, 300.0) want=(118.3, 300.0)
+PASS parse proc/emu/maa                 got=(4, 3, 6) want=(4, 3, 6)
+PASS parse temp na                      got=(None, 'na') want=(None, 'na')
+PASS parse sys uptime                   got=36.5 want=36.5
+PASS parse garbage -> None              got=None want=None
+PASS parse missing disk -> None         got=None want=None
+PASS eval healthy -> []                 got=[] want=[]
+PASS eval mem>90 -> CRIT                got=[('CRIT', 'mem_used')] want=[('CRIT', 'mem_used')]
+PASS eval mem>85 -> WARN                got=[('WARN', 'mem_used')] want=[('WARN', 'mem_used')]
+PASS eval mem_free<8G -> WARN           got=[('WARN', 'mem_free')] want=[('WARN', 'mem_free')]
+PASS eval cpu>=95 -> WARN               got=[('WARN', 'cpu_high')] want=[('WARN', 'cpu_high')]
+PASS eval E<20 -> CRIT                  got=[('CRIT', 'diskE_low')] want=[('CRIT', 'diskE_low')]
+PASS eval E<60 -> WARN                  got=[('WARN', 'diskE_low')] want=[('WARN', 'diskE_low')]
+PASS eval C<15 -> CRIT                  got=[('CRIT', 'diskC_low')] want=[('CRIT', 'diskC_low')]
+PASS eval temp>=85 -> WARN              got=[('WARN', 'temp_high')] want=[('WARN', 'temp_high')]
+PASS eval temp>=92 -> CRIT              got=[('CRIT', 'temp_high')] want=[('CRIT', 'temp_high')]
+PASS eval emu>0 adb=0 -> WARN           got=[('WARN', 'emu_adb')] want=[('WARN', 'emu_adb')]
+PASS eval maa>0 emu=0 -> WARN           got=[('WARN', 'maa_no_emu')] want=[('WARN', 'maa_no_emu')]
+PASS trend slope ≈ -2.0/h               got=True want=True
+PASS trend points/span                  got=(5, 2.0) want=(5, 2.0)
+PASS trend span<20min -> None           got=None want=None
+PASS eval rate -3G/h -> WARN+eta        got=[('WARN', 'diskE_rate'), ('WARN', 'diskE_eta')] want=[('WARN', 'diskE_rate'), ('WARN', 'diskE_eta')]
+PASS eval slow drain eta<24h            got=[('WARN', 'diskE_low'), ('WARN', 'diskE_eta')] want=[('WARN', 'diskE_low'), ('WARN', 'diskE_eta')]
+PASS eval rate alert at high free       got=[('WARN', 'diskE_rate')] want=[('WARN', 'diskE_rate')]
+PASS window emu stats                   got={'n': 3, 'first': 3.0, 'last': 4.0, 'min': 3.0, 'max': 5.0} want={'n': 3, 'first': 3.0, 'last': 4.0, 'min': 3.0, 'max': 5.0}
+PASS window missing key -> None         got=None want=None
+PASS window ssh-down filtered -> None   got=None want=None
+PASS line prefix/order                  got=['cpu=20%', 'mem=31.8%', 'diskC=41.7G', 'diskE=118.3G', 'emu=4', 'maa=3'] want=['cpu=20%', 'mem=31.8%', 'diskC=41.7G', 'diskE=118.3G', 'emu=4', 'maa=3']
+PASS line tail status                   got=True want=True
+PASS line alerts none                   got=True want=True
+PASS eval ssh down -> CRIT              got=[('CRIT', 'ssh_down')] want=[('CRIT', 'ssh_down')]
+PASS line ssh down                      got='HOST_HEALTH=cpu=-,mem=-,diskC=-,diskE=-,emu=-,maa=-,ssh=down,temp=na,memFree=-,rateE=na,alerts=ssh_down,status=DOWN' want='HOST_HEALTH=cpu=-,mem=-,diskC=-,diskE=-,emu=-,maa=-,ssh=down,temp=na,memFree=-,rateE=na,alerts=ssh_down,status=DOWN'
+PASS status rollup warn                 got='WARN' want='WARN'
+PASS status rollup crit                 got='CRIT' want='CRIT'
+selftest: OK (36/36)
+
+== ② python tools/host_health.py --check（rc=2 = WARN）==
+（注意：rc=2 是「有黄灯」的正常语义，不是失败；ssh 取数正常）
+
+WARN diskC_low    C: 剩余 29.7G（< 35G）
+主机健康 2026-09-28 09:48  host=100.79.173.69  ssh=ok  预警 1（WARN 1 / CRIT 0）
+HOST_HEALTH=cpu=19%,mem=27.2%,diskC=29.7G,diskE=147.4G,emu=3,maa=2,ssh=ok,temp=na,memFree=47597M,rateE=na,alerts=diskC_low,status=WARN
+
+== ③ python tools/host_health.py --json --no-log（rc=2）==
+
+{
+ "ts": "2026-09-28 09:48:59",
+ "host": "100.79.173.69",
+ "window_h": 6.0,
+ "metrics": {
+  "disks": {
+   "C:": {
+    "free_gb": 29.7,
+    "total_gb": 238.5
+   },
+   "E:": {
+    "free_gb": 147.4,
+    "total_gb": 1863.0
+   }
+  },
+  "proc": {
+   "MuMuVMMHeadless": 3,
+   "MuMuNxDevice": 3,
+   "MuMuNxMain": 1,
+   "MAA": 2
+  },
+  "mem_total_mb": 65375,
+  "mem_free_mb": 47630,
+  "cpu_pct": 21,
+  "adb": 5,
+  "temp_c": null,
+  "temp_src": "na",
+  "sys": {
+   "name": "MRFZ-0000",
+   "boot": "2026-09-28 04:01:18",
+   "uptime_h": 5.8
+  },
+  "host_ts": "2026-09-28 09:48:38",
+  "mem_used_pct": 27.1,
+  "emu": 3,
+  "maa": 2,
+  "ssh": "ok"
+ },
+ "trend": null,
+ "proc_win": {
+  "emu": {
+   "n": 4,
+   "first": 3.0,
+   "last": 3.0,
+   "min": 3.0,
+   "max": 3.0
+  },
+  "maa": {
+   "n": 4,
+   "first": 2.0,
+   "last": 2.0,
+   "min": 2.0,
+   "max": 2.0
+  },
+  "adb": {
+   "n": 4,
+   "first": 5.0,
+   "last": 5.0,
+   "min": 5.0,
+   "max": 5.0
+  }
+ },
+ "alerts": [
+  {
+   "level": "WARN",
+   "code": "diskC_low",
+   "msg": "C: 剩余 29.7G（< 35G）"
+  }
+ ],
+ "status": "WARN",
+ "line": "HOST_HEALTH=cpu=21%,mem=27.1%,diskC=29.7G,diskE=147.4G,emu=3,maa=2,ssh=ok,temp=na,memFree=47630M,rateE=na,alerts=diskC_low,status=WARN"
+}
+
+== ④ 温度来源核查（2026-09-28，只读 ssh 逐条）==
+
+结论：**主机无可用内置/WMI 温度源** —— 探针输出 `TEMP|na|na`，`temp=na` 不告警是设计行为（非取数失败）。
+
+| 来源 | 查询 | 实测结果 |
+|---|---|---|
+| ACPI 热区 | root/wmi `MSAcpi_ThermalZoneTemperature` | 类不受支持：HRESULT **0x8004100c**（WBEM_E_NOT_SUPPORTED）→ 0 条 |
+| 第三方命名空间 | root `OpenHardwareMonitor` / `Sensor` | 命名空间不存在：HRESULT **0x8004100e**（无效命名空间）→ 0 条 |
+
+依据任务约束「不装第三方监控软件」：不置任何温度探针 ⇒ 温度这项在本主机恒为 `na`；
+若日后需要温度监控，需在主机上引入第三方探针（HWiNFO / LibreHardwareMonitor 等），由用户拍板。
+
+== 附：本次趋势历史（runtime/host_health.jsonl 前两行，字段截断）==
+
+{"epoch": 1790559440.71, "ts": "2026-09-28 09:37:24", "host": "100.79.173.69", "ssh": "ok", "cpu_pct": 21, "mem_free_mb": 47869, "mem_used_pct": 26.8, "disk_gb": {"C:": 29.7, "E:": 147.5}, "emu": 3, "maa": 2, "adb": 5, "temp_c": null, "status": "WARN", "alerts": ["diskC_low"]}
+{"epoch": 1790559818.32, "ts": "2026-09-28 09:43:40", "host": "100.79.173.69", "ssh": "ok", "cpu_pct": 22, "mem_free_mb": 47741, "mem_used_pct": 27.0, "disk_gb": {"C:": 29.7, "E:": 147.5}, "emu": 3, "maa": 2, "adb": 5, "temp_c": null, "status": "WARN", "alerts": ["diskC_low"]}
+（字段说明与 jq 读法见 docs/HOST_HEALTH.md §5）

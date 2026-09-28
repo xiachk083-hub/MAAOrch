@@ -1,0 +1,1 @@
+stage_capability --check: OK（SSH+PS 通；当日 1 个目录，149 次尝试，1s）

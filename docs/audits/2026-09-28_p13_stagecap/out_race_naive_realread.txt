@@ -1,0 +1,1 @@
+RACE mode=naive reader=raw gap=5ms good=202 torn=28 enoent=0 eacces=0 other=0 [WRITER done=300/300 rc=0] killed=0 final_ok=1 tmp_left=0

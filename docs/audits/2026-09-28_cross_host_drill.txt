@@ -1,0 +1,102 @@
+# t_31d8e3b9 · 跨机能力矩阵 / 降级通道 —— 实跑记录（只读 + dry-run）
+
+> 2026-09-28 09:44–09:58 CST · mas · 约束：只读 + dry-run；未发车、未改配置、未开 SSH 隧道。
+> 主机 = MRFZ-0000（100.79.173.69）· 本机 = DESKTOP-L1OEMR3（D:\1-2\MAAOrch）
+> 本文件是 `docs/CROSS_HOST_MATRIX.md` 的证据底稿；命令均按执行原文记录，输出为节选。
+
+## 0. 上一轮（崩溃 attempt 1）残留盘点
+
+```
+$ ssh HOST 'dir /s /b "E:\MAA-CLI\drill"'
+E:\MAA-CLI\drill\config\profiles\idx19.toml     (174 B, 2026-09-28 09:32)
+E:\MAA-CLI\drill\config\profiles\idx37.toml     (174 B, 2026-09-28 09:33)
+E:\MAA-CLI\drill\config\tasks\daily_official.toml (1,226 B, 2026-09-28 09:32)
+# asst.log mtime 2026-09-28 09:33 ⇒ attempt 1 已在主机跑过一次 dry-run 后崩溃
+```
+
+## 1. 主机 maa-cli 版本（fresh）
+
+```
+$ ssh HOST '"E:\MAA-CLI\bin\maa.exe" version'
+maa-cli v0.7.5
+MaaCore v6.18.0          # rc=0
+$ ssh HOST 'where maa & where maa.exe'   → 都 "找不到文件"（PATH 无 maa ⇒ 必须全路径入口）
+```
+
+## 2. dry-run 复核
+
+### 2.1 主机（MAA_CONFIG_DIR = drill 沙盒）
+
+```
+$ ssh HOST 'set "MAA_CONFIG_DIR=E:\MAA-CLI\drill\config" & "E:\MAA-CLI\bin\maa.exe" --batch run daily_official --dry-run -p idx19 2>&1'
+[2026-09-28 09:51:01 WARN ] Resource directory ...\data\MaaResource\resource not found, ignoring
+Summary: [StartUp] / [Fight 1-7 x1] / [Recruit] / [Infrast] / [Mall] / [Award] / [CloseDown]  ← 7 段全部 Unstarted
+ssh_rc=0
+```
+
+### 2.2 本机（沙盒 = scratch\t31_drill，同源三文件副本）
+
+```
+$ MAA_CONFIG_DIR=...\t31_drill\config maa-cli.exe --batch run daily_official --dry-run -p idx19
+[2026-09-28 09:54:24 WARN ] Resource directory ... not found, ignoring
+Summary: 同上 7 段 Unstarted
+local_rc=0
+```
+
+> 观测：`startup=true`/`closedown=true` 与显式 StartUp 条目并存时，Summary 只出现 1 个 StartUp + 1 个 CloseDown（7 段）。
+
+## 3. 网络 / 端口
+
+```
+$ curl -m 12 http://100.79.173.69:36163/            → HTTP 404 in 0.0898s（REST 活）
+$ curl -X POST .../api/info/get/overview -d '{}'    → code=200；Proxy 段含 LastProxyDate/ProxyTimes/ErrorTimes/ErrorInfo
+$ curl -m 5 telnet://100.79.173.69:16832            → rc=7 "Could not connect to server"（约 2.1s）— 本机直连 adb 被拒
+$ ssh HOST 'netstat -ano | findstr 36163'           → 0.0.0.0:36163 LISTENING pid 15124；TIME_WAIT 来自 100.111.209.108（=本机）
+$ ssh HOST 'netstat -ano -p tcp | findstr LISTENING | findstr /C:":168" /C:":558" /C:":171" /C:":5037"'
+    127.0.0.1:5037 / 127.0.0.1:5583 / 127.0.0.1:16832 / 127.0.0.1:17184  ← 全部 loopback 绑定
+$ ssh HOST 'adb.exe devices'  09:50 → 5 台（16800/16832/17184/5581/5583）；09:56 → 3 台（16832/17184/5583）← 端点会漂/增减
+$ ipconfig（本机） → 100.111.209.108（tailnet）/ 192.168.1.2（LAN）
+```
+
+## 4. 截图 / 识别（三条通道实测）
+
+```
+# (a) SSH 执行主机 adb → 字节拉回本机
+$ time ssh HOST 'cmd /S /c ""E:\MuMu Player 12\shell\adb.exe" -s 127.0.0.1:16832 exec-out screencap -p"' > csh_16832.png
+real 1.358s   size 1,584,768 B   magic 89 50 4e 47（PNG）
+$ PY312 tools/client_state_check.py --image csh_16832.png
+    CLIENT_STATE=正常:大厅  (EVIDENCE=终端,签到活动)   SOURCE=...1280x720
+```
+```
+# (b) REST /api/ocr/screenshot/adb（从本机直取，无需 SSH）
+$ python t31_shot2.py → code=200 "ADB 截图成功" elapsed 0.59s；image_base64(1280x720)/serial 回显
+$ python t31_shot3.py → saved 96,859 B PNG；PY312 client_state_check --image →
+    CLIENT_STATE=模态:账号管理残留 (EVIDENCE=登录其他账号)
+    # 注：同一实例 09:52 与 09:56 画面不同（大厅→账号管理面板）——取图必须现场现做
+```
+```
+# (c) 隧道（本卡未连）：仅做可行性判断 —— 直连被拒 + adb loopback 绑定 + SSH:22 通 ⇒ 可隧道，但快速通道必退化（SURVEY §5.2）
+```
+
+## 5. 记账面（REST 只读）
+
+```
+POST /api/info/get/overview → Proxy 段样例：
+  "hbznn119-日": {"LastProxyDate":"2026-09-28 06:50:21","ProxyTimes":8,"ErrorTimes":6,
+                  "ErrorInfo":{"...":"MAA 在完成任务前退出", ...}}
+  "145三月初发货": {"LastProxyDate":"2026-09-28 05:05:35","ProxyTimes":2,"ErrorTimes":0}
+```
+
+## 6. 本机侧资产核对
+
+```
+$ "$LOCALAPPDATA/Microsoft/WinGet/Links/maa-cli.exe" --version → maa 0.7.5
+$ ls D:/Xiach/MuMuPlayer/nx_main/adb.exe → 存在；本机 adb devices → 空（本机实例当前未运行）
+$ PY312 = C:/Users/xiach/AppData/Local/Programs/Python/Python312/python.exe → cv2 + rapidocr_onnxruntime 已装
+```
+
+## 7. 本卡对主机/本机的写影响（透明性）
+
+- 主机：`E:\MAA-CLI\drill\config` 3 文件（attempt 1 遗留，本卡复用）；两次 dry-run 各追加 asst.log（`%APPDATA%\loong\maa\data\debug\asst.log`）与热更缓存（噪声级）。
+- 本机：scratch 沙盒（`t31_drill`、脚本、2 张 PNG）；本机 adb server 被拉起（本机自身，无实例连接）。
+- 未触碰：AUTO-MAS 任何数据/配置、MAA_N 生产目录、任何实例（只读截图）、未开隧道。

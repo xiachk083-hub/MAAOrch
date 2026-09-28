@@ -1,0 +1,30 @@
+PASS window 05:20 in                        got=True want=True
+PASS window 04:00 out                       got=None want=None
+PASS window 19:25 in(lead10)                got=True want=True
+PASS window 19:00 out(lead10)               got=None want=None
+PASS window 21:00 out                       got=None want=None
+PASS restart /r                             got=True want=True
+PASS restart /s out                         got=False want=False
+PASS restart-computer                       got=True want=True
+PASS reboot-only name out                   got=False want=False
+PASS parse in_flight                        got=2 want=2
+PASS parse tasks n                          got=2 want=2
+PASS parse pfr                              got=3 want=3
+PASS parse boot                             got='2026-09-28 04:01:18' want='2026-09-28 04:01:18'
+PASS parse ver name                         got='2.7.71' want='2.7.71'
+PASS cmp changed n                          got=1 want=1
+PASS cmp same n                             got=1 want=1
+PASS cmp new n                              got=1 want=1
+PASS cmp unreadable n                       got=1 want=1
+PASS eval soon+active risk                  got=True want=True
+PASS eval soon idle no risk                 got=False want=False
+PASS eval imminent risk                     got=True want=True
+PASS eval pending risk                      got=True want=True
+PASS eval window overlap risk               got=True want=True
+PASS eval disabled skip                     got=False want=False
+PASS risk both                              got='客户端更新+系统重启' want='客户端更新+系统重启'
+PASS risk none                              got='无' want='无'
+PASS risk unknown                           got=True want=True
+PASS state roundtrip                        got='2.7.71' want='2.7.71'
+PASS state keeps first_seen                 got=True want=True
+selftest: OK (0 失败)

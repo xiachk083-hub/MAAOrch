@@ -1,0 +1,54 @@
+=== dry-run #1 台账 success（Gitano × 1-7，直刷不试探）===
+[09:01:08] 台账：Gitano × 1-7 = success ⇒ 决策 farm
+=== mas_probe_farm · DRY-RUN ===
+目标: 账号 Gitano / 关卡 1-7
+台账: status=success（report built_at=2026-09-28 08:58:21；失败类型 {} ｜ 最近失败 ）
+决策: farm —— 台账=success ⇒ 直接正式刷（跳过试探）
+正式刷: series=2（连战倍数，不是总次数上限；--times 直译 SeriesNumb）
+--- mas_run_profile 计划（farm-dry-run, rc=0）---
+  脚本: 明日方舟-官-3-搓玉（目录 E:\MAA-Multi\MAA_3, emu=15）｜REST code=200
+  账号: Gitano（Official/简洁/Fixed，StageMode=Fixed）
+    将写 7 键: {"MedicineNumb": 0, "SeriesNumb": "2", "Stage": "1-7", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "-"}
+    当日生效值: {"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "SR-5", "Stage_1": "1-7", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "1-7"}
+    读回期望: StagePlan=['1-7'] Series=2 MedicineCount=0 UseMedicine=False 剩余理智=False
+  步骤: backup → plan/add+plan/update → scripts/user/update → preflight → dispatch/start → readback(L1) → readback(L2, 参考) → wait → restore → audit
+
+=== dry-run #2 台账 failed（帝国猛虎 × SR-7，默认拒绝 rc=2）===
+[09:01:09] 台账：帝国猛虎 × SR-7 = failed ⇒ 决策 refuse
+=== mas_probe_farm · DRY-RUN ===
+目标: 账号 帝国猛虎 / 关卡 SR-7
+台账: status=failed（report built_at=2026-09-28 08:58:21；失败类型 {'stage_unavailable': 45, 'stage_not_open': 21} ｜ 最近失败 2026-09-27）
+决策: refuse —— 台账=failed ⇒ 默认拒绝发车；确认已修复后加 --retry-after-fix "<修复说明>" 放行
+台账判定：failed（built_at=2026-09-28 08:58:21）
+  最近失败 2026-09-27 ｜ 失败类型 {'stage_unavailable': 45, 'stage_not_open': 21} ｜ 能力类失败 ×66
+  证据[stage_unavailable] 2026-09-08：任务出错: 理智作战
+  证据[stage_unavailable] 2026-09-08：任务出错: 理智作战
+  证据[stage_unavailable] 2026-09-08：任务出错: 理智作战
+  证据[stage_unavailable] 2026-09-09：任务出错: 理智作战
+  证据[stage_unavailable] 2026-09-09：任务出错: 理智作战
+  证据[stage_unavailable] 2026-09-09：任务出错: 理智作战
+  后续：确认已修（关卡开放/代理已设/干员到位…）后加 --retry-after-fix "<一句话说明>" 再跑
+(rc=2)
+
+=== dry-run #3 台账 unknown（Raiz × 1-7，先试探后开刷）===
+[09:01:09] 台账：Raiz × 1-7 = unknown ⇒ 决策 probe
+=== mas_probe_farm · DRY-RUN ===
+目标: 账号 Raiz / 关卡 1-7
+台账: status=unknown（report built_at=2026-09-28 08:58:21；失败类型 {} ｜ 最近失败 ）
+决策: probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+试探 profile: stage_plan=['1-7'] series=1 medicine={'use': False, 'count': 0} 剩余理智=不挂(=stage_remain '-') restore_after=timeout:600s
+正式刷: series=2（连战倍数，不是总次数上限；--times 直译 SeriesNumb）
+--- mas_run_profile 计划（probe-dry-run, rc=0）---
+  脚本: 明日方舟-台-1（目录 E:\MAA-Multi\MAA_10, emu=60）｜REST code=200
+  账号: Raiz（txwy/简洁/Fixed，StageMode=Fixed）
+    将写 7 键: {"MedicineNumb": 0, "SeriesNumb": "1", "Stage": "1-7", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "-"}
+    当日生效值: {"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "CE-6", "Stage_1": "LS-6", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "LS-6"}
+    读回期望: StagePlan=['1-7'] Series=1 MedicineCount=0 UseMedicine=False 剩余理智=False
+  步骤: backup → plan/add+plan/update → scripts/user/update → preflight → dispatch/start → readback(L1) → readback(L2, 参考) → wait → restore → audit
+--- mas_run_profile 计划（farm-dry-run, rc=0）---
+  脚本: 明日方舟-台-1（目录 E:\MAA-Multi\MAA_10, emu=60）｜REST code=200
+  账号: Raiz（txwy/简洁/Fixed，StageMode=Fixed）
+    将写 7 键: {"MedicineNumb": 0, "SeriesNumb": "2", "Stage": "1-7", "Stage_1": "-", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "-"}
+    当日生效值: {"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "CE-6", "Stage_1": "LS-6", "Stage_2": "-", "Stage_3": "-", "Stage_Remain": "LS-6"}
+    读回期望: StagePlan=['1-7'] Series=2 MedicineCount=0 UseMedicine=False 剩余理智=False
+  步骤: backup → plan/add+plan/update → scripts/user/update → preflight → dispatch/start → readback(L1) → readback(L2, 参考) → wait → restore → audit

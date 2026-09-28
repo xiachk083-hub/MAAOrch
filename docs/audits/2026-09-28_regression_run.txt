@@ -1,0 +1,44 @@
+[PASS] test_A1_switch_gate_official_ok                          13ms 
+[PASS] test_A2_switch_gate_official_violations                   0ms 
+[PASS] test_A3_switch_gate_nonofficial_ok_and_violations         0ms 
+[PASS] test_A4_switch_gate_clienttype_normalization_and_unknown      0ms 
+[PASS] test_A5_switch_gate_module_selftest                       0ms 
+[PASS] test_B1_readback_parse_gui_classifies_entries            26ms 
+[PASS] test_B2_readback_match_main_five_keys                     0ms 
+[PASS] test_B3_readback_strict_simple_flags                      0ms 
+[PASS] test_B4_readback_attribution_mask_and_mtime_gate          0ms 
+[PASS] test_B5_readback_golden_live_sample                       0ms 
+[PASS] test_B6_run_profile_module_selftest                   27314ms 
+[PASS] test_C1_dispatch_whitelist_blocks_before_any_io           3ms 
+[PASS] test_C2_dispatch_no_go_and_dry_run_paths                  1ms 
+[PASS] test_C3_dispatch_singleflight_duplicate_today            26ms 
+[PASS] test_C4_dispatch_lock_busy_and_stale_reclaim             21ms 
+[PASS] test_C5_dispatch_response_contract_bad_params            14ms 
+[PASS] test_C6_dispatch_module_selftest                        435ms 
+[PASS] test_D1_tools_never_dispatch_scriptconfig                 7ms 
+[PASS] test_D2_scriptconfig_semantics_documented                 1ms 
+[PASS] test_D3_writers_never_touch_switch_fields                 1ms 
+[PASS] test_E1_ledger_key_of_mapping                             1ms 
+[PASS] test_E2_ledger_record_idempotent_and_supersede           11ms 
+[PASS] test_E3_ledger_open_window                                0ms 
+[PASS] test_E4_ledger_legacy_merge_and_corrupt_selfheal         41ms 
+[PASS] test_E5_ledger_retention_prunes                          14ms 
+[PASS] test_E6_run_profile_state_contract                       14ms 
+      自检明细: {"mas_plan_builder": "ok (37/37)", "mas_probe_farm": "ok (23/23)", "mas_ondemand": "ok (36/36)", "activity_switch": "ok (13/13)", "mas_preflight": "rc=0", "maa_upgrade_check": "rc=0"}
+[PASS] test_F1_all_tool_selftests_green                       1747ms 
+      假数据 finding：ADB_STALE_ENTRY,MUMU_STATE_LIE,NO_ENABLED_USER,PORT_FORMULA_MISMATCH,SCRIPT_IDX_MISSING,SCRIPT_NO_QUEUE,SLOT_MEMORY_OFF_SLOT
+[PASS] test_F2_mapping_offline_invariants                        3ms 
+      在飞核销：声明值核销 ✓ / 未声明值拒绝 ✓ / 锁·租约活体 ✓ / 孤儿+已还原判违例 ✓
+[PASS] test_F3_inflight_pointer_accounting                      61ms 
+      SWITCH_GATE=VIOLATION:MAA_10,MAA_12（槽位 12；已知残留 MAA_10,MAA_12）
+[PASS] test_L1_live_switch_gate_no_new_violations             1548ms 
+      侧车补丁：mumu/constants/AutoProxy 哈希与标记均在位
+[PASS] test_L2_live_remote_patch_pins                          594ms 
+      stage_fix verify：API 46/46；pending 0；bad 0
+[PASS] test_L3_live_stage_fallback_and_medicine_ledger        4856ms 
+      运行台账：4 条历史，未还原 0 条
+[PASS] test_L4_live_run_profile_no_open_runs                   291ms 
+      账本：0 条在窗记录（含 prev）
+[PASS] test_L5_live_ondemand_ledger_sane                         0ms 
+
+REGRESSION=PASS (34 passed, 0 failed, 0 skipped, 37.1s) [live]

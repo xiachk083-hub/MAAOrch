@@ -1,0 +1,14 @@
+live prompt: 7246 chars sha=9b41eaa33303614e (newline='\n')
+  #1 hits=0 FAIL
+  #2 hits=0 FAIL
+  #3 hits=0 FAIL
+  #4 hits=1 OK
+  #5 hits=1 OK
+  #6 hits=1 OK
+  #7 hits=0 FAIL
+  #8 hits=1 OK
+FAIL: 替换命中数不符（prompt 可能已被并发编辑），未落盘：
+  #1 hits=0: '③现场七检+审计水位（切号闸门/补丁闸门/错误聚合/客户端状态/身份留痕/磁盘与空转/打断源治理/审'
+  #2 hits=0: '【第三步 现场七检（每项 1 次）】'
+  #3 hits=0: '最多 22 次工具调用'
+  #7 hits=0: '先 15 行主表'

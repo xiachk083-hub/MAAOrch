@@ -1,0 +1,11 @@
+CMD: mas_ondemand_mcp.py --check
+RC=0 SECS=10.4
+------------------------------------------------------------
+--- stdout ---
+mas_ondemand_mcp --check: OK
+  tools=list_running,dispatch_queue,dispatch_script,dispatch_account,stop_task,ondemand_preflight
+  {"reachable": true, "rest_detail": "code=200", "queues": 40, "scripts": 54, "ondemand_records": 2, "ledger": "D:\\1-2\\MAAOrch\\runtime\\mas_ondemand_ledger.json", "log": "D:\\1-2\\MAAOrch\\runtime\\mas_ondemand_log.jsonl", "log_events": "D:\\1-2\\MAAOrch\\runtime\\mas_dispatch_log.jsonl", "guard_window": "", "no_go": false}
+  dry-run dispatch_queue(日常定时1)={"ok": true, "dry_run": true, "refused": null, "summary": "DRY  日常定时1 would_dispatch", "would_dispatch": "日常定时1", "target_uid": null}
+
+--- stderr ---
+

@@ -1,0 +1,31 @@
+CMD: mas_probe_farm.py --selftest
+RC=0 SECS=0.8
+------------------------------------------------------------
+--- stdout ---
+SELFTEST=OK (23/23)
+  PASS 台账 success ⇒ 直刷
+  PASS --force-probe 覆盖 success
+  PASS 台账 failed ⇒ 拒绝
+  PASS failed + 修复说明 ⇒ 试探
+  PASS 台账 unknown ⇒ 试探
+  PASS 台账报告缺失 ⇒ unknown/试探
+  PASS probe profile 字段（Series=1/timeout/不挂剩余理智）
+  PASS farm profile 字段（SeriesNumb/run_end/保留）
+  PASS 判定：drop_statistics 命中 ⇒ success
+  PASS 判定：副本日志掉落统计 ⇒ success
+  PASS 判定：未开放 ⇒ failed/stage_not_open
+  PASS 判定：选中没开打 ⇒ failed/stage_unavailable
+  PASS 判定：代理指挥失误 ⇒ failed/proxy_mismatch
+  PASS 判定：掉线 ⇒ inconclusive/fight_error_net
+  PASS 判定：无新增尝试 ⇒ inconclusive/no_attempt
+  PASS 判定：理智不足 ⇒ inconclusive/insufficient_sanity
+  PASS 判定：选中无结论 ⇒ inconclusive/selected_no_result
+  PASS 判定：剿灭链完成 ⇒ success
+  PASS asst 锚点归总（sanity/params/计数）
+  PASS asst 时窗过滤（旧行不算）
+  PASS times 取值域（0..6/-1）
+  PASS 日志行前缀剥除
+  PASS 单飞锁文件语义
+
+--- stderr ---
+

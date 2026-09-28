@@ -1,0 +1,285 @@
+{
+ "ts": "20260928-095439",
+ "drill_root": "C:\\Users\\xiach\\AppData\\Local\\Temp\\rollback_drill_20260928-095439",
+ "seconds": 137.5,
+ "steps": [
+  {
+   "step": "A0 生产文件+备份 8 份 sha256 == 清单",
+   "ok": true,
+   "detail": "8/8 一致（并落本地副本）"
+  },
+  {
+   "step": "A1 S0 损坏字节→回滚（本机副本）",
+   "ok": true,
+   "detail": "hash 回到 patched 版"
+  },
+  {
+   "step": "A1 S1 accswitch v2→v1 回滚",
+   "ok": true,
+   "detail": "sha==v1 备份; MARKERS=1(期望1)"
+  },
+  {
+   "step": "A1 S2 accswitch →原版 回滚",
+   "ok": true,
+   "detail": "sha==原版备份; MARKERS=0(期望0)"
+  },
+  {
+   "step": "A1 S3 AutoProxy medicine 回滚（v2 保留）",
+   "ok": true,
+   "detail": "False 行回归; v2 特征仍在"
+  },
+  {
+   "step": "A1 S4 constants medicine 回滚",
+   "ok": true,
+   "detail": "True 计数 2→1"
+  },
+  {
+   "step": "A1 S5 mumu close-fix 全量回滚",
+   "ok": true,
+   "detail": "判活新方法消失"
+  },
+  {
+   "step": "A2 回滚副本 py_compile 全过",
+   "ok": true,
+   "detail": "s0:ok; s1:ok; s2:ok; s3:ok; s4:ok; s5:ok"
+  },
+  {
+   "step": "A3 回滚后补丁断言全部转 FAIL（可检出）",
+   "ok": true,
+   "detail": "v1缺5条/v3缺2条/const缺2条/mumu缺5条"
+  },
+  {
+   "cycle": "A",
+   "seconds": 6.8
+  },
+  {
+   "step": "C0 提取 flag 代码段",
+   "ok": true,
+   "detail": "MUMU_RELIABLE_CLOSE=True"
+  },
+  {
+   "step": "C1 parents[3] 推导 == E:\\AUTO-MAS\\config\\mumu_close_legacy.flag",
+   "ok": true,
+   "detail": "E:\\AUTO-MAS\\config\\mumu_close_legacy.flag"
+  },
+  {
+   "step": "C2 沙箱内 flag 路径随 __file__ 正确平移",
+   "ok": true,
+   "detail": "C:\\Users\\xiach\\AppData\\Local\\Temp\\rollback_drill_20260928-095439\\mumu_tree\\e\\config\\mumu_close_legacy.flag"
+  },
+  {
+   "step": "C3 开关真值：无 flag→新逻辑；建 flag→回退旧逻辑",
+   "ok": true,
+   "detail": "无 flag 时回退分支=False（期望 False=走新逻辑）；有 flag 时回退分支=True（期望 True=走旧逻辑）"
+  },
+  {
+   "cycle": "C",
+   "seconds": 0.0
+  },
+  {
+   "step": "D0 生产枚举（只读）：v2/050305 两代都能一一映射到现存目标",
+   "ok": true,
+   "detail": "v2- n=48 nomatch=0 target_missing=0; 050305 n=54 nomatch=0 target_missing=0"
+  },
+  {
+   "step": "D1 本地沙箱：两代备份按 PS 一行分别回滚（v2→v1 态 / 050305→原版态）",
+   "ok": true,
+   "detail": "样本 6 个；异常 无"
+  },
+  {
+   "step": "D2 （记录）模板回滚必须与代码面配套",
+   "ok": true,
+   "detail": "注入源=代码侧 AutoProxy.py；只回模板不回代码 ⇒ 下一轮注入按现代码重写模板"
+  },
+  {
+   "cycle": "D",
+   "seconds": 4.4,
+   "maps": {
+    "v2-": [
+     "n=48",
+     "nomatch=0",
+     "target_missing=0"
+    ],
+    "050305": [
+     "n=54",
+     "nomatch=0",
+     "target_missing=0"
+    ]
+   }
+  },
+  {
+   "step": "B0 主机 scratch 建立（3 份当前版副本）",
+   "ok": true,
+   "detail": "AutoProxy.py=0f94b53b50445600214535d35995fad8c469a7f59b6b0d0016441a366934e143\r constants.py=030ebbd0e39101d2d95979c2efbd4462606b6406fef90767ec570a4339cad5d4\r mumu.py=3fc40de9df4d38"
+  },
+  {
+   "step": "B1 闸门在「沙箱=已打补丁」态判 OK",
+   "ok": true,
+   "detail": "PATCH_GUARD=OK verdicts={\"accswitch_v2\": \"OK\", \"medicine_autoproxy\": \"OK\", \"medicine_constants\": \"OK\", \"mumu_close_fix\": \"OK\"}"
+  },
+  {
+   "step": "B2 沙箱回滚→v1：闸门判 accswitch/medicine 缺失",
+   "ok": true,
+   "detail": "PATCH_GUARD=MISSING:2 verdicts={\"accswitch_v2\": \"MISSING\", \"medicine_autoproxy\": \"MISSING\", \"medicine_constants\": \"OK\", \"mumu_close_fix\": \"OK\"}"
+  },
+  {
+   "step": "B3 --reapply accswitch_v2 --apply（scratch）后闸门回 OK",
+   "ok": true,
+   "detail": "REAPPLY=OK  backup=E:\\AUTO-MAS\\_rbdrill_20260928-095439\\AutoProxy.py.bak-patchguard-20260928-095500; PATCH_GUARD=OK verdicts={\"accswitch_v2\": \"OK\", \"medicine_autoproxy\": \"OK\", \"medicine_constants\": \"OK\", \"mumu_close_fix\": \"OK\"}"
+  },
+  {
+   "step": "B4 沙箱回滚→原版：accswitch/medicine 缺失（原版无补丁）",
+   "ok": true,
+   "detail": "PATCH_GUARD=MISSING:2 verdicts={\"accswitch_v2\": \"MISSING\", \"medicine_autoproxy\": \"MISSING\", \"medicine_constants\": \"OK\", \"mumu_close_fix\": \"OK\"}"
+  },
+  {
+   "step": "B5 只回 medicine：medicine 缺失 / accswitch 判定为漂移",
+   "ok": true,
+   "detail": "PATCH_GUARD=MISSING:1 verdicts={\"accswitch_v2\": \"WARN\", \"medicine_autoproxy\": \"MISSING\", \"medicine_constants\": \"OK\", \"mumu_close_fix\": \"OK\"}"
+  },
+  {
+   "step": "B6 mumu 回滚：mumu_close_fix 判缺失",
+   "ok": true,
+   "detail": "PATCH_GUARD=MISSING:2 verdicts={\"accswitch_v2\": \"WARN\", \"medicine_autoproxy\": \"MISSING\", \"medicine_constants\": \"OK\", \"mumu_close_fix\": \"MISSING\"}"
+  },
+  {
+   "step": "B7 主机 scratch 清理",
+   "ok": true,
+   "detail": "GONE=True"
+  },
+  {
+   "cycle": "B",
+   "seconds": 32.6,
+   "scratch": "E:\\AUTO-MAS\\_rbdrill_20260928-095439"
+  },
+  {
+   "step": "F0 主机 scratch 建立 + 复读（SR 计数）",
+   "ok": true,
+   "detail": "now[sr=46 n17=46 dash=0] bak[sr=46 n17=0 dash=46]"
+  },
+  {
+   "step": "F1 改坏 3 号 → 计数变化",
+   "ok": true,
+   "detail": "sr=46 n17=43 dash=3"
+  },
+  {
+   "step": "F2 备份拷回 → 哈希与备份一致 + 内容回到备份态",
+   "ok": true,
+   "detail": "sr=46 n17=0 dash=46 | same=True sha=6b3d9e425c698df9933fea758a958f10b8785066060e52e6fa91651ba5439b8f"
+  },
+  {
+   "step": "F3 备份 MANIFEST 可读（含 sha256）",
+   "ok": true,
+   "detail": "# STAGE-FIX BACKUP 2026-09-27T23:40:51\r / # scope: Info.Stage_1 -> \"1-7\" for 46 SR-* users (see plan.json)\r / file: E:\\AUTO-MAS\\config\\ScriptConfig.json\r / sha256_pre : 6B3D9E425C698DF9933FEA758A958F1"
+  },
+  {
+   "step": "F4 scratch 清理",
+   "ok": true,
+   "detail": "GONE=True"
+  },
+  {
+   "step": "F5 mas_stage_fix --rollback 的 plan.json 在位（API 回滚路径可走）",
+   "ok": true,
+   "detail": "stage_fix_20260927_233640"
+  },
+  {
+   "cycle": "F",
+   "seconds": 3.9
+  },
+  {
+   "step": "E1 物化快照到临时目录",
+   "ok": true,
+   "detail": "RESTORE=DONE ok=685 failed=0 skipped=1"
+  },
+  {
+   "step": "E2 改坏 3 处（Config.json, gui.new.json, gui.json(删除)）",
+   "ok": true,
+   "detail": "config\\Config.json; data\\014a17a7-32d7-4238-971f-28c4700e4e51\\Default\\ConfigFile\\gui.new.json; data\\014a17a7-32d7-4238-971f-28c4700e4e51\\Default\\ConfigFile\\gui.json(删除)"
+  },
+  {
+   "step": "E3 二次 restore 回滚",
+   "ok": true,
+   "detail": "RESTORE=DONE ok=3 failed=0 skipped=1"
+  },
+  {
+   "step": "E4 回滚后逐文件哈希对照 manifest",
+   "ok": true,
+   "detail": "校验 685 个，异常 0"
+  },
+  {
+   "step": "E5 生产 vs 快照漂移扫描（只读）",
+   "ok": true,
+   "detail": "SNAPSHOT_DRIFT=DRIFT:7"
+  },
+  {
+   "cycle": "E",
+   "seconds": 50.3,
+   "drift": "SNAPSHOT_DRIFT=DRIFT:7"
+  },
+  {
+   "step": "G0 生产现状（只读）",
+   "ok": true,
+   "detail": "Enabled=False×24 Enabled=True×0"
+  },
+  {
+   "step": "G1 --enable 在副本上真跑：24 条全开",
+   "ok": true,
+   "detail": "changed=24 rc=0 Days/Time 原样=True"
+  },
+  {
+   "step": "G2 幂等：再跑 --enable 零改动",
+   "ok": true,
+   "detail": "changed=0"
+  },
+  {
+   "step": "G3 反向（恢复接管）--disable 亦可跑",
+   "ok": true,
+   "detail": "changed=24"
+  },
+  {
+   "step": "G4 Hermes cron 发车 job 在位（只读核对；pause/resume 本次不执行）",
+   "ok": true,
+   "detail": "2600f6415f16 [active]"
+  },
+  {
+   "cycle": "G",
+   "seconds": 35.7
+  },
+  {
+   "step": "H1 生产 3 补丁文件哈希与演练前一致（零改动）",
+   "ok": true,
+   "detail": "一致"
+  },
+  {
+   "step": "H2 本次主机 scratch 无残留",
+   "ok": true,
+   "detail": "RB_REST=False\r RB_SC=False"
+  },
+  {
+   "step": "H3 mumu flag 未被误建（生产仍走新逻辑）",
+   "ok": true,
+   "detail": "FLAG=False"
+  },
+  {
+   "step": "H4 本地演练垃圾清理（留存 $TMPDIR 路径备查）",
+   "ok": true,
+   "detail": "C:\\Users\\xiach\\AppData\\Local\\Temp\\rollback_drill_20260928-095439"
+  },
+  {
+   "cycle": "H",
+   "seconds": 3.7
+  }
+ ],
+ "cycle_seconds": {
+  "A": 912.265,
+  "C": 919.093,
+  "D": 919.14,
+  "B": 923.562,
+  "F": 956.203,
+  "E": 960.078,
+  "G": 1010.406,
+  "H": 1046.093
+ },
+ "ok_count": 44,
+ "total": 44
+}

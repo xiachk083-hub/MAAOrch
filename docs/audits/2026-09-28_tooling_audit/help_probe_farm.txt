@@ -1,0 +1,55 @@
+CMD: mas_probe_farm.py --help
+RC=0 SECS=1.3
+------------------------------------------------------------
+--- stdout ---
+usage: mas_probe_farm.py [-h] [--account ACCOUNT] [--stage STAGE]
+                         [--times TIMES] [--medicine MEDICINE] [--force-probe]
+                         [--retry-after-fix 说明] [--timeout TIMEOUT]
+                         [--farm-max-wait FARM_MAX_WAIT] [--probe-only]
+                         [--remain-sanity] [--no-remain-sanity]
+                         [--script SCRIPT] [--disable-others] [--all-accounts]
+                         [--write-mode {plan,fixed}] [--no-ledger-update]
+                         [--ledger-days LEDGER_DAYS]
+                         [--capability-json CAPABILITY_JSON] [--apply]
+                         [--dry-run] [--list {unknown,failed,success,all}]
+                         [--no-rest] [--status] [--tail TAIL] [--selftest]
+                         [--json]
+
+先试探后开刷（AUTO-MAS）：台账 → 必要时一次最小试探 → 成功才正式刷 N 次
+
+options:
+  -h, --help            show this help message and exit
+  --account ACCOUNT     账号名（与 AUTO-MAS 一致）
+  --stage STAGE         关卡码（1-7 / CE-6 / SR-7…；剿灭请走剿灭配置，不在本工具范围）
+  --times TIMES         正式刷的连战倍数 SeriesNumb（0..6，0=自动，-1=不调整；**不是总次数**）。默认 1
+  --medicine MEDICINE   理智药额度（0=不吃；默认 0=保守）
+  --force-probe         台账 success 也要先试探一次
+  --retry-after-fix 说明  台账 failed 时放行（进试探）：写一句话说明修了什么
+  --timeout TIMEOUT     试探等待上限秒（restore_after=timeout:Ns，默认 600）
+  --farm-max-wait FARM_MAX_WAIT
+                        正式刷等待上限秒（restore_after=run_end 的兜底，默认 10800=3h）
+  --probe-only          只试探：成功后不进入正式刷
+  --remain-sanity       保留「剩余理智」任务（复制该号当日 Stage_Remain；默认不挂）
+  --no-remain-sanity    （默认）不挂剩余理智
+  --script SCRIPT       目标脚本名/uid（默认按账号自动解析；必须唯一命中）
+  --disable-others      多号脚本：临时停用其它启用号（透传 mas_run_profile）
+  --all-accounts        多号脚本：接受整脚本跑（透传 mas_run_profile）
+  --write-mode {plan,fixed}
+                        发车写路线（默认 plan=临时计划表）
+  --no-ledger-update    不跑 stage_capability --update
+  --ledger-days LEDGER_DAYS
+                        台账增量扫描天数（默认 1 天）
+  --capability-json CAPABILITY_JSON
+                        台账 JSON 路径覆盖（自测/离线用）
+  --apply               真执行（默认 dry-run：只打印计划，零写）
+  --dry-run             显式 dry-run（默认行为）
+  --list {unknown,failed,success,all}
+                        只读：列台账行与账号脚本归属
+  --no-rest             --list 时不查 REST（离线）
+  --status              只读：本工具历史记录 + 锁状态
+  --tail TAIL           --status 显示条数
+  --selftest            离线自测（零触网）
+  --json                JSON 输出（单行）
+
+--- stderr ---
+

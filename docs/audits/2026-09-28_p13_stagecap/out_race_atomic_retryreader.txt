@@ -1,0 +1,1 @@
+RACE mode=atomic reader=retry gap=0ms good=738 torn=0 enoent=0 eacces=0 other=0 [WRITER done=0/400 rc=1] 异常=PermissionError: [WinError 5] 拒绝访问。: 'D:\\1-2\\MAAOrch\\docs\\audits\\2026-09-28_p13_stage killed=0 final_ok=1 tmp_left=0

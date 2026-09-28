@@ -1,0 +1,56 @@
+== 单进程语义（隔离 runtime=C:\Users\xiach\AppData\Local\Temp\lease_selftest_p0rzlvqp\runtime）==
+PASS acquire free                               got=(True, 'acquired') want=(True, 'acquired')
+PASS check free→busy(other)                     got='busy' want='busy'
+PASS check self                                 got='self' want='self'
+PASS acquire busy                               got=(False, 'busy') want=(False, 'busy')
+PASS busy holder                                got='t_a' want='t_a'
+PASS same owner→renewed                         got=(True, 'renewed') want=(True, 'renewed')
+PASS ttl updated                                got=120 want=120
+PASS acquired_at kept                           got=True want=True
+PASS renew by other                             got='not_owner' want='not_owner'
+PASS release by other                           got=(False, 'not_owner') want=(False, 'not_owner')
+PASS release by owner                           got=(True, 'free') want=(True, 'free')
+PASS check after release                        got='free' want='free'
+== 多实例全有或全无（回滚）==
+PASS bulk busy                                  got=(False, 'busy') want=(False, 'busy')
+PASS rollback released 93                       got=('free', ['93']) want=('free', ['93'])
+PASS 92 still A                                 got='busy' want='busy'
+PASS bulk ok                                    got=(True, 'acquired') want=(True, 'acquired')
+== --force 抢租留痕 ==
+PASS force steal                                got=(True, 'stolen', 't_a') want=(True, 'stolen', 't_a')
+PASS history stolen                             got=['stolen'] want=['stolen']
+== hold() 上下文管理器（给别人抛 Busy；退出/异常必释放）==
+PASS hold acquired                              got='t_hold' want='t_hold'
+PASS hold blocks others                         got='busy' want='busy'
+PASS hold raises Busy                           got='t_hold' want='t_hold'
+PASS hold released after block                  got='free' want='free'
+PASS released after exception                   got='free' want='free'
+== TTL 过期自动失效 + 被接管（真时钟，ttl=4s）==
+PASS 短租取到                                       got=(True, 'acquired') want=(True, 'acquired')
+PASS 在租期内=busy                                  got='busy' want='busy'
+PASS 过期满 4s→free                                got='free' want='free'
+PASS child takeover rc0                         got=(0, 'acquired') want=(0, 'acquired')
+PASS history expired                            got=['expired'] want=['expired']
+== 真·多进程互抢（8 个进程同时 acquire 同一实例，临界区撑 400ms）==
+PASS exactly one winner                         got=1 want=1
+PASS losers busy                                got=['busy'] want=['busy']
+PASS losers rc1                                 got=[1] want=[1]
+PASS exactly one lease on disk                  got=1 want=1
+PASS winner is the winner                       got='race-3' want='race-3'
+PASS all ops yielded valid json                 got=True want=True
+== 同主并发（幂等续租，仍只有一条）==
+PASS same owner all rc0                         got=[0, 0, 0] want=[0, 0, 0]
+PASS one lease row                              got=1 want=1
+== 文件卫生 ==
+PASS ledger is valid json                       got=True want=True
+PASS no tmp leftover                            got=False want=False
+PASS lock removed                               got=False want=False
+PASS history all ended                          got=True want=True
+== check 子命令退出码（子进程真跑）==
+PASS check free rc0                             got=0 want=0
+PASS check busy rc1                             got=1 want=1
+PASS check busy token                           got='LEASE=busy' want='LEASE=busy'
+PASS check self rc0                             got=0 want=0
+PASS alias --check rc1                          got=1 want=1
+
+selftest: OK (0 失败)  [runtime=C:\Users\xiach\AppData\Local\Temp\lease_selftest_p0rzlvqp\runtime]

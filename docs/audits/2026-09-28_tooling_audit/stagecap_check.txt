@@ -1,0 +1,8 @@
+CMD: stage_capability.py --check
+RC=0 SECS=7.7
+------------------------------------------------------------
+--- stdout ---
+stage_capability --check: OK（SSH+PS 通；当日 1 个目录，142 次尝试，1s）
+
+--- stderr ---
+

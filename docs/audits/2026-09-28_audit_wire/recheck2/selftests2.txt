@@ -1,0 +1,442 @@
+== 生产统一流 行数（batch 前）: 1033
+
+### mas_audit --selftest
+SELFTEST=OK (19/19)
+  PASS append 落盘并读回
+  PASS 凭据类键丢弃
+  PASS 手机号打码
+  PASS 非法 action 拒绝
+  PASS 非法 actor/target/result 拒绝
+  PASS params 超长截断留指纹
+  PASS validate 抓到未打码手机号
+  PASS 锁建立与释放
+  PASS 按体积轮转（apply）
+  PASS 按天数轮转（dry→apply）
+  PASS prune 保留期 + keep_min 兜底
+  PASS query 过滤/排序/限量
+  PASS 旧日志适配器（ledger/dispatch/profile）
+  PASS 看板库适配器（events/comments）
+  PASS 数据面缺失 fail-closed
+  PASS status/validate 口径
+  PASS schema 与样例自洽
+  PASS 时间解析（绝对/相对）
+  PASS 旧日志时间戳归一（ISO-T/缺秒/毫秒）
+rc=0
+
+### mas_run_profile --selftest
+拒绝：锁被占（0 秒前创建，C:\Users\xiach\AppData\Local\Temp\mas_run_profile_selftest_cpws4uym\lock）——同一时刻只允许一个 profile 任务
+拒绝：MAAORCH_DISPATCH_NO_GO / MAAORCH_RUN_PROFILE_NO_GO 置位（一票否决）
+SELFTEST=OK (36/36)
+  PASS validate_total_times_refused
+  PASS validate_target_drop_refused
+  PASS validate_ok_and_warning
+  PASS validate_series_bad
+  PASS dry_run_zero_write
+  PASS multi_account_needs_explicit
+  PASS disabled_account_refused
+  PASS plan_full_copy_diff
+  PASS plan_weekly_base_copy
+  PASS keep_remain_false_semantics
+  PASS apply_success_full_chain
+  PASS readback_mismatch_stops
+  PASS readback_wrong_values_stops
+  PASS preflight_nogo_rollback
+  PASS timeout_stop_and_restore
+  PASS run_end_success
+  PASS strict_l2_mismatch
+  PASS write_mode_fixed_route
+  PASS write_mode_fixed_needs_fixed_account
+  PASS multi_account_disable_others
+  PASS lock_busy_refused
+  PASS no_go_refused
+  PASS dispatch_refused_rollback
+  PASS reconcile_restores_run
+  PASS status_and_list_plans
+  PASS readback_stale_file_rejected
+  PASS simple_flags_asserted
+  PASS detailed_mode_tolerates_flags
+  PASS mask_attribution
+  PASS dry_run_flag_explicit_and_conflict
+  PASS lease_busy_refused_zero_write
+  PASS lease_apply_lifecycle
+  PASS lease_released_on_failure
+  PASS lease_beat_semantics
+  PASS lease_no_emu_skips
+  PASS lease_preflight_env_passthrough
+rc=0
+
+### mas_probe_farm --selftest
+SELFTEST=OK (23/23)
+  PASS 台账 success ⇒ 直刷
+  PASS --force-probe 覆盖 success
+  PASS 台账 failed ⇒ 拒绝
+  PASS failed + 修复说明 ⇒ 试探
+  PASS 台账 unknown ⇒ 试探
+  PASS 台账报告缺失 ⇒ unknown/试探
+  PASS probe profile 字段（Series=1/timeout/不挂剩余理智）
+  PASS farm profile 字段（SeriesNumb/run_end/保留）
+  PASS 判定：drop_statistics 命中 ⇒ success
+  PASS 判定：副本日志掉落统计 ⇒ success
+  PASS 判定：未开放 ⇒ failed/stage_not_open
+  PASS 判定：选中没开打 ⇒ failed/stage_unavailable
+  PASS 判定：代理指挥失误 ⇒ failed/proxy_mismatch
+  PASS 判定：掉线 ⇒ inconclusive/fight_error_net
+  PASS 判定：无新增尝试 ⇒ inconclusive/no_attempt
+  PASS 判定：理智不足 ⇒ inconclusive/insufficient_sanity
+  PASS 判定：选中无结论 ⇒ inconclusive/selected_no_result
+  PASS 判定：剿灭链完成 ⇒ success
+  PASS asst 锚点归总（sanity/params/计数）
+  PASS asst 时窗过滤（旧行不算）
+  PASS times 取值域（0..6/-1）
+  PASS 日志行前缀剥除
+  PASS 单飞锁文件语义
+rc=0
+
+### mas_farm_orchestrator --selftest
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 试探：rc=0 判定=success/stage_farmed（drop_statistics 出现该关）
+[11:29:00] 试探成功，台账读回=unknown
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+[11:29:00] 执行：rc=0 run_id=rp_x
+[11:29:00] 还原复核：open_runs=无 temp_plans=无 stage_mode=OK
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = success（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：farm —— 台账=success ⇒ 直接正式刷（跳过试探）
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+[11:29:00] 执行：rc=0 run_id=rp_x
+[11:29:00] 还原复核：open_runs=无 temp_plans=无 stage_mode=OK
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = failed（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：refuse —— 台账=failed ⇒ 默认拒绝发车；确认已修复后加 --retry-after-fix "<修复说明>" 放行
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：NO-GO（不过项：['maa_slot']）
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 试探：rc=3 判定=failed/stage_not_open（未开放）
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 试探：rc=2 判定=failed/stage_not_open（未开放）
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 试探：rc=4 判定=failed/stage_not_open（未开放）
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 试探：rc=0 判定=success/stage_farmed（drop_statistics 出现该关）
+[11:29:00] 试探成功，台账读回=unknown
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+[11:29:00] 执行：rc=3 run_id=rp_x
+[11:29:00] 还原复核：open_runs=无 temp_plans=无 stage_mode=OK
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = success（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：farm —— 台账=success ⇒ 直接正式刷（跳过试探）
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+[11:29:00] 执行：rc=2 run_id=rp_x
+[11:29:00] 还原复核：open_runs=无 temp_plans=无 stage_mode=OK
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+拒绝：脚本 明日方舟-官-1 还有其它启用号（乙）——发车粒度只到脚本；加 --disable-others（临时停用它们）或 --all-accounts（接受整脚本跑）
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = success（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：farm —— 台账=success ⇒ 直接正式刷（跳过试探）
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+[11:29:00] 执行：rc=0 run_id=rp_x
+[11:29:00] 还原复核：open_runs=无 temp_plans=无 stage_mode=OK
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+拒绝：MAAORCH_FARM_ORCH_NO_GO 置位（一票否决）
+拒绝：剿灭（Annihilation）不在这条 7 键路线里——它由账号的 Info.Annihilation 配置，本工具不碰该字段（要试剿灭请用 mas_run_profile 的对应路线）。
+[11:29:00] 目标：甲 × 1-7 ⇒ 脚本 明日方舟-官-1（E:\MAA-Multi\MAA_1，实例 13）
+[11:29:00] preflight：GO
+[11:29:00] 台账：甲 × 1-7 = unknown（报告 built_at=2026-09-28 06:00:00）
+[11:29:00] 决策：probe —— 台账=unknown ⇒ 先试探后开刷（不猜）
+[11:29:00] 试探：rc=0 判定=success/stage_farmed（drop_statistics 出现该关）
+[11:29:00] 试探成功，台账读回=unknown
+[11:29:00] 计划：profile=profile.farm.json（series=1，medicine=0）干跑 rc=0
+[11:29:00] 租约：acquired（取租成功）
+[11:29:00] 执行：rc=0 run_id=rp_x
+[11:29:00] 还原复核：open_runs=无 temp_plans=无 stage_mode=OK
+SELFTEST=OK (24/24)
+  PASS 决策：success ⇒ 直刷/force 试探
+  PASS 决策：unknown ⇒ 试探
+  PASS 决策：failed ⇒ 拒绝/修复后试探
+  PASS 计划：profile 字段与校验
+  PASS 计划：非法 times 被拒
+  PASS 全链：unknown→试探→执行 rc=0
+  PASS 全链：success 直刷（跳过试探）
+  PASS 全链：台账 failed 拒绝
+  PASS 全链：preflight NO-GO 停
+  PASS 全链：试探 rc=3 ⇒ 3
+  PASS 全链：试探 rc=2 ⇒ 2
+  PASS 全链：试探 rc=4 ⇒ 4
+  PASS 全链：试探成功+执行失败 ⇒ 5
+  PASS 全链：无试探+执行 rc=2 ⇒ 2
+  PASS 全链：租约被占（事后取租）⇒ 2
+  PASS 全链：事前查租被占 ⇒ 早停
+  PASS 全链：多号脚本 fail-closed
+  PASS 全链：--disable-others 放行
+  PASS 全链：dry-run 零发车
+  PASS 闸门：NO_GO 一票否决
+  PASS 闸门：剿灭拒绝
+  PASS 报告：关键小节齐全
+  PASS 锁：创建/释放
+  PASS 取值域：times
+rc=0
+
+### mas_plan_builder --selftest
+拒绝：MAAORCH_PLAN_BUILDER_NO_GO 置位（一票否决）
+=== mas_plan_builder · TestA（官服）===
+- 本轮主刷：**10-6**（固源岩组）
+- 候选回退位：2-4 → 7-4 → 1-7
+- 用药：不吃药（MedicineNumb=0） ｜ 活动优先：关 ｜ series：未指定
+- 停刷条件：MAA 任务自然结束（理智耗尽 / 药耗尽 / 关卡不可用跳过）——run profile 轮询 app.log「任务结束:<task_uid>」判完。
+- ⚠ 需先试探一次：10-6、2-4、7-4（台账 unknown）
+stage_plan = ["10-6", "2-4", "7-4", "1-7"]
+草案：../plans/TestA_20260928_1129.md
+profile：../plans/TestA_20260928_1129.json
+执行（零写预览）：python tools/mas_run_profile.py --profile ../plans/TestA_20260928_1129.json
+执行（真发车，需批准）：python tools/mas_run_profile.py --profile ../plans/TestA_20260928_1129.json \
+  --apply
+  ⚠(profile) medicine.use_expiring=False：**AUTO-MAS 两层没有这个键**（MAA 侧 UseExpiringMedicine，主战斗值随模板/该号 ConfigFile）⇒ 本次不会写它，只读回记录实际值。（docs/MAS_RUN_PROFILE.md §2 行 6）
+  ⚠(profile) target_drop.enabled=false：本次不写该字段（简洁模式 AutoProxy 每轮自会硬关）
+SELFTEST=OK (37/37)
+  PASS build_all 生成计划
+  PASS stage_plan 非空且 <=4
+  PASS 主刷=10-6（固源岩组缺口 46 折算 AP 最大）
+  PASS SR-7 因台账 failed 被剔除
+  PASS 10-6 标注 unknown→需先试探
+  PASS 缺口计算 固源岩组=46
+  PASS 缺口计算 聚酸酯组=32
+  PASS 糖组达标不进队列
+  PASS 候选排序按 AP/个 升序
+  PASS AP 交叉核对走 unit_cost|普通
+  PASS 预估次数/AP（46÷0.76≈61 次×21=1281）
+  PASS 练度体检（箱 10×E2-60）
+  PASS 理智策略：210//21=10 次
+  PASS 每日预算 280//21=13 次/天
+  PASS 活动：官服无刷关→enabled=False
+  PASS profile 过 mas_run_profile 校验
+  PASS target.script 解析（--script 优先）
+  PASS medicine 默认不吃
+  PASS json 元数据块是下划线注释
+  PASS 活动关候选 -> 补 1-7 尾位
+  PASS --no-tail-1-7 不补
+  PASS stage_plan 恒含 1-7（主刷为常驻关时亦然）
+  PASS 满位时先给 1-7 留位（不挤掉，直接不让填充占满）
+  PASS 落盘 json 回读再校验（可直接执行）
+  PASS md 渲染含「依据 → 结论」链
+  PASS --material 覆盖强制入队（糖组 999<1200）
+  PASS 全达标 -> 补刀模式
+  PASS 日服刷关活动 -> activity_priority.enabled=True
+  PASS 国际服刷关活动（二手源）→ enabled + caveat 点名
+  PASS 活动快照 >7 天 -> 拒绝据此判断（enabled=False + stale）
+  PASS 产物缺失 -> Refuse
+  PASS 台账缺失 -> Refuse
+  PASS --skip-capability 仍能出草案（并记风险）
+  PASS 台账口径与 can_farm 一致
+  PASS dry-run 命令不含 --apply
+  PASS apply 命令带 --apply/--disable-others
+  PASS NO_GO 一票否决（exec 面 rc=2，未调 run profile）
+rc=0
+
+### mas_dispatch --selftest
+WARN mas_dispatch: 状态文件损坏（JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 3 (char 2)），已隔离到 C:\Users\xiach\AppData\Local\Temp\mas_dispatch_selftest_wmapymgn\state.json.corrupt-20260928-112900，按空状态继续（下一跳重建）
+LATE 日常定时1 计划 08:29 已超追发窗口 30 分钟 —— 不自动发车；已交巡检/人工决策（补发须显式 dispatch_queue，本脚本不补）
+DISPATCH_ALERT=日常定时1:late_handoff
+LATE 日常定时1 计划 08:29 已超追发窗口 30 分钟 —— 不自动发车；已交巡检/人工决策（补发须显式 dispatch_queue，本脚本不补）
+DISPATCH_ALERT=日常定时1:late_handoff
+dismiss 日常定时3：late 标记已关；告警已清 日常定时3:late_handoff；note=决定不补
+release 晚班定时9：busy 窗口已清（2026-09-28 11:29:00）
+release 晚班定时10：busy 窗口已清（2026-09-28 11:29:00）
+SELFTEST=OK (26/26)
+rc=0
+
+### mas_ondemand --selftest
+SELFTEST=OK (36/36)
+  PASS plan_queue_name
+  PASS plan_bad_uid_refused
+  PASS plan_script_uid
+  PASS dry_run_no_write
+  PASS apply_queue_audit_state
+  PASS apply_script
+  PASS account_temp_queue_apply
+  PASS account_disabled_refused
+  PASS account_ambiguous_refused
+  PASS account_unknown_refused
+  PASS duplicate_inflight_refused
+  PASS resource_inflight_refused
+  PASS slot_busy_refused
+  PASS slot_warm_refused_then_quiet_ok
+  PASS shift_grace_refused
+  PASS preflight_nogo_refused
+  PASS preflight_skip_allowed
+  PASS rest_down_fail_closed
+  PASS no_go_hard_gate
+  PASS upstream_running_logged
+  PASS stop_bad_id_refused
+  PASS stop_ok_audited
+  PASS stop_all_needs_force
+  PASS wake_needs_force
+  PASS cleanup_busy_guard_and_force
+  PASS release_reopens_target
+  PASS list_running_parse
+  PASS ledger_migrates_legacy_books
+  PASS ledger_cross_visible_in_list_running
+  PASS shared_lock_blocks_cli_apply
+  PASS lease_busy_refused_zero_write
+  PASS lease_held_then_release_frees
+  PASS lease_same_owner_renews
+  PASS lease_released_on_failed_dispatch
+  PASS lease_stop_releases
+  PASS lease_no_target_skips
+rc=0
+
+### mas_config_snapshot --selftest
+PASS classify: Password/Token => sensitive          2
+PASS redact: 密文替换为标记                                
+PASS redact: 空值不动                                   
+PASS redact: 无长b64兜底触发                              
+PASS classify: 无敏感键非敏感                              
+PASS diff: 列表按键对齐(改)                                [('add', 'N.y'), ('add', 'New'), ('add', 'Q[uid=u3]'), ('chg', 'N.x')]
+PASS diff: 列表按键对齐(删/增)                              
+PASS diff: dict 数值变化                                
+PASS diff: dict 新增键                                 
+PASS diff: 顶层删键                                     
+PASS diff: 无键列表按索引                                  [{'op': 'chg', 'path': 'L[1]', 'old': '2', 'new': '9'}]
+PASS diff: 长值截断                                     14
+PASS diff: 敏感键值隐去                                   [{"op": "chg", "path": "Password", "old": "<敏感已隐去>", "new": 
+[11:29:01] 扫描本地源 C:\Users\xiach\AppData\Local\Temp\tmpzedgqepx\base
+[11:29:01] 文件集 3 个 / 0.0 MB
+SNAPSHOT=OK ts=snap files=3 bytes=79 sensitive=1 store=none
+[11:29:02] 快照完成：C:\Users\xiach\AppData\Local\Temp\tmpzedgqepx\snap
+PASS snapshot(local): rc=0                          
+PASS snapshot: 敏感文件只留脱敏副本                           
+PASS snapshot: 非敏感留全保副本                             
+PASS plan: 识别 diff/missing/unrecoverable            {'same': 0, 'diff': 2, 'missing': 1, 'unrecoverable': 1}
+PASS plan: 敏感文件标注不可本地恢复                             
+[11:29:02] 跳过：config\ScriptConfig.json（敏感文件无全保副本，未动）
+RESTORE=DONE ok=2 failed=0 skipped=1
+PASS restore(local): rc=0（敏感跳过不算失败）                 
+PASS restore: 内容还原                                  
+PASS restore: missing 重建                            
+PASS restore: 敏感文件被跳过未动                             
+PASS plan: 回滚后非敏感全 same                             {'same': 2, 'diff': 1, 'missing': 0, 'unrecoverable': 1}
+[11:29:02] 跳过：config\ScriptConfig.json（敏感文件无全保副本，未动）
+RESTORE=DONE ok=0 failed=0 skipped=1
+PASS restore: 快照外文件不动                               
+[11:29:02] 扫描本地源 C:\Users\xiach\AppData\Local\Temp\tmpzedgqepx\base
+[11:29:02] 文件集 4 个 / 0.0 MB
+SNAPSHOT=OK ts=snap2 files=4 bytes=85 sensitive=1 store=none
+[11:29:02] 快照完成：C:\Users\xiach\AppData\Local\Temp\tmpzedgqepx\snap2
+PASS diff A/B: 捕到改动                                 
+PASS diff A/B: 字段级可读                                [{'path': 'config\\QueueConfig.json', 'changes': [{'op': 'chg', 'path': 'a', 'ol
+PASS path: 拒绝越界                                     
+PASS path: 归一化                                      
+PASS rotate: 只留最新 N                                 ['20260101_000000']
+PASS break: 叶子被改坏                                   a.b: 'keep' -> 'keep-BROKEN'
+PASS pid_alive: 死 pid => False                      pid=10760
+PASS pid_alive: 本进程 => True                         
+[11:29:02] 锁自愈：残留锁 C:\Users\xiach\AppData\Local\Temp\mas_snap_selftest_2h98alc3\mas_config_snapshot.lock 的锁主 pid=10760 已不存在，清理后重试
+PASS lock: 死锁被清（新鲜 mtime 不等 2h）                     dead_pid=10760 got=True held=True
+PASS lock: 活锁按原样拒绝（不抢、锁保留）                          refused=True kept=True
+PASS lock: 判不了活→回退 2h（新鲜拒/超期清）                      refused=True fresh_kept=True stale_cleared=True
+selftest: OK (35/35)
+rc=0
+
+### mas_patch_guard --selftest
+PASS contains-hit       fails=0 want=0 
+PASS contains-miss      fails=1 want=1 contains[abc]
+PASS not_contains-ok    fails=0 want=0 
+PASS not_contains-bad   fails=1 want=1 not_contains[abc]
+PASS regex-hit          fails=0 want=0 
+PASS regex-miss         fails=1 want=1 regex[AccountSwitchEnabled\"\] = True]
+PASS count-eq-ok        fails=0 want=0 
+PASS count-min-bad      fails=1 want=1 count[A]=2(<3)
+PASS count-max-bad      fails=1 want=1 count[A]=2(>1)
+PASS multi              fails=0 want=0 
+PASS multi-one-fail     fails=1 want=1 contains[nope]
+PASS unknown-type       fails=1 want=1 unknown-check-type[wat]
+PASS schema: patches=4 名称=accswitch_v2, medicine_autoproxy, medicine_constants, mumu_close_fix
+selftest: OK (0 失败)
+rc=0
+
+### mas_stage_fix --selftest
+  ✓ SR-7 Fixed 命中
+  ✓ SR-5 Fixed 命中
+  ✓ 1-7 Fixed 不命中
+  ✓ 计划模式不命中
+  ✓ 空 Stage 不命中
+  ✓ others_hash 不受 Stage_1/Password 影响
+  ✓ opener 无代理
+    （系统代理当前: http://127.0.0.1:7890）
+  ✓ plan 结构可序列化
+  ✓ --json 摘要键齐 + pending/failures 带 uid/name/diffs
+SELFTEST=OK
+rc=0
+
+### activity_switch --selftest
+✗ --pretend-now 只用于 dry-run 预演，不能与 --apply 同用
+SELFTEST=OK (13/13)
+  PASS JP 可刷：直切判定 + 尾位 1-7 + dry-run 零写
+  PASS CN：在期但 MAA 表无活动关 ⇒ 不可切（fail-closed）
+  PASS unknown ⇒ 试探（未开探针跳过 / 探针成功才切 / 探针失败零写）
+  PASS 写面：临时计划表（复制+差分）+ StageMode 指针 + 备份落盘
+  PASS 还原：dry-run 零写 / apply 回写+删表 / 幂等
+  PASS 活动结束（end 已过/MAA 不可刷）⇒ 自动还原
+  PASS 班次运行中（配置锁定）：跳过 + 零残留
+  PASS 收尾（heal）：计划全为已关闭活动关 ⇒ 切 1-7（默认关，opt-in）
+  PASS 闸门：显式范围 / --approved-by / NO_GO / pretend-now 不与 apply 同用
+  PASS 证据新鲜：server_events >7 天 ⇒ 拒绝切换（G4）
+  PASS --stages 显式目标（forced）+ 关码数校验
+  PASS 报告渲染 + 计划文件落盘
+  PASS record_due：end 已过 / MAA 不可刷 两条判据
+rc=0
+### mas_patch_guard_selftest.py
+== mas_patch_guard 沙箱自测 2026-09-28 11:29:02 ==
+PASS 0. 沙箱建立（副本）                                    SANDBOX=True/True
+PASS 1. 沙箱副本各改坏 1 字节                                FLIP1 byte=31628 v->V FLIP2 byte=3654 T->t
+PASS 2. 坏字节被检出（期望 MISSING:2）                        PATCH_GUARD=MISSING:2 rc=1
+PASS 2b. 同文件另一补丁报漂移不误杀
+PASS 2c. 退出码=1                                      rc=1
+PASS 3. dry-run 重放（REAPPLY=DRY-RUN）                 rc=0
+PASS 3b. dry-run 零写入（沙箱哈希不变）                        sha=f3ead4cae923b167
+PASS 3c. 计划含 diff 与备份/重启提醒
+PASS 4. --apply 重放成功（REAPPLY=OK）                    rc=0
+PASS 4b. 回读哈希 == 补丁版                                got=0f94b53b50445600 want=0f94b53b50445600
+PASS 4c. 备份文件已生成（.bak-patchguard-*）
+PASS 5. constants 重放成功                              rc=0
+PASS 5b. 回读哈希 == 补丁版                                got=030ebbd0e39101d2 want=030ebbd0e39101d2
+PASS 6. 重放后复检全绿（PATCH_GUARD=OK）                     PATCH_GUARD=OK rc=0
+PASS 7. 生产文件全程只读（哈希未变）
+PASS 8. 沙箱已清理                                       CLEANED=True
+
+selftest: OK（0 步失败：无）
+日志: D:\1-2\MAAOrch\runtime\patches\selftest_last.txt
+rc=0
+== 生产统一流 行数（batch 后）: 1035

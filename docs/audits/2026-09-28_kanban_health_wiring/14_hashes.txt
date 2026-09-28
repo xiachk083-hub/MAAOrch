@@ -1,0 +1,7 @@
+# t_4cd871de 验收哈希快照（2026-09-28 11:28 BJT）
+# 用途：集成方/复核者 `cd D:\1-2\MAAOrch && sha256sum -c docs/audits/2026-09-28_kanban_health_wiring/14_hashes.txt`
+94a2c73516b332661fa566ab94424e5cc78fe47db2d653bc266969bee832bb8d  tools/mas_observe_mcp.py
+9bdf00447510173be03c4c9f1bd1f9f3a7667f2b2d541ef11214845bf93d4e76  tools/kanban_health.py
+cc19f1f9fc6e106055a26861346695c5d93e7a04d8fa23f0c5c3a56f90445b52  tests/kanban_health_mcp_probe.py
+8b81cfd20be2ed4baac2d17f2427a30bfbbfe842f33a11805cbda68f71c5cc01  docs/KANBAN_HEALTH.md
+# live prompt = jobs.json 中 job 52b88b0ffca0：7246 chars，sha256(utf-8) 前16=9b41eaa33303614e，enabled=true（v4：现场九检 + 主表 16 行含 KANBAN_HEALTH=）

@@ -1,0 +1,7 @@
+stage_capability: 写盘锁被占（pid=424242 ts=harness，0s 前），等待中…（上限 360s）
+stage_capability: 已获写盘锁（等待 3.0s）
+stage_capability[update]: 扫描 50000 次尝试/1 天（1s）；state 新增 50000 更新 0 裁掉 0；台账 1 行；unknown 0.0%
+写出：C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\state\stage_capability_state.json
+      C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\reports\stage_capability.json
+      C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\reports\STAGE_CAPABILITY.md
+WORKER prefix=A rc=0 secs=5.3 pid=28860

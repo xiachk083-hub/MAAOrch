@@ -1,0 +1,46 @@
+# CLI 实跑记录（2026-09-28 10:27:04 CST；append 一律 --dry-run，避免往生产统一流灌演示数据；含 stderr=拒绝理由）
+
+$ $PY312 tools/mas_audit.py append --actor tool:mas_ondemand --action dispatch.start \
+      --target 'account:帝国猛虎' --result ok --reason '演示：干跑不落盘' \
+      --param mode=AutoProxy --param phone=13812345678 --param token=SECRET \
+      --evidence runtime/mas_ondemand_log.jsonl --card t_d937f659 --dry-run
+（注意：phone/token 两个键被整键丢弃 = 脱敏红线在生效；只有 mode 留在 params）
+v: 1
+ts: 2026-09-28 10:27:06
+actor: tool:mas_ondemand
+action: dispatch.start
+target: account:帝国猛虎
+result: ok
+reason: 演示：干跑不落盘
+params: {"mode": "AutoProxy"}
+evidence: ["runtime/mas_ondemand_log.jsonl"]
+card: t_d937f659
+AUDIT=DRY-RUN action=dispatch.start target=account:帝国猛虎 result=ok
+rc=0
+
+--- 拒绝路径（schema 不合规，rc=2）---
+$ ... --action DispatchStart --target - --result ok
+拒绝：action 必须是 域.动词（小写，如 dispatch.start）：'DispatchStart'
+rc=2
+$ ... --target '没有冒号'
+拒绝：target 必须是 kind:id 或 '-'：'没有冒号'
+rc=2
+$ ... --result success（枚举外）
+                           [--run-id RUN_ID] [--ts TS] [--dry-run]
+mas_audit.py append: error: argument --result: invalid choice: 'success' (choose from ok, fail, refused, info, unknown)
+rc=2
+$ ... --since 乱给（时间参数坏）
+拒绝：时间参数无法解析：--since '前天两点'（支持 日期 / '日期 时间' / HH:MM / 30m|12h|7d）
+rc=2
+
+--- 新域告警但不拒（可扩展）---
+警告：action 域名 'foo' 不在词表里（docs/MAS_AUDIT_SCHEMA.md §4）；如系新域请补词表。
+v: 1
+ts: 2026-09-28 10:27:09
+actor: tool:x
+action: foo.bar
+target: -
+result: info
+reason:
+AUDIT=DRY-RUN action=foo.bar target=- result=info
+rc=0

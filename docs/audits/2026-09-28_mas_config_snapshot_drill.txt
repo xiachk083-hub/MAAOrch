@@ -1,0 +1,28 @@
+PASS residual-cleanup 无 _cfgsnap_drill_* 残留
+阶段1a：物化 686 个文件到本地临时副本（基线 20260928_092944__baseline）…
+PASS materialize plan diff=0 missing=686
+PASS materialized-count 物化 686 个；敏感未物化 0（设计）
+PASS break-files 改坏 5 个：json-field, json-field, append-bytes, delete, touch-mtime
+PASS snapshot-broken snapshot B @ D:\1-2\MAAOrch\runtime\snapshots\_drills\20260928_103038__drill\snapB（files=684）
+PASS diff-detects 改动 3 / 新增 0 / 删除 1 / 字段报告 3
+  diff字段: config\Config.json Data.IfShowNotice false -> true
+  diff字段: data\014a17a7-32d7-4238-971f-28c4700e4e51\Default\ConfigFile\gui.new.json Configurations.Default.TaskQueue[Name=开始唤醒].$type "StartUpTask" -> "StartUpTask-BROKEN"
+== 回滚计划：快照 20260928_092944__baseline → D:\1-2\MAAOrch\runtime\snapshots\_drills\20260928_103038__drill\root（local） ==
+  [覆盖] config\Config.json                                         sha e10c264e → 621fefd8（源:本地快照）
+  [新建] config\ScriptConfig.json                                   sha - → 41e51ad5（源:主机 store）
+  [新建] data\014a17a7-32d7-4238-971f-28c4700e4e51\Default\ConfigFile\gui.json sha - → 09204bb0（源:本地快照）
+  [覆盖] data\014a17a7-32d7-4238-971f-28c4700e4e51\Default\ConfigFile\gui.new.json sha e0f10c22 → ffbc65cb（源:本地快照）
+  [覆盖] app\task\MAA\AutoProxy.py                                  sha c6c20bc2 → 0f94b53b（源:本地快照）
+计划：覆盖 3 / 新建 2 / 已是快照 681 / 不可恢复 0
+dry-run 计划：覆盖 3 / 新建 2 / 已是快照 681 / 不可恢复 0
+PASS restore-apply RESTORE rc=0（将 mtime-only 不还原：内容级回滚）
+PASS verify-hashes 全部字段校验通过
+阶段2：主机 scratch 演练 E:\AUTO-MAS\backups\_cfgsnap_drill_20260928_103038__drill
+  2a 计划：对比 scratch 现状（686 文件；物化走 HTTP 拉取通道）…
+  2a 完成：新建 686 / 覆盖 0 / 已是快照 0
+  2b 物化完成 rc=0
+PASS remote-scratch-restore 全保物化 686 个（含敏感：走 store 同机复制）
+PASS remote-break 改坏 AutoProxy.py + ScriptConfig.json
+  2d 二次回滚完成 rc=0（diff=2）
+PASS remote-restore-again 二次回滚 diff=2
+PASS remote-cleanup 清理 scratch：OK

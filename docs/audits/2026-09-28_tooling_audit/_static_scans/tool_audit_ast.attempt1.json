@@ -1,0 +1,2228 @@
+{
+ "tools/mas_run_profile.py": {
+  "path": "tools/mas_run_profile.py",
+  "bytes": 124791,
+  "lines": 2454,
+  "imports": [
+   "__future__.annotations",
+   "argparse",
+   "base64",
+   "contextlib",
+   "datetime",
+   "hashlib",
+   "io",
+   "json",
+   "mas_ondemand",
+   "os",
+   "re",
+   "shutil",
+   "subprocess",
+   "sys",
+   "tempfile",
+   "time",
+   "urllib.error",
+   "urllib.request"
+  ],
+  "bare_except": [],
+  "broad_except": [
+   [
+    303,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    328,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    345,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    362,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    389,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    451,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    807,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1708,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    292,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    414,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    435,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    1990,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1305,
+    "except Exception as e:  # noqa: BLE001"
+   ]
+  ],
+  "except_pass": [
+   [
+    1315,
+    "except TransportError:"
+   ]
+  ],
+  "longest_funcs": [
+   [
+    412,
+    1976,
+    "selftest"
+   ],
+   [
+    164,
+    799,
+    "build_plan"
+   ],
+   [
+    163,
+    1583,
+    "_apply_locked"
+   ],
+   [
+    123,
+    565,
+    "validate_profile"
+   ],
+   [
+    105,
+    1438,
+    "restore_run"
+   ],
+   [
+    72,
+    1364,
+    "do_writes"
+   ],
+   [
+    60,
+    2391,
+    "main"
+   ],
+   [
+    58,
+    1263,
+    "wait_task_end"
+   ],
+   [
+    53,
+    1885,
+    "post"
+   ],
+   [
+    52,
+    1060,
+    "match_readback"
+   ],
+   [
+    51,
+    370,
+    "host_probe"
+   ],
+   [
+    49,
+    1212,
+    "poll_readback"
+   ]
+  ],
+  "cli_args": [
+   {
+    "line": 2394,
+    "flags": [
+     "--profile"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2395,
+    "flags": [
+     "--apply"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2396,
+    "flags": [
+     "--account"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2397,
+    "flags": [
+     "--all-accounts"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2398,
+    "flags": [
+     "--disable-others"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2400,
+    "flags": [
+     "--write-mode"
+    ],
+    "default": "plan",
+    "action": null,
+    "nargs": null,
+    "choices": [
+     "plan",
+     "fixed"
+    ],
+    "dest": null
+   },
+   {
+    "line": 2402,
+    "flags": [
+     "--preflight"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2403,
+    "flags": [
+     "--readback-timeout"
+    ],
+    "default": 300,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2404,
+    "flags": [
+     "--poll-seconds"
+    ],
+    "default": 15,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2405,
+    "flags": [
+     "--max-wait-seconds"
+    ],
+    "default": 10800,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2407,
+    "flags": [
+     "--wait-poll-seconds"
+    ],
+    "default": 20,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2408,
+    "flags": [
+     "--no-stop-on-timeout"
+    ],
+    "default": "None",
+    "action": "store_false",
+    "nargs": null,
+    "choices": null,
+    "dest": "stop_on_timeout"
+   },
+   {
+    "line": 2410,
+    "flags": [
+     "--restore-wait-seconds"
+    ],
+    "default": 180,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2411,
+    "flags": [
+     "--restore-attempts"
+    ],
+    "default": 12,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2412,
+    "flags": [
+     "--restore-gap-seconds"
+    ],
+    "default": 30,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2413,
+    "flags": [
+     "--strict-l2"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2414,
+    "flags": [
+     "--status"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2415,
+    "flags": [
+     "--reconcile"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2416,
+    "flags": [
+     "--restore-run"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2417,
+    "flags": [
+     "--list-plans"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2418,
+    "flags": [
+     "--selftest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 2419,
+    "flags": [
+     "--json"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   }
+  ],
+  "keywords": {
+   "dry_run": 4,
+   "dry-run": 14,
+   "--apply": 9,
+   "ledger": 11,
+   "lock": 16,
+   "msvcrt": 0,
+   "fcntl": 0,
+   "filelock": 0,
+   "requests": 0,
+   "urllib.request": 4,
+   "subprocess": 6,
+   "argparse": 3,
+   "json": 102,
+   "csv": 0,
+   "preflight": 44,
+   "restore": 80,
+   "backup": 13,
+   "extract_again": 0,
+   "signal": 0,
+   "daemon": 0,
+   "threading": 0,
+   "asyncio": 0,
+   "flask": 0,
+   "http.server": 0
+  },
+  "sys_exit": [
+   [
+    2454,
+    "main()"
+   ]
+  ]
+ },
+ "tools/mas_ondemand.py": {
+  "path": "tools/mas_ondemand.py",
+  "bytes": 106925,
+  "lines": 1979,
+  "imports": [
+   "__future__.annotations",
+   "argparse",
+   "base64",
+   "contextlib",
+   "datetime",
+   "io",
+   "json",
+   "mas_dispatch",
+   "mas_ondemand_ledger",
+   "os",
+   "re",
+   "shutil",
+   "subprocess",
+   "sys",
+   "tempfile",
+   "time",
+   "urllib.error",
+   "urllib.request",
+   "uuid"
+  ],
+  "bare_except": [],
+  "broad_except": [
+   [
+    177,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    691,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1072,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1092,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1171,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1928,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    476,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    898,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    962,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1232,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1484,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    982,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    960,
+    "except Exception as e:  # noqa: BLE001"
+   ]
+  ],
+  "except_pass": [
+   [
+    1928,
+    "except Exception:  # noqa: BLE001"
+   ]
+  ],
+  "longest_funcs": [
+   [
+    435,
+    1471,
+    "selftest"
+   ],
+   [
+    91,
+    835,
+    "cmd_dispatch"
+   ],
+   [
+    77,
+    1001,
+    "cmd_wake"
+   ],
+   [
+    72,
+    1165,
+    "cmd_cleanup"
+   ],
+   [
+    57,
+    771,
+    "execute_temp_queue"
+   ],
+   [
+    54,
+    932,
+    "cmd_stop"
+   ],
+   [
+    51,
+    1925,
+    "main"
+   ],
+   [
+    51,
+    1112,
+    "parse_task_events"
+   ],
+   [
+    45,
+    552,
+    "_resolve_plan_target"
+   ],
+   [
+    43,
+    1426,
+    "post"
+   ],
+   [
+    40,
+    1239,
+    "cmd_release"
+   ],
+   [
+    36,
+    632,
+    "_recent_activity"
+   ]
+  ],
+  "cli_args": [
+   {
+    "line": 1932,
+    "flags": [
+     "--queue"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1933,
+    "flags": [
+     "--script"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1934,
+    "flags": [
+     "--account"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1935,
+    "flags": [
+     "--wake"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1936,
+    "flags": [
+     "--stop"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1937,
+    "flags": [
+     "--list-running"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1938,
+    "flags": [
+     "--cleanup"
+    ],
+    "default": null,
+    "action": null,
+    "nargs": "?",
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1940,
+    "flags": [
+     "--release"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1941,
+    "flags": [
+     "--selftest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1942,
+    "flags": [
+     "--apply"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1943,
+    "flags": [
+     "--force"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1944,
+    "flags": [
+     "--skip-preflight"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1945,
+    "flags": [
+     "--json"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1946,
+    "flags": [
+     "--events"
+    ],
+    "default": 80,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1947,
+    "flags": [
+     "--timeout"
+    ],
+    "default": 240,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1948,
+    "flags": [
+     "--preflight-timeout"
+    ],
+    "default": 900,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   }
+  ],
+  "keywords": {
+   "dry_run": 9,
+   "dry-run": 16,
+   "--apply": 10,
+   "ledger": 37,
+   "lock": 22,
+   "msvcrt": 0,
+   "fcntl": 0,
+   "filelock": 0,
+   "requests": 0,
+   "urllib.request": 3,
+   "subprocess": 7,
+   "argparse": 3,
+   "json": 64,
+   "csv": 0,
+   "preflight": 61,
+   "restore": 0,
+   "backup": 0,
+   "extract_again": 0,
+   "signal": 0,
+   "daemon": 0,
+   "threading": 0,
+   "asyncio": 0,
+   "flask": 0,
+   "http.server": 0
+  },
+  "sys_exit": [
+   [
+    1979,
+    "main()"
+   ]
+  ]
+ },
+ "tools/mas_plan_builder.py": {
+  "path": "tools/mas_plan_builder.py",
+  "bytes": 87592,
+  "lines": 1578,
+  "imports": [
+   "__future__.annotations",
+   "argparse",
+   "datetime",
+   "importlib",
+   "json",
+   "os",
+   "re",
+   "subprocess",
+   "sys",
+   "tempfile",
+   "urllib.request"
+  ],
+  "bare_except": [],
+  "broad_except": [
+   [
+    1407,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1546,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    609,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    694,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    629,
+    "except Exception as e:  # noqa: BLE001"
+   ]
+  ],
+  "except_pass": [
+   [
+    545,
+    "except ValueError:"
+   ]
+  ],
+  "longest_funcs": [
+   [
+    186,
+    941,
+    "build_all"
+   ],
+   [
+    185,
+    1390,
+    "selftest"
+   ],
+   [
+    145,
+    777,
+    "render_md"
+   ],
+   [
+    64,
+    1252,
+    "main"
+   ],
+   [
+    62,
+    529,
+    "events_policy"
+   ],
+   [
+    59,
+    1329,
+    "_fixture"
+   ],
+   [
+    47,
+    594,
+    "resolve_script"
+   ],
+   [
+    38,
+    257,
+    "apcost_lookup"
+   ],
+   [
+    37,
+    1201,
+    "parse_args"
+   ],
+   [
+    36,
+    423,
+    "pick_queue"
+   ],
+   [
+    33,
+    358,
+    "analyze_material"
+   ],
+   [
+    31,
+    712,
+    "build_stage_slots"
+   ]
+  ],
+  "cli_args": [
+   {
+    "line": 1204,
+    "flags": [
+     "--account"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1205,
+    "flags": [
+     "--script"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1206,
+    "flags": [
+     "--materials"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1207,
+    "flags": [
+     "--material"
+    ],
+    "default": "None",
+    "action": "append",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1209,
+    "flags": [
+     "--sanity"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1210,
+    "flags": [
+     "--medicine"
+    ],
+    "default": 0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1211,
+    "flags": [
+     "--series"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": [
+     "0",
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6",
+     "-1"
+    ],
+    "dest": null
+   },
+   {
+    "line": 1213,
+    "flags": [
+     "--restore-after"
+    ],
+    "default": "run_end",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1214,
+    "flags": [
+     "--keep-remain/--no-keep-remain"
+    ],
+    "default": true,
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": "keep_remain"
+   },
+   {
+    "line": 1216,
+    "flags": [
+     "--prefer"
+    ],
+    "default": "best",
+    "action": null,
+    "nargs": null,
+    "choices": [
+     "best",
+     "proven"
+    ],
+    "dest": null
+   },
+   {
+    "line": 1218,
+    "flags": [
+     "--no-tail-1-7"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1219,
+    "flags": [
+     "--events-warn-age"
+    ],
+    "default": 3.0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1220,
+    "flags": [
+     "--events-fail-age"
+    ],
+    "default": 7.0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1221,
+    "flags": [
+     "--skip-capability"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1222,
+    "flags": [
+     "--no-rest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1223,
+    "flags": [
+     "--rest-timeout"
+    ],
+    "default": 15.0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1224,
+    "flags": [
+     "--out-dir"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1225,
+    "flags": [
+     "--list-accounts"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1226,
+    "flags": [
+     "--selftest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1227,
+    "flags": [
+     "--json"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1229,
+    "flags": [
+     "--exec-dry-run"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1230,
+    "flags": [
+     "--exec-preflight"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1231,
+    "flags": [
+     "--apply"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1232,
+    "flags": [
+     "--disable-others"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1233,
+    "flags": [
+     "--all-accounts"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1234,
+    "flags": [
+     "--write-mode"
+    ],
+    "default": "plan",
+    "action": null,
+    "nargs": null,
+    "choices": [
+     "plan",
+     "fixed"
+    ],
+    "dest": null
+   },
+   {
+    "line": 1235,
+    "flags": [
+     "--max-wait-seconds"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   }
+  ],
+  "keywords": {
+   "dry_run": 5,
+   "dry-run": 10,
+   "--apply": 13,
+   "ledger": 0,
+   "lock": 0,
+   "msvcrt": 0,
+   "fcntl": 0,
+   "filelock": 0,
+   "requests": 0,
+   "urllib.request": 4,
+   "subprocess": 2,
+   "argparse": 2,
+   "json": 118,
+   "csv": 0,
+   "preflight": 8,
+   "restore": 7,
+   "backup": 0,
+   "extract_again": 0,
+   "signal": 0,
+   "daemon": 0,
+   "threading": 0,
+   "asyncio": 0,
+   "flask": 0,
+   "http.server": 0
+  },
+  "sys_exit": [
+   [
+    1578,
+    "main()"
+   ]
+  ]
+ },
+ "tools/mas_ondemand_mcp.py": {
+  "path": "tools/mas_ondemand_mcp.py",
+  "bytes": 86978,
+  "lines": 1540,
+  "imports": [
+   "__future__.annotations",
+   "asyncio",
+   "contextlib",
+   "datetime",
+   "json",
+   "mas_dispatch",
+   "mas_observe_mcp",
+   "mas_ondemand_ledger",
+   "mas_preflight",
+   "mcp.server.lowlevel.Server",
+   "mcp.server.stdio.stdio_server",
+   "mcp.types",
+   "os",
+   "re",
+   "shutil",
+   "subprocess",
+   "sys",
+   "tempfile",
+   "time",
+   "uuid"
+  ],
+  "bare_except": [],
+  "broad_except": [
+   [
+    108,
+    "except Exception:  # noqa: BLE001  掩码是锦上添花，导入失败不拖垮 server"
+   ],
+   [
+    243,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    276,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    290,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    307,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    342,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    355,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    503,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    543,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    553,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    621,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    679,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    794,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    819,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    843,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    924,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    934,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    1091,
+    "except Exception as e:  # noqa: BLE001  任何异常都收成结构化错误（server 不崩）"
+   ],
+   [
+    1129,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1142,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    131,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    366,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    521,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    590,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    897,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    903,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    1174,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    734,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    378,
+    "except Exception:  # noqa: BLE001"
+   ]
+  ],
+  "except_pass": [
+   [
+    819,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    131,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    897,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    903,
+    "except Exception:  # noqa: BLE001"
+   ]
+  ],
+  "longest_funcs": [
+   [
+    358,
+    1163,
+    "selftest"
+   ],
+   [
+    169,
+    601,
+    "tool_dispatch_account"
+   ],
+   [
+    92,
+    776,
+    "tool_stop_task"
+   ],
+   [
+    90,
+    405,
+    "_dispatch_target"
+   ],
+   [
+    79,
+    874,
+    "tool_preflight"
+   ],
+   [
+    73,
+    326,
+    "tool_list_running"
+   ],
+   [
+    44,
+    1117,
+    "_check"
+   ],
+   [
+    40,
+    497,
+    "tool_dispatch_queue"
+   ],
+   [
+    37,
+    1204,
+    "script"
+   ],
+   [
+    31,
+    547,
+    "tool_dispatch_script"
+   ],
+   [
+    28,
+    1397,
+    "c_preflight_passthrough"
+   ],
+   [
+    21,
+    1208,
+    "_post"
+   ]
+  ],
+  "cli_args": [],
+  "keywords": {
+   "dry_run": 12,
+   "dry-run": 17,
+   "--apply": 2,
+   "ledger": 37,
+   "lock": 14,
+   "msvcrt": 0,
+   "fcntl": 0,
+   "filelock": 0,
+   "requests": 0,
+   "urllib.request": 0,
+   "subprocess": 8,
+   "argparse": 0,
+   "json": 44,
+   "csv": 0,
+   "preflight": 43,
+   "restore": 0,
+   "backup": 0,
+   "extract_again": 0,
+   "signal": 0,
+   "daemon": 0,
+   "threading": 0,
+   "asyncio": 2,
+   "flask": 0,
+   "http.server": 0
+  },
+  "sys_exit": [
+   [
+    1537,
+    "_check()"
+   ],
+   [
+    1539,
+    "_cmd_selftest()"
+   ]
+  ]
+ },
+ "tools/mas_probe_farm.py": {
+  "path": "tools/mas_probe_farm.py",
+  "bytes": 76151,
+  "lines": 1433,
+  "imports": [
+   "__future__.annotations",
+   "argparse",
+   "contextlib",
+   "datetime",
+   "json",
+   "mas_run_profile",
+   "os",
+   "re",
+   "stage_capability",
+   "subprocess",
+   "sys",
+   "tempfile",
+   "time"
+  ],
+  "bare_except": [],
+  "broad_except": [
+   [
+    318,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    359,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    394,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    571,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    587,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    623,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    829,
+    "except Exception as e:  # noqa: BLE001   （REST 不可达等）"
+   ],
+   [
+    1035,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    1077,
+    "except Exception:  # noqa: BLE001"
+   ],
+   [
+    1176,
+    "except Exception as e:  # noqa: BLE001"
+   ],
+   [
+    621,
+    "except Exception as e:  # noqa: BLE001"
+   ]
+  ],
+  "except_pass": [
+   [
+    424,
+    "except ValueError:"
+   ],
+   [
+    448,
+    "except ValueError:"
+   ]
+  ],
+  "longest_funcs": [
+   [
+    302,
+    756,
+    "run"
+   ],
+   [
+    171,
+    1168,
+    "selftest"
+   ],
+   [
+    88,
+    1342,
+    "main"
+   ],
+   [
+    80,
+    454,
+    "judge_probe"
+   ],
+   [
+    47,
+    294,
+    "host_attempts"
+   ],
+   [
+    41,
+    410,
+    "asst_summary"
+   ],
+   [
+    40,
+    678,
+    "summarize_rp_plan"
+   ],
+   [
+    37,
+    1083,
+    "cmd_list"
+   ],
+   [
+    35,
+    591,
+    "verify_restored"
+   ],
+   [
+    34,
+    182,
+    "hold_lock"
+   ],
+   [
+    33,
+    720,
+    "render_plan_text"
+   ],
+   [
+    33,
+    642,
+    "collect_evidence"
+   ]
+  ],
+  "cli_args": [
+   {
+    "line": 1345,
+    "flags": [
+     "--account"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1346,
+    "flags": [
+     "--stage"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1347,
+    "flags": [
+     "--times"
+    ],
+    "default": "1",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1349,
+    "flags": [
+     "--medicine"
+    ],
+    "default": 0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1350,
+    "flags": [
+     "--force-probe"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1351,
+    "flags": [
+     "--retry-after-fix"
+    ],
+    "default": "",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1353,
+    "flags": [
+     "--timeout"
+    ],
+    "default": 600.0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1354,
+    "flags": [
+     "--farm-max-wait"
+    ],
+    "default": 10800.0,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1356,
+    "flags": [
+     "--probe-only"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1357,
+    "flags": [
+     "--remain-sanity"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": "remain_sanity"
+   },
+   {
+    "line": 1359,
+    "flags": [
+     "--no-remain-sanity"
+    ],
+    "default": "None",
+    "action": "store_false",
+    "nargs": null,
+    "choices": null,
+    "dest": "remain_sanity"
+   },
+   {
+    "line": 1361,
+    "flags": [
+     "--script"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1362,
+    "flags": [
+     "--disable-others"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": "disable_others"
+   },
+   {
+    "line": 1364,
+    "flags": [
+     "--all-accounts"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": "all_accounts"
+   },
+   {
+    "line": 1366,
+    "flags": [
+     "--write-mode"
+    ],
+    "default": "plan",
+    "action": null,
+    "nargs": null,
+    "choices": [
+     "plan",
+     "fixed"
+    ],
+    "dest": null
+   },
+   {
+    "line": 1367,
+    "flags": [
+     "--no-ledger-update"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1368,
+    "flags": [
+     "--ledger-days"
+    ],
+    "default": 1,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1369,
+    "flags": [
+     "--capability-json"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1370,
+    "flags": [
+     "--apply"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1371,
+    "flags": [
+     "--dry-run"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1372,
+    "flags": [
+     "--list"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": [
+     "unknown",
+     "failed",
+     "success",
+     "all"
+    ],
+    "dest": null
+   },
+   {
+    "line": 1373,
+    "flags": [
+     "--no-rest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1374,
+    "flags": [
+     "--status"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1375,
+    "flags": [
+     "--tail"
+    ],
+    "default": 15,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1376,
+    "flags": [
+     "--selftest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 1377,
+    "flags": [
+     "--json"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   }
+  ],
+  "keywords": {
+   "dry_run": 1,
+   "dry-run": 10,
+   "--apply": 8,
+   "ledger": 66,
+   "lock": 13,
+   "msvcrt": 0,
+   "fcntl": 0,
+   "filelock": 0,
+   "requests": 0,
+   "urllib.request": 0,
+   "subprocess": 10,
+   "argparse": 2,
+   "json": 82,
+   "csv": 0,
+   "preflight": 0,
+   "restore": 16,
+   "backup": 0,
+   "extract_again": 0,
+   "signal": 0,
+   "daemon": 0,
+   "threading": 0,
+   "asyncio": 0,
+   "flask": 0,
+   "http.server": 0
+  },
+  "sys_exit": [
+   [
+    1433,
+    "main()"
+   ]
+  ]
+ },
+ "tools/stage_capability.py": {
+  "path": "tools/stage_capability.py",
+  "bytes": 50245,
+  "lines": 989,
+  "imports": [
+   "__future__.annotations",
+   "argparse",
+   "base64",
+   "collections.Counter",
+   "collections.OrderedDict",
+   "datetime",
+   "json",
+   "maa_error_daily",
+   "os",
+   "re",
+   "subprocess",
+   "sys"
+  ],
+  "bare_except": [],
+  "broad_except": [
+   [
+    836,
+    "except Exception as e:  # noqa: BLE001"
+   ]
+  ],
+  "except_pass": [],
+  "longest_funcs": [
+   [
+    108,
+    574,
+    "render_md"
+   ],
+   [
+    106,
+    257,
+    "classify_attempt"
+   ],
+   [
+    100,
+    415,
+    "aggregate"
+   ],
+   [
+    41,
+    790,
+    "cmd_account"
+   ],
+   [
+    37,
+    914,
+    "_selftest"
+   ],
+   [
+    33,
+    953,
+    "main"
+   ],
+   [
+    30,
+    734,
+    "_finish"
+   ],
+   [
+    30,
+    99,
+    "ssh_ps"
+   ],
+   [
+    28,
+    536,
+    "build_report"
+   ],
+   [
+    18,
+    387,
+    "merge_attempts"
+   ],
+   [
+    17,
+    766,
+    "cmd_local"
+   ],
+   [
+    16,
+    517,
+    "stats_of"
+   ]
+  ],
+  "cli_args": [
+   {
+    "line": 955,
+    "flags": [
+     "--build"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 956,
+    "flags": [
+     "--update"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 957,
+    "flags": [
+     "--rebuild-local"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 958,
+    "flags": [
+     "--replay"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 959,
+    "flags": [
+     "--days"
+    ],
+    "default": "<expr>",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 960,
+    "flags": [
+     "--update-days"
+    ],
+    "default": "<expr>",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 961,
+    "flags": [
+     "--account"
+    ],
+    "default": "None",
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 962,
+    "flags": [
+     "--json"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 963,
+    "flags": [
+     "--no-write"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 964,
+    "flags": [
+     "--timeout"
+    ],
+    "default": 1500,
+    "action": null,
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 965,
+    "flags": [
+     "--selftest"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   },
+   {
+    "line": 966,
+    "flags": [
+     "--check"
+    ],
+    "default": "None",
+    "action": "store_true",
+    "nargs": null,
+    "choices": null,
+    "dest": null
+   }
+  ],
+  "keywords": {
+   "dry_run": 0,
+   "dry-run": 0,
+   "--apply": 1,
+   "ledger": 0,
+   "lock": 0,
+   "msvcrt": 0,
+   "fcntl": 0,
+   "filelock": 0,
+   "requests": 0,
+   "urllib.request": 0,
+   "subprocess": 4,
+   "argparse": 2,
+   "json": 34,
+   "csv": 0,
+   "preflight": 0,
+   "restore": 0,
+   "backup": 0,
+   "extract_again": 0,
+   "signal": 0,
+   "daemon": 0,
+   "threading": 0,
+   "asyncio": 0,
+   "flask": 0,
+   "http.server": 0
+  },
+  "sys_exit": [
+   [
+    989,
+    "main()"
+   ]
+  ]
+ }
+}

@@ -1,0 +1,250 @@
+{
+ "tool": "regression",
+ "generated_at": "2026-09-28 11:08:46",
+ "live": true,
+ "ok": true,
+ "passed": 34,
+ "failed": 0,
+ "skipped": 0,
+ "seconds": 37.1,
+ "cases": [
+  {
+   "name": "test_A1_switch_gate_official_ok",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 13
+  },
+  {
+   "name": "test_A2_switch_gate_official_violations",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_A3_switch_gate_nonofficial_ok_and_violations",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_A4_switch_gate_clienttype_normalization_and_unknown",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_A5_switch_gate_module_selftest",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_B1_readback_parse_gui_classifies_entries",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 26
+  },
+  {
+   "name": "test_B2_readback_match_main_five_keys",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_B3_readback_strict_simple_flags",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_B4_readback_attribution_mask_and_mtime_gate",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_B5_readback_golden_live_sample",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_B6_run_profile_module_selftest",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 27314
+  },
+  {
+   "name": "test_C1_dispatch_whitelist_blocks_before_any_io",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 3
+  },
+  {
+   "name": "test_C2_dispatch_no_go_and_dry_run_paths",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 1
+  },
+  {
+   "name": "test_C3_dispatch_singleflight_duplicate_today",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 26
+  },
+  {
+   "name": "test_C4_dispatch_lock_busy_and_stale_reclaim",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 21
+  },
+  {
+   "name": "test_C5_dispatch_response_contract_bad_params",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 14
+  },
+  {
+   "name": "test_C6_dispatch_module_selftest",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 435
+  },
+  {
+   "name": "test_D1_tools_never_dispatch_scriptconfig",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 7
+  },
+  {
+   "name": "test_D2_scriptconfig_semantics_documented",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 1
+  },
+  {
+   "name": "test_D3_writers_never_touch_switch_fields",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 1
+  },
+  {
+   "name": "test_E1_ledger_key_of_mapping",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 1
+  },
+  {
+   "name": "test_E2_ledger_record_idempotent_and_supersede",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 11
+  },
+  {
+   "name": "test_E3_ledger_open_window",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  },
+  {
+   "name": "test_E4_ledger_legacy_merge_and_corrupt_selfheal",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 41
+  },
+  {
+   "name": "test_E5_ledger_retention_prunes",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 14
+  },
+  {
+   "name": "test_E6_run_profile_state_contract",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 14
+  },
+  {
+   "name": "test_F1_all_tool_selftests_green",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 1747
+  },
+  {
+   "name": "test_F2_mapping_offline_invariants",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 3
+  },
+  {
+   "name": "test_F3_inflight_pointer_accounting",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 61
+  },
+  {
+   "name": "test_L1_live_switch_gate_no_new_violations",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 1548
+  },
+  {
+   "name": "test_L2_live_remote_patch_pins",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 594
+  },
+  {
+   "name": "test_L3_live_stage_fallback_and_medicine_ledger",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 4856
+  },
+  {
+   "name": "test_L4_live_run_profile_no_open_runs",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 291
+  },
+  {
+   "name": "test_L5_live_ondemand_ledger_sane",
+   "ok": true,
+   "skip": false,
+   "detail": "",
+   "ms": 0
+  }
+ ]
+}

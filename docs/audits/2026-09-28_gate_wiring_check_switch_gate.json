@@ -1,0 +1,217 @@
+{
+ "tool": "mas_switch_gate",
+ "generated_at": "2026-09-28 00:43:06",
+ "api": "http://100.79.173.69:36163",
+ "rest": {
+  "state": "down",
+  "error": "HTTP Error 502: Bad Gateway",
+  "scripts": 0,
+  "slots": 0
+ },
+ "dirs": [
+  "E:\\MAA-Multi\\MAA_1",
+  "E:\\MAA-Multi\\MAA_2",
+  "E:\\MAA-Multi\\MAA_3",
+  "E:\\MAA-Multi\\MAA_4",
+  "E:\\MAA-Multi\\MAA_5",
+  "E:\\MAA-Multi\\MAA_6",
+  "E:\\MAA-Multi\\MAA_7",
+  "E:\\MAA-Multi\\MAA_8",
+  "E:\\MAA-Multi\\MAA_9",
+  "E:\\MAA-Multi\\MAA_10",
+  "E:\\MAA-Multi\\MAA_11",
+  "E:\\MAA-Multi\\MAA_12"
+ ],
+ "slots": [
+  {
+   "name": "MAA_1",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "166****9553",
+   "switch": true,
+   "mtime": "2026-09-28 00:29:44",
+   "path": "E:\\MAA-Multi\\MAA_1",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_2",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "192****7973",
+   "switch": true,
+   "mtime": "2026-09-27 19:55:33",
+   "path": "E:\\MAA-Multi\\MAA_2",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_3",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "158****4013",
+   "switch": true,
+   "mtime": "2026-09-27 19:59:21",
+   "path": "E:\\MAA-Multi\\MAA_3",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_4",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "171****6354",
+   "switch": true,
+   "mtime": "2026-09-27 20:03:37",
+   "path": "E:\\MAA-Multi\\MAA_4",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_5",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "171****6036",
+   "switch": true,
+   "mtime": "2026-09-27 20:07:44",
+   "path": "E:\\MAA-Multi\\MAA_5",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_6",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "134****5276",
+   "switch": true,
+   "mtime": "2026-09-27 20:02:12",
+   "path": "E:\\MAA-Multi\\MAA_6",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_7",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "182****2399",
+   "switch": true,
+   "mtime": "2026-09-27 19:49:40",
+   "path": "E:\\MAA-Multi\\MAA_7",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_8",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Official",
+   "account": "151****9793",
+   "switch": true,
+   "mtime": "2026-09-27 19:57:58",
+   "path": "E:\\MAA-Multi\\MAA_8",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_9",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Bilibili",
+   "account": "",
+   "switch": false,
+   "mtime": "2026-09-27 05:51:52",
+   "path": "E:\\MAA-Multi\\MAA_9",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_10",
+   "status": "OK",
+   "issues": [
+    "official-switch-not-true"
+   ],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "VIOLATION",
+   "server": "Official",
+   "account": "186****6119",
+   "switch": false,
+   "mtime": "2026-09-27 05:56:42",
+   "path": "E:\\MAA-Multi\\MAA_10",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_11",
+   "status": "OK",
+   "issues": [],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "OK",
+   "server": "Bilibili",
+   "account": "",
+   "switch": false,
+   "mtime": "2026-09-27 05:55:38",
+   "path": "E:\\MAA-Multi\\MAA_11",
+   "expected_servers": []
+  },
+  {
+   "name": "MAA_12",
+   "status": "OK",
+   "issues": [
+    "official-switch-not-true"
+   ],
+   "notes": [
+    "no-rest-meta"
+   ],
+   "verdict": "VIOLATION",
+   "server": "Official",
+   "account": "177****2151",
+   "switch": false,
+   "mtime": "2026-09-26 06:13:09",
+   "path": "E:\\MAA-Multi\\MAA_12",
+   "expected_servers": []
+  }
+ ],
+ "violations": [
+  "MAA_10",
+  "MAA_12"
+ ],
+ "unknown": [],
+ "switch_gate": "VIOLATION:MAA_10,MAA_12"
+}

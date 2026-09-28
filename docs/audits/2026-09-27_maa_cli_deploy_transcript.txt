@@ -1,0 +1,86 @@
+=== maa-cli 主机侧部署证据 transcript ===
+=== 来源：t_9fc91afc / mas / 2026-09-27 22:15 (MRFZ-0000, SSH Administrator) ===
+
+:: host = MRFZ-0000  time = 2026-09-27 22:15:56
+:: maa.exe sha256
+49FC56C7FE9744E9526D79703C0A10D3A5495240D5184B67FD0B5DE126A06871
+:: core sha256 full
+EFF5C522650F967186F72329B3CBC30C4C9168202F459AAB746EA453FD47E164
+:: version
+maa-cli v0.7.5
+MaaCore v6.18.0
+:: dir
+  config = C:\Users\Administrator\AppData\Roaming\loong\maa\config
+  data = C:\Users\Administrator\AppData\Roaming\loong\maa\data
+  resource = C:\Users\Administrator\AppData\Roaming\loong\maa\data\resource
+  library = C:\Users\Administrator\AppData\Roaming\loong\maa\data\lib
+  cache = C:\Users\Administrator\AppData\Local\loong\maa\cache
+  log = C:\Users\Administrator\AppData\Roaming\loong\maa\data\debug
+  hot-update = C:\Users\Administrator\AppData\Roaming\loong\maa\data\MaaResource
+:: junctions
+  C:\Users\Administrator\AppData\Roaming\loong\maa\data\lib -> E:\MAA-CLI\core
+  C:\Users\Administrator\AppData\Roaming\loong\maa\data\resource -> E:\MAA-CLI\core\resource
+:: profile kaori-official.toml
+[connection]
+adb_path = "E:/MuMu Player 12/shell/adb.exe"
+address = "127.0.0.1:16548"
+config = "General"
+[instance_options]
+touch_mode = "MaaTouch"
+:: E:\MAA-CLI sizes
+  bin MB=7.84
+  core MB=529.4
+:: adb devices now
+List of devices attached
+127.0.0.1:16480	device
+127.0.0.1:16736	device
+127.0.0.1:16768	device
+127.0.0.1:16800	device
+127.0.0.1:16832	device
+127.0.0.1:16864	device
+127.0.0.1:17024	device
+127.0.0.1:17120	device
+127.0.0.1:17152	device
+127.0.0.1:17156	device
+127.0.0.1:17312	device
+127.0.0.1:5561	device
+127.0.0.1:5577	device
+127.0.0.1:5579	device
+127.0.0.1:5581	device
+127.0.0.1:5583	device
+127.0.0.1:5585	device
+127.0.0.1:5595	device
+127.0.0.1:5601	device
+127.0.0.1:5603	device
+127.0.0.1:5605	device
+127.0.0.1:5613	device
+127.0.0.1:5619	device
+127.0.0.1:5627	device
+127.0.0.1:5645	device
+127.0.0.1:5647	device
+127.0.0.1:5655	device
+127.0.0.1:5667	device
+127.0.0.1:7555	device
+emulator-5576	device
+emulator-5580	device
+[rc=0]
+
+=== 追加：级别 1 复跑（2026-09-27 22:29） ===
+== maa list ==
+list rc=0
+== maa activity ==
+Opening mini games:
+- 黑流树海刷钱
+activity rc=0
+== dry-run kaori-official ==
+Summary
+----------------------------------------
+[StartUp] Unstarted
+dryrun-kaori rc=0
+== dry-run v-official ==
+Summary
+----------------------------------------
+[StartUp] Unstarted
+dryrun-v rc=0
+:: now = 2026-09-27 22:29:52
+[rc=0]

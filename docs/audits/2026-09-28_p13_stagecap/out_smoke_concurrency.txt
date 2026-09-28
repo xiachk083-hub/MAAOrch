@@ -1,0 +1,31 @@
+phase1 自然竞态：两 worker 同起（各 50000 条），总耗时 7.3s
+  A stdout: iles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1\state\stage_capability_state.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1\reports\stage_capability.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1\reports\STAGE_CAPABILITY.md | WORKER prefix=A rc=0 secs=2.1 pid=22292
+  B stdout: iles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1\state\stage_capability_state.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1\reports\stage_capability.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1\reports\STAGE_CAPABILITY.md | WORKER prefix=B rc=0 secs=7.1 pid=35892
+[phase1]
+  OK   两 worker rc=0（A: WORKER prefix=A rc=0 secs=2.1 pid=22292 | B: WORKER prefix=B rc=0 secs=7.1 pid=35892）
+  OK   state 不丢更新：A=50000/50000 B=50000/50000（共 100000）
+  OK   报告 JSON 一致：row.attempt_n=100000（期望 100000）
+  OK   报告 MD 存在且非空
+  OK   锁已清理（无残留）
+  OK   (自然竞态) 是否重叠等锁：是
+  OK   审计 2 行（mas_audit）：[('update', 50000), ('update', 100000)]
+  OK   审计记到串行叠加（state_attempts=[50000, 100000]）
+phase1b 定序竞态：harness 占锁 3.0s 后放锁
+  A stdout: s/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\state\stage_capability_state.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\reports\stage_capability.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\reports\STAGE_CAPABILITY.md | WORKER prefix=A rc=0 secs=5.3 pid=28860
+  B stdout: s/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\state\stage_capability_state.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\reports\stage_capability.json |       C:/Users/xiach/AppData/Local/hermes/profiles/mas/cache/scratch/p13/smoke3_20260928_110124\phase1b\reports\STAGE_CAPABILITY.md | WORKER prefix=B rc=0 secs=9.9 pid=39520
+[phase1b]
+  OK   两 worker rc=0（A: WORKER prefix=A rc=0 secs=5.3 pid=28860 | B: WORKER prefix=B rc=0 secs=9.9 pid=39520）
+  OK   state 不丢更新：A=50000/50000 B=50000/50000（共 100000）
+  OK   报告 JSON 一致：row.attempt_n=100000（期望 100000）
+  OK   报告 MD 存在且非空
+  OK   锁已清理（无残留）
+  OK   两方都留等待痕（写盘锁被占…等待中）
+  OK   至少一方留获锁痕（等了 N 秒）
+  OK   审计 2 行（mas_audit）：[('update', 50000), ('update', 100000)]
+  OK   审计记到串行叠加（state_attempts=[50000, 100000]）
+phase2 真实 rebuild-local ×2：1.0s
+  OK   两个 --rebuild-local rc=0（0 / 0）
+  OK   真实 JSON 可解析（rows=288 built_at=2026-09-28 11:01:44）
+  OK   真实 MD 存在且非空（57151 B）
+  OK   真实锁无残留
+SMOKE=PASS

@@ -1,0 +1,19 @@
+OK   case1 success via drop_statistics                    1-7            -> success（期望 success）
+OK   case2 maa_result success but no drop for that stage -> unknown 1-7            -> unknown（期望 unknown）
+OK   case3 stage_not_open                                 SR-7           -> failed（期望 failed/stage_not_open）
+OK   case3 stage_not_open                                 1-7            -> success（期望 success）
+OK   case4 stage_unavailable (CA-5 selected, chain error before battle) CA-5           -> failed（期望 failed/stage_unavailable）
+OK   case4 stage_unavailable (CA-5 selected, chain error before battle) 1-7            -> success（期望 success）
+OK   case5 fight error after real drops -> success (env note kept) AT-4           -> success（期望 success）
+OK   case6 net failure without drops -> unknown (not failed) AT-4           -> unknown（期望 unknown）
+OK   case7 annihilation chain done -> success             Annihilation   -> success（期望 success）
+OK   case8 annihilation selected but chain error -> failed Annihilation   -> failed（期望 failed/stage_unavailable）
+OK   case9 proxy mismatch -> failed                       1-7            -> failed（期望 failed/proxy_mismatch）
+OK  掉线类计入环境失败（net_fail_n=2）且不拉低能力判定
+OK   写盘层 1/6 原子写（覆盖生效、不留 tmp）
+OK   写盘层 2/6 锁被占：等待 0.5s 后让路（不删别人的锁）
+OK   写盘层 3/6 陈旧锁抢占 + 释放清理
+OK   写盘层 4/6 _finish 读-改-写回环（两次 update 合并 5 条）
+OK   写盘层 5/6 干跑不碰盘 + 写盘留审计 2 条
+OK   写盘层 6/6 rebuild-local 同锁（忙让路 rc=2 不改产物、闲写盘 1 行、干跑不碰盘）
+--selftest: 全部通过

@@ -1,0 +1,318 @@
+@@@v_165450|2026-09-07|v|明日方舟-官-5-16-54-50.json
+(共 451 行)
+--- 行 1..25 ---
+   1| [2026-09-07 20:55:48.828][INF][Bootstrapper]           <2> ===================================
+   2| 
+   3| [2026-09-07 20:55:48.845][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+   4| 
+   5| [2026-09-07 20:55:48.846][INF][Bootstrapper]           <2> Version v6.17.2
+   6| 
+   7| [2026-09-07 20:55:48.848][INF][Bootstrapper]           <2> Built at 2026-09-06T05:09:24.6120970+08:00
+   8| 
+   9| [2026-09-07 20:55:48.849][INF][Bootstrapper]           <2> Maa ENV: Production
+  10| 
+  11| [2026-09-07 20:55:48.849][INF][Bootstrapper]           <2> Command Line: E:\MAA-Multi\MAA_4\MAA.dll
+  12| 
+  13| [2026-09-07 20:55:48.849][INF][Bootstrapper]           <2> User Dir E:\MAA-Multi\MAA_4\
+  14| 
+  15| [2026-09-07 20:55:48.854][INF][Bootstrapper]           <2> Run as Administrator
+  16| 
+  17| [2026-09-07 20:55:48.854][INF][Bootstrapper]           <2> ===================================
+  18| 
+  19| [2026-09-07 20:55:49.017][INF][ConfigurationHelper]    <2> E:\MAA-Multi\MAA_4\config\gui.json.bak saved
+  20| 
+  21| [2026-09-07 20:55:50.058][INF][ConfigurationHelper]    <2> E:\MAA-Multi\MAA_4\config\gui.new.json.bak saved
+  22| 
+  23| [2026-09-07 20:55:52.994][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+  24| 
+  25| [2026-09-07 20:55:53.078][INF][AsstProxy]              <2> AsstSetUserDir dirame: E:\MAA-Multi\MAA_4\
+--- 行 88..190 ---
+  88| 
+  89| [2026-09-07 20:55:58.078][INF][ResourceUpdater]        <2> {"code":0,"msg":"current resource latest version is 2026-09-05 11:08:36.000","data":{"version_name":"2026-09-05 11:08:36.000","version_number":288,"channel":"stable","os":"","arch":"","release_note":"placeholder"}}
+  90| 
+  91| [2026-09-07 20:56:07.908][INF][TaskQueueViewModel]     <2> Timer canceled: false
+  92| 
+  93| [2026-09-07 20:56:07.908][INF][RunningState]           <2> InterruptLock: depth=0 (called from TimerCanceledAsync)
+  94| 
+  95| [2026-09-07 20:56:07.911][INF][RunningState]           <2> Idle: true to false (called from Init)
+  96| 
+  97| [2026-09-07 20:56:07.927][INF][RunningState]           <2> Idle: false to true (called from Init)
+  98| 
+  99| [2026-09-07 20:56:07.941][INF][TaskQueueViewModel]     <2> LinkStart Enter
+ 100| 
+ 101| [2026-09-07 20:56:07.947][INF][TaskQueueViewModel]     <2> Main windows log clear.
+ 102| 
+ 103| [2026-09-07 20:56:07.947][INF][TaskQueueViewModel]     <2> 
+ 104| 
+ 105| [2026-09-07 20:56:07.948][INF][TaskQueueViewModel]     <2> Build Time:
+ 106| 2026/9/6 05:09:24
+ 107| Resource Time:
+ 108| 2026/9/5 19:08:36
+ 109| 
+ 110| [2026-09-07 20:56:07.952][INF][RunningState]           <2> Idle: true to false (called from LinkStartWithTasks)
+ 111| 
+ 112| [2026-09-07 20:56:07.964][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+ 113| 
+ 114| [2026-09-07 20:56:07.976][INF][AsstProxy]              <11> name: MuMuEmulator12, extras: {}
+ 115| 
+ 116| [2026-09-07 20:56:07.977][INF][AsstProxy]              <11> handle: 2174933715056, adbPath: E:\MuMu Player 12\nx_main\adb.exe, address: 127.0.0.1:16992, config: MuMuEmulator12
+ 117| 
+ 118| [2026-09-07 20:56:10.589][INF][AsstProxy]              <11> handle: 2174933715056, adbPath: E:\MuMu Player 12\nx_main\adb.exe, address: 127.0.0.1:16992, config: MuMuEmulator12, return: true
+ 119| 
+ 120| [2026-09-07 20:56:10.595][INF][TaskQueueViewModel]     <2> 最快截图耗时: 328ms (RawWithGzip)
+ 121| 
+ 122| [2026-09-07 20:56:10.598][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+ 123| 
+ 124| [2026-09-07 20:56:10.627][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+ 125| 
+ 126| [2026-09-07 20:56:10.628][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+ 127| 
+ 128| [2026-09-07 20:56:10.641][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+ 129| 
+ 130| [2026-09-07 20:56:10.641][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+ 131| 
+ 132| [2026-09-07 20:56:10.642][INF][TaskQueueViewModel]     <2> Index 3, Type "Infrast", Name 基建换班, IsEnable true
+ 133| 
+ 134| [2026-09-07 20:56:10.658][INF][TaskQueueViewModel]     <2> Index 4, Type "Recruit", Name 自动公招, IsEnable true
+ 135| 
+ 136| [2026-09-07 20:56:10.664][INF][TaskQueueViewModel]     <2> Index 5, Type "Mall", Name 信用收支, IsEnable true
+ 137| 
+ 138| [2026-09-07 20:56:10.689][INF][TaskQueueViewModel]     <2> Index 6, Type "Award", Name 领取奖励, IsEnable true
+ 139| 
+ 140| [2026-09-07 20:56:10.693][INF][TaskQueueViewModel]     <2> Index 7, Type "Roguelike", Name 自动肉鸽, IsEnable false
+ 141| 
+ 142| [2026-09-07 20:56:10.701][INF][TaskQueueViewModel]     <2> 正在运行中……
+ 143| 
+ 144| [2026-09-07 20:56:10.711][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+ 145| 
+ 146| [2026-09-07 20:56:10.713][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+ 147| 
+ 148| [2026-09-07 20:56:10.738][INF][TaskQueueViewModel]     <2> LinkStart Exit, 2,796 ms
+ 149| 
+ 150| [2026-09-07 20:56:26.049][INF][TaskQueueViewModel]     <2> 截图用时 306ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+ 151| 
+ 152| [2026-09-07 20:58:27.315][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+ 153| 
+ 154| [2026-09-07 20:58:27.316][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+ 155| 
+ 156| [2026-09-07 20:58:27.804][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+ 157| 
+ 158| [2026-09-07 20:58:27.805][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+ 159| 
+ 160| [2026-09-07 20:59:12.528][INF][TaskQueueViewModel]     <2> 开始行动 1~5 次, -150理智
+ 161| 
+ 162| 理智: 151/210
+ 163| 
+ 164| [2026-09-07 21:01:27.752][INF][TaskQueueViewModel]     <2> LS-5 掉落统计: 
+ 165| 龙门币 : 1800 (+1800)
+ 166| 高级作战记录 : 15 (+15)
+ 167| 中级作战记录 : 5 (+5)
+ 168| 初级作战记录 : 5 (+5)
+ 169| 家具 : 1 (+1)
+ 170| 当前次数 : 5
+ 171| 
+ 172| [2026-09-07 21:01:27.770][INF][ToolboxViewModel]       <2> Depot updated from stage drops, 5 items processed
+ 173| 
+ 174| [2026-09-07 21:01:27.774][INF][GameDataReportService]  <2> Start PostWithRetryAsync, url: https://penguin-stats.io/PenguinStats/api/v2/report
+ 175| 
+ 176| [2026-09-07 21:01:27.774][INF][GameDataReportService]  <2> Request headers: {"User-Agent":"MaaAssistantArknights/6.17.2","X-Penguin-Idempotency-Key":"MAA68e6f1c1854f1d9f8ed412dcb86"}
+ 177| 
+ 178| [2026-09-07 21:01:27.776][INF][GameDataReportService]  <2> Request body: {"drops":[{"dropType":"FURNITURE","itemId":"furni","quantity":1},{"dropType":"NORMAL_DROP","itemId":"2004","quantity":15},{"dropType":"NORMAL_DROP","itemId":"2003","quantity":5},{"dropType":"NORMAL_DROP","itemId":"2002","quantity":5}],"server":"CN","source":"MaaAssistantArknights","stageId":"wk_kc_5","times":5,"version":"v6.17.2"}
+ 179| 
+ 180| [2026-09-07 21:01:27.784][INF][GameDataReportService]  <2> Start PostWithRetryAsync, url: https://backend.yituliu.cn/maa/upload/stageDrop
+ 181| 
+ 182| [2026-09-07 21:01:27.784][INF][GameDataReportService]  <2> Request headers: {"User-Agent":"MaaAssistantArknights/6.17.2"}
+ 183| 
+ 184| [2026-09-07 21:01:27.784][INF][GameDataReportService]  <2> Request body: {"drops":[{"dropType":"FURNITURE","itemId":"furni","quantity":1},{"dropType":"NORMAL_DROP","itemId":"2004","quantity":15},{"dropType":"NORMAL_DROP","itemId":"2003","quantity":5},{"dropType":"NORMAL_DROP","itemId":"2002","quantity":5}],"server":"CN","source":"MaaAssistantArknights","stageId":"wk_kc_5","times":5,"version":"v6.17.2"}
+ 185| 
+ 186| [2026-09-07 21:01:27.913][INF][HttpResponseLoggingExtension] <2> HTTP: OK POST https://backend.yituliu.cn/maa/upload/stageDrop null null 128.889ms
+ 187| 
+ 188| [2026-09-07 21:01:28.272][INF][HttpResponseLoggingExtension] <2> HTTP: OK POST https://penguin-stats.io/PenguinStats/api/v2/report null null 493.493ms
+ 189| 
+ 190| [2026-09-07 21:01:28.273][INF][ConfigurationHelper]    <2> Configuration Root.Configurations.Default.Gui.RuntimeSettings..PenguinId has been set: `` -> `028916349`, save scheduled
+@@@v_014157|2026-09-07|v|明日方舟-官-5-01-41-57.json
+(共 334 行)
+--- 行 88..175 ---
+  88| 
+  89| [2026-09-07 05:42:21.367][INF][TaskQueueViewModel]     <2> Timer canceled: false
+  90| 
+  91| [2026-09-07 05:42:21.368][INF][RunningState]           <2> InterruptLock: depth=0 (called from TimerCanceledAsync)
+  92| 
+  93| [2026-09-07 05:42:21.369][INF][RunningState]           <2> Idle: true to false (called from Init)
+  94| 
+  95| [2026-09-07 05:42:21.384][INF][RunningState]           <2> Idle: false to true (called from Init)
+  96| 
+  97| [2026-09-07 05:42:21.393][INF][TaskQueueViewModel]     <2> LinkStart Enter
+  98| 
+  99| [2026-09-07 05:42:21.398][INF][TaskQueueViewModel]     <2> Main windows log clear.
+ 100| 
+ 101| [2026-09-07 05:42:21.398][INF][TaskQueueViewModel]     <2> 
+ 102| 
+ 103| [2026-09-07 05:42:21.399][INF][TaskQueueViewModel]     <2> Build Time:
+ 104| 2026/9/6 05:09:24
+ 105| Resource Time:
+ 106| 2026/9/5 19:08:36
+ 107| 
+ 108| [2026-09-07 05:42:21.402][INF][RunningState]           <2> Idle: true to false (called from LinkStartWithTasks)
+ 109| 
+ 110| [2026-09-07 05:42:21.414][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+ 111| 
+ 112| [2026-09-07 05:42:21.418][INF][AsstProxy]              <15> name: MuMuEmulator12, extras: {}
+ 113| 
+ 114| [2026-09-07 05:42:21.419][INF][AsstProxy]              <15> handle: 1773841702208, adbPath: E:\MuMu Player 12\nx_main\adb.exe, address: 127.0.0.1:16992, config: MuMuEmulator12
+ 115| 
+ 116| [2026-09-07 05:42:24.401][INF][AsstProxy]              <15> handle: 1773841702208, adbPath: E:\MuMu Player 12\nx_main\adb.exe, address: 127.0.0.1:16992, config: MuMuEmulator12, return: true
+ 117| 
+ 118| [2026-09-07 05:42:24.407][INF][TaskQueueViewModel]     <2> 最快截图耗时: 259ms (RawByNc)
+ 119| 
+ 120| [2026-09-07 05:42:24.412][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+ 121| 
+ 122| [2026-09-07 05:42:24.441][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+ 123| 
+ 124| [2026-09-07 05:42:24.443][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+ 125| 
+ 126| [2026-09-07 05:42:24.454][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+ 127| 
+ 128| [2026-09-07 05:42:24.455][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+ 129| 
+ 130| [2026-09-07 05:42:24.455][INF][TaskQueueViewModel]     <2> Index 3, Type "Infrast", Name 基建换班, IsEnable true
+ 131| 
+ 132| [2026-09-07 05:42:24.471][INF][TaskQueueViewModel]     <2> Index 4, Type "Recruit", Name 自动公招, IsEnable true
+ 133| 
+ 134| [2026-09-07 05:42:24.475][INF][TaskQueueViewModel]     <2> Index 5, Type "Mall", Name 信用收支, IsEnable true
+ 135| 
+ 136| [2026-09-07 05:42:24.487][INF][TaskQueueViewModel]     <2> Index 6, Type "Award", Name 领取奖励, IsEnable true
+ 137| 
+ 138| [2026-09-07 05:42:24.492][INF][TaskQueueViewModel]     <2> Index 7, Type "Roguelike", Name 自动肉鸽, IsEnable false
+ 139| 
+ 140| [2026-09-07 05:42:24.500][INF][TaskQueueViewModel]     <2> 正在运行中……
+ 141| 
+ 142| [2026-09-07 05:42:24.512][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+ 143| 
+ 144| [2026-09-07 05:42:24.514][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+ 145| 
+ 146| [2026-09-07 05:42:24.547][INF][TaskQueueViewModel]     <2> LinkStart Exit, 3,153 ms
+ 147| 
+ 148| [2026-09-07 05:42:44.132][INF][TaskQueueViewModel]     <2> 截图用时 398ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+ 149| 
+ 150| [2026-09-07 05:45:14.953][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+ 151| 
+ 152| [2026-09-07 05:45:14.953][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+ 153| 
+ 154| [2026-09-07 05:45:15.442][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+ 155| 
+ 156| [2026-09-07 05:45:15.442][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+ 157| 
+ 158| [2026-09-07 05:46:06.083][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+ 159| 理智: 11/210  
+ 160| 
+ 161| [2026-09-07 05:46:06.084][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+ 162| 
+ 163| [2026-09-07 05:46:06.584][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+ 164| 
+ 165| [2026-09-07 05:46:06.585][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+ 166| 
+ 167| [2026-09-07 05:46:47.587][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -6理智
+ 168| 
+ 169| 理智: 11/210
+ 170| 
+ 171| [2026-09-07 05:48:41.992][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+ 172| 龙门币 : 72 (+72)
+ 173| 固源岩 : 2 (+2)
+ 174| 基础作战记录 : 2 (+2)
+ 175| 赤金 : 1 (+1)
+@@@u1739_025241|2026-09-07|用户_173920298|明日方舟-b-3-02-52-41.json
+(共 346 行)
+--- 行 88..175 ---
+  88| 
+  89| [2026-09-07 06:53:07.492][INF][TaskQueueViewModel]     <2> Timer canceled: false
+  90| 
+  91| [2026-09-07 06:53:07.492][INF][RunningState]           <2> InterruptLock: depth=0 (called from TimerCanceledAsync)
+  92| 
+  93| [2026-09-07 06:53:07.493][INF][RunningState]           <2> Idle: true to false (called from Init)
+  94| 
+  95| [2026-09-07 06:53:07.504][INF][RunningState]           <2> Idle: false to true (called from Init)
+  96| 
+  97| [2026-09-07 06:53:07.513][INF][TaskQueueViewModel]     <2> LinkStart Enter
+  98| 
+  99| [2026-09-07 06:53:07.517][INF][TaskQueueViewModel]     <2> Main windows log clear.
+ 100| 
+ 101| [2026-09-07 06:53:07.517][INF][TaskQueueViewModel]     <2> 
+ 102| 
+ 103| [2026-09-07 06:53:07.518][INF][TaskQueueViewModel]     <2> Build Time:
+ 104| 2026/9/6 05:09:24
+ 105| Resource Time:
+ 106| 2026/9/5 19:08:36
+ 107| 
+ 108| [2026-09-07 06:53:07.522][INF][RunningState]           <2> Idle: true to false (called from LinkStartWithTasks)
+ 109| 
+ 110| [2026-09-07 06:53:07.530][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+ 111| 
+ 112| [2026-09-07 06:53:07.535][INF][AsstProxy]              <15> name: MuMuEmulator12, extras: {}
+ 113| 
+ 114| [2026-09-07 06:53:07.535][INF][AsstProxy]              <15> handle: 1908058542512, adbPath: E:\MuMu Player 12\nx_main\adb.exe, address: 127.0.0.1:16448, config: MuMuEmulator12
+ 115| 
+ 116| [2026-09-07 06:53:10.286][INF][AsstProxy]              <15> handle: 1908058542512, adbPath: E:\MuMu Player 12\nx_main\adb.exe, address: 127.0.0.1:16448, config: MuMuEmulator12, return: true
+ 117| 
+ 118| [2026-09-07 06:53:10.291][INF][TaskQueueViewModel]     <2> 最快截图耗时: 350ms (RawByNc)
+ 119| 
+ 120| [2026-09-07 06:53:10.295][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+ 121| 
+ 122| [2026-09-07 06:53:10.319][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+ 123| 
+ 124| [2026-09-07 06:53:10.320][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+ 125| 
+ 126| [2026-09-07 06:53:10.329][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+ 127| 
+ 128| [2026-09-07 06:53:10.330][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+ 129| 
+ 130| [2026-09-07 06:53:10.330][INF][TaskQueueViewModel]     <2> Index 3, Type "Infrast", Name 基建换班, IsEnable true
+ 131| 
+ 132| [2026-09-07 06:53:10.341][INF][TaskQueueViewModel]     <2> Index 4, Type "Recruit", Name 自动公招, IsEnable true
+ 133| 
+ 134| [2026-09-07 06:53:10.345][INF][TaskQueueViewModel]     <2> Index 5, Type "Mall", Name 信用收支, IsEnable true
+ 135| 
+ 136| [2026-09-07 06:53:10.356][INF][TaskQueueViewModel]     <2> Index 6, Type "Award", Name 领取奖励, IsEnable true
+ 137| 
+ 138| [2026-09-07 06:53:10.359][INF][TaskQueueViewModel]     <2> Index 7, Type "Roguelike", Name 自动肉鸽, IsEnable false
+ 139| 
+ 140| [2026-09-07 06:53:10.363][INF][TaskQueueViewModel]     <2> 正在运行中……
+ 141| 
+ 142| [2026-09-07 06:53:10.371][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+ 143| 
+ 144| [2026-09-07 06:53:10.372][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+ 145| 
+ 146| [2026-09-07 06:53:10.390][INF][TaskQueueViewModel]     <2> LinkStart Exit, 2,877 ms
+ 147| 
+ 148| [2026-09-07 06:53:39.330][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 453ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器，请在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强
+ 149| 
+ 150| [2026-09-07 06:56:14.917][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+ 151| 
+ 152| [2026-09-07 06:56:14.918][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+ 153| 
+ 154| [2026-09-07 06:56:15.404][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+ 155| 
+ 156| [2026-09-07 06:56:15.405][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+ 157| 
+ 158| [2026-09-07 06:57:07.894][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+ 159| 理智: 13/210  
+ 160| 
+ 161| [2026-09-07 06:57:07.895][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+ 162| 
+ 163| [2026-09-07 06:57:08.395][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+ 164| 
+ 165| [2026-09-07 06:57:08.395][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+ 166| 
+ 167| [2026-09-07 06:57:55.693][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -12理智
+ 168| 
+ 169| 理智: 13/210
+ 170| 
+ 171| [2026-09-07 06:59:40.466][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+ 172| 龙门币 : 144 (+144)
+ 173| 固源岩 : 2 (+2)
+ 174| 基础作战记录 : 2 (+2)
+ 175| 源岩 : 1 (+1)
+
+---STDERR---
+
+rc=0

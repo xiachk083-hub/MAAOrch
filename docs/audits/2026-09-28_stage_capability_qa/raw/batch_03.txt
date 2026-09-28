@@ -1,0 +1,1782 @@
+###ENTRY|2026-09-02|白桑_|明日方舟-官-33-15-33-00.json|白桑_|CA-5|
+###JSON
+{
+    "recruit_statistics": {
+        "4★": 1
+    },
+    "drop_statistics": {
+        "CA-5": {
+            "龙门币": 720,
+            "技巧概要·卷3": 4,
+            "技巧概要·卷2": 4,
+            "技巧概要·卷1": 2
+        },
+        "1-7": {
+            "龙门币": 288,
+            "固源岩": 5,
+            "基础作战记录": 4
+        }
+    },
+    "sanity": 0,
+    "sanity_full_at": "理智将在 2026-09-03 16:41 回满。(20h 48m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=393|bytes=31272
+##HEAD
+[2026-09-02 19:33:51.458][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-02 19:33:51.473][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-02 19:33:51.475][INF][Bootstrapper]           <2> Version v6.16.8
+
+##FILTER
+[2026-09-02 19:33:53.931][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-02 19:34:07.785][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-02 19:34:10.074][INF][TaskQueueViewModel]     <2> 最快截图耗时: 287ms (RawWithGzip)
+[2026-09-02 19:34:10.076][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-02 19:34:10.119][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-02 19:34:10.121][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-02 19:34:10.131][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-02 19:34:10.131][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-02 19:34:10.169][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-02 19:35:41.369][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-02 19:35:41.370][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-02 19:35:41.859][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-02 19:36:24.019][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -60理智
+理智: 83/210
+[2026-09-02 19:38:35.696][INF][TaskQueueViewModel]     <2> CA-5 掉落统计: 
+[2026-09-02 19:39:10.260][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 24/210  
+[2026-09-02 19:39:10.260][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-02 19:39:10.760][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-02 19:39:56.848][INF][TaskQueueViewModel]     <2> 开始行动 1~4 次, -24理智
+理智: 24/210
+[2026-09-02 19:41:28.535][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-02 19:42:01.842][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 0/210  
+[2026-09-02 19:42:01.843][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-02 19:42:02.343][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-02 19:51:19.301][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-02 19:51:19.301][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-02 19:51:19.810][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-02 19:52:12.513][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-02 19:52:12.514][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-02 19:52:13.015][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-02 19:52:41.701][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-02 19:52:48.413][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 404ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器请尝试开启截图增强
+[2026-09-02 19:53:14.985][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-02 19:53:14.986][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-02 19:53:15.486][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-02 19:53:27.008][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-02 19:53:27.008][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-02 19:53:27.025][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-03 16:41 回满。(20h 48m 后)
+[2026-09-02 19:53:27.045][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-02 19:53:27.043][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-02 19:53:27.045][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-02|河清灯_别寄圆通|明日方舟-日-4-02-19-58.json|河清灯_别寄圆通|CA-5|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 74,
+    "sanity_full_at": "",
+    "maa_result": "MAA 进程超时"
+}
+###JSON_END
+###LOG|lines=219|bytes=11826
+##HEAD
+[2026-09-02 06:21:04.114][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-02 06:21:04.132][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-02 06:21:04.133][INF][Bootstrapper]           <2> Version v6.16.8
+
+##FILTER
+[2026-09-02 06:21:07.450][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-02 06:21:23.271][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-02 06:21:28.524][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 720ms (RawByNc)
+[2026-09-02 06:21:28.527][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-02 06:21:28.576][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-02 06:21:28.578][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-02 06:21:28.632][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-02 06:21:59.513][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 726ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器请尝试开启截图增强
+[2026-09-02 06:23:52.924][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-02 06:23:52.925][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-02 06:23:53.403][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-02 06:24:23.212][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -60理智
+理智: 74/173
+[2026-09-02 06:25:06.363][WRN][TaskQueueViewModel]     <2> 游戏掉线，重新连接
+[2026-09-02 06:25:32.631][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-02 06:25:33.145][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 3
+[2026-09-02 06:35:11.570][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-02 06:35:11.571][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 3
+[2026-09-02 06:35:12.040][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 4
+[2026-09-02 06:35:34.656][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-02 06:35:34.657][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 4
+[2026-09-02 06:35:35.157][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 5
+##TAIL
+[2026-09-02 06:35:34.657][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 4
+
+[2026-09-02 06:35:35.157][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 5
+
+###END
+###ENTRY|2026-09-02|河清灯_别寄圆通|明日方舟-日-4-03-11-19.json|河清灯_别寄圆通|CA-5|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 83,
+    "sanity_full_at": "",
+    "maa_result": "MAA 进程超时"
+}
+###JSON_END
+###LOG|lines=221|bytes=12061
+##HEAD
+[2026-09-02 07:12:21.375][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-02 07:12:21.390][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-02 07:12:21.391][INF][Bootstrapper]           <2> Version v6.16.8
+
+##FILTER
+[2026-09-02 07:12:23.980][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-02 07:12:38.262][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-02 07:12:41.162][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 502ms (RawWithGzip)
+[2026-09-02 07:12:41.166][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-02 07:12:41.207][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-02 07:12:41.208][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-02 07:12:41.256][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-02 07:13:00.883][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 449ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器请尝试开启截图增强
+[2026-09-02 07:14:26.947][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-02 07:14:26.947][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-02 07:14:27.436][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-02 07:14:58.395][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -60理智
+理智: 83/173
+[2026-09-02 07:15:41.685][WRN][TaskQueueViewModel]     <2> 游戏掉线，重新连接
+[2026-09-02 07:16:07.098][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-02 07:16:07.602][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 3
+[2026-09-02 07:24:36.609][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-02 07:24:36.610][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 3
+[2026-09-02 07:24:37.126][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 4
+[2026-09-02 07:24:56.804][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-02 07:24:56.804][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 4
+[2026-09-02 07:24:57.304][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 5
+##TAIL
+[2026-09-02 07:24:56.804][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 4
+
+[2026-09-02 07:24:57.304][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 5
+
+###END
+###ENTRY|2026-09-02|河清灯_别寄圆通|明日方舟-日-4-07-16-22.json|河清灯_别寄圆通|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 124,
+    "sanity_full_at": "",
+    "maa_result": "MAA 进程超时"
+}
+###JSON_END
+###LOG|lines=235|bytes=12534
+##HEAD
+[2026-09-02 11:17:29.545][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-02 11:17:29.564][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-02 11:17:29.566][INF][Bootstrapper]           <2> Version v6.16.8
+
+##FILTER
+[2026-09-02 11:17:32.751][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-02 11:17:47.885][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-02 11:17:52.925][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 704ms (RawWithGzip)
+[2026-09-02 11:17:52.927][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-02 11:17:52.972][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-02 11:17:52.973][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-02 11:17:52.984][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-02 11:17:52.985][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-02 11:17:53.024][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-02 11:18:21.148][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 541ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器请尝试开启截图增强
+[2026-09-02 11:20:08.361][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-02 11:20:08.362][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-02 11:20:08.850][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-02 11:20:41.728][INF][TaskQueueViewModel]     <2> 开始行动 1~4 次, -120理智
+理智: 124/173
+[2026-09-02 11:21:25.202][WRN][TaskQueueViewModel]     <2> 游戏掉线，重新连接
+[2026-09-02 11:21:53.871][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-02 11:21:54.420][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-02 11:22:31.237][INF][TaskQueueViewModel]     <2> 开始行动 1~6 次, -36理智
+理智: 124/173
+[2026-09-02 11:23:14.637][WRN][TaskQueueViewModel]     <2> 游戏掉线，重新连接
+[2026-09-02 11:23:46.849][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-02 11:23:47.353][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-02 11:33:55.406][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-02 11:33:55.407][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-02 11:33:55.910][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-02 11:34:24.598][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-02 11:34:24.599][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-02 11:34:25.099][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+##TAIL
+[2026-09-02 11:34:24.599][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+
+[2026-09-02 11:34:25.099][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+
+###END
+###ENTRY|2026-09-03|用户_173920298|明日方舟-b-3-02-29-21.json|用户_173920298|CE-6|
+###JSON
+{
+    "recruit_statistics": {
+        "4★": 1
+    },
+    "drop_statistics": {
+        "CE-6": {
+            "龙门币": 30000
+        },
+        "1-7": {
+            "龙门币": 72,
+            "基础作战记录": 2,
+            "固源岩": 1
+        }
+    },
+    "sanity": 1,
+    "sanity_full_at": "理智将在 2026-09-04 03:33 回满。(20h 40m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=364|bytes=22368
+##HEAD
+[2026-09-03 06:30:17.283][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-03 06:30:17.297][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-03 06:30:17.298][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-03 06:30:21.331][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-03 06:30:36.858][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-03 06:30:39.212][INF][TaskQueueViewModel]     <2> 最快截图耗时: 350ms (RawWithGzip)
+[2026-09-03 06:30:39.214][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-03 06:30:39.254][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-03 06:30:39.255][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-03 06:30:39.265][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-03 06:30:39.266][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 06:30:39.305][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-03 06:30:39.307][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-03 06:31:00.931][INF][TaskQueueViewModel]     <2> 截图用时 347ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-03 06:33:00.236][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-03 06:33:00.236][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-03 06:33:00.728][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-03 06:33:00.729][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-03 06:33:48.206][INF][TaskQueueViewModel]     <2> 开始行动 1~3 次, -108理智
+理智: 114/210
+[2026-09-03 06:36:03.288][INF][TaskQueueViewModel]     <2> CE-6 掉落统计: 
+[2026-09-03 06:36:46.265][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 7/210  
+[2026-09-03 06:36:46.266][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-03 06:36:46.767][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-03 06:36:46.767][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-03 06:37:34.759][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -6理智
+理智: 7/210
+[2026-09-03 06:39:12.723][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 06:39:43.317][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 1/210  
+[2026-09-03 06:39:43.317][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-03 06:39:43.818][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-03 06:50:34.726][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-03 06:50:34.727][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-03 06:50:35.245][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-03 06:51:28.293][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-03 06:51:28.293][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-03 06:51:28.794][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-03 06:52:46.055][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-03 06:52:46.056][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-03 06:52:46.560][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-03 06:53:02.012][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-03 06:53:02.012][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-03 06:53:02.066][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-04 03:33 回满。(20h 40m 后)
+[2026-09-03 06:53:02.098][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-03 06:53:02.095][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-03 06:53:02.098][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-03|用户_173920298|明日方舟-b-3-15-30-00.json|用户_173920298|CE-6|
+###JSON
+{
+    "recruit_statistics": {
+        "4★": 1
+    },
+    "drop_statistics": {
+        "CE-6": {
+            "龙门币": 30000
+        },
+        "1-7": {
+            "龙门币": 216,
+            "固源岩": 5,
+            "基础作战记录": 4,
+            "双酮": 1
+        }
+    },
+    "sanity": 5,
+    "sanity_full_at": "理智将在 2026-09-04 16:09 回满。(20h 16m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=402|bytes=37910
+##HEAD
+[2026-09-03 19:31:02.460][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-03 19:31:02.475][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-03 19:31:02.476][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-03 19:31:05.318][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-03 19:31:19.242][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-03 19:31:21.345][INF][TaskQueueViewModel]     <2> 最快截图耗时: 316ms (RawWithGzip)
+[2026-09-03 19:31:21.347][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-03 19:31:21.386][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-03 19:31:21.387][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-03 19:31:21.396][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-03 19:31:21.396][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 19:31:21.435][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-03 19:31:21.436][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-03 19:31:41.110][INF][TaskQueueViewModel]     <2> 截图用时 328ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-03 19:32:51.893][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-03 19:32:51.893][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-03 19:32:52.384][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-03 19:32:52.384][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-03 19:33:38.298][INF][TaskQueueViewModel]     <2> 开始行动 1~3 次, -108理智
+理智: 130/210
+[2026-09-03 19:35:44.572][INF][TaskQueueViewModel]     <2> CE-6 掉落统计: 
+[2026-09-03 19:36:19.508][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 23/210  
+[2026-09-03 19:36:19.508][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-03 19:36:20.008][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-03 19:36:20.009][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-03 19:37:05.661][INF][TaskQueueViewModel]     <2> 开始行动 1~3 次, -18理智
+理智: 23/210
+[2026-09-03 19:38:36.696][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 19:39:08.965][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 5/210  
+[2026-09-03 19:39:08.965][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-03 19:39:09.466][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-03 19:49:17.671][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-03 19:49:17.671][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-03 19:49:18.185][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-03 19:50:09.872][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-03 19:50:09.873][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-03 19:50:10.374][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-03 19:51:13.268][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-03 19:52:09.872][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-03 19:52:09.872][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-03 19:52:10.372][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-03 19:52:24.881][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-03 19:52:24.882][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-03 19:52:24.898][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-04 16:09 回满。(20h 16m 后)
+[2026-09-03 19:52:24.919][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-03 19:52:24.917][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-03 19:52:24.919][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-03|v|明日方舟-官-5-01-32-15.json|v|CE-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "CE-6": {
+            "龙门币": 20000
+        },
+        "1-7": {
+            "龙门币": 144,
+            "基础作战记录": 3,
+            "固源岩": 2,
+            "破损装置": 1,
+            "源岩": 1
+        }
+    },
+    "sanity": 0,
+    "sanity_full_at": "理智将在 2026-09-04 02:42 回满。(20h 44m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=334|bytes=17684
+##HEAD
+[2026-09-03 05:33:11.011][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-03 05:33:11.025][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-03 05:33:11.026][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-03 05:33:14.728][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-03 05:33:30.514][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-03 05:33:32.968][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 402ms (RawWithGzip)
+[2026-09-03 05:33:32.972][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-03 05:33:33.014][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-03 05:33:33.015][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-03 05:33:33.025][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-03 05:33:33.025][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 05:33:33.059][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-03 05:33:33.061][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-03 05:33:51.716][INF][TaskQueueViewModel]     <2> 截图用时 297ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-03 05:35:39.953][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-03 05:35:39.954][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-03 05:35:40.442][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-03 05:35:40.443][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-03 05:36:28.155][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -72理智
+理智: 83/210
+[2026-09-03 05:38:40.970][INF][TaskQueueViewModel]     <2> CE-6 掉落统计: 
+[2026-09-03 05:39:20.052][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 12/210  
+[2026-09-03 05:39:20.053][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-03 05:39:20.553][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-03 05:39:20.553][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-03 05:40:07.156][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -12理智
+理智: 12/210
+[2026-09-03 05:41:56.268][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 05:42:31.914][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 0/210  
+[2026-09-03 05:42:31.915][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-03 05:42:32.415][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-03 05:53:31.604][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-03 05:53:31.604][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-03 05:53:32.115][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-03 05:54:03.899][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-03 05:54:03.900][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-03 05:54:04.402][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-03 05:56:09.296][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-03 05:57:27.553][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-03 05:57:27.555][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-03 05:57:28.083][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-03 05:57:43.196][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-03 05:57:43.196][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-03 05:57:43.292][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-04 02:42 回满。(20h 44m 后)
+[2026-09-03 05:57:43.325][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-03 05:57:43.322][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-03 05:57:43.325][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-03|酸酸酸酸|l-1-酸酸酸酸-11-01-12.json|酸酸酸酸|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "1-7": {
+            "龍門幣": 3024,
+            "名声": 3024,
+            "初級源岩": 53,
+            "入門作戦記録": 48,
+            "純金": 5,
+            "エステル原料": 5,
+            "源岩鉱": 4,
+            "アケトン試剤": 2,
+            "破損装置": 2,
+            "ブドウ糖": 2,
+            "異鉄の欠片": 1
+        }
+    },
+    "sanity": 1,
+    "sanity_full_at": "理智将在 2026-09-04 06:04 回满。(14h 38m 后)",
+    "maa_result": "MAA 部分任务执行失败"
+}
+###JSON_END
+###LOG|lines=496|bytes=30089
+##HEAD
+[2026-09-03 15:01:16.802][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-03 15:01:16.815][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-03 15:01:16.816][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-03 15:01:19.610][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-03 15:01:32.824][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-03 15:01:35.458][INF][TaskQueueViewModel]     <2> 最快截图耗时: 369ms (RawByNc)
+[2026-09-03 15:01:35.460][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-03 15:01:35.483][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-03 15:01:35.484][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 15:01:35.493][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-03 15:01:35.494][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 15:01:35.543][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-03 15:01:35.545][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-03 15:01:38.423][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-03 15:01:38.423][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-03 15:01:38.923][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-03 15:01:38.923][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-03 15:01:51.012][INF][TaskQueueViewModel]     <2> 截图用时 360ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-03 15:02:10.723][INF][TaskQueueViewModel]     <2> 开始行动 1~6 次, -36理智
+理智: 148/148
+[2026-09-03 15:03:54.016][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:04:07.922][INF][TaskQueueViewModel]     <2> 开始行动 7~12 次, -36理智
+理智: 112/148
+[2026-09-03 15:05:49.159][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:06:02.901][INF][TaskQueueViewModel]     <2> 开始行动 13~18 次, -36理智
+理智: 76/148
+[2026-09-03 15:07:48.753][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:08:02.473][INF][TaskQueueViewModel]     <2> 开始行动 19~24 次, -36理智
+理智: 144/149
+[2026-09-03 15:09:43.892][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:09:57.502][INF][TaskQueueViewModel]     <2> 开始行动 25~30 次, -36理智
+理智: 108/149
+[2026-09-03 15:11:39.042][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:11:52.761][INF][TaskQueueViewModel]     <2> 开始行动 31~36 次, -36理智
+理智: 72/149
+[2026-09-03 15:13:34.042][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:13:47.631][INF][TaskQueueViewModel]     <2> 开始行动 37~42 次, -36理智
+理智: 37/149
+[2026-09-03 15:15:28.618][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 15:15:53.061][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 1/149  
+[2026-09-03 15:15:53.062][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-03 15:15:53.557][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-03 15:15:53.558][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-03 15:16:26.515][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 1/149  
+[2026-09-03 15:16:26.515][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-03 15:16:27.016][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-03 15:22:44.199][ERR][TaskQueueViewModel]     <2> 任务出错: 基建换班
+[2026-09-03 15:22:44.805][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-03 15:23:03.928][ERR][TaskQueueViewModel]     <2> 出现错误, 已返回
+[2026-09-03 15:23:03.977][ERR][TaskQueueViewModel]     <2> 任务出错: 自动公招
+[2026-09-03 15:23:04.468][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-03 15:23:50.391][ERR][TaskQueueViewModel]     <2> 任务出错: 信用收支
+[2026-09-03 15:23:50.896][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-03 15:24:13.159][ERR][TaskQueueViewModel]     <2> 任务出错: 领取奖励
+[2026-09-03 15:24:13.662][INF][AsstProxy]              <2> Start Task Chain: Roguelike, Task ID: 8
+[2026-09-03 15:25:52.178][ERR][TaskQueueViewModel]     <2> 任务出错: 自动肉鸽
+[2026-09-03 15:25:52.662][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-04 06:04 回满。(14h 38m 后)
+[2026-09-03 15:25:52.686][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-03 15:25:52.680][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-03 15:25:52.686][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-03|酸酸酸酸|l-1-酸酸酸酸-18-48-23.json|酸酸酸酸|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "1-7": {
+            "龍門幣": 1296,
+            "名声": 1296,
+            "入門作戦記録": 23,
+            "初級源岩": 24,
+            "異鉄の欠片": 2,
+            "ブドウ糖": 2,
+            "破損装置": 1,
+            "家具": 1
+        }
+    },
+    "sanity": 3,
+    "sanity_full_at": "理智将在 2026-09-04 13:40 回满。(14h 32m 后)",
+    "maa_result": "MAA 部分任务执行失败"
+}
+###JSON_END
+###LOG|lines=350|bytes=20184
+##HEAD
+[2026-09-03 22:48:28.652][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-03 22:48:28.667][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-03 22:48:28.668][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-03 22:48:32.018][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-03 22:48:46.519][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-03 22:48:49.092][INF][TaskQueueViewModel]     <2> 最快截图耗时: 325ms (RawByNc)
+[2026-09-03 22:48:49.094][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-03 22:48:49.123][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-03 22:48:49.124][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 22:48:49.135][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-03 22:48:49.136][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-03 22:48:49.190][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-03 22:48:49.191][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-03 22:49:09.021][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 416ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器，请在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强
+[2026-09-03 22:51:21.052][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-03 22:51:21.053][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-03 22:51:21.540][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-03 22:51:21.541][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-03 22:51:47.237][INF][TaskQueueViewModel]     <2> 开始行动 1~6 次, -36理智
+理智: 110/150
+[2026-09-03 22:53:30.382][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 22:53:43.724][INF][TaskQueueViewModel]     <2> 开始行动 7~12 次, -36理智
+理智: 74/150
+[2026-09-03 22:55:24.609][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 22:55:38.136][INF][TaskQueueViewModel]     <2> 开始行动 13~18 次, -36理智
+理智: 39/150
+[2026-09-03 22:57:19.133][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-03 22:57:42.771][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 3/150  
+[2026-09-03 22:57:42.772][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-03 22:57:43.271][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-03 22:57:43.271][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-03 22:58:16.013][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 3/150  
+[2026-09-03 22:58:16.013][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-03 22:58:16.514][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-03 23:04:45.649][ERR][TaskQueueViewModel]     <2> 任务出错: 基建换班
+[2026-09-03 23:04:46.155][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-03 23:05:04.846][ERR][TaskQueueViewModel]     <2> 出现错误, 已返回
+[2026-09-03 23:05:04.889][ERR][TaskQueueViewModel]     <2> 任务出错: 自动公招
+[2026-09-03 23:05:05.378][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-03 23:05:49.302][ERR][TaskQueueViewModel]     <2> 任务出错: 信用收支
+[2026-09-03 23:05:49.818][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-03 23:06:10.750][ERR][TaskQueueViewModel]     <2> 任务出错: 领取奖励
+[2026-09-03 23:06:11.251][INF][AsstProxy]              <2> Start Task Chain: Roguelike, Task ID: 8
+[2026-09-03 23:07:24.701][ERR][TaskQueueViewModel]     <2> 任务出错: 自动肉鸽
+[2026-09-03 23:07:25.169][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-04 13:40 回满。(14h 32m 后)
+[2026-09-03 23:07:25.189][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-03 23:07:25.185][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-03 23:07:25.189][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-04|tbNick_h56zy|明日方舟-b-12-16-01-24.json|tbNick_h56zy|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 0,
+    "sanity_full_at": "",
+    "maa_result": "MAA 在完成任务前中止"
+}
+###JSON_END
+###LOG|lines=161|bytes=8802
+##HEAD
+[2026-09-04 20:02:22.723][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-04 20:02:22.736][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-04 20:02:22.737][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-04 20:02:26.300][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 20:02:40.176][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-04 20:02:43.170][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 447ms (RawWithGzip)
+[2026-09-04 20:02:43.174][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-04 20:02:43.237][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-04 20:02:43.238][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 20:02:43.248][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-04 20:02:43.248][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 20:02:43.356][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-04 20:02:43.358][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-04 20:02:46.499][ERR][TaskQueueViewModel]     <2> 游戏掉线，停止任务
+[2026-09-04 20:02:46.528][INF][TaskQueueViewModel]     <2> 正在停止……
+[2026-09-04 20:02:46.531][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-04 20:02:46.532][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-04 20:02:47.001][INF][TaskQueueViewModel]     <2> 已停止
+##TAIL
+[2026-09-04 20:02:47.001][INF][RunningState]           <2> Stopping: true to false (called from SetStopped)
+
+[2026-09-04 20:02:47.002][INF][RunningState]           <2> Idle: false to true (called from SetStopped)
+
+###END
+###ENTRY|2026-09-04|白桑_|明日方舟-官-33-19-41-54.json|白桑_|CA-5|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "CA-5": {
+            "龙门币": 360,
+            "技巧概要·卷3": 2,
+            "技巧概要·卷2": 2,
+            "技巧概要·卷1": 1
+        },
+        "1-7": {
+            "龙门币": 216,
+            "基础作战记录": 5,
+            "固源岩": 3,
+            "酯原料": 1,
+            "赤金": 1
+        }
+    },
+    "sanity": 0,
+    "sanity_full_at": "理智将在 2026-09-05 20:57 回满。(20h 43m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=362|bytes=20346
+##HEAD
+[2026-09-04 23:42:57.363][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-04 23:42:57.381][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-04 23:42:57.382][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-04 23:43:02.395][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 23:43:18.187][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-04 23:43:21.308][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 445ms (RawWithGzip)
+[2026-09-04 23:43:21.311][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-04 23:43:21.368][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-04 23:43:21.369][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-04 23:43:21.438][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-04 23:43:21.439][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 23:43:21.513][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-04 23:43:21.515][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-04 23:43:42.893][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 409ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器，请在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强
+[2026-09-04 23:46:26.653][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-04 23:46:26.653][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-04 23:46:27.136][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-04 23:46:27.136][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-04 23:47:19.818][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -30理智
+理智: 46/210
+[2026-09-04 23:49:40.288][INF][TaskQueueViewModel]     <2> CA-5 掉落统计: 
+[2026-09-04 23:50:17.860][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 17/210  
+[2026-09-04 23:50:17.861][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-04 23:50:18.364][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-04 23:50:18.365][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-04 23:51:09.081][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -12理智
+理智: 17/210
+[2026-09-04 23:52:35.688][ERR][TaskQueueViewModel]     <2> 代理指挥失误
+[2026-09-04 23:52:55.758][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+理智 : 12 (+12)
+[2026-09-04 23:52:55.767][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 23:53:13.302][INF][TaskQueueViewModel]     <2> 开始行动 3~4 次, -12理智
+理智: 17/210
+[2026-09-04 23:54:51.742][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+理智 : 12
+[2026-09-04 23:55:18.158][INF][TaskQueueViewModel]     <2> 开始行动 5 次, -6理智
+理智: 5/210
+[2026-09-04 23:56:55.162][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+理智 : 12
+[2026-09-04 23:57:29.142][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 0/210  
+[2026-09-04 23:57:29.142][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-04 23:57:29.644][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-05 00:09:07.917][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-05 00:09:07.917][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-05 00:09:08.444][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-05 00:09:40.934][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-05 00:09:40.935][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-05 00:09:41.435][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-05 00:12:13.229][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-05 00:13:25.063][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-05 00:13:25.063][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-05 00:13:25.579][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-05 00:13:38.276][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-05 00:13:38.276][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-05 00:13:38.422][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-05 20:57 回满。(20h 43m 后)
+[2026-09-05 00:13:38.493][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-05 00:13:38.491][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-05 00:13:38.493][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-04|白桑_|明日方舟-官-33-15-33-00.json|白桑_|CA-5|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 0,
+    "sanity_full_at": "",
+    "maa_result": "MAA 在完成任务前中止"
+}
+###JSON_END
+###LOG|lines=296|bytes=19205
+##HEAD
+[2026-09-04 19:33:52.772][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-04 19:33:52.797][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-04 19:33:52.798][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-04 19:33:55.595][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 19:33:58.679][INF][AnnouncementDialogViewModel] <13> ### 关于 MuMu 模拟器焦点切换导致滑动中断的说明 (NEW!!!)
+测试发现，MuMu 模拟器开启 ｢触控增强｣ 时，若在滑动操作过程中切换窗口或最小化模拟器，会导致滑动中断并产生明显的惯性漂移，该问题需由 MuMu 官方修复。为了避免该问题对基建换班、地图导航等需要滑动定位的场景造成影响，建议直接将模拟器保持最小化运行，或临时关闭 ｢触控增强｣ 模式使用其他触控方案。我们已将该问题反馈给 MuMu 团队，后续如有优化进展将同步告知。
+近期发现有第三方冒充 MAA 创建假仓库、篡改源码并夹带恶意程序（窃取信息、植入木马等），请大家注意辨别：
+前往「设置 - 问题反馈 - 打开日志文件夹」查看日志，了解错误原因。  
+请使用「设置 - 问题反馈 - 生成日志压缩包」生成错误报告，并点击蓝色的「问题反馈」链接提交反馈。
+• **软件版本**：解压完整包至**新**文件夹，可复制旧目录的 `config` 和 `data` 保留数据（⚠️ 请勿直接覆盖，错误操作可能导致资源损坏）  
+**更新渠道**：可在「设置 - 更新设置」中切换**正式版**和**公测版**（版本号含 `-beta.x` 的为公测版）。若界面提示版本过低且最低需求版本为公测版，但检测已是最新版本，说明该功能目前仅在公测版中提供，需等待正式版发布或切换至公测版获取。**请注意，公测版可能存在更多问题，如无特殊需求建议使用正式版。**
+[2026-09-04 19:34:09.357][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-04 19:34:11.332][INF][TaskQueueViewModel]     <2> 最快截图耗时: 278ms (RawWithGzip)
+[2026-09-04 19:34:11.334][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-04 19:34:11.371][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-04 19:34:11.372][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-04 19:34:11.383][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-04 19:34:11.383][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 19:34:11.422][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-04 19:34:11.423][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-04 19:34:14.186][ERR][TaskQueueViewModel]     <2> 游戏掉线，停止任务
+[2026-09-04 19:34:14.202][INF][TaskQueueViewModel]     <2> 正在停止……
+[2026-09-04 19:34:14.205][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-04 19:34:14.205][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-04 19:34:14.686][INF][TaskQueueViewModel]     <2> 已停止
+##TAIL
+[2026-09-04 19:34:14.687][INF][RunningState]           <2> Stopping: true to false (called from SetStopped)
+
+[2026-09-04 19:34:14.687][INF][RunningState]           <2> Idle: false to true (called from SetStopped)
+
+###END
+###ENTRY|2026-09-04|白桑_|明日方舟-官-33-15-34-27.json|白桑_|CA-5|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 0,
+    "sanity_full_at": "",
+    "maa_result": "MAA 在完成任务前中止"
+}
+###JSON_END
+###LOG|lines=225|bytes=12768
+##HEAD
+[2026-09-04 19:34:27.539][INF][ConfigurationHelper]    <2> Configuration Root.Update..UpdatePackage has been set: `MAAComponent-OTA-v6.17.0_v6.17.1-win-x64.zip` -> ``, save scheduled
+
+[2026-09-04 19:34:27.539][INF][ConfigurationHelper]    <2> Configuration Root.Update..IsFirstBoot has been set: `false` -> `true`, save scheduled
+
+[2026-09-04 19:34:27.540][INF][Bootstrapper]           <2> Delegated pending update completed successfully
+
+##FILTER
+[2026-09-04 19:34:27.732][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 19:35:23.813][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 19:35:37.290][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-04 19:35:39.511][INF][TaskQueueViewModel]     <2> 最快截图耗时: 289ms (RawByNc)
+[2026-09-04 19:35:39.513][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-04 19:35:39.551][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-04 19:35:39.552][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CA-5"], selected CA-5
+[2026-09-04 19:35:39.562][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-04 19:35:39.562][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 19:35:39.648][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-04 19:35:39.649][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-04 19:35:41.906][ERR][TaskQueueViewModel]     <2> 游戏掉线，停止任务
+[2026-09-04 19:35:41.926][INF][TaskQueueViewModel]     <2> 正在停止……
+[2026-09-04 19:35:41.929][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-04 19:35:41.929][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-04 19:35:42.407][INF][TaskQueueViewModel]     <2> 已停止
+##TAIL
+[2026-09-04 19:35:42.408][INF][RunningState]           <2> Stopping: true to false (called from SetStopped)
+
+[2026-09-04 19:35:42.408][INF][RunningState]           <2> Idle: false to true (called from SetStopped)
+
+###END
+###ENTRY|2026-09-04|爱尔奎特我老婆|明日方舟-官-20-15-37-23.json|爱尔奎特我老婆|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 0,
+    "sanity_full_at": "",
+    "maa_result": "MAA 在完成任务前中止"
+}
+###JSON_END
+###LOG|lines=163|bytes=9051
+##HEAD
+[2026-09-04 19:38:16.128][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-04 19:38:16.141][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-04 19:38:16.142][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-04 19:38:19.025][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 19:38:32.741][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-04 19:38:34.846][INF][TaskQueueViewModel]     <2> 最快截图耗时: 277ms (RawByNc)
+[2026-09-04 19:38:34.848][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-04 19:38:34.884][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-04 19:38:34.885][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 19:38:34.894][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-04 19:38:34.894][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 19:38:34.928][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-04 19:38:34.929][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-04 19:38:37.258][ERR][TaskQueueViewModel]     <2> 游戏掉线，停止任务
+[2026-09-04 19:38:37.280][INF][TaskQueueViewModel]     <2> 正在停止……
+[2026-09-04 19:38:37.283][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-04 19:38:37.283][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-04 19:38:37.760][INF][TaskQueueViewModel]     <2> 已停止
+##TAIL
+[2026-09-04 19:38:37.761][INF][RunningState]           <2> Stopping: true to false (called from SetStopped)
+
+[2026-09-04 19:38:37.761][INF][RunningState]           <2> Idle: false to true (called from SetStopped)
+
+###END
+###ENTRY|2026-09-04|酸酸酸酸|l-1-酸酸酸酸-07-03-23.json|酸酸酸酸|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "1-7": {
+            "龍門幣": 2736,
+            "名声": 2736,
+            "初級源岩": 48,
+            "入門作戦記録": 47,
+            "アケトン試剤": 5,
+            "異鉄の欠片": 4,
+            "ブドウ糖": 3,
+            "源岩鉱": 3,
+            "純金": 2,
+            "エステル原料": 1
+        }
+    },
+    "sanity": 4,
+    "sanity_full_at": "理智将在 2026-09-05 02:02 回满。(14h 33m 后)",
+    "maa_result": "MAA 部分任务执行失败"
+}
+###JSON_END
+###LOG|lines=598|bytes=36084
+##HEAD
+[2026-09-04 11:04:28.775][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-04 11:04:28.790][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-04 11:04:28.791][INF][Bootstrapper]           <2> Version v6.17.0
+
+##FILTER
+[2026-09-04 11:04:33.311][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-04 11:04:36.725][INF][AnnouncementDialogViewModel] <19> ### 关于 MuMu 模拟器焦点切换导致滑动中断的说明 (NEW!!!)
+测试发现，MuMu 模拟器开启 ｢触控增强｣ 时，若在滑动操作过程中切换窗口或最小化模拟器，会导致滑动中断并产生明显的惯性漂移，该问题需由 MuMu 官方修复。为了避免该问题对基建换班、地图导航等需要滑动定位的场景造成影响，建议直接将模拟器保持最小化运行，或临时关闭 ｢触控增强｣ 模式使用其他触控方案。我们已将该问题反馈给 MuMu 团队，后续如有优化进展将同步告知。
+近期发现有第三方冒充 MAA 创建假仓库、篡改源码并夹带恶意程序（窃取信息、植入木马等），请大家注意辨别：
+前往「设置 - 问题反馈 - 打开日志文件夹」查看日志，了解错误原因。  
+请使用「设置 - 问题反馈 - 生成日志压缩包」生成错误报告，并点击蓝色的「问题反馈」链接提交反馈。
+• **软件版本**：解压完整包至**新**文件夹，可复制旧目录的 `config` 和 `data` 保留数据（⚠️ 请勿直接覆盖，错误操作可能导致资源损坏）  
+**更新渠道**：可在「设置 - 更新设置」中切换**正式版**和**公测版**（版本号含 `-beta.x` 的为公测版）。若界面提示版本过低且最低需求版本为公测版，但检测已是最新版本，说明该功能目前仅在公测版中提供，需等待正式版发布或切换至公测版获取。**请注意，公测版可能存在更多问题，如无特殊需求建议使用正式版。**
+[2026-09-04 11:04:49.063][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-04 11:04:51.652][INF][TaskQueueViewModel]     <2> 最快截图耗时: 328ms (RawWithGzip)
+[2026-09-04 11:04:51.654][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-04 11:04:51.691][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-04 11:04:51.692][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 11:04:51.702][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-04 11:04:51.703][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-04 11:04:51.761][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-04 11:04:51.762][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-04 11:05:10.645][INF][TaskQueueViewModel]     <2> 截图用时 371ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-04 11:06:24.373][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-04 11:06:24.374][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-04 11:06:24.863][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-04 11:06:24.864][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-04 11:06:50.913][INF][TaskQueueViewModel]     <2> 开始行动 1~6 次, -36理智
+理智: 124/150
+[2026-09-04 11:08:32.470][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:08:44.418][INF][TaskQueueViewModel]     <2> 开始行动 7~12 次, -36理智
+理智: 89/150
+[2026-09-04 11:10:26.308][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:10:37.276][INF][TaskQueueViewModel]     <2> 开始行动 13~18 次, -36理智
+理智: 159/151
+[2026-09-04 11:12:13.088][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:12:24.189][INF][TaskQueueViewModel]     <2> 开始行动 19~24 次, -36理智
+理智: 123/151
+[2026-09-04 11:14:00.277][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:14:12.075][INF][TaskQueueViewModel]     <2> 开始行动 25~30 次, -36理智
+理智: 87/151
+[2026-09-04 11:15:47.986][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:15:59.869][INF][TaskQueueViewModel]     <2> 开始行动 31~36 次, -36理智
+理智: 51/151
+[2026-09-04 11:17:35.803][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:17:56.759][INF][TaskQueueViewModel]     <2> 开始行动 37~38 次, -12理智
+理智: 15/151
+[2026-09-04 11:19:32.207][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-04 11:19:46.362][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 4/151  
+[2026-09-04 11:19:46.363][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-04 11:19:46.863][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-04 11:19:46.863][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-04 11:20:21.414][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 4/151  
+[2026-09-04 11:20:21.415][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-04 11:20:21.915][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-04 11:26:36.063][ERR][TaskQueueViewModel]     <2> 任务出错: 基建换班
+[2026-09-04 11:26:36.565][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-04 11:26:53.744][ERR][TaskQueueViewModel]     <2> 出现错误, 已返回
+[2026-09-04 11:26:53.787][ERR][TaskQueueViewModel]     <2> 任务出错: 自动公招
+[2026-09-04 11:26:54.274][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-04 11:27:35.111][ERR][TaskQueueViewModel]     <2> 任务出错: 信用收支
+[2026-09-04 11:27:35.612][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-04 11:27:55.059][ERR][TaskQueueViewModel]     <2> 任务出错: 领取奖励
+[2026-09-04 11:27:55.560][INF][AsstProxy]              <2> Start Task Chain: Roguelike, Task ID: 8
+[2026-09-04 11:29:06.415][ERR][TaskQueueViewModel]     <2> 任务出错: 自动肉鸽
+[2026-09-04 11:29:06.712][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-05 02:02 回满。(14h 33m 后)
+[2026-09-04 11:29:06.729][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-04 11:29:06.727][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-04 11:29:06.729][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-05|河清灯_别寄圆通|明日方舟-日-4-03-10-11.json|河清灯_别寄圆通|1-7|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 31,
+    "sanity_full_at": "",
+    "maa_result": "MAA 在完成任务前中止"
+}
+###JSON_END
+###LOG|lines=200|bytes=11193
+##HEAD
+[2026-09-05 07:11:11.621][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-05 07:11:11.633][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-05 07:11:11.634][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-05 07:11:15.006][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-05 07:11:29.114][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-05 07:11:33.856][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 1,058ms (RawByNc)
+[2026-09-05 07:11:33.858][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-05 07:11:33.885][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-05 07:11:33.887][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-05 07:11:33.898][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-05 07:11:33.898][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-05 07:11:33.941][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-05 07:11:33.942][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-05 07:11:55.938][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 699ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器，请在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强
+[2026-09-05 07:13:21.632][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-05 07:13:21.633][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-05 07:13:22.124][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-05 07:13:22.124][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-05 07:13:51.495][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 31/173  
+[2026-09-05 07:13:51.495][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-05 07:13:51.995][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-05 07:13:51.995][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-05 07:14:31.558][INF][TaskQueueViewModel]     <2> 开始行动 1~5 次, -30理智
+理智: 31/173
+[2026-09-05 07:15:14.836][ERR][TaskQueueViewModel]     <2> 游戏掉线，停止任务
+[2026-09-05 07:15:14.855][INF][TaskQueueViewModel]     <2> 正在停止……
+[2026-09-05 07:15:15.380][INF][TaskQueueViewModel]     <2> 已停止
+##TAIL
+[2026-09-05 07:15:15.381][INF][RunningState]           <2> Stopping: true to false (called from SetStopped)
+
+[2026-09-05 07:15:15.381][INF][RunningState]           <2> Idle: false to true (called from SetStopped)
+
+###END
+###ENTRY|2026-09-05|用户_173920298|明日方舟-b-3-19-57-41.json|用户_173920298|CE-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "CE-6": {
+            "龙门币": 10000
+        },
+        "1-7": {
+            "龙门币": 72,
+            "基础作战记录": 2,
+            "固源岩": 1,
+            "赤金": 1
+        }
+    },
+    "sanity": 3,
+    "sanity_full_at": "理智将在 2026-09-06 20:49 回满。(20h 29m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=342|bytes=18052
+##HEAD
+[2026-09-05 23:58:39.619][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-05 23:58:39.638][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-05 23:58:39.639][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-05 23:58:44.396][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-05 23:58:58.940][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-05 23:59:02.267][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 421ms (RawByNc)
+[2026-09-05 23:59:02.274][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-05 23:59:02.316][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-05 23:59:02.317][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-05 23:59:02.331][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-05 23:59:02.332][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-05 23:59:02.406][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-05 23:59:02.408][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-05 23:59:22.353][INF][TaskQueueViewModel]     <2> 截图用时 350ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-06 00:01:21.592][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-06 00:01:21.593][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-06 00:01:22.081][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-06 00:01:22.082][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-06 00:02:08.087][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -36理智
+理智: 44/210
+[2026-09-06 00:04:27.155][INF][TaskQueueViewModel]     <2> CE-6 掉落统计: 
+[2026-09-06 00:05:01.431][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 8/210  
+[2026-09-06 00:05:01.432][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-06 00:05:01.933][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-06 00:05:01.934][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-06 00:05:45.412][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -6理智
+理智: 9/210
+[2026-09-06 00:07:26.631][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-06 00:07:56.511][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 3/210  
+[2026-09-06 00:07:56.512][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-06 00:07:57.012][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-06 00:18:11.808][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-06 00:18:11.808][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-06 00:18:12.321][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-06 00:18:56.351][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-06 00:18:56.351][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-06 00:18:56.851][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-06 00:19:31.591][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-06 00:20:15.677][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-06 00:20:15.678][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-06 00:20:16.185][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-06 00:20:27.382][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-06 00:20:27.382][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-06 00:20:27.424][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-06 20:49 回满。(20h 29m 后)
+[2026-09-06 00:20:27.450][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-06 00:20:27.448][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-06 00:20:27.450][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-05|v|明日方舟-官-5-18-55-53.json|v|CE-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "CE-6": {
+            "龙门币": 40000
+        },
+        "1-7": {
+            "龙门币": 288,
+            "固源岩": 6,
+            "基础作战记录": 4,
+            "代糖": 1
+        }
+    },
+    "sanity": 2,
+    "sanity_full_at": "理智将在 2026-09-06 19:53 回满。(20h 41m 后)",
+    "maa_result": "MAA 部分任务执行失败"
+}
+###JSON_END
+###LOG|lines=287|bytes=15888
+##HEAD
+[2026-09-05 22:56:49.281][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-05 22:56:49.299][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-05 22:56:49.301][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-05 22:56:53.164][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-05 22:57:07.464][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-05 22:57:10.519][INF][TaskQueueViewModel]     <2> 最快截图耗时: 400ms (RawByNc)
+[2026-09-05 22:57:10.522][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-05 22:57:10.545][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-05 22:57:10.546][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-05 22:57:10.555][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-05 22:57:10.556][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-05 22:57:10.592][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-05 22:57:10.593][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-05 22:57:29.195][INF][TaskQueueViewModel]     <2> 截图用时 337ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-05 22:59:13.213][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-05 22:59:13.214][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-05 22:59:13.705][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-05 22:59:13.706][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-05 22:59:56.738][INF][TaskQueueViewModel]     <2> 开始行动 1~4 次, -144理智
+理智: 169/210
+[2026-09-05 23:02:08.968][INF][TaskQueueViewModel]     <2> CE-6 掉落统计: 
+[2026-09-05 23:02:48.620][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 25/210  
+[2026-09-05 23:02:48.620][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-05 23:02:49.120][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-05 23:02:49.121][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-05 23:03:30.909][INF][TaskQueueViewModel]     <2> 开始行动 1~4 次, -24理智
+理智: 26/210
+[2026-09-05 23:05:18.126][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-05 23:05:54.513][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 2/210  
+[2026-09-05 23:05:54.514][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-05 23:05:55.015][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-05 23:10:30.983][ERR][TaskQueueViewModel]     <2> 任务出错: 基建换班
+[2026-09-05 23:10:31.563][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-05 23:10:49.381][ERR][TaskQueueViewModel]     <2> 出现错误, 已返回
+[2026-09-05 23:10:49.426][ERR][TaskQueueViewModel]     <2> 任务出错: 自动公招
+[2026-09-05 23:10:49.911][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-05 23:11:34.478][ERR][TaskQueueViewModel]     <2> 任务出错: 信用收支
+[2026-09-05 23:11:34.982][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-05 23:11:56.095][ERR][TaskQueueViewModel]     <2> 任务出错: 领取奖励
+[2026-09-05 23:11:56.674][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-06 19:53 回满。(20h 41m 后)
+[2026-09-05 23:11:56.732][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-05 23:11:56.705][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-05 23:11:56.732][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-06|v|明日方舟-官-5-01-32-09.json|v|CE-6|
+###JSON
+{
+    "recruit_statistics": {
+        "4★": 1,
+        "3★": 1
+    },
+    "drop_statistics": {
+        "CE-6": {
+            "龙门币": 10000
+        },
+        "1-7": {
+            "龙门币": 360,
+            "固源岩": 7,
+            "基础作战记录": 6,
+            "双酮": 2,
+            "代糖": 1,
+            "源岩": 1
+        }
+    },
+    "sanity": 2,
+    "sanity_full_at": "理智将在 2026-09-07 02:30 回满。(20h 31m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=482|bytes=72409
+##HEAD
+[2026-09-06 05:33:05.673][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-06 05:33:05.685][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-06 05:33:05.686][INF][Bootstrapper]           <2> Version v6.17.1
+
+##FILTER
+[2026-09-06 05:33:09.505][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-06 05:33:23.440][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-06 05:33:25.955][INF][TaskQueueViewModel]     <2> 最快截图耗时: 319ms (RawWithGzip)
+[2026-09-06 05:33:25.957][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-06 05:33:25.983][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-06 05:33:25.984][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["CE-6"], selected CE-6
+[2026-09-06 05:33:25.993][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-06 05:33:25.994][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-06 05:33:26.030][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-06 05:33:26.031][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-06 05:33:41.034][INF][TaskQueueViewModel]     <2> 截图用时 306ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-06 05:35:52.410][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-06 05:35:52.411][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-06 05:35:52.899][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-06 05:35:52.900][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-06 05:36:54.810][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -36理智
+理智: 67/210
+[2026-09-06 05:39:09.842][INF][TaskQueueViewModel]     <2> CE-6 掉落统计: 
+[2026-09-06 05:39:40.759][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 31/210  
+[2026-09-06 05:39:40.760][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-06 05:39:41.260][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-06 05:39:41.260][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-06 05:40:30.971][INF][TaskQueueViewModel]     <2> 开始行动 1~5 次, -30理智
+理智: 31/210
+[2026-09-06 05:42:22.007][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-06 05:43:03.149][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 2/210  
+[2026-09-06 05:43:03.149][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-06 05:43:03.649][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-06 05:54:33.426][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-06 05:54:33.426][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-06 05:54:33.951][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-06 05:55:54.884][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-06 05:55:54.885][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-06 05:55:55.386][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-06 05:58:18.771][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-06 05:59:38.146][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-06 05:59:38.147][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-06 05:59:38.650][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-06 05:59:53.852][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-06 05:59:53.853][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-06 05:59:53.990][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-07 02:30 回满。(20h 31m 后)
+[2026-09-06 05:59:54.049][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-06 05:59:54.047][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-06 05:59:54.049][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-07|檀丝江喜|明日方舟-官-14-02-39-10.json|檀丝江喜|LS-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "1-7": {
+            "龙门币": 288,
+            "声望": 288,
+            "基础作战记录": 6,
+            "固源岩": 4,
+            "源岩": 1
+        }
+    },
+    "sanity": 1,
+    "sanity_full_at": "",
+    "maa_result": "MAA 在完成任务前中止"
+}
+###JSON_END
+###LOG|lines=240|bytes=13587
+##HEAD
+[2026-09-07 06:39:19.058][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 06:39:19.073][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 06:39:19.074][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 06:39:23.235][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 06:39:38.101][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 06:39:40.944][INF][TaskQueueViewModel]     <2> 最快截图耗时: 278ms (RawByNc)
+[2026-09-07 06:39:40.947][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 06:39:40.973][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 06:39:40.975][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 06:39:40.985][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 06:39:40.986][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 06:39:41.050][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 06:39:41.052][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:40:02.388][INF][TaskQueueViewModel]     <2> 截图用时 378ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 06:42:33.300][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-07 06:42:33.301][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:42:33.782][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-07 06:42:33.783][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-07 06:43:03.455][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-07 06:43:03.957][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-07 06:43:03.958][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-07 06:43:51.185][INF][TaskQueueViewModel]     <2> 开始行动 1~4 次, -24理智
+理智: 25/205
+[2026-09-07 06:45:46.182][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-07 06:46:24.740][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 1/205  
+[2026-09-07 06:46:24.742][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-07 06:46:25.241][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-07 06:55:30.421][ERR][TaskQueueViewModel]     <2> 截图失败，如反复出现请尝试重启或更换模拟器！
+[2026-09-07 06:58:27.532][ERR][TaskQueueViewModel]     <2> 模拟器断开，正在尝试重连 (1)
+[2026-09-07 06:58:38.674][ERR][TaskQueueViewModel]     <2> 模拟器断开，正在尝试重连 (2)
+[2026-09-07 06:58:49.839][ERR][TaskQueueViewModel]     <2> 模拟器断开，正在尝试重连 (3)
+[2026-09-07 06:59:00.962][ERR][TaskQueueViewModel]     <2> 模拟器断开，正在尝试重连 (4)
+[2026-09-07 06:59:12.102][ERR][TaskQueueViewModel]     <2> 模拟器断开，正在尝试重连 (5)
+[2026-09-07 06:59:23.382][ERR][TaskQueueViewModel]     <2> 重连失败，连接断开！
+[2026-09-07 06:59:23.433][ERR][TaskQueueViewModel]     <2> 截图失败，如反复出现请尝试重启或更换模拟器！
+[2026-09-07 06:59:23.602][INF][TaskQueueViewModel]     <2> 已停止
+##TAIL
+[2026-09-07 06:59:23.611][INF][RunningState]           <2> Stopping: false to false (called from SetStopped)
+
+[2026-09-07 06:59:23.616][INF][RunningState]           <2> Idle: false to true (called from SetStopped)
+
+###END
+###ENTRY|2026-09-07|檀丝江喜|明日方舟-官-14-02-59-33.json|檀丝江喜|LS-6|
+###JSON
+{
+    "recruit_statistics": {
+        "3★": 4
+    },
+    "drop_statistics": {},
+    "sanity": 4,
+    "sanity_full_at": "理智将在 2026-09-08 03:10 回满。(19h 53m 后)",
+    "maa_result": "MAA 部分任务执行失败"
+}
+###JSON_END
+###LOG|lines=400|bytes=60155
+##HEAD
+[2026-09-07 07:00:34.543][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 07:00:34.561][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 07:00:34.562][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 07:00:39.210][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 07:00:53.939][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 07:00:56.720][WRN][TaskQueueViewModel]     <2> 最快截图耗时: 408ms (RawWithGzip)
+[2026-09-07 07:00:56.722][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 07:00:56.746][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 07:00:56.747][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 07:00:56.758][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 07:00:56.758][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 07:00:56.835][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 07:00:56.837][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 07:01:12.164][INF][TaskQueueViewModel]     <2> 截图用时 303ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 07:03:06.731][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-07 07:03:06.732][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-07 07:03:07.216][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-07 07:03:07.217][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-07 07:03:39.745][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-07 07:03:40.248][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-07 07:03:40.248][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-07 07:04:38.516][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 4/205  
+[2026-09-07 07:04:38.517][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-07 07:04:39.017][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-07 07:14:14.552][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-07 07:14:14.554][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-07 07:14:15.058][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-07 07:15:20.450][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-07 07:15:20.450][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-07 07:15:20.951][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-07 07:15:41.737][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-07 07:16:35.439][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-07 07:16:35.440][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-07 07:16:35.942][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-07 07:16:54.588][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-07 07:16:54.588][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-07 07:16:54.614][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-08 03:10 回满。(19h 53m 后)
+[2026-09-07 07:16:54.639][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-07 07:16:54.638][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-07 07:16:54.639][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-07|檀丝江喜|明日方舟-官-14-03-17-02.json|檀丝江喜|LS-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {
+        "1-7": {
+            "龙门币": 72,
+            "声望": 72,
+            "固源岩": 2,
+            "基础作战记录": 2
+        }
+    },
+    "sanity": 2,
+    "sanity_full_at": "理智将在 2026-09-08 03:41 回满。(20h 17m 后)",
+    "maa_result": "MAA 部分任务执行失败"
+}
+###JSON_END
+###LOG|lines=231|bytes=12992
+##HEAD
+[2026-09-07 07:17:57.466][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 07:17:57.482][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 07:17:57.482][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 07:18:01.150][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 07:18:15.500][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 07:18:17.949][INF][TaskQueueViewModel]     <2> 最快截图耗时: 348ms (RawWithGzip)
+[2026-09-07 07:18:17.952][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 07:18:17.982][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 07:18:17.984][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 07:18:17.995][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 07:18:17.996][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 07:18:18.013][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 07:18:18.014][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 07:18:32.373][INF][TaskQueueViewModel]     <2> 截图用时 262ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 07:20:14.284][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-07 07:20:14.284][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-07 07:20:14.773][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-07 07:20:14.774][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-07 07:20:45.968][ERR][TaskQueueViewModel]     <2> 任务出错: 理智作战
+[2026-09-07 07:20:46.469][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-07 07:20:46.469][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-07 07:21:34.292][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -6理智
+理智: 7/205
+[2026-09-07 07:23:23.539][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-07 07:23:52.817][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 2/205  
+[2026-09-07 07:23:52.818][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-07 07:23:52.834][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-08 03:41 回满。(20h 17m 后)
+[2026-09-07 07:23:52.853][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-07 07:23:53.882][INF][Bootstrapper]           <2> MaaAssistantArknights GUI exited
+
+[2026-09-07 07:23:53.882][INF][Bootstrapper]           <2> 
+
+###END
+###ENTRY|2026-09-07|白桑_|明日方舟-官-33-02-28-08.json|白桑_|Annihilation|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 14,
+    "sanity_full_at": "理智将在 2026-09-08 02:10 回满。(19h 35m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=217|bytes=10936
+##HEAD
+[2026-09-07 06:29:05.717][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 06:29:05.733][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 06:29:05.734][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 06:29:09.664][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 06:29:24.005][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 06:29:26.499][INF][TaskQueueViewModel]     <2> 最快截图耗时: 350ms (RawWithGzip)
+[2026-09-07 06:29:26.502][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 06:29:26.526][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 剿灭作战, IsEnable true
+[2026-09-07 06:29:26.527][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["Annihilation"], selected Annihilation
+[2026-09-07 06:29:26.552][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 06:29:26.553][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:29:41.747][INF][TaskQueueViewModel]     <2> 截图用时 287ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 06:31:52.928][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-07 06:31:52.928][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:31:53.417][INF][TaskQueueViewModel]     <2> 开始任务: 剿灭作战
+[2026-09-07 06:31:53.418][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-07 06:32:13.247][INF][TaskQueueViewModel]     <2> 开始行动 1 次, -25理智
+理智: 114/210
+[2026-09-07 06:32:33.884][INF][TaskQueueViewModel]     <2> 炎国 掉落统计: 
+剿灭模式 : 330 / 1800
+[2026-09-07 06:32:51.477][INF][TaskQueueViewModel]     <2> 开始行动 2 次, -25理智
+理智: 89/210
+[2026-09-07 06:33:03.747][INF][TaskQueueViewModel]     <2> 炎国 掉落统计: 
+剿灭模式 : 660 / 1800
+[2026-09-07 06:33:19.402][INF][TaskQueueViewModel]     <2> 开始行动 3 次, -25理智
+理智: 64/210
+[2026-09-07 06:33:32.733][INF][TaskQueueViewModel]     <2> 炎国 掉落统计: 
+剿灭模式 : 990 / 1800
+[2026-09-07 06:33:49.372][INF][TaskQueueViewModel]     <2> 开始行动 4 次, -25理智
+理智: 39/210
+[2026-09-07 06:34:00.831][INF][TaskQueueViewModel]     <2> 炎国 掉落统计: 
+剿灭模式 : 1320 / 1800
+[2026-09-07 06:34:33.883][INF][TaskQueueViewModel]     <2> 完成任务: 剿灭作战
+理智: 14/210  
+[2026-09-07 06:34:33.883][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-07 06:34:33.910][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-08 02:10 回满。(19h 35m 后)
+[2026-09-07 06:34:33.952][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-07 06:34:33.949][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-07 06:34:33.952][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-07|河清灯_别寄圆通|明日方舟-日-4-02-43-22.json|河清灯_别寄圆通|1-7|
+###JSON
+{
+    "recruit_statistics": {
+        "3★": 3
+    },
+    "drop_statistics": {
+        "1-7": {
+            "龍門幣": 144,
+            "名声": 144,
+            "初級源岩": 2,
+            "入門作戦記録": 2,
+            "源岩鉱": 1
+        }
+    },
+    "sanity": 5,
+    "sanity_full_at": "",
+    "maa_result": "MAA 进程超时"
+}
+###JSON_END
+###LOG|lines=384|bytes=55480
+##HEAD
+[2026-09-07 06:43:28.082][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 06:43:28.096][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 06:43:28.097][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 06:43:31.672][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 06:43:46.657][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 06:43:49.373][INF][TaskQueueViewModel]     <2> 最快截图耗时: 281ms (RawByNc)
+[2026-09-07 06:43:49.376][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 06:43:49.403][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 06:43:49.404][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 06:43:49.415][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 06:43:49.416][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 06:43:49.460][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 06:43:49.462][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:44:10.050][INF][TaskQueueViewModel]     <2> 截图用时 386ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 06:46:24.994][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-07 06:46:24.995][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:46:25.478][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-07 06:46:25.478][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-07 06:46:57.107][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 16/173  
+[2026-09-07 06:46:57.108][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-07 06:46:57.608][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-07 06:46:57.608][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-07 06:47:29.384][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -12理智
+理智: 16/173
+[2026-09-07 06:49:24.655][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-07 06:49:42.965][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 5/173  
+[2026-09-07 06:49:42.968][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-07 06:49:43.465][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-07 06:59:39.816][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-07 06:59:39.820][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-07 06:59:40.321][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-07 07:00:40.785][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-07 07:00:40.785][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-07 07:00:41.286][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+##TAIL
+[2026-09-07 07:00:41.285][INF][TaskQueueViewModel]     <2> 开始任务: 信用收支
+
+[2026-09-07 07:00:41.286][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+
+###END
+###ENTRY|2026-09-07|用户_173920298|明日方舟-b-3-02-52-41.json|用户_173920298|LS-6|
+###JSON
+{
+    "recruit_statistics": {
+        "4★": 1
+    },
+    "drop_statistics": {
+        "1-7": {
+            "龙门币": 144,
+            "固源岩": 2,
+            "基础作战记录": 2,
+            "源岩": 1
+        }
+    },
+    "sanity": 2,
+    "sanity_full_at": "理智将在 2026-09-08 03:48 回满。(20h 34m 后)",
+    "maa_result": "Success!"
+}
+###JSON_END
+###LOG|lines=346|bytes=26056
+##HEAD
+[2026-09-07 06:52:47.364][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 06:52:47.383][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 06:52:47.385][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 06:52:51.675][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 06:53:07.530][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 06:53:10.291][INF][TaskQueueViewModel]     <2> 最快截图耗时: 350ms (RawByNc)
+[2026-09-07 06:53:10.295][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 06:53:10.319][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 06:53:10.320][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 06:53:10.329][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 06:53:10.330][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 06:53:10.371][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 06:53:10.372][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:53:39.330][WRN][TaskQueueViewModel]     <2> 截图用时较长(平均: 453ms)，自动战斗类功能（如自动肉鸽）可能表现异常。如使用 MuMu、雷电模拟器，请在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强
+[2026-09-07 06:56:14.917][INF][TaskQueueViewModel]     <2> 完成任务: 开始唤醒
+[2026-09-07 06:56:14.918][INF][AsstProxy]              <2> Completed Task Chain: StartUp, Task ID: 1
+[2026-09-07 06:56:15.404][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-07 06:56:15.405][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+[2026-09-07 06:57:07.894][INF][TaskQueueViewModel]     <2> 完成任务: 理智作战
+理智: 13/210  
+[2026-09-07 06:57:07.895][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 2
+[2026-09-07 06:57:08.395][INF][TaskQueueViewModel]     <2> 开始任务: 剩余理智
+[2026-09-07 06:57:08.395][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 3
+[2026-09-07 06:57:55.693][INF][TaskQueueViewModel]     <2> 开始行动 1~2 次, -12理智
+理智: 13/210
+[2026-09-07 06:59:40.466][INF][TaskQueueViewModel]     <2> 1-7 掉落统计: 
+[2026-09-07 07:00:16.347][INF][TaskQueueViewModel]     <2> 完成任务: 剩余理智
+理智: 2/210  
+[2026-09-07 07:00:16.348][INF][AsstProxy]              <2> Completed Task Chain: Fight, Task ID: 3
+[2026-09-07 07:00:16.849][INF][AsstProxy]              <2> Start Task Chain: Infrast, Task ID: 4
+[2026-09-07 07:10:47.870][INF][TaskQueueViewModel]     <2> 完成任务: 基建换班
+[2026-09-07 07:10:47.871][INF][AsstProxy]              <2> Completed Task Chain: Infrast, Task ID: 4
+[2026-09-07 07:10:48.396][INF][AsstProxy]              <2> Start Task Chain: Recruit, Task ID: 5
+[2026-09-07 07:11:47.659][INF][TaskQueueViewModel]     <2> 完成任务: 自动公招
+[2026-09-07 07:11:47.660][INF][AsstProxy]              <2> Completed Task Chain: Recruit, Task ID: 5
+[2026-09-07 07:11:48.159][INF][AsstProxy]              <2> Start Task Chain: Mall, Task ID: 6
+[2026-09-07 07:12:24.931][INF][TaskQueueViewModel]     <2> 完成任务: 访问好友
+[2026-09-07 07:13:27.218][INF][TaskQueueViewModel]     <2> 完成任务: 信用收支
+[2026-09-07 07:13:27.218][INF][AsstProxy]              <2> Completed Task Chain: Mall, Task ID: 6
+[2026-09-07 07:13:27.724][INF][AsstProxy]              <2> Start Task Chain: Award, Task ID: 7
+[2026-09-07 07:13:46.019][INF][TaskQueueViewModel]     <2> 完成任务: 领取奖励
+[2026-09-07 07:13:46.019][INF][AsstProxy]              <2> Completed Task Chain: Award, Task ID: 7
+[2026-09-07 07:13:46.063][INF][TaskQueueViewModel]     <2> 任务已全部完成！
+理智将在 2026-09-08 03:48 回满。(20h 34m 后)
+[2026-09-07 07:13:46.101][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+##TAIL
+[2026-09-07 07:13:46.098][INF][RunningState]           <2> InterruptLock: depth=1 (called from CheckAfterCompleted)
+
+[2026-09-07 07:13:46.101][INF][TaskQueueViewModel]     <2> Post actions: 退出 明日方舟 -> 退出 MAA
+
+###END
+###ENTRY|2026-09-07|用户_173920298|明日方舟-b-3-15-39-19.json|用户_173920298|LS-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 0,
+    "sanity_full_at": "",
+    "maa_result": "MAA 未能正确登录 PRTS"
+}
+###JSON_END
+###LOG|lines=155|bytes=8696
+##HEAD
+[2026-09-07 19:40:10.215][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 19:40:10.227][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 19:40:10.228][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 19:40:13.230][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 19:40:26.886][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 19:40:29.203][INF][TaskQueueViewModel]     <2> 最快截图耗时: 340ms (RawWithGzip)
+[2026-09-07 19:40:29.205][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 19:40:29.229][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 19:40:29.230][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 19:40:29.239][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 19:40:29.239][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 19:40:29.274][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 19:40:29.276][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 19:40:44.060][INF][TaskQueueViewModel]     <2> 截图用时 249ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 19:48:44.404][ERR][TaskQueueViewModel]     <2> 任务出错: 开始唤醒
+[2026-09-07 19:48:44.903][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+[2026-09-07 19:48:44.904][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+##TAIL
+[2026-09-07 19:48:44.903][INF][TaskQueueViewModel]     <2> 开始任务: 理智作战
+
+[2026-09-07 19:48:44.904][INF][AsstProxy]              <2> Start Task Chain: Fight, Task ID: 2
+
+###END
+###ENTRY|2026-09-07|用户_173920298|明日方舟-b-3-15-48-56.json|用户_173920298|LS-6|
+###JSON
+{
+    "recruit_statistics": {},
+    "drop_statistics": {},
+    "sanity": 0,
+    "sanity_full_at": "",
+    "maa_result": "MAA 未能正确登录 PRTS"
+}
+###JSON_END
+###LOG|lines=151|bytes=8510
+##HEAD
+[2026-09-07 19:49:48.787][INF][Bootstrapper]           <2> ===================================
+
+[2026-09-07 19:49:48.801][INF][Bootstrapper]           <2> MaaAssistantArknights GUI started
+
+[2026-09-07 19:49:48.802][INF][Bootstrapper]           <2> Version v6.17.2
+
+##FILTER
+[2026-09-07 19:49:52.289][ERR][AutoStart]              <2> Failed to set startup: No value exists with that name.
+[2026-09-07 19:50:06.593][INF][TaskQueueViewModel]     <2> 正在连接模拟器……
+[2026-09-07 19:50:09.211][INF][TaskQueueViewModel]     <2> 最快截图耗时: 361ms (RawByNc)
+[2026-09-07 19:50:09.213][INF][TaskQueueViewModel]     <2> Index 0, Type "StartUp", Name 开始唤醒, IsEnable true
+[2026-09-07 19:50:09.237][INF][TaskQueueViewModel]     <2> Index 1, Type "Fight", Name 理智作战, IsEnable true
+[2026-09-07 19:50:09.238][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["LS-6"], selected LS-6
+[2026-09-07 19:50:09.248][INF][TaskQueueViewModel]     <2> Index 2, Type "Fight", Name 剩余理智, IsEnable true
+[2026-09-07 19:50:09.248][INF][FightSettingsUserControlModel] <2> GetFightStage: from ["1-7"], selected 1-7
+[2026-09-07 19:50:09.285][INF][TaskQueueViewModel]     <2> 开始任务: 开始唤醒
+[2026-09-07 19:50:09.287][INF][AsstProxy]              <2> Start Task Chain: StartUp, Task ID: 1
+[2026-09-07 19:50:25.757][INF][TaskQueueViewModel]     <2> 截图用时 291ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+[2026-09-07 20:00:15.040][ERR][TaskQueueViewModel]     <2> 任务出错: 开始唤醒
+##TAIL
+[2026-09-07 19:50:25.757][INF][TaskQueueViewModel]     <2> 截图用时 291ms。如使用 MuMu、雷电模拟器，可在 ｢设置 - 连接设置 - 连接配置｣ 选择对应模拟器，并开启下方显示的截图增强以降低耗时
+
+[2026-09-07 20:00:15.040][ERR][TaskQueueViewModel]     <2> 任务出错: 开始唤醒
+
+###END
+
+---STDERR---
+
+rc=0

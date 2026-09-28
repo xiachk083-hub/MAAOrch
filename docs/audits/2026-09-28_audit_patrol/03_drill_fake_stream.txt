@@ -1,0 +1,29 @@
+# 命令: $PY312 tests/audit_patrol_drill.py   （离线演练：假统一流/假归档 ⇒ 断言判据触发；tempfile 假目录，零真实 runtime 读写）
+# 时间: 2026-09-28 11:17:03
+# rc=0 （0=PASS/7/7；2=有 FAIL 项）
+# 备注：B1 断言 = 「段内容齐」+ rc∈{0,2}——宿主机 D: 剩 59.8GB<60GB 的**既有** WARN 会把 rc 抬到 2，与本卡改动无关。
+
+审计巡检接线离线演练 @2026-09-28 11:17:00（假统一流/假归档，全程 tempfile）
+
+A. tools/audit_waterline.py（MAAORCH_AUDIT_DIR=假目录）
+  A1 OK（live 0.2MiB / 覆盖 2h / 归档在）                     PASS
+        AUDIT_STATUS=OK live=0.2MB archives=1 report_hours=2.0 rot=no   （0.16s，AUDIT_STATUS 判据行）
+        []
+  A2 WARN（live 11MiB > 10MiB）                          PASS
+        AUDIT_STATUS=WARN live=12.4MB archives=1 report_hours=2.0 rot=yes 原因=live=12.4MB>10MB   （0.19s，AUDIT_STATUS 判据行）
+        ['AUDIT_STATUS=WARN live=12.4MB archives=1 report_hours=2.0 rot=yes 原因=live=12.4MB>10MB']
+  A3 WARN（覆盖 26h 且该转未轮转：mtime 回拨 8 天）                  PASS
+        AUDIT_STATUS=WARN live=0.2MB archives=1 report_hours=26.0 rot=yes 原因=report_hours=26.0≥24h 且该轮转未轮转（轮转：存活≥7.0d）   （0.20s，AUDIT_STATUS 判据行）
+        ['AUDIT_STATUS=WARN live=0.2MB archives=1 report_hours=26.0 rot=yes 原因=report_hours=26.0≥24h 且该轮转未轮转（轮转：存活≥7.0d）']
+  A4 CRIT（归档缺失且 live 9MiB > 轮转 8MiB）                   PASS
+        AUDIT_STATUS=CRIT live=10.1MB archives=0 report_hours=2.0 rot=yes 原因=归档缺失（0 份）而 live=10.1MB>轮转阈值8MB   （0.15s，AUDIT_STATUS 判据行）
+        ['AUDIT_STATUS=CRIT live=10.1MB archives=0 report_hours=2.0 rot=yes 原因=归档缺失（0 份）而 live=10.1MB>轮转阈值8MB']
+
+B. tools/storage_waterline.py --local-only --runtime <假 runtime>
+  B1 输出含 runtime/audit 段（体积/最老天数/趋势）                   PASS
+        本机 runtime/audit 审计流: 0.24 MB / 2 文件（live 0.23 MB / 归档 1 份 0.0 MB；最老 0.0 天（2026-09-28）；趋势 0.24 MB/天）
+  B2 假 11MiB 统一流 ⇒ WARN finding（rc≥2）                  PASS
+        WARN  本机 runtime/audit 统一流 live=12.9MB>10MB（阈值口径同 tools/audit_waterline.py）
+  B3 假 9MiB 无归档 ⇒ CRIT finding（rc=3）                   PASS
+
+DRILL=PASS (7/7)

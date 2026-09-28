@@ -1,0 +1,70 @@
+### 0) 生成草案（可重放）
+$ python tools/mas_plan_builder.py --account y9Flipped
+=== mas_plan_builder · y9Flipped（官服）===
+- 本轮主刷：**10-6**（固源岩组）
+- 候选回退位：10-6-HARD → 2-4 → 1-7
+- 用药：不吃药（MedicineNumb=0） ｜ 活动优先：关 ｜ series：未指定
+- 停刷条件：MAA 任务自然结束（理智耗尽 / 药耗尽 / 关卡不可用跳过）——run profile 轮询 app.log「任务结束:<task_uid>」判完。
+- ⚠ 需先试探一次：10-11、10-11-HARD、10-6、10-6-HARD、11-11（台账 unknown）
+stage_plan = ["10-6", "10-6-HARD", "2-4", "1-7"]
+草案：runtime/reports/plans/y9Flipped_20260928_0839.md
+profile：runtime/reports/plans/y9Flipped_20260928_0839.json
+执行（零写预览）：python tools/mas_run_profile.py --profile runtime/reports/plans/y9Flipped_20260928_0839.json
+执行（真发车，需批准）：python tools/mas_run_profile.py --profile runtime/reports/plans/y9Flipped_20260928_0839.json \
+  --apply
+  ⚠(profile) medicine.use_expiring=False：**AUTO-MAS 两层没有这个键**（MAA 侧 UseExpiringMedicine，主战斗值随模板/该号 ConfigFile）⇒ 本次不会写它，只读回记录实际值。（docs/MAS_RUN_PROFILE.md §2 行 6）
+  ⚠(profile) target_drop.enabled=false：本次不写该字段（简洁模式 AutoProxy 每轮自会硬关）
+
+### 1) dry-run（原样，多号脚本应被 fail-closed 拒绝）
+$ python tools/mas_run_profile.py --profile runtime/reports/plans/y9Flipped_20260928_0839.json
+=== mas_run_profile · DRY-RUN ===
+脚本: 明日方舟-官-2-4-47（sid=919c8a3b, emu=14, 目录=E:\MAA-Multi\MAA_2）
+stage_plan: ['10-6', '10-6-HARD', '2-4', '1-7']（写 Stage/Stage_1..3：长度为 4，未给的位清成 '-'）
+medicine: use=False count=0（use=false ⇒ MedicineNumb=0）
+activity_priority: enabled=False medicine=0
+keep_remain_sanity_task: True（False ⇒ Stage_Remain="-"，不挂剩余理智）
+restore_after: run_end
+写路线: 临时计划表（默认，账号自己的值不动）
+  预期写入步骤:
+  REST: OK (code=200)
+  WARN: medicine.use_expiring=False：**AUTO-MAS 两层没有这个键**（MAA 侧 UseExpiringMedicine，主战斗值随模板/该号 ConfigFile）⇒ 本次不会写它，只读回记录实际值。（docs/MAS_RUN_PROFILE.md §2 行 6）
+  WARN: target_drop.enabled=false：本次不写该字段（简洁模式 AutoProxy 每轮自会硬关）
+  拒绝[G2]: multi_account_needs_explicit — 账号 y9Flipped 所在脚本还有 3 个启用号（古茶七心红、音乐厅生动的深海鱼、寻找勇者的大魔王）会一起跑。要只跑 y9Flipped：加 --disable-others（临时写 Status=False，工具会快照并在结束/失败时还原）；要整脚本跑：加 --all-accounts。（docs/MAS_RUN_PROFILE.md §7-4）
+
+[dry-run] 未触达任何写请求。加 --apply 真执行。
+rc=2
+
+### 2) dry-run（显式单号 --disable-others，走完整执行路径 · 零写）
+$ python tools/mas_run_profile.py --profile runtime/reports/plans/y9Flipped_20260928_0839.json --disable-others
+=== mas_run_profile · DRY-RUN ===
+脚本: 明日方舟-官-2-4-47（sid=919c8a3b, emu=14, 目录=E:\MAA-Multi\MAA_2）
+stage_plan: ['10-6', '10-6-HARD', '2-4', '1-7']（写 Stage/Stage_1..3：长度为 4，未给的位清成 '-'）
+medicine: use=False count=0（use=false ⇒ MedicineNumb=0）
+activity_priority: enabled=False medicine=0
+keep_remain_sanity_task: True（False ⇒ Stage_Remain="-"，不挂剩余理智）
+restore_after: run_end
+写路线: 临时计划表（默认，账号自己的值不动）
+  账号: y9Flipped        server=Official mode=简洁 StageMode=Fixed
+      目标 7 键: {"MedicineNumb": 0, "SeriesNumb": "0", "Stage": "10-6", "Stage_1": "10-6-HARD", "Stage_2": "2-4", "Stage_3": "1-7", "Stage_Remain": "1-7"}
+      读回期望: StagePlan=['10-6', '10-6-HARD', '2-4', '1-7'] Series=0 MedicineCount=0 UseMedicine=False 剩余理智=True
+  账号: 古茶七心红           （临时停用） server=Official mode=简洁 StageMode=Fixed
+  账号: 音乐厅生动的深海鱼       （临时停用） server=Official mode=简洁 StageMode=c6684b55-adfe-49ab-b8d7-7c4cae1fdb31
+  账号: 寻找勇者的大魔王        （临时停用） server=Official mode=简洁 StageMode=Fixed
+  预期写入步骤:
+    - {"op": "backup", "to": "D:\\1-2\\MAAOrch\\runtime\\run_profile\\backups\\<run_id>"}
+    - {"op": "plan/add+plan/update", "per_account": 1, "payload_keys": ["MedicineNumb", "SeriesNumb", "Stage", "Stage_1", "Stage_2", "Stage_3", "Stage_Remain"]}
+    - {"op": "scripts/user/update", "StageMode": "<planId>"}
+    - {"op": "scripts/user/update", "Status": false, "accounts": ["古茶七心红", "音乐厅生动的深海鱼", "寻找勇者的大魔王"]}
+    - {"op": "preflight", "cmd": "mas_preflight.py --script 明日方舟-官-2-4-47 --json"}
+    - {"op": "dispatch/start", "taskId": "919c8a3b-0f8b-41fa-bc1d-3b25d0fc2926", "mode": "AutoProxy"}
+    - {"op": "readback(L1)", "file": "E:\\MAA-Multi\\MAA_2\\config\\gui.new.json", "assert": ["StagePlan", "Series", "MedicineCount", "UseMedicine", "IsEnable", "剩余理智条目"]}
+    - {"op": "readback(L2, 参考)", "file": "E:\\MAA-Multi\\MAA_2\\debug\\asst.log"}
+    - {"op": "wait", "policy": "run_end"}
+    - {"op": "restore", "what": ["StageMode", "Task 键", "删临时计划表", "Status"]}
+    - {"op": "audit", "files": ["runtime\\mas_run_profile_log.jsonl", "runtime\\mas_ledger.jsonl"]}
+  REST: OK (code=200)
+  WARN: medicine.use_expiring=False：**AUTO-MAS 两层没有这个键**（MAA 侧 UseExpiringMedicine，主战斗值随模板/该号 ConfigFile）⇒ 本次不会写它，只读回记录实际值。（docs/MAS_RUN_PROFILE.md §2 行 6）
+  WARN: target_drop.enabled=false：本次不写该字段（简洁模式 AutoProxy 每轮自会硬关）
+
+[dry-run] 未触达任何写请求。加 --apply 真执行。
+rc=0

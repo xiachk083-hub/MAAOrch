@@ -1,0 +1,8 @@
+CMD: mas_plan_builder.py --list-accounts
+RC=0 SECS=0.6
+------------------------------------------------------------
+--- stdout ---
+y9Flipped                    operators=有 depot=有
+
+--- stderr ---
+

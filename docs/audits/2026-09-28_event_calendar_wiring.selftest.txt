@@ -1,0 +1,35 @@
+# t_403cd83b / 2026-09-28 10:44:28 +0800
+$ python tools/mas_shift_report.py --selftest
+  ok  daily 窗口起=05:00
+  ok  daily 窗口终=12:00
+  ok  evening 窗口起=19:30
+  ok  evening 窗口终=次日05:00
+  ok  shift 自动判定(daily)
+  ok  脱敏丢凭据键
+  ok  应跑=2（排 l-*/停用）
+  ok  实跑=1
+  ok  缺口=1（仅失败 B）
+  ok  排除 l-*
+  ok  连续失败 streak=3
+  ok  重试自愈不算连续失败
+  ok  _last_json_line 单行
+  ok  _last_json_line 多行
+  ok  _last_json_line 无 JSON
+  ok  告警: dispatch_failed
+  ok  告警: gap_over_n
+  ok  告警: all_busy
+  ok  告警: consecutive_failed
+  ok  成熟度闸: 未成熟不报 gap/all_busy/streak
+  ok  成熟度闸: dispatch_failed 仍报
+  ok  payload schema
+  ok  卡片含结论行
+  ok  event_cal: 取 UPCOMING 行
+  ok  event_cal: 取 EVENT_CAL/EVENT_ADVICE 行
+  ok  event_cal: 无 UPCOMING 行 ⇒ fail-closed UNKNOWN
+  ok  event_cal: 工具自身 UNKNOWN 原样保留
+  ok  报告渠道行: dry-run 与真发区分
+  ok  报告第 9 节含 UPCOMING= 行
+  ok  报告降级仍含 UPCOMING=UNKNOWN: 行
+  ok  看板 DB 可定位或明确返回 None
+SELFTEST=OK（0 项失败）
+rc=0

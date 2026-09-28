@@ -1,0 +1,18 @@
+班次前自检（只读）  2026-09-28 10:11:29
+目标: 脚本 明日方舟-官-2-4-47 → 1 脚本 / 1 目录 / 1 实例
+[PASS] 1 REST     POST /api/scripts/get code=200 @http://100.79.173.69:36163
+[PASS] 2 槽位空闲     目标目录均无 MAA.exe 在跑
+        （其他在跑槽位：MAA_9, l-1，不阻断）
+[PASS] 3 模拟器      idx14 UP 127.0.0.1:5583 boot=1
+        idx=14   UP serial=127.0.0.1:5583 boot=1
+[SKIP] 4 残留画面     显式 --skip-screen
+[PASS] 5 注入闸门     E:\MAA-Multi\MAA_2 OK
+        MAA_2    OK        server=Official account=192****7973 switch=True 
+[WARN] 6 磁盘水位     C: 29.7GB (<30 WARN); E: 147.2GB
+[FAIL] 7 客户端版本    idx14 com.hypergryph.arknights 0.0.0-旧版本→2.7.71（lastUpdate 2026-09-04 21:56:56）
+        idx=14   com.hypergryph.arknights     2.7.71       changed
+[PASS] 8 宿主重启     在飞 MAA=2；host DailyRestart1900@2026-09-28 19:00:00（528 min）; host DailyRestart0400@2026-09-29 04:00:00（1068 min）
+        host  DailyRestart1900   @ 2026-09-28 19:00:00（528 min）
+        host  DailyRestart0400   @ 2026-09-29 04:00:00（1068 min）
+PREFLIGHT=NO-GO
+  - 客户端版本变化 —— 建议暂停该实例发车（人工确认可正常进游戏后再 interrupt_guard.py --record 刷新基线）：idx14 com.hypergryph.arknights 0.0.0-旧版本→2.7.71（lastUpdate 2026-09-04 21:56:56）

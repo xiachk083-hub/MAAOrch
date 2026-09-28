@@ -1,0 +1,58 @@
+CMD: mas_run_profile.py --help
+RC=0 SECS=1.1
+------------------------------------------------------------
+--- stdout ---
+usage: mas_run_profile.py [-h] [--profile PROFILE] [--apply]
+                          [--account ACCOUNT] [--all-accounts]
+                          [--disable-others] [--write-mode {plan,fixed}]
+                          [--preflight] [--readback-timeout READBACK_TIMEOUT]
+                          [--poll-seconds POLL_SECONDS]
+                          [--max-wait-seconds MAX_WAIT_SECONDS]
+                          [--wait-poll-seconds WAIT_POLL_SECONDS]
+                          [--no-stop-on-timeout]
+                          [--restore-wait-seconds RESTORE_WAIT_SECONDS]
+                          [--restore-attempts RESTORE_ATTEMPTS]
+                          [--restore-gap-seconds RESTORE_GAP_SECONDS]
+                          [--strict-l2] [--status] [--reconcile]
+                          [--restore-run RUN_ID] [--list-plans] [--selftest]
+                          [--json]
+
+按 profile 一次发车（AUTO-MAS）：计划表/Series/吃药/活动优先 + 读回校验 + 自动还原
+
+options:
+  -h, --help            show this help message and exit
+  --profile PROFILE     profile JSON 路径（见
+                        runtime/templates/run_profile.example.json）
+  --apply               真执行（缺省 dry-run：只打印将做的改动与接口）
+  --account ACCOUNT     只跑这个号（覆盖 profile.target.account；多号脚本还需 --disable-
+                        others）
+  --all-accounts        接受整脚本跑（多号脚本的显式确认）
+  --disable-others      单号发车时临时停用同脚本其它启用号（Status=False，工具快照/还原）
+  --write-mode {plan,fixed}
+                        plan=新建临时计划表（默认，账号自己的值不动）；fixed=只对 Fixed 账号直写自己的 7 键
+  --preflight           dry-run 时也跑一次 preflight（只读，较慢）
+  --readback-timeout READBACK_TIMEOUT
+                        读回校验超时秒（默认 300）
+  --poll-seconds POLL_SECONDS
+                        读回轮询间隔（默认 15s）
+  --max-wait-seconds MAX_WAIT_SECONDS
+                        restore_after=run_end 时的等待上限（默认 10800s=3h）
+  --wait-poll-seconds WAIT_POLL_SECONDS
+                        等任务轮询间隔（默认 20s）
+  --no-stop-on-timeout  超时不 stop（默认超时用 /api/dispatch/stop 止损再还原）
+  --restore-wait-seconds RESTORE_WAIT_SECONDS
+                        超时 stop 后等解锁上限（默认 180s）
+  --restore-attempts RESTORE_ATTEMPTS
+                        还原重试次数（默认 12）
+  --restore-gap-seconds RESTORE_GAP_SECONDS
+                        还原重试间隔（默认 30s）
+  --strict-l2           L2（asst.log append_task）不符也止损（默认仅告警）
+  --status              列出运行台账
+  --reconcile           对账：还原已确认结束的 open 记录
+  --restore-run RUN_ID  手动还原某次运行
+  --list-plans          只读：计划表 + 遗留「临时-按需-*」
+  --selftest            离线自测（假传输，不碰网络/runtime）
+  --json                单行/结构化 JSON 输出
+
+--- stderr ---
+

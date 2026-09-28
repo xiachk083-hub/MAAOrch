@@ -1,0 +1,66 @@
+=== --action 'profile.*' ===
+2026-09-28 11:34:06  info    tool:mas_run_profile       profile.plan           script:明日方舟-官-12             audit
+2026-09-28 11:04:44  refused tool:mas_run_profile       profile.refuse         script:明日方舟-官-2-4-47         audit
+2026-09-28 11:03:02  info    tool:mas_run_profile       profile.plan           script:明日方舟-官-12             audit
+2026-09-28 10:58:22  ok      tool:mas_run_profile       profile.backup         run:rp_20260928_105821_run   run=rp_20260928_105821_run audit
+2026-09-28 10:58:22  ok      tool:mas_run_profile       profile.plan_created   run:rp_20260928_105821_run   run=rp_20260928_105821_run audit
+2026-09-28 10:58:22  ok      tool:mas_run_profile       profile.preflight      run:rp_20260928_105821_run   run=rp_20260928_105821_run audit
+AUDIT_QUERY=6条 scanned=1037 legacy=0
+
+=== --action 'farm.*' ===
+2026-09-28 11:09:12  refused tool:mas_probe_farm        farm.refused           run:pf_20260928_110911__wire run=pf_20260928_110911__wire_iso audit 原因=target_unresolved
+2026-09-28 11:09:12  fail    tool:mas_probe_farm        farm.refuse            run:pf_20260928_110911__wire run=pf_20260928_110911__wire_iso audit
+2026-09-28 11:04:08  fail    tool:mas_farm_orchestrator farm.run               run:fo_20260928_110353_烤箱    run=fo_20260928_110353_烤箱 audit 原因=卡在 preflight（rc=2）
+2026-09-28 11:04:08  fail    tool:mas_farm_orchestrator farm.done              run:fo_20260928_110353_烤箱    run=fo_20260928_110353_烤箱 audit 原因=卡在 preflight（rc=2）
+2026-09-28 10:51:38  info    tool:mas_farm_orchestrator farm.lease_release     run:fo_20260928_105137_甲     run=fo_20260928_105137_甲 audit
+2026-09-28 10:51:38  ok      tool:mas_farm_orchestrator farm.done              run:fo_20260928_105137_甲     run=fo_20260928_105137_甲 audit 原因=整链跑通（试探→执行→还原）
+AUDIT_QUERY=6条 scanned=1037 legacy=0
+
+=== --action 'dispatch.*' ===
+2026-09-28 11:09:59  ok      tool:mas_ondemand          dispatch.cleanup_ok    temp_queue:临时-按需-20260928_06 audit
+2026-09-28 11:09:59  ok      tool:mas_ondemand          dispatch.cleanup_ok    temp_queue:临时-按需-20260928_10 audit
+2026-09-28 11:08:05  ok      tool:mas_ondemand          dispatch.release       task:骰子                      audit
+2026-09-28 11:05:29  refused tool:mas_ondemand          dispatch.refuse        account:烤箱                   audit 原因=preflight_no-go
+2026-09-28 11:04:06  refused tool:mas_ondemand          dispatch.refuse        account:hbznn119-官           audit 原因=preflight_no-go
+2026-09-28 10:58:24  refused tool:mas_ondemand          dispatch.refuse        script:脚本A                   audit 原因=concurrent_write
+AUDIT_QUERY=6条 scanned=1037 legacy=0
+
+=== --action 'stage.*' ===
+2026-09-28 11:12:19  ok      tool:stage_capability      stage.rebuild          file:runtime/reports/stage_c audit
+2026-09-28 11:12:19  ok      tool:stage_capability      stage.rebuild          file:runtime/reports/stage_c audit
+2026-09-28 11:05:35  ok      tool:stage_capability      stage.rebuild          file:runtime/reports/stage_c audit
+2026-09-28 11:04:44  fail    tool:mas_plan_builder      stage.exec_done        -                            audit
+2026-09-28 11:04:43  ok      tool:mas_plan_builder      stage.plan_built       account:y9Flipped            audit
+2026-09-28 11:04:43  info    tool:mas_plan_builder      stage.exec_dry_run     -                            audit
+AUDIT_QUERY=6条 scanned=1037 legacy=0
+
+=== --action 'config.*' ===
+2026-09-28 11:09:16  ok      tool:mas_config_snapshot   config.drift           -                            audit
+2026-09-28 11:09:14  ok      tool:mas_config_snapshot   config.restore         snapshot:20260928_092944__ba audit
+2026-09-28 11:09:13  ok      tool:mas_config_snapshot   config.restore         snapshot:20260928_092944__ba audit
+2026-09-28 11:07:41  ok      tool:mas_config_snapshot   config.drift           -                            audit
+2026-09-28 11:07:39  ok      tool:mas_config_snapshot   config.restore         snapshot:20260928_092944__ba audit
+2026-09-28 11:07:38  ok      tool:mas_config_snapshot   config.restore         snapshot:20260928_092944__ba audit
+AUDIT_QUERY=6条 scanned=1037 legacy=0
+
+=== --action 'patch.*' ===
+2026-09-28 11:29:20  ok      tool:mas_patch_guard       patch.reapply          file:E:\AUTO-MAS\_patchguard audit
+2026-09-28 11:29:15  ok      tool:mas_patch_guard       patch.reapply          file:E:\AUTO-MAS\_patchguard audit
+2026-09-28 11:12:14  ok      tool:mas_patch_guard       patch.reapply          file:E:\AUTO-MAS\_patchguard audit
+2026-09-28 11:12:08  ok      tool:mas_patch_guard       patch.reapply          file:E:\AUTO-MAS\_patchguard audit
+2026-09-28 11:08:59  ok      tool:mas_patch_guard       patch.reapply          file:E:\AUTO-MAS\_rbdrill_20 audit
+2026-09-28 11:08:52  ok      tool:mas_patch_guard       patch.reapply          file:E:\AUTO-MAS\_rbdrill_20 audit
+AUDIT_QUERY=6条 scanned=1037 legacy=0
+
+=== --action 'run.*' ===
+2026-09-28 11:31:36  info    tool:mas_watch             run.watch              -                            audit
+AUDIT_QUERY=1条 scanned=1037 legacy=0
+
+=== --action 'manual.*' ===
+2026-09-28 11:19:55  info    worker:mas                 manual.note            -                            卡=t_a190ca4b audit 原因=接线期统一流读法说明（t_a190ca4b）
+AUDIT_QUERY=1条 scanned=1037 legacy=0
+
+=== --action 'audit.*' ===
+2026-09-28 09:58:36  ok      worker:mas                 audit.bootstrap        file:runtime/audit/mas_audit 卡=t_d937f659 audit 原因=统一审计入口上线：schema maaorch.audit.v1 首次落盘
+AUDIT_QUERY=1条 scanned=1037 legacy=0
+

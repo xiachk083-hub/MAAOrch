@@ -1,0 +1,30 @@
+# builtin 30 分钟巡检报告（tick 起跑 10:57:54，报告落盘 11:10:18）— 本卡取证
+# 源: C:\Users\xiach\AppData\Local/hermes/profiles/mas/cron/output/52b88b0ffca0/2026-09-28_11-10-18.md
+# 关键事实 1：本轮可见工具面 = auto-mas-monitor10/maaorch-daily6/mas-dispatch5/mas-triage2/mas-observe9/mas-ondemand6 = 38
+#   ⇒ mas-observe 9 说明 audit_waterline 已在工具面（10:55 上的线，本轮 10:57:54 起跑前已生效）。
+# 关键事实 2：本轮 prompt = 11:00:44 应用前的旧稿（第三步只有 1)~7)，收尾无 8)）⇒ 主表 14 行、无 AUDIT_STATUS=。
+#   ⇒ 缺行原因 = prompt 应用时点(11:00:44)晚于本轮起跑(10:57:54)，不是判据/工具问题；
+#     现行 prompt（含 8) + 主表 AUDIT_STATUS 行）自 11:00:44 起在 jobs.json，下一轮 tick（11:27:52）即覆盖。
+# 附带：本卡给 storage_waterline/audit_waterline 的口径与本报告 DISK 行（C:30G/238G、E:147G/1863G）互不影响。
+
+巡检完成（21 次工具调用内）。以下为最终报告：
+
+MCP_API_TOOL_COUNT=38 | ISOLATION=PASS
+SCHEDULE=OK（reachable=true；due/late/drift=无；日常1–12 已发齐 12/12、晚班未到点）
+SWITCH_GATE=VIOLATION:MAA_10,MAA_12
+PATCH_GUARD=OK
+CLIENT_STATE=正常:标题页×3、未知×1（异常1：idx25=未知）
+ERR_SUMMARY=86 条 Top=客户端未就绪（致命61/警告14/忽略11；escalated）
+DISPATCH_ALERT=无
+UPCOMING=国际服 周切：剿灭周额度重置 + 周任务刷新:2026-09-28 19:00（约 7.9 小时后）；B服 矢量突破#3「拟生态」开启:2026-09-29 16:00（约 28.9 小时后）；B服 「资源收集」全关卡全天开放开启:2026-09-29 16:00（约 28.9 小时后）；国服 矢量突破#3「拟生态」开启:2026-09-29 16:00（约 28.9 小时后）；国服 「资源收集」全关卡全天开放开启:2026-09-29 16:00（约 28.9 小时后）；日服 サイドストーリー「人々、我々」结束:2026-09-30 02:59（约 39.9 小时后）；等另有 6 项在窗内
+IDENTITY=一致（red_rounds=0；2 个多号脚本共 12 轮）
+DISK=C:30G/238G ⚠、E:147G/1863G ⚠
+POWER=0 建议=无（参考：在飞 MAA=0）
+INTERRUPT_RISK=无
+WIKI_GOV=UNKNOWN:工具面未提供（mas-wiki 未接线）
+结论=异常:切号闸门违例（MAA_10/MAA_12）、今日 5 号失败（已发补跑）、盘位低水位
+
+证据/处置：
+1) 巡检时点 09-28 11:02–11:08；工具面=auto-mas-monitor10/maaorch-daily6/mas-dispatch5/mas-triage2/mas-observe9/mas-ondemand6=38（含刷新滞后组，无禁用项）；后端就绪=true（background=ready）
+2) 今日账号=52 有记录（ok22/retry25/fail5）；ERROR_TRIAGE=hb***-日:startup_failed(warn)、帝***:startup_failed(warn)（均唤醒/登录失败，可重试）；总览 Proxy：hb***-日×6、帝***×4、潮*×3 次 ErrorTimes>0 交叉印证；在飞 MAA=0
+3) 补跑=5 号已发车（预演全通过→11:07:38 dry_run=False，复核 running=true，未截断）；补位=无需（due/late=无，未发车）；队列 7/12 满员、5 项待跑（另 1 号今日未跑）；KB=未接线

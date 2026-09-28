@@ -1,0 +1,29 @@
+{
+  "captured_at": "2026-09-28 11:16:05 (BJT)",
+  "channel": "Hermes 会话工具面实调（mas profile → 网关已连接的 mas-observe stdio server；非本地直连）",
+  "tool": "mcp__mas_observe__mas_kanban_health",
+  "arguments": {},
+  "gateway_visibility": {
+    "tool_listed_in_session_catalog": true,
+    "config": "mcp_servers.mas-observe.enabled = true",
+    "reconnect_log": "mcp-stderr.log: 'starting MCP server mas-observe' 于 2026-09-28 11:17-11:18（关→开刷新，见 12_server_check / 集成卡收口）"
+  },
+  "result": {
+    "ok": true,
+    "tool": "mas_kanban_health",
+    "line": "KANBAN_HEALTH=ts=20260928_111605,boards=2,cards=189,running=8,dup=4,zombie=0,blocked_stale=1,fail=2,orphan=0,P1=1,P2=7,P3=2,status=CRIT",
+    "status": "CRIT",
+    "counts": {
+      "boards": 2, "cards": 189, "running": 8, "dup": 4, "zombie": 0,
+      "blocked_stale": 1, "fail": 2, "orphan": 0, "P1": 1, "P2": 7, "P3": 2
+    },
+    "exit_code": 0,
+    "elapsed_s": 0.8
+  },
+  "semantics_note": "ok=true 且 status=CRIT：--line/--json 路径 rc=0 表示『扫描成功出判据』（0/2/3 类有效结论只看默认模式的退出码）；CRIT 是看板数据结论（P1=1），不是工具失败。WARN/CRIT 均为 ok=true 的有效结论。",
+  "board_snapshot_examples": [
+    "[P1] t_50ea890a(blocked) ≈ t_a190ca4b(running) 相似度 1.00",
+    "[P2] t_c8b36f5e blocked 12.1h（kind=未标，recur=0）",
+    "[P2] running 9 张 > 板级建议上限 6"
+  ]
+}

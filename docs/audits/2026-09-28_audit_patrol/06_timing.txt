@@ -1,0 +1,10 @@
+# 巡检耗时增量实测（验收 3：status --json 无网络、增量 <1s）
+# 命令: 逐个计时（date +%s%3N 前后差，含 Python 启动）
+# 时间: 2026-09-28 11:02:55
+
+tools/mas_audit.py status --json               rc=0  耗时 229 ms
+tools/audit_waterline.py --json                rc=0  耗时 144 ms
+tools/storage_waterline.py --local-only        rc=2  耗时 1796 ms
+
+# 对照：MCP 面 audit_waterline 工具自报 elapsed_s=0.1~0.2s（见 04_mcp_probe.txt），
+#       巡检为 +1 次工具调用（不拉网络、不扫远端），增量 <1s。

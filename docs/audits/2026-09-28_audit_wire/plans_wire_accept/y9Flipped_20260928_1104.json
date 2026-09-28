@@ -1,0 +1,134 @@
+{
+ "target": {
+  "script": "明日方舟-官-2-4-47",
+  "account": "y9Flipped"
+ },
+ "stage_plan": [
+  "10-6",
+  "10-6-HARD",
+  "2-4",
+  "1-7"
+ ],
+ "medicine": {
+  "use": false,
+  "count": 0,
+  "use_expiring": false
+ },
+ "activity_priority": {
+  "enabled": false,
+  "medicine": 0
+ },
+ "target_drop": {
+  "enabled": false,
+  "drop_id": "",
+  "count": 0
+ },
+ "keep_remain_sanity_task": true,
+ "restore_after": "run_end",
+ "notes": "由 mas_plan_builder 生成 2026-09-28 11:04:43；目标 固源岩组；主刷 10-6；用药 0 瓶；活动优先 关；停刷=理智耗尽/任务自然结束；详见 runtime/reports/plans/ 同名 .md",
+ "_plan_builder": {
+  "activity_enabled": false,
+  "notes": "由 mas_plan_builder 生成 2026-09-28 11:04:43；目标 固源岩组；主刷 10-6；用药 0 瓶；活动优先 关；停刷=理智耗尽/任务自然结束；详见 runtime/reports/plans/ 同名 .md",
+  "generated_at": "2026-09-28 11:04:43",
+  "mode": "gap",
+  "queue": [
+   {
+    "material": "固源岩组",
+    "gap": 46,
+    "best": "10-6",
+    "runs": 61,
+    "ap_need": 1281
+   },
+   {
+    "material": "聚酸酯组",
+    "gap": 32,
+    "best": "7-4",
+    "runs": 58,
+    "ap_need": 1044
+   },
+   {
+    "material": "异铁组",
+    "gap": 21,
+    "best": "14-12",
+    "runs": 41,
+    "ap_need": 861
+   }
+  ],
+  "probe_needed": [
+   "10-11",
+   "10-11-HARD",
+   "10-6",
+   "10-6-HARD",
+   "11-11",
+   "11-11-HARD",
+   "11-18",
+   "11-18-HARD",
+   "12-15",
+   "12-15-HARD",
+   "12-18",
+   "12-18-HARD",
+   "13-12",
+   "13-12-HARD",
+   "13-16",
+   "13-16-HARD",
+   "13-3",
+   "13-3-HARD",
+   "14-12",
+   "14-12-HARD",
+   "14-20",
+   "14-20-HARD",
+   "14-9",
+   "14-9-HARD",
+   "15-12",
+   "15-17",
+   "15-6",
+   "16-16",
+   "16-4",
+   "16-5",
+   "17-7",
+   "2-4",
+   "2-6",
+   "2-8",
+   "3-8",
+   "4-6",
+   "5-1",
+   "5-3",
+   "5-5",
+   "6-10",
+   "6-4",
+   "6-5",
+   "7-18",
+   "7-2",
+   "7-4",
+   "7-6",
+   "9-13",
+   "9-17",
+   "9-7",
+   "R8-3",
+   "S4-1"
+  ],
+  "box": {
+   "owned": 419,
+   "all": 460,
+   "e2": 288,
+   "e2_60": 155,
+   "e2_80": 100,
+   "six": 128,
+   "six_e2": 119,
+   "grade": "厚"
+  },
+  "events": {
+   "server_key": "cn_official",
+   "verdict": "该服无在期刷关活动 ⇒ 按主线/资源本排（activity_priority.enabled=false）",
+   "enabled": false,
+   "gen": "2026-09-28 04:49:45+08:00",
+   "age_days": 0.26
+  },
+  "budget_per_day": 280.0,
+  "cap_built_at": "2026-09-28 11:04:16",
+  "inputs": [
+   "runtime\\reports\\stage_capability.json",
+   "config\\material_water_levels.json"
+  ]
+ }
+}

@@ -1,0 +1,24 @@
+# mas_audit.py --selftest 实跑（2026-09-28 10:25:50 CST）
+
+$ $PY312 tools/mas_audit.py --selftest
+SELFTEST=OK (19/19)
+  PASS append 落盘并读回
+  PASS 凭据类键丢弃
+  PASS 手机号打码
+  PASS 非法 action 拒绝
+  PASS 非法 actor/target/result 拒绝
+  PASS params 超长截断留指纹
+  PASS validate 抓到未打码手机号
+  PASS 锁建立与释放
+  PASS 按体积轮转（apply）
+  PASS 按天数轮转（dry→apply）
+  PASS prune 保留期 + keep_min 兜底
+  PASS query 过滤/排序/限量
+  PASS 旧日志适配器（ledger/dispatch/profile）
+  PASS 看板库适配器（events/comments）
+  PASS 数据面缺失 fail-closed
+  PASS status/validate 口径
+  PASS schema 与样例自洽
+  PASS 时间解析（绝对/相对）
+  PASS 旧日志时间戳归一（ISO-T/缺秒/毫秒）
+rc=0
