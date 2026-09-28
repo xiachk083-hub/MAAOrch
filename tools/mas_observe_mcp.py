@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r"""mas-observe MCP —— 巡检用「只读观察面」：9 个只读工具，全部包只读 CLI。
+r"""mas-observe MCP —— 巡检用「只读观察面」：13 个只读工具，全部包只读 CLI。
 
 背景（2026-09-27，kanban t_6cfe7865 / docs/MCP_TOOL_ROADMAP.md §3.2 冻结契约）：
 巡检 agent（cron job 52b88b0ffca0）看得到"谁失败、有没有漏发"，但看不到"现场什么样、
@@ -15,6 +15,12 @@ r"""mas-observe MCP —— 巡检用「只读观察面」：9 个只读工具，
   mas_kanban_health(board?, json?)              看板治理体检一行（KANBAN_HEALTH=：重复/僵尸/长期 blocked/崩溃超限/孤儿产物）
   audit_waterline()                             统一审计流（runtime/audit/）水位判据一行（AUDIT_STATUS=：OK|WARN|CRIT；
                                                 等价 tools/audit_waterline.py，卡 t_537fbff2）
+  mas_y3_gap(timeout?)                          Y3 缺口检测一行（Y3_GAP=：截断/孤儿化 never_ran 类候选，只列不补；
+                                                等价 tools/mas_y3_gap.py --check，卡 t_03de93ab）
+  maaw_asset_drift(timeout?)                    MAAW 资产漂移一行（MAAW_ASSET_DRIFT=：fw pipeline/模板 md5 基线比对，
+                                                漂移即告警、只报不处置；等价 tools/maaw_asset_drift.py --check，卡 t_bf5ca5cf）
+  mas_perf(timeout?, mult?)                    性能基线回归检测一行（PERF=：近轮 vs 14 天基线 P90 超阈即 WARN；
+                                                等价 tools/perf_baseline.py --check，卡 t_c6f3a410 / t_f3cda416）
 
 写操作：**无**（不发车、不动实例、不改配置、不 kill；远端全只读）。
 本机可写的东西只有：runtime/observe/ 下的临时产物（截图/json）、mas_report(write_report=true)
@@ -65,6 +71,10 @@ CLI_INTERRUPT = os.path.join(TOOLS_DIR, "interrupt_guard.py")
 CLI_EVENTCAL = os.path.join(TOOLS_DIR, "event_calendar.py")
 CLI_AUDIT_WL = os.path.join(TOOLS_DIR, "audit_waterline.py")
 CLI_KANBAN_HEALTH = os.path.join(TOOLS_DIR, "kanban_health.py")
+CLI_RESID_OC = os.path.join(TOOLS_DIR, "mas_residue_occupancy.py")
+CLI_Y3_GAP = os.path.join(TOOLS_DIR, "mas_y3_gap.py")
+CLI_ASSET_DRIFT = os.path.join(TOOLS_DIR, "maaw_asset_drift.py")
+CLI_PERF = os.path.join(TOOLS_DIR, "perf_baseline.py")
 
 PY = sys.executable  # MCP server 由 Python312 拉起（config: command=Python312\python.exe）
 SERVER_NAME = "mas-observe"
@@ -248,10 +258,68 @@ _SCHEMAS = [
                      "properties": {"timeout": {"type": "integer", "description": "超时(秒)，默认 60"}},
                      "additionalProperties": False},
     ),
+    types.Tool(
+        name="mas_y3_gap",
+        description=("【只读】Y3 缺口检测（截断/孤儿化号 · never_ran 类，卡 t_03de93ab 产物；等价 "
+                     "tools/mas_y3_gap.py --check）：本班次派发记录（mas_dispatch_state）× 主机快照 never_ran × "
+                     "队列停滞/重启证据 ⇒ 候选账号（**只列不补**，补跑判定归 G3）。"
+                     "返回 {ok, y3_gap, shift, shift_day, counts, exit_code, elapsed_s}；巡检写 `Y3_GAP=…` 行时"
+                     "直接用返回的 y3_gap（值不含 `Y3_GAP=` 前缀：OK / <n>:<账号,…> / UNKNOWN:<原因>；"
+                     "候选账号按本 server 契约掩码：前 2+***+后 2，短名首字符+***）。"
+                     "数据不可得（SSH 快照失败/调度状态不可读/工具缺/超时）⇒ ok=false 且 y3_gap=\"UNKNOWN:<原因>\""
+                     "（fail-closed，**不许当「无缺口」用**）。SSH 两跳全只读、零写盘、不发车、不改配置。耗时约 10-40s。"),
+        inputSchema={"type": "object",
+                     "properties": {"timeout": {"type": "integer", "description": "超时(秒)，默认 180"}},
+                     "additionalProperties": False},
+    ),
+    types.Tool(
+        name="mas_residue_occupancy",
+        description=("【只读】残留补跑队列 + 产线占用公告（卡 t_c27a2bd8 产物；等价 tools/mas_residue_occupancy.py）："
+                     "两条巡检判据一次取回 —— ① `TEMP_QUEUE_RESIDUE=<n> [候选清单]`：AUTO-MAS 上仍存在的"
+                     "「临时-补跑-*」残留队列（只报**不清理**；REST 不可达 ⇒ UNKNOWN）；"
+                     "② `PROD_OCCUPANCY=<无|谁@何时@哪台/目录>`：产线实例/目录当前占用者（实例租约 + 按需在窗 + "
+                     "班次 busy 窗 + 主机在飞 MAA 进程四源合并；未被认领的在飞进程写「未公告」；ssh 探测失败 ⇒ "
+                     "UNKNOWN + 公告面）。返回 {ok, temp_queue_residue, prod_occupancy, residue{count,names}, "
+                     "occupancy[], live{}, sources{}}。只读：不清理、不发车、不 kill；耗时约 2-10s。"),
+        inputSchema={"type": "object",
+                     "properties": {"timeout": {"type": "integer", "description": "超时(秒)，默认 120"}},
+                     "additionalProperties": False},
+    ),
+    types.Tool(
+        name="maaw_asset_drift",
+        description=("【只读】MAAW 资产漂移检测（K3，卡 t_bf5ca5cf 产物；等价 tools/maaw_asset_drift.py --check）："
+                     "把 maa-arknights-fw 的 pipeline json 与模板图（fw resource/pipeline、JP 覆盖层 pipeline+image、"
+                     "Award/SignInEvent 三图、fw+仓内 data/spa 工作集，共 62 文件）与冻结 md5 基线"
+                     "（runtime/reports/maaw_asset_baseline.json）逐文件比对 ⇒ 漂移即告警。"
+                     "返回 {ok, asset_drift, drift{changed,missing,new}, counts, baseline, current_files, exit_code, elapsed_s}；"
+                     "巡检写 `MAAW_ASSET_DRIFT=…` 行时直接用 asset_drift：`0` / `<n>`（漂移文件数）/ `UNKNOWN:<原因>`。"
+                     "基线缺失/损坏或站点根不可达 ⇒ ok=false 且 asset_drift=\"UNKNOWN:<原因>\"（fail-closed，**不许当「无漂移」用**）。"
+                     "**只报不处置**：不重基线（--build 只在人工 CLI 做）、不写 MAAW、不改任何文件；"
+                     "漂移明细进证据行交人工（合法变更→重基线；非法变更→备份回滚，见 K3.md）。<1s、无网络。"),
+        inputSchema={"type": "object",
+                     "properties": {"timeout": {"type": "integer", "description": "超时(秒)，默认 120"}},
+                     "additionalProperties": False},
+    ),
+    types.Tool(
+        name="mas_perf",
+        description=("【只读】性能基线回归检测一行（卡 t_c6f3a410 / t_f3cda416 产物；等价 tools/perf_baseline.py --check）："
+                     "单号日耗时 / 单轮耗时 / 启动→首链 / 截图 / 任务链耗时，对照 14 天基线"
+                     "（runtime/reports/perf_baseline.json）超阈（默认 P90×1.5；mult 下限 1.3＝「超基线 ≥30%」）即报。"
+                     "返回 {ok, perf, findings_total, findings[], shift_day, baseline, thresholds, exit_code, elapsed_s}；"
+                     "巡检写 `PERF=…` 行时直接用 perf：`OK` / `WARN:<n>项:<类型,…>` / `UNKNOWN:<原因>`"
+                     "（findings 账号已掩码：前 2+***+后 2）。采集失败/基线缺失/超时 ⇒ perf=\"UNKNOWN:<原因>\""
+                     "（fail-closed，**不许当「无回归」用**）。只读：--check --json --no-write 零写盘、不发车、"
+                     "不改配置、SSH 全读操作。耗时约 30-120s。"),
+        inputSchema={"type": "object",
+                     "properties": {"timeout": {"type": "integer", "description": "超时(秒)，默认 420"},
+                                    "mult": {"type": "number", "description": "阈值倍数（默认 1.5；下限 1.3）"}},
+                     "additionalProperties": False},
+    ),
 ]
 
 _KNOWN_TOOLS = ["mas_preflight", "mas_report", "mas_idle_emulators", "mas_client_state", "mas_identity_trail",
-                "mas_interrupt_guard", "event_calendar", "mas_kanban_health", "audit_waterline"]
+                "mas_interrupt_guard", "event_calendar", "mas_kanban_health", "audit_waterline", "mas_y3_gap",
+                "mas_residue_occupancy", "maaw_asset_drift", "mas_perf"]
 
 
 # ---------------------------------------------------------------- 基础工具
@@ -1212,6 +1280,280 @@ def tool_audit_waterline(a: dict) -> dict:
     return payload
 
 
+# ---------------------------------------------------------------- mas_y3_gap
+
+_Y3G_HEAD_RE = re.compile(r"· shift=([0-9]{4}-[0-9]{2}-[0-9]{2})/([A-Za-z]+)")
+_Y3G_COUNTS = (("派发队列", "dispatched_queues"), ("已判", "judged_queues"),
+               ("在跑排除", "active_queues"), ("已完成", "completed_queues"),
+               ("静默不足", "recent_queues"), ("缺进度面", "missing_progress"),
+               ("never_ran", "never_ran_total"))
+
+
+def _y3g_parse(out: str) -> dict:
+    """`mas_y3_gap.py --check` 摘要 → {y3_gap, shift, shift_day, counts}（搬运，不重算）。
+
+    判据行 `Y3_GAP=…` 取最后一条匹配（fail-closed 时其后还有一行说明文字，非判据）；
+    shift/shift_day 取自标题行 `· shift=<day>/<shift>`；counts 从计数行「派发队列 n｜…」
+    宽匹配抽取，抽不到给 {}（不影响 y3_gap 真值）。
+    """
+    vals: dict = {"y3_gap": None, "shift": None, "shift_day": None, "counts": {}}
+    for raw in (out or "").splitlines():
+        ln = raw.strip()
+        if ln.startswith("Y3_GAP="):
+            vals["y3_gap"] = ln[len("Y3_GAP="):]
+        if vals["shift"] is None:
+            m = _Y3G_HEAD_RE.search(ln)
+            if m:
+                vals["shift_day"], vals["shift"] = m.group(1), m.group(2)
+        if not vals["counts"] and "｜" in ln:
+            for label, key in _Y3G_COUNTS:
+                m = re.search(re.escape(label) + r" (\d+)", ln)
+                if m:
+                    vals["counts"][key] = int(m.group(1))
+    return vals
+
+
+def _y3g_mask_value(v):
+    """`<n>:<账号,…>` 的账号段按本 server 契约掩码（前 2+***+后 2；短名首字符+***），其余原样。"""
+    if not v or not isinstance(v, str) or v.startswith("UNKNOWN:") or ":" not in v:
+        return v
+    n, _, rest = v.partition(":")
+    if not n.isdigit():
+        return v
+    names = [x.strip() for x in rest.split(",") if x.strip()]
+    if not names:
+        return v
+    return "%s:%s" % (n, ",".join(_mask(x) for x in names))
+
+
+def tool_y3_gap(a: dict) -> dict:
+    """Y3 缺口检测（只读）：--check 摘要 ⇒ y3_gap（写 `Y3_GAP=…` 用；候选账号按契约掩码）；fail-closed 给 UNKNOWN:<原因>。"""
+    try:
+        tmo = int(a.get("timeout") or 180)
+    except (TypeError, ValueError):
+        tmo = 180
+    if not os.path.isfile(CLI_Y3_GAP):
+        return _err("unknown", "缺 tools/mas_y3_gap.py（工具面未提供）",
+                    y3_gap="UNKNOWN:缺 tools/mas_y3_gap.py（工具面未提供）")
+    t0 = time.time()
+    try:
+        rc, out, err = _run([PY, CLI_Y3_GAP, "--check"], timeout=tmo)
+    except subprocess.TimeoutExpired:
+        return _err("timeout", "mas_y3_gap 超时 %ss" % tmo,
+                    y3_gap="UNKNOWN:超时（mas_y3_gap --check >%ss）" % tmo,
+                    elapsed_s=round(time.time() - t0, 1))
+    except Exception as e:  # noqa: BLE001
+        return _err("unknown", "%s: %s" % (type(e).__name__, e),
+                    y3_gap="UNKNOWN:%s" % str(e)[:120], elapsed_s=round(time.time() - t0, 1))
+    elapsed = round(time.time() - t0, 1)
+    vals = _y3g_parse(out)
+    y3_gap = _y3g_mask_value(vals["y3_gap"])
+    payload = {"ok": rc == 0, "y3_gap": y3_gap, "shift": vals["shift"],
+               "shift_day": vals["shift_day"], "counts": vals["counts"],
+               "exit_code": rc, "elapsed_s": elapsed}
+    if rc == 2:            # 工具自身 fail-closed（快照不可得/调度状态不可读/不在班次窗）⇒ 行已是 UNKNOWN
+        payload["error"] = {"kind": "unavailable", "detail": str(y3_gap or "数据不可用")[:400]}
+    elif rc != 0:
+        payload["error"] = {"kind": "unknown", "detail": ("rc=%s %s" % (rc, (err or out or "").strip()))[:400]}
+        payload["y3_gap"] = "UNKNOWN:rc=%s（mas_y3_gap 未产出）" % rc
+    if not payload.get("y3_gap"):
+        payload["ok"] = False
+        payload["y3_gap"] = "UNKNOWN:无输出（mas_y3_gap --check 未产出 Y3_GAP 行；rc=%s）" % rc
+        payload.setdefault("error", {"kind": "parse_error", "detail": (out or err or "")[-300:]})
+    if str(payload["y3_gap"]).startswith("UNKNOWN:"):
+        payload["ok"] = False
+    return payload
+
+
+# ---------------------------------------------------------------- mas_residue_occupancy
+
+def tool_resid_oc(a: dict) -> dict:
+    """残留补跑队列 + 产线占用公告（只读）：单一真源 = tools/mas_residue_occupancy.py（本层只搬运）。
+
+    返回 temp_queue_residue / prod_occupancy 两行判据（巡检主表原样引用）；
+    源不可达 ⇒ 对应行以 `UNKNOWN:` 开头（fail-closed）。本层不清理、不发车、不 kill。
+    """
+    try:
+        tmo = int(a.get("timeout") or 120)
+    except (TypeError, ValueError):
+        tmo = 120
+    if not os.path.isfile(CLI_RESID_OC):
+        return _err("unknown", "缺 tools/mas_residue_occupancy.py（工具面未提供）",
+                    temp_queue_residue="UNKNOWN:缺 tools/mas_residue_occupancy.py（工具面未提供）",
+                    prod_occupancy="UNKNOWN:缺 tools/mas_residue_occupancy.py（工具面未提供）")
+    t0 = time.time()
+    try:
+        rc, out, err = _run([PY, CLI_RESID_OC, "--json"], timeout=tmo)
+    except subprocess.TimeoutExpired:
+        return _err("timeout", "mas_residue_occupancy 超时 %ss（残留/占用判据未返回）" % tmo,
+                    temp_queue_residue="UNKNOWN:超时（mas_residue_occupancy >%ss）" % tmo,
+                    prod_occupancy="UNKNOWN:超时（mas_residue_occupancy >%ss）" % tmo,
+                    elapsed_s=round(time.time() - t0, 1))
+    except Exception as e:  # noqa: BLE001
+        msg = "%s: %s" % (type(e).__name__, e)
+        return _err("unknown", msg, temp_queue_residue="UNKNOWN:%s" % msg[:120],
+                    prod_occupancy="UNKNOWN:%s" % msg[:120], elapsed_s=round(time.time() - t0, 1))
+    elapsed = round(time.time() - t0, 1)
+    try:
+        data = json.loads(out.strip() or "{}")
+    except ValueError:
+        head = " ".join((out or "").split())[:200] or "（无输出）"
+        return _err("parse_error", "rc=%s %s" % (rc, head),
+                    temp_queue_residue="UNKNOWN:parse_error（mas_residue_occupancy 未产出判据）",
+                    prod_occupancy="UNKNOWN:parse_error（mas_residue_occupancy 未产出判据）",
+                    exit_code=rc, elapsed_s=elapsed)
+    payload = dict(data)
+    payload.setdefault("tool", "mas_residue_occupancy")
+    payload["ok"] = bool(data.get("ok")) and rc == 0
+    payload["exit_code"] = rc
+    payload["elapsed_s"] = elapsed
+    for key in ("temp_queue_residue", "prod_occupancy"):
+        if not str(payload.get(key) or "").strip():
+            payload[key] = "UNKNOWN:无输出（mas_residue_occupancy 未产出 %s）" % key
+            payload["ok"] = False
+    if not payload["ok"]:
+        payload.setdefault("error", {"kind": "unavailable",
+                                     "detail": ((err or out or "") or "").strip()[-300:]})
+    return payload
+
+
+# ---------------------------------------------------------------- maaw_asset_drift
+
+def tool_asset_drift(a: dict) -> dict:
+    """MAAW 资产 md5 漂移（只读）：maaw_asset_drift.py --check ⇒ asset_drift（写 `MAAW_ASSET_DRIFT=…` 用）；
+    fail-closed 给 UNKNOWN:<原因>。MCP 面**只调 --check**（不 --build、不写盘、不碰 MAAW 文件）。"""
+    try:
+        tmo = int(a.get("timeout") or 120)
+    except (TypeError, ValueError):
+        tmo = 120
+    if not os.path.isfile(CLI_ASSET_DRIFT):
+        return _err("unknown", "缺 tools/maaw_asset_drift.py（工具面未提供）",
+                    asset_drift="UNKNOWN:缺 tools/maaw_asset_drift.py（工具面未提供）")
+    t0 = time.time()
+    try:
+        rc, out, err = _run([PY, CLI_ASSET_DRIFT, "--check", "--json"], timeout=tmo)
+    except subprocess.TimeoutExpired:
+        return _err("timeout", "maaw_asset_drift 超时 %ss" % tmo,
+                    asset_drift="UNKNOWN:超时（maaw_asset_drift --check >%ss）" % tmo,
+                    elapsed_s=round(time.time() - t0, 1))
+    except Exception as e:  # noqa: BLE001
+        msg = "%s: %s" % (type(e).__name__, e)
+        return _err("unknown", msg, asset_drift="UNKNOWN:%s" % msg[:120],
+                    elapsed_s=round(time.time() - t0, 1))
+    elapsed = round(time.time() - t0, 1)
+    try:
+        data = json.loads(out.strip() or "{}")
+    except ValueError:
+        head = " ".join((out or "").split())[:200] or "（无输出）"
+        return _err("parse_error", "rc=%s %s" % (rc, head),
+                    asset_drift="UNKNOWN:parse_error（maaw_asset_drift 未产出判据）",
+                    exit_code=rc, elapsed_s=elapsed)
+    payload = dict(data)
+    payload.setdefault("tool", "maaw_asset_drift")
+    payload["ok"] = bool(data.get("ok")) and rc == 0
+    payload["exit_code"] = rc
+    payload["elapsed_s"] = elapsed
+    if not str(payload.get("asset_drift") or "").strip():
+        payload["asset_drift"] = "UNKNOWN:无输出（maaw_asset_drift 未产出 MAAW_ASSET_DRIFT 行；rc=%s）" % rc
+        payload["ok"] = False
+    if str(payload["asset_drift"]).startswith("UNKNOWN:"):
+        payload["ok"] = False
+    if not payload["ok"]:
+        payload.setdefault("error", {"kind": "unavailable",
+                                     "detail": ((err or out or "") or "").strip()[-300:]})
+    return payload
+
+
+# ---------------------------------------------------------------- mas_perf
+
+def _perf_mask_subject(kind: str, subject) -> str:
+    """按 kind 掩码账号名（RUN_SLOW=`<acct> <day> 单轮`；ACCOUNT_DAY_SLOW=`<acct>（…）`）；非账号对象原样。"""
+    s = str(subject or "")
+    if kind == "RUN_SLOW":
+        parts = s.split(" ")
+        if parts and parts[0]:
+            parts[0] = _mask(parts[0])
+        return " ".join(parts)
+    if kind == "ACCOUNT_DAY_SLOW":
+        i = s.find("（")
+        if i > 0:
+            return _mask(s[:i]) + s[i:]
+    return s
+
+
+def tool_perf(a: dict) -> dict:
+    """性能基线回归检测（只读）：`perf_baseline.py --check --json --no-write` ⇒ perf（写 `PERF=…` 用）。
+
+    值形态：`OK` / `WARN:<n>项:<类型,…>`（超基线 P90×mult，默认 ×1.5） / `UNKNOWN:<原因>`
+    （fail-closed：SSH 采集失败/基线缺失/超时/解析失败）。findings 账号按本 server 契约掩码；
+    mult 下限 1.3（卡面判据「超基线 ≥30%」防噪声）。只读：零写盘、不发车、不改配置。
+    """
+    try:
+        tmo = int(a.get("timeout") or 420)
+    except (TypeError, ValueError):
+        tmo = 420
+    mult = None
+    if a.get("mult") is not None:
+        try:
+            mult = max(1.3, float(a.get("mult")))
+        except (TypeError, ValueError):
+            mult = None
+    if not os.path.isfile(CLI_PERF):
+        return _err("unknown", "缺 tools/perf_baseline.py（工具面未提供）",
+                    perf="UNKNOWN:缺 tools/perf_baseline.py（工具面未提供）")
+    argv = [PY, CLI_PERF, "--check", "--json", "--no-write", "--timeout", str(tmo)]
+    if mult is not None:
+        argv += ["--mult", str(mult)]
+    t0 = time.time()
+    try:
+        rc, out, err = _run(argv, timeout=tmo + 30)
+    except subprocess.TimeoutExpired:
+        return _err("timeout", "perf_baseline 超时 %ss" % (tmo + 30),
+                    perf="UNKNOWN:超时（perf_baseline --check >%ss）" % (tmo + 30),
+                    elapsed_s=round(time.time() - t0, 1))
+    except Exception as e:  # noqa: BLE001
+        return _err("unknown", "%s: %s" % (type(e).__name__, e),
+                    perf="UNKNOWN:%s" % str(e)[:120], elapsed_s=round(time.time() - t0, 1))
+    elapsed = round(time.time() - t0, 1)
+    if rc not in (0, 3):
+        last = ""
+        for ln in reversed(((out or "") + "\n" + (err or "")).splitlines()):
+            if ln.strip():
+                last = ln.strip()[:200]
+                break
+        return _err("unavailable", "rc=%s %s" % (rc, last or "（无输出）"),
+                    perf="UNKNOWN:采集失败（rc=%s：%s）" % (rc, last or "无输出"),
+                    exit_code=rc, elapsed_s=elapsed)
+    try:
+        data = json.loads(out.strip() or "{}")
+    except ValueError:
+        head = " ".join((out or "").split())[:200] or "（无输出）"
+        return _err("parse_error", "rc=%s %s" % (rc, head),
+                    perf="UNKNOWN:parse_error（perf_baseline --check --json 未产出报告）",
+                    exit_code=rc, elapsed_s=elapsed)
+    findings = data.get("findings") or []
+    if findings:
+        kinds = ",".join(sorted({str(f.get("kind")) for f in findings}))
+        perf = "WARN:%d项:%s" % (len(findings), kinds)
+    else:
+        perf = "OK"
+    masked = []
+    for f in findings[:8]:
+        masked.append({"kind": f.get("kind"),
+                       "subject": _perf_mask_subject(str(f.get("kind") or ""), f.get("subject")),
+                       "value": f.get("value"), "unit": f.get("unit"),
+                       "baseline_p90": f.get("baseline_p90"), "ratio": f.get("ratio"),
+                       "basis": f.get("basis")})
+    payload = {"ok": True, "tool": "mas_perf", "perf": perf,
+               "findings_total": len(findings), "findings": masked,
+               "shift_day": data.get("shift_day"),
+               "baseline": data.get("baseline"), "thresholds": data.get("thresholds"),
+               "exit_code": rc, "elapsed_s": elapsed}
+    if len(findings) > 8:
+        payload["findings_truncated"] = True
+    return payload
+
+
 # ---------------------------------------------------------------- MCP 装配
 
 async def _call(name: str, args: dict):
@@ -1235,6 +1577,14 @@ async def _call(name: str, args: dict):
             return _text(tool_kanban_health(args))
         if name == "audit_waterline":
             return _text(tool_audit_waterline(args))
+        if name == "mas_y3_gap":
+            return _text(tool_y3_gap(args))
+        if name == "mas_residue_occupancy":
+            return _text(tool_resid_oc(args))
+        if name == "maaw_asset_drift":
+            return _text(tool_asset_drift(args))
+        if name == "mas_perf":
+            return _text(tool_perf(args))
         return _text({"ok": False, "error": {"kind": "bad_args", "detail": "unknown tool: %s" % name}})
     except Exception as e:  # noqa: BLE001
         return _text(_err("unknown", "%s: %s" % (type(e).__name__, e)))
@@ -1261,7 +1611,7 @@ def _check() -> int:
     if names != _KNOWN_TOOLS:
         problems.append("工具名与冻结契约不一致: %s" % names)
     for p in (CLI_PREFLIGHT, CLI_ERRDAILY, CLI_IDLE, CLI_CLIENT, CLI_IDENTITY, CLI_INTERRUPT, CLI_EVENTCAL,
-              CLI_KANBAN_HEALTH, CLI_AUDIT_WL):
+              CLI_KANBAN_HEALTH, CLI_AUDIT_WL, CLI_Y3_GAP, CLI_RESID_OC, CLI_ASSET_DRIFT, CLI_PERF):
         if not os.path.isfile(p):
             problems.append("CLI 缺失: %s" % p)
     # 只读姿态自审：本文件不得出现任何写端点/写动作（字样拼接避免自匹配）
@@ -1282,6 +1632,10 @@ def _check() -> int:
                  (CLI_EVENTCAL, ["--selftest"], "SELFTEST=OK"),
                  (CLI_KANBAN_HEALTH, ["--selftest"], "SELFTEST=PASS"),
                  (CLI_AUDIT_WL, ["--selftest"], "SELFTEST=OK"),
+                 (CLI_Y3_GAP, ["--selftest"], "SELFTEST=OK"),
+                 (CLI_RESID_OC, ["--selftest"], "SELFTEST=OK"),
+                 (CLI_ASSET_DRIFT, ["--selftest"], "SELFTEST=OK"),
+                 (CLI_PERF, ["--selftest"], "selftest:"),
                  (CLI_CLIENT, ["--help"], "usage"),
                  (CLI_IDLE, ["--help"], "usage")]
     results = []

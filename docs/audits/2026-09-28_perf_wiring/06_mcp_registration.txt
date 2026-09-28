@@ -1,0 +1,8 @@
+2026-09-28 21:55:26,986 INFO tools.mcp_tool: MCP server 'mas-observe' (stdio): registered 12 tool(s): mcp__mas_observe__mas_preflight, mcp__mas_observe__mas_report, mcp__mas_observe__mas_idle_emulator
+2026-09-28 21:55:35,365 INFO tools.mcp_tool: MCP server 'mas-observe' (stdio): registered 12 tool(s): mcp__mas_observe__mas_preflight, mcp__mas_observe__mas_report, mcp__mas_observe__mas_idle_emulator
+2026-09-28 21:55:45,748 INFO tools.mcp_tool: MCP server 'mas-observe' (stdio): registered 12 tool(s): mcp__mas_observe__mas_preflight, mcp__mas_observe__mas_report, mcp__mas_observe__mas_idle_emulator
+2026-09-28 21:55:53,397 INFO tools.mcp_tool: MCP server 'mas-observe' (stdio): registered 12 tool(s): mcp__mas_observe__mas_preflight, mcp__mas_observe__mas_report, mcp__mas_observe__mas_idle_emulator
+2026-09-28 22:11:09,383 INFO gateway.run_profile_reconcile: MCP servers reconciled with config (mas): removed=['mas-observe'] added=[]
+2026-09-28 22:12:11,072 INFO tools.mcp_tool: MCP server 'mas-observe' (stdio): registered 13 tool(s): mcp__mas_observe__mas_preflight, mcp__mas_observe__mas_report, mcp__mas_observe__mas_idle_emulator
+2026-09-28 22:12:11,073 INFO tools.mcp_tool: MCP: registered 13 tool(s) from 1 server(s)
+2026-09-28 22:12:11,075 INFO gateway.run_profile_reconcile: MCP servers reconciled with config (mas): removed=[] added=['mas-observe']
