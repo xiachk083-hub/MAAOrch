@@ -66,7 +66,7 @@ def sample(host: str) -> str:
     cmd = [ssh_exe(), "-i", KEY, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no",
            "-o", "ConnectTimeout=15", "Administrator@" + host,
            "powershell -NoProfile -EncodedCommand " + b64]
-    r = subprocess.run(cmd, capture_output=True, timeout=90, creationflags=NOWIN)
+    r = subprocess.run(cmd, capture_output=True, stdin=subprocess.DEVNULL, timeout=90, creationflags=NOWIN)
     out = (r.stdout or b"").decode("utf-8", "replace")
     for line in reversed(out.splitlines()):
         line = line.strip()

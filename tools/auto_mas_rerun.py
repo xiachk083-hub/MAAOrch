@@ -43,7 +43,7 @@ def api(path: str, body: dict | None = None, timeout: int = 90) -> dict:
 
 def ssh_ps(script: str, timeout: int = 180) -> str:
     r = subprocess.run(SSH + ["chcp 65001 >nul && powershell -NoProfile -Command " + '"' + script + '"'],
-                       capture_output=True, timeout=timeout)
+                       capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout)
     return (r.stdout + r.stderr).decode("utf-8", "replace")
 
 

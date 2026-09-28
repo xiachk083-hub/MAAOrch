@@ -40,7 +40,9 @@ hermes -p mas mcp test auto-mas-monitor    # ✓ Connected, Tools discovered: 10
 hermes -p mas mcp test auto-mas-scrubbed   # ✓ Connected, Tools discovered: 118
 ```
 
-真实巡检运行（execution `e5215e48c2db4f7386cfce7b7eae9cff`，2026-09-26 17:10:18 完成，20 次 LLM / 79 次工具调用）
+真实巡检运行（execution `e5215e48c2db4f7386cfce7b7eae9cff`，2026-09-26 17:10:18 完成；
+`state.db` 实测 **20 次 LLM / 85 次工具调用**，交接文档初稿写的 79 已按数据库订正。
+**注意：这是一次手动 direct 运行，它证明不了自动路径可用 —— 见 §11**）
 的 agent.log 中：`mcp__auto_mas_monitor__*` 被实际调用多次，**`mcp__auto_mas_scrubbed__*` 实际调用 = 0**。
 
 该次运行的报告落在 `profiles/mas/cron/output/52b88b0ffca0/2026-09-26_17-10-18.md`，其中 **Hermes 自己报告**：
@@ -67,8 +69,10 @@ health / git_version / overview / queues / queue item / queue time get / scripts
 - 定时项 **24** 个，**全部 `Enabled: true`**
 - 两个班次、各 12 个、间隔 3 分钟：**早班 05:00 → 05:33**，**晚班 19:30 → 20:03**
 
-**层一由 AUTO-MAS 自己触发，不依赖 Hermes/MAAOrch。本次交接不修改、不关闭它。**
-Hermes 只做巡检与"是否真的漏了"的判断 —— 它是补漏器，不是主力。
+> ⚠️ **2026-09-27 已被推翻（用户决定）**：层一不再由 AUTO-MAS 触发，**改由 Hermes 的 cron 发车**。
+> AUTO-MAS 侧 24 条定时项已全部 `Enabled=false`（Days/Time 保留，可一键回滚）。
+> 变更记录、时刻表、闸门、回滚命令见 `docs/audits/2026-09-27_hermes_takes_over_mas_scheduler.md`。
+> Hermes 从此既是调度员也是巡检员（相对 AUTO-MAS 多的那层：发车前后体检、fail-closed、留痕）。
 
 ## 5. 分阶段接管
 
@@ -135,3 +139,80 @@ Hermes 只做巡检与"是否真的漏了"的判断 —— 它是补漏器，不
    ⇒ 巡检提示词不要依赖「队列总数」；需要队列清单请走 REST（`tools/mas_catchup_check.py` 就是走 REST）。
 4. 历史遗留的判据文件 `data/daily_state/*.json` 已 8 天未更新 —— **不要**把它当作"今日是否完成"的依据，一律以 `/api/history/search` 的当日记录为准。
 5. 层二（`tools/scheduler.py`）本就无运行入口、已 8 天未跑；本次不恢复它。
+6. **自动路径曾长期假死（2026-09-26 发现并修复）** —— 见 §11。
+
+## 11. 自动路径事故 + 根因 + agent-time 量化（2026-09-26 追加）
+
+- **自动巡检在修复前一次都没成功过**：17:41:05、18:12:05、18:52:33 三次 30 分钟自动 fire 在 0.2~0.45 秒内崩掉，
+  报 `RuntimeError: Failed to initialize OpenAI client: No module named 'pydantic_core._pydantic_core'`。
+- **根因（19:03 临时探针抓到调用栈）**：`gateway/run.py:422 _ensure_windows_gateway_venv_imports()` 为让 detached
+  网关看到 venv 包做了两级退路 —— 先试 `VIRTUAL_ENV`（launcher 给的是 `<hermes>\tools`，**不是 venv**，跳过），
+  再退到 `<repo>/venv`：也就是 2026-09-24 建的 **3.11 uv 遗留 venv（572 MB，仍躺在磁盘上）**，用 `site.addsitedir()`
+  把它的 site-packages 插到 `sys.path[1]`，压过 PM 正式安装的 3.14 环境。自动 fire 是**网关进程内**执行
+  （`executions.source=builtin` → `cron/scheduler.py:2522 run_job` → `_construct_cron_agent` →
+  `agent_init._init_openai_client`），于是 `import openai` 拿到 3.11 的 pydantic_core，在 3.14 解释器下必崩；
+  手动 `hermes cron run` 走独立进程（`source=direct`，经 `hermes.exe` 干净启动）所以一直正常 —— 这就是
+  "手动能跑、自动必挂"的全部原因，也说明 §3 那次"实跑验证"验证的是 MCP 隔离，**不是自动触发**。
+  旁证：同一网关里 ark 的两个 cron 任务 262 次 `builtin` 全部成功 —— 它们是脚本型任务，不构造 AIAgent。
+  （更正：19:00 前我曾判断为"启动 shell 的 PYTHONPATH 污染"，重启网关后 18:52 仍失败，该结论已被推翻。）
+- **修复**：停网关 → `Rename-Item hermes-agent\venv venv.pre-pm-3.11.bak` → 启动网关。修复后探针显示网关
+  `sys.path` 里 `hermes-agent\venv` 命中数为 **0**，`hermes doctor` 正常，四个 profile 网关 running。
+  回滚 = 把目录名改回 `venv`（但故障会复现）。
+- **残留风险**：① `hermes update`/重装若重新生成仓库内 `venv`，故障复发 —— 用探针第一时间发现；
+  ② `gateway-service\Hermes_Gateway.cmd` 仍会把继承的 `%PYTHONPATH%` 追加进长命进程；
+  ③ `.hermes-runtime\python\cpython-3.11...` 等 PM 迁移残留可另行清理。
+- **验证通过（19:23:04 首次自动 fire）**：`source=builtin, status=completed`，agent time **199.8 s**，
+  3 次 LLM / 4 次工具 / 96,760 token；巡检产物 `cron/output/52b88b0ffca0/2026-09-26_19-26-24.md` 给出
+  `MCP_API_TOOL_COUNT=10`、`ISOLATION=PASS`、后端 ready、今日 2/2 DONE。修复前同类 fire 0.2~0.45 秒即崩。
+- **量化与探针**：`tools/mas_agent_time.py`（只读，`mode=ro` 打开 Hermes sqlite）；`--check` 退出码 0/3/4 判自动路径健康
+  （最近一次自动 fire 成功而窗口内仍有旧失败时报 `AUTO_PATH=RECOVERED`，退出码 0）；
+  正常模式产出 `docs/audits/<date>_mas_agent_time.{md,json}`；测试 `tests/test_mas_agent_time.py`（13 项）。
+- **agent-time 基线**（30 分钟节拍 ⇒ 48 次/天）：
+
+  | 口径 | 单次 agent time | 占用 | agent time/天 | token/天 |
+  |---|---|---|---|---|
+  | 提示词收紧前（16:50 样本，手动） | 1160.9 s | 64.5% | 15.48 h | 124.4 M |
+  | 收紧后（18:16 样本，≤6 次工具预算） | 303.0 s | 16.8% | 4.04 h | 11.0 M |
+
+- **Hermes 侧只保留 mas 这一个定时任务**（`52b88b0ffca0`，every 30m）：不新增探针 cron、不加第二个巡检任务；
+  探针只在人工/看板按需调用。
+- 全过程证据链：`docs/audits/2026-09-26_hermes_autopatrol_incident.md`。
+
+## 12. Hermes 调用 MAA 清日常（2026-09-26 追加）
+
+- **MAA 本家没有 MCP、也没有对外 HTTP 面** ⇒ 只能经调度层：Hermes → MAAOrch MCP（`127.0.0.1:19997/mcp/`，41 工具）→ `mas_rerun` → 远端 AUTO-MAS → `MAA.exe`。证据见 `docs/audits/2026-09-26_hermes_clear_daily.md` §1。
+- **已接线**：`profiles\mas\config.yaml` 新增 `mcp_servers.maaorch-daily`（`tools.include` 只放行 6 个工具：`mas_status, mas_snapshot, mas_rerun_state, account_status, queue, mas_rerun`），
+  `platform_toolsets.cron` 追加该 server；唯一任务 `52b88b0ffca0` 的提示词改为「只读巡检 + 清日常补漏」（1358 字）。
+- **为什么是 `mas_rerun` 而不是 `smart_dispatch`**：后者无 `dry_run`（一调即下发）且只覆盖 MAAOrch 本机 3 个账号；产线 54 个账号在远端 AUTO-MAS，只有 `mas_rerun` 能补跑（原生 `dry_run=True` 预演、单飞锁、单批 ≤8）。
+- **发车准入**（提示词硬条件，全部满足才动）：不在守卫窗（05:00–05:40 / 19:20–20:20）、今日确有失败账号、当前无批次在跑；且必须先 `dry_run=True` 预演再确认。
+- **依赖**：MAAOrch Python 上游需在跑（不常驻是设计；不可达时 fail-closed 只报错不发车）。启动 `tools\start_python_upstream.bat`。
+- **回滚**：见 `docs/audits/2026-09-26_hermes_clear_daily.md` §7（改 `tools.include` 即可 30 秒退回纯只读）。
+### 12.1 两条运维硬事实（2026-09-26 21:0x 实测，必须遵守）
+
+1. **改完 `config.yaml` 的 `platform_toolsets` / MCP server 后必须重启网关** —— 网关进程会缓存，`builtin`（自动）运行拿不到新工具面。实测：重启前 20:43 的 `builtin` 运行报「工具集未包含 mas_status / mas_rerun」，`direct`（`hermes cron run`，新进程）却正常；`hermes gateway restart` 后 20:54:57 的 `builtin` 运行报告 `MCP_API_TOOL_COUNT=20（auto-mas-monitor 10 + maaorch-daily 10）`。
+2. **MAAOrch Python 上游（19997）不常驻，也不需要常驻** —— 平台设计如此（空转 ~47% CPU）。Hermes 的 `maaorch-daily` 已是 **stdio 代理形态**（`tools/mas_maaorch_daily_proxy.py`），调用时按需拉起上游（首次 ≤45 s；MCP 工具调用超时默认 300 s）。实测：上游被杀（`listen19997=0`）后，21:24:11 的 `builtin` 运行照常完成（21:28:34），运行后 `listen19997=1`。上游彻底起不来时代理结构化报错、Hermes 侧 fail-closed（只报后端不可达，不发车）。
+
+### 12.2 成本（新提示词，自动路径实测）
+
+- 20:54:57 `builtin`：**374.2 s / 4 次 LLM / 5 次工具 / 217,266 token**（30 分钟节拍 ⇒ 约 5 h/天、10.4 M token/天），与「只读巡检」收紧后基线（303 s）同量级。
+- 报告示例（20:54:57）：`MCP_API_TOOL_COUNT=20`、`ISOLATION=PASS`、今日 20 个账号全部 DONE（16 一次过 + 4 重试成功）、`CLEAR_PREVIEW=未预演（today.failed_names 为空）`、`CLEAR_DISPATCH=未发车（无失败账号可补，且晚班批次仍在运行）`。
+
+## 13. 队列发车的补发职责边界（2026-09-27 加固落地）
+
+> 来源：卡 t_a53348ec（调度器加固）。完整证据/回滚见 `docs/audits/2026-09-27_dispatch_hardening.md`。
+
+- **命令面**（`tools/mas_dispatch.py`，全部默认 dry-run）：`--check-schedule`（SHIFT_TABLE ↔ AUTO-MAS
+  只读一致性校验）、`--busy`（busy 窗口 + 未关闭 late 标记）、`--release <队列> --apply`
+  （人工确认对方任务已结束后清 busy 窗口）、`--dismiss-late <队列> --apply --note …`（放弃补发）、
+  `--force-conflict`（显式放行资源冲突，记账 `conflict_overridden`）。
+- **边界规则（硬）**：
+  1. **队列级发车/补发** 只归 `mas_dispatch`：超追发窗口（>30min）**不自动补**，只记 `late` 标记 +
+     `late_handoff` 台账告警；补发必须显式 `--queue <队列> --apply`（成功自动关标记+清告警），
+     或显式 `--dismiss-late` 放弃。
+  2. **账号级补跑** 只归巡检 `mas_rerun`（见 §12），与队列级动作正交；巡检的 MCP `dispatch_due`/
+     `dispatch_queue` 对超窗队列只报 `late: true`，不发车。
+  3. 同一队列同一班次**一天只发一次**（跨进程锁内单飞）⇒ 两侧即使同时动作也不会双发同一队列。
+  4. 同资源（MAA 目录/脚本/实例）在 busy 窗内被其它队列占用时，发车**拒绝**且零上游写请求
+     （`conflict_inflight` + 台账告警）；是否并行只由人工决定（`--release` / `--force-conflict`）。
+- **巡检提示词建议追加一行**（可选，不强制）：`DISPATCH_ALERT` 里若出现 `:conflict_inflight` 或
+  `:late_handoff`，只报告 + 给候选，不自行发车，等人工决定。

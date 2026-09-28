@@ -225,7 +225,7 @@ def ssh_ps(script: str, timeout: int = 90) -> str:
     r = subprocess.run([exe, "-i", SSH_KEY, "-o", "BatchMode=yes",
                         "-o", "ConnectTimeout=15", "Administrator@" + _host(),
                         "powershell -NoProfile -EncodedCommand " + b64],
-                       capture_output=True, timeout=timeout)
+                       capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout)
     out = (r.stdout or b"").decode("utf-8", "replace")
     return "\n".join(ln for ln in out.splitlines() if not ln.startswith("<Objs"))
 

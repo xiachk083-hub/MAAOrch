@@ -173,6 +173,7 @@ $PY312 tools/mas_shift_report.py --shift daily       # 班次日报（缺口/成
 
 * 输出：`runtime/reports/maa_errors_<date>.{md,json}`（`--no-write` 只打印）；`runtime/reports/shift_report_<YYYYMMDD>_<shift>.md` + 看板只读汇总卡；告警默认 dry-run（`--alert-send` 才真发）。
 * 排期（2026-09-28 起）：Hermes cron `mas-shift-report`（id `8b1708397046`）每天 08:30（日常班）/ 21:30＋23:30（晚班快照＋定稿）自动出报告+看板卡（no_agent、deliver=local）；接入细节/告警渠道/开关见 `docs/MAS_SHIFT_REPORT.md`。
+* 排期（2026-09-28 起 · 回滚演练）：Hermes cron `mas-rollback-drill`（id `55337a0a2b62`）**每周一 09:00** 自动跑回滚演练 A–H（no_agent、deliver=local；入口 `tools/mas_rollback_drill.py`，三闸/归档/FAIL 告警见 `docs/ROLLBACK_DRILL.md` §5.2）；手跑 `python tools/mas_rollback_drill.py`（判据末行 `ROLLBACK_DRILL_AUTO=`）。
 * 卡面俗称「errboard」= 这一组 + `mas-triage` MCP（`error_daily`）；**没有**独立叫 errboard 的工具。
 * 禁忌：① 班次日窗口 = `[D 05:00, D+1 05:00)`；② 别拿 `data/daily_state/*.json` 当「今日是否完成」依据（已长期不更新，以 history / REST 当日记录为准）。
 
@@ -383,7 +384,7 @@ $PY312 tools/mas_mapping.py --selftest         # 离线自测（假数据，不�
 | server | 工具 | 性质 |
 |---|---|---|
 | `mas-ondemand` | `list_running` / `dispatch_queue` / `dispatch_script` / `dispatch_account` / `stop_task` / `ondemand_preflight` | 1 只读 + 5 写（全部默认 dry-run） |
-| `mas-observe` | `mas_preflight` / `mas_report` / `mas_idle_emulators` / `mas_client_state` / `mas_identity_trail` / `mas_interrupt_guard` / `event_calendar` | 全只读 |
+| `mas-observe` | `mas_preflight` / `mas_report` / `mas_idle_emulators` / `mas_client_state` / `mas_identity_trail` / `mas_interrupt_guard` / `event_calendar` / `mas_kanban_health` / `audit_waterline` | 全只读（9） |
 | `mas-dispatch` | `list_schedule` / `dispatch_due` / `dispatch_queue` / `switch_gate` | 2 只读 + 2 写（默认预演） |
 | `mas-triage` | `triage_error` / `error_daily` | 只读 |
 | `maaorch-daily` | `mas_status` / `mas_snapshot` / `mas_rerun_state` / `account_status` / `queue` / `mas_rerun` | 5 只读 + 1 写（`dry_run=True` 默认预演） |
@@ -398,6 +399,13 @@ $PY312 tools/mas_mapping.py --selftest         # 离线自测（假数据，不�
 > **统一入口（新）**：`tools/mas_audit.py` —— 写入走一条流 `runtime/audit/mas_audit.jsonl`（schema `maaorch.audit.v1`），
 > 查询可多源合并（本流 + 归档 + 下表 9 套旧流 + 看板库，旧流只用 `query --legacy` **只读桥接**，不迁移不重写）；
 > 轮转/保留见 `docs/MAS_AUDIT_SCHEMA.md`（§7 阈值、§8 接入建议、§9 清理清单）。
+>
+> **水位判据（2026-09-28 接线，卡 t_537fbff2）**：`tools/audit_waterline.py`（只读；`AUDIT_STATUS=OK|WARN|CRIT`
+> —— live>10MiB⇒WARN、live>25MiB 或 归档缺失而 live>8MiB⇒CRIT、覆盖≥24h 该转未转⇒WARN）。
+> 已并入 30 分钟巡检（cron job `52b88b0ffca0` 第三步 8）经 MCP 工具 `mas-observe.audit_waterline` 取数）；
+> `tools/storage_waterline.py` 的本地段也覆盖 `runtime/audit/`（体积 / 最老文件天数 / 趋势）。
+> **只判不治**：两个水位工具都**永不** rotate/prune（清理永远是人拍板）。离线演练：`tests/audit_patrol_drill.py`。
+> 证据与阈值口径：`docs/audits/2026-09-28_audit_patrol/README.md`。
 
 | 文件 | 内容 |
 |---|---|
@@ -423,7 +431,7 @@ $PY312 tools/mas_mapping.py --selftest         # 离线自测（假数据，不�
 1. 先查本页 §B 与 `ls tools/`；用 `search_files` 在 `tools/` 里按关键词搜 docstring（pattern 例：`argv|add_argument|"""`）。
 2. 再看 `docs/` 的 `MAS_*.md` 与 `docs/audits/` 最近条目（同日已有 tooling audit）；跨会话先查知识库 `D:\1-2\MAS-KB`（技能 `wiki-search`）。
 3. 优先**扩展现有工具**（加子命令/参数/JSON 字段），而不是新脚本；确需新脚本时：默认 dry-run + `--selftest` + 末行判据 + 审计留痕，缺一不可。
-4. 已知能力↔工具一言表（速查）：发车=ondemand/dispatch ｜ 按配置刷=run_profile ｜ 试探=probe_farm ｜ 计划=plan_builder ｜ **整链编排（决策→试探→执行→还原）=farm_orchestrator** ｜ 台账=stage_capability ｜ 班前=preflight ｜ 互斥=lease ｜ 快照=config_snapshot ｜ 定因=error_triage/maa_error_daily ｜ 日报=shift_report ｜ 场景=scenario_dispatch ｜ 刷哪里划算=stage_efficiency ｜ 活动切换=activity_switch ｜ **端口/映射=mas_mapping** ｜ 审计统一（写/查/轮转）=mas_audit。
+4. 已知能力↔工具一言表（速查）：发车=ondemand/dispatch ｜ 按配置刷=run_profile ｜ 试探=probe_farm ｜ 计划=plan_builder ｜ **整链编排（决策→试探→执行→还原）=farm_orchestrator** ｜ 台账=stage_capability ｜ 班前=preflight ｜ 互斥=lease ｜ 快照=config_snapshot ｜ 定因=error_triage/maa_error_daily ｜ 日报=shift_report ｜ 场景=scenario_dispatch ｜ 刷哪里划算=stage_efficiency ｜ 活动切换=activity_switch ｜ **端口/映射=mas_mapping** ｜ 审计统一（写/查/轮转）=mas_audit ｜ 审计水位（巡检判据，只读）=audit_waterline。
 
 ---
 

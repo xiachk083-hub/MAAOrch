@@ -39,12 +39,35 @@ REMOTE = "chcp 65001 >nul && set PYTHONIOENCODING=utf-8 && python E:/_mas_watch_
 DISK_WARN_GB = {"C": 60, "E": 150}          # 低于这个值告警（当前 C:238/E:1863 的总量基准）
 
 
+def _unified_from_event(rec: dict) -> None:
+    """watch 事件 → 统一流：run.watch（watch 事件字段杂 ⇒ 原样进 params，另给 kind 子类）。"""
+    kind = str(rec.get("kind") or "").strip()
+    if not kind:
+        return
+    ok = rec.get("ok")
+    res = "ok" if ok is True else ("fail" if ok is False else "info")
+    params = {k: v for k, v in rec.items() if k not in ("ts",) and v not in (None, "")}
+    tools_dir = os.path.dirname(os.path.abspath(__file__))
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    import mas_audit  # noqa: PLC0415
+    mas_audit.safe_append(
+        actor="tool:mas_watch", action="run.watch", target="-", result=res,
+        reason=str(rec.get("error") or rec.get("detail") or "")[:300], params=params,
+        evidence=[LEDGER], card=os.environ.get("HERMES_KANBAN_TASK", ""),
+        path=mas_audit.stream_for_runtime(RUNTIME))
+
+
 def log_event(kind: str, **kw) -> None:
     os.makedirs(RUNTIME, exist_ok=True)
     rec = {"ts": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "kind": kind}
     rec.update(kw)
     with open(LEDGER, "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    try:
+        _unified_from_event(rec)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def load_state() -> dict:
@@ -61,7 +84,7 @@ def save_state(st: dict) -> None:
 
 def fetch() -> dict | None:
     try:
-        r = subprocess.run(SSH + [REMOTE], capture_output=True, timeout=600)
+        r = subprocess.run(SSH + [REMOTE], capture_output=True, stdin=subprocess.DEVNULL, timeout=600)
         out = (r.stdout + r.stderr).decode("utf-8", "replace")
         for ln in out.splitlines():
             ln = ln.strip()
@@ -240,7 +263,7 @@ def main() -> int:
         if todo:
             r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "auto_mas_rerun.py"),
                                 "--accounts", ",".join(todo), "--apply", "--force"],
-                               capture_output=True, timeout=1200)
+                               capture_output=True, stdin=subprocess.DEVNULL, timeout=1200)
             out = (r.stdout + r.stderr).decode("utf-8", "replace")
             planned = todo if "发车" in out else []
             log_event("rerun", accounts=todo, ok=bool(planned), detail=out[-400:])

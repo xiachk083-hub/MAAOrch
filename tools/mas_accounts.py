@@ -62,7 +62,7 @@ def ssh(cmd: str, timeout: int = 60) -> str:
     p = subprocess.run(
         ["ssh", "-i", SSH_KEY, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no",
          "-o", "ConnectTimeout=12", SSH_HOST, cmd],
-        capture_output=True, timeout=timeout,
+        capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout,
     )
     if p.returncode != 0:
         raise RuntimeError(f"ssh 失败({p.returncode}): {p.stderr.decode('utf-8', 'replace')[:200]}")

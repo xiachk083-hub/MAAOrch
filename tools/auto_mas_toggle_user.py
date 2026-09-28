@@ -63,7 +63,7 @@ def ssh_ps(script: str, timeout: int = 60) -> str:
     p = subprocess.run(
         ["ssh", "-i", SSH_KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10",
          SSH_HOST, f"chcp 65001 >nul & powershell -NoProfile -EncodedCommand {b64}"],
-        capture_output=True, timeout=timeout,
+        capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout,
     )
     return p.stdout.decode("utf-8", "replace")
 
