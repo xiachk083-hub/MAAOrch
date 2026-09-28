@@ -1,0 +1,76 @@
+=== t_72ed337a phase3 原始输出（watch + 证据 + 收尾；2026-09-28 12:23:43 起，MRFZ-0000）===
+命令: ssh Administrator@100.79.173.69 'powershell -NoProfile -ExecutionPolicy Bypass -File "E:\MAA-CLI\logs\phase3.ps1"'
+
+==TIME==
+12:23:43
+BASELINE: BL=4170 BS=590777 T0=12:23:08
+R1 t=12:24:23 lines=4960 new=790 byPx={29804:736 nopx:42 1084:12} maaAlive=2
+R2 t=12:25:04 lines=5172 new=1002 byPx={29804:948 nopx:42 1084:12} maaAlive=2
+R3 t=12:25:44 lines=5359 new=1189 byPx={29804:1133 nopx:44 1084:12} maaAlive=2
+R4 t=12:26:25 lines=5555 new=1385 byPx={29804:1327 nopx:46 1084:12} maaAlive=2
+R5 t=12:27:05 lines=5642 new=1472 byPx={29804:1371 nopx:46 32304:43 1084:12} maaAlive=0
+WATCH_DONE=True rounds=5
+==EVIDENCE==
+== RC files ==
+（iso-A rc 文件为 0 字节，读取报 InvokeMethodOnNull；iso-B 读到 "RC="（空值）——为 .cmd %errorlevel% 捕获的边角问题，不用于结论）
+iso-B-kaori-idx37.rc.txt => RC=
+== OUT tails ==
+--- iso-A-v-idx19.out.txt tail ---
+Summary
+----------------------------------------
+[StartUp] 12:23:12 - 12:26:32 (3m 20s) Completed
+--- iso-B-kaori-idx37.out.txt tail ---
+Summary
+----------------------------------------
+[StartUp] 12:23:12 - 12:26:28 (3m 16s) Error
+Error: Some error occurred during running task!
+== debug dir listing ==
+asst.log 952490 09-28 12:26:33
+== asst.log new-region analysis ==
+TOTAL_LINES=5642 baseline=4170
+NEW_LINES=1472
+PXCOUNT 29804 => 1371
+PXCOUNT nopx => 46
+PXCOUNT 32304 => 43
+PXCOUNT 1084 => 12
+STREAM Px29804 count=1371
+  first: [2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] -----------------------------
+  last : [2026-09-28 12:26:29.261][TRC][Px29804][Tx55723] asst::OcrPack::~OcrPack | leave, 0 ms
+STREAM Px32304 count=43
+  first: [2026-09-28 12:26:29.962][TRC][Px32304][Tx63662] end of sleep 1000
+  last : [2026-09-28 12:26:33.178][TRC][Px32304][Tx31664] asst::OcrPack::~OcrPack | leave, 0 ms
+STREAM Px1084 count=12
+  first: [2026-09-28 09:51:02.497][INF][Px1084][Tx36945] asst::Assistant::append_task | task_id: 7
+  last : [2026-09-28 09:51:02.500][TRC][Px1084][Tx36945] asst::OcrPack::~OcrPack | leave, 0 ms
+[1] head of each PX stream (6 lines, capped):
+--- Px29804 head ---
+[2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] -----------------------------
+[2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] MaaCore Process Start
+[2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] Version v6.18.0
+[2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] Built at Sep 23 2026 21:04:42
+[2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] User Dir C:\Users\Administrator\AppData\Roaming\loong\maa\data
+[2026-09-28 12:23:08.920][TRC][Px29804][Tx55723] -----------------------------
+--- Px32304 head （恢复落盘后的首行 = 流中段"end of sleep"，非头部 ⇒ 窗口内头部行已丢） ---
+[2026-09-28 12:26:29.962][TRC][Px32304][Tx63662] end of sleep 1000
+[2026-09-28 12:26:29.962][INF][Px32304][Tx63662] {"class":"asst::ProcessTask","cur_task":"StartUp",...}
+[2026-09-28 12:26:30.267][INF][Px32304][Tx63662] Call ` E:/MuMu Player 12/shell/adb.exe -s 127.0.0.1:16992 exec-out "screencap | nc -w 3 10.0.2.2 55607" ` ret 0 , cost 304 ms ...
+[2026-09-28 12:26:30.275][TRC][Px32304][Tx63662] match_templ | SwitchTheme@ToggleSettingsMenu.png [opencv] score: 0.997548 rect: [ 290, 391, 29, 24 ] ...
+[2026-09-28 12:26:30.275][TRC][Px32304][Tx63662] asst::PipelineAnalyzer::analyze | MatchTemplate StartUp
+[2026-09-28 12:26:30.275][INF][Px32304][Tx63662] Assistant::append_callback | SubTaskStart {...}
+[2] interleave window lines 1414..1444 (around first Px32304 line), capped:
+[2026-09-28 12:26:29.255][TRC][Px29804] ... Assistant::~Assistant | leave, 0 ms
+[2026-09-28 12:26:29.256][TRC][Px29804] ... AdbController::~AdbController | leave, 0 ms
+[2026-09-28 12:26:29.256][INF][Px29804] Disconnecting LD
+[2026-09-28 12:26:29.261][TRC][Px29804] ... OcrPack::~OcrPack | leave, 0 ms
+[2026-09-28 12:26:29.962][TRC][Px32304] end of sleep 1000        <-- B（29804）流末 0.7s 后 A（32304）开始落盘
+[2026-09-28 12:26:30.267][INF][Px32304] Call ` ... -s 127.0.0.1:16992 ... `
+...
+[3] near LAST Px29804 line, window 1420..1436, capped: （同上拼接形态）
+==TEARDOWN==
+{"errcode": 0}  (shutdown idx19)
+{"errcode": 0}  (shutdown idx37)
+VMM19_37=down
+maa-cli procs remaining: 0
+fz-maa MAAs: 8824
+==END==
+12:27:21

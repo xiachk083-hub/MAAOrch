@@ -1,6 +1,6 @@
 # maa-cli 部署与连通性验证（主机侧，含与 AUTO-MAS 共存）
 
-> v1.1 · 2026-09-27（22:2x 初版；23:57 级别 3 实测后更新）· 任务 `t_9fc91afc`（mas）· 目标机 **MRFZ-0000（100.79.173.69）**
+> v1.2 · 2026-09-27（22:2x 初版；23:57 级别 3 实测后更新）· 2026-09-28 并发日志隔离小样（t_72ed337a；**结论=不成立**，§5/§8.1）· 任务 `t_9fc91afc`（mas）· 目标机 **MRFZ-0000（100.79.173.69）**
 > 状态：**已实装；三级验证全部完成**。级别 1/2 通过并留证（§4）；**级别 3 真跑通过**（2026-09-27 23:03–23:53，候选 B=idx19，`RC=0`，StartUp `Completed` 2m24s，见 §4.3 与 `docs/audits/2026-09-27_maa_cli_lv3_transcript.txt`）。
 > 配套文档：能力面/schema = `MAA_CLI_SURVEY.md`（t_8057ebaa）；日志判据 = `MAA_LOG_DICTIONARY.md`；模拟器拓扑 = `MAS_EMULATORS.md`。
 
@@ -178,7 +178,7 @@ touch_mode = "MaaTouch"
 
 **并发（并行基准）注意**：
 - 多进程 = 每进程独立 profile/设备；日志隔离用 `MAA_STATE_DIR`（改它 `asst.log` 跟着搬，SURVEY §3.1）或 `--log-file`。
-- ⚠️ 同 data 目录下多进程 `asst.log` 是否互踩**未验证** —— 并行基准开跑前先做小样（2 进程）验证。
+- ✅ 同 data 目录下多进程 `asst.log` **互踩已实测坐实（2026-09-28，不隔离，丢日志形态）**：先占文件者正常记账，另一方在重叠窗口的日志**整段静默丢失**（无回填、无第二文件），前者退出后才恢复落盘 ⇒ **并发必逐进程 `MAA_STATE_DIR`**；证据 `docs/audits/2026-09-28_maacli_log_isolation/`。
 - 班次窗口（05:00–08:00 / 19:30–23:00）建议只碰**非产线实例**（停用号），避开重试/补发窗口。
 - maa-cli 无 AUTO-MAS 的排队/记账/通知——批跑场景需要外部编排（与 t_cc935c9b 的取舍对接）。
 
@@ -233,7 +233,7 @@ winget uninstall --id MaaAssistantArknights.maa-cli -e --source winget --disable
 
 ## 8. 缺口与后续（交给并行基准 / 路径取舍卡）
 
-1. **并发日志隔离**（多进程同 data 目录）未验证 —— 并行基准先做 2 进程小样。
+1. ~~**并发日志隔离**（多进程同 data 目录）未验证 —— 并行基准先做 2 进程小样。~~ ⇒ **已实测（2026-09-28，t_72ed337a）：隔离不成立（丢日志形态）**——后占者重叠窗口整段静默丢、无回填、无第二文件；并行基准须逐进程 `MAA_STATE_DIR`。证据 `docs/audits/2026-09-28_maacli_log_isolation/`（含 phase3/phase4 原始输出）。遗留项：MaaCore `Utils/Logger.cpp` 源码级证据未取到（GitHub raw 404）＝运行时推断。
 2. `hot-update`：本次级别 3 真跑 CLI 日志仅见 `MaaResource\resource not found` WARN（噪声级），未见拉仓/限速；如需强制刷新再评估镜像（SURVEY §3.4）。
 3. winget 源索引旧（0.5.9）——回归 winget 管理需先修源（`source update` 被取消原因未深究）。
 4. 账号语义：maa-cli 无 `AccountSwitchEnabled` 对应物（SURVEY §6）——多号设计注意。

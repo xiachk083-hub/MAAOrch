@@ -31,7 +31,7 @@
 
 MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威在 Harness）；不做研发工作台（`runtime/_pilot`、`*probe*` 不属契约面）。
 
-⚠️ **边界图景漂移（UNVERIFIED）**：`POSITIONING.md`（09-26）与 `STRUCTURE.md`（08-12 定型）仍描述 **in-repo Web/Node 前端**（看板 19999、`ui/web`）——该图景**部分已被推翻**：2026-09-27 提交 `retire(frontend)`（前端整体退役、按 49 条白名单删 91 条路由，见 `git log`）。当前在役 in-repo 面 = Python API（`127.0.0.1:19997`，按需拉起；见 `docs/http-api.md`）+ `tools/*` 工具链。引用这两份文档的前端/UI 章节前，先对照 `git log` 与 `docs/http-api.md`；其余章节（分层/四职责/MCP 结构）本卡**未逐行复核**，真值源 = 代码。
+✅ **边界图景漂移（2026-09-28 已收口）**：`POSITIONING.md` 与 `STRUCTURE.md` 的前端/UI 相关段落已按代码校正（退役标注 + 数字修正；`retire(frontend)` = 2026-09-26 提交 `9f9fab9`）。当前在役 in-repo 面 = Python API（`127.0.0.1:19997`，按需拉起；见 `docs/http-api.md`）+ Node 最小运维页 `/status`（19999）+ `tools/*` 工具链。漂移清单与证据：`docs/audits/2026-09-28_brain_reverify/`。
 
 ### 1.2 两台机器与端点
 
@@ -130,7 +130,7 @@ MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威
 
 **纪律**：**设计 ≠ 可用**。文档里"已设计/已自测/ dryness 通过 / 演练通过"都**不等于**生产可用；任何写路径只有在**有实跑证据 + 接线位置 + 回滚方式**三者齐全时才可标 `DEPLOYED`。
 
-### 4.2 能力表（本卡快照 2026-09-28 11:31；26 行）
+### 4.2 能力表（快照 2026-09-28 11:31；27 行；#22/#24 复验回写于 t_e5f7d4a8 12:30）
 
 | # | 能力 | 标签 | 关键证据 / 来源 | 复验方式 |
 |---|---|---|---|---|
@@ -153,15 +153,16 @@ MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威
 | 17 | 班次日报 shift_report | DEPLOYED | cron `8b1708397046`（08:30/21:30/23:30；09:56 ok） | `--shift daily` |
 | 18 | 调度看门狗 scheduler_watchdog | PROPOSED | CLI+演练 PASS（`WATCHDOG=OK`；15 步假环境演练）；**计划任务注册"待 lead 批准"** ⇒ 还不是活的安全网 | `--check` / `--install-task`（未批准勿跑） |
 | 19 | 知识库巡检行 WIKI_GOV | PROPOSED | 卡 `t_c8b36f5e`（blocked）；巡检行待接线 | `mas_watch`/巡检报告观察 |
-| 20 | maa-cli 第二驱动 | DEPLOYED（主机） | 三级验证全过：L3 真跑 idx19 `RC=0`（2026-09-27 23:03–23:53，`MAA_CLI_DEPLOY.md` §4.3）；**受限用途**；并发日志隔离 **UNVERIFIED** | 使用前重查 `maa version`/`maa dir config` |
+| 20 | maa-cli 第二驱动 | DEPLOYED（主机） | 三级验证全过：L3 真跑 idx19 `RC=0`（2026-09-27 23:03–23:53，`MAA_CLI_DEPLOY.md` §4.3）；**受限用途**；并发日志隔离 **实测不成立**（t_72ed337a：2026-09-28 同 data 目录 2 进程并发=后占者整窗口静默丢日志；隔离=逐进程 `MAA_STATE_DIR`） | 使用前重查 `maa version`/`maa dir config`；并发处置见 `docs/audits/2026-09-28_maacli_log_isolation/` |
 | 21 | MaaFw 取证三件套 | TESTED | 18 ms/帧、`PostMessage` 输入隔离（`MAA_DRIVER_OPTIONS.md` §1.3） | `maafw_capture.py` 自测 |
-| 22 | 肉鸽机队 `l-*`（fz-maa 看守） | UNVERIFIED | 文档口径=既在看守（手册/驱动取舍 §2.2）；**本卡未复验主机现状** | 真值源：主机计划任务 `MAAOrch-RogueFleet` + 看守日志 |
+| 22 | 肉鸽机队 `l-*`（fz-maa 看守） | DEPLOYED | **在看守=是**（2026-09-28 12:20 DESKTOP-L1OEMR3：`MAAOrch-RogueFleet` 已启用、每 2 分钟、上次 12:20:01 rc=0；watch.log 实时写，含 12:18 真实救援 l-2 模拟器级重启）。注：#0 看守 `MAAOrch-Rogue0Watch` 已禁用（09-26 13:28 末次，原因未留痕） | `schtasks /query /tn MAAOrch-RogueFleet /v` + 看守日志；明细 `docs/audits/2026-09-28_brain_reverify/` |
 | 23 | 共享知识库 MAS-KB | DEPLOYED | `D:\1-2\MAS-KB` + 技能 `wiki-search`（先查库再动手） | `wiki_search.py` |
-| 24 | in-repo 栈图景（POSITIONING/STRUCTURE 的 UI 章节除外） | UNVERIFIED | 本卡只读文档、未复核代码现状；部分已被 `retire(frontend)` 推翻 | 真值源：`git log` + 代码 + `docs/http-api.md` |
-| 25 | in-repo 前端 / Node 看板图景 | DEPRECATED | 2026-09-27 `retire(frontend)`（提交 `9f9fab9`，49 条白名单路由） | 以 Hermes 会话/看板卡为入口 |
+| 24 | in-repo 栈图景（POSITIONING/STRUCTURE；UI 章节见 #25） | DEPLOYED | 2026-09-28 按代码复核并校正：`ui/web` 已退役、api_fastapi=2267 行/49 路由、主入口端口=api_port（19997）、根日志已收口 `logs/`、mas_watch=305 非空行（漂移清单+证据 `docs/audits/2026-09-28_brain_reverify/`） | 引用前对照 `git log` + 代码 + `docs/http-api.md` |
+| 25 | in-repo 前端 / Node 看板图景 | DEPRECATED | 2026-09-26 `retire(frontend)`（提交 `9f9fab9`，49 条白名单路由；原文写 09-27 系笔误，git 实为 09-26 16:06） | 以 Hermes 会话/看板卡为入口 |
 | 26 | `REF_MAA_CLI_SKILL.md` 的环境搭建路径 | DEPRECATED | 2026-09-20 本机实验稿，其安装/junction 做法已被 `MAA_CLI_DEPLOY.md`（主机主部署位）取代；探测器结论（客户端类型表征等）仍有效 | 用 `MAA_CLI_DEPLOY.md` + 技能 `maa-cli-ops` |
+| 27 | 绕代理统一客户端 `mas_net`（G2 修复） | TESTED | t_f79db125（09-28）：五件套接线后 裸 urlopen 清零 + 活体 REST 200/54 脚本 + proxy RPC 41 工具 + 绕代理 20/20；证据 `docs/audits/2026-09-28_g2_proxy_bypass/` | `tools/mas_net.py --selftest` / `--ab-check` |
 
-**计数（本表 26 行）**：`DEPLOYED` 16 ｜ `TESTED` 2 ｜ `IMPLEMENTED` 2 ｜ `PROPOSED` 2 ｜ `UNVERIFIED` 2 ｜ `DEPRECATED` 2。
+**计数（本表 27 行）**：`DEPLOYED` 18 ｜ `TESTED` 3 ｜ `IMPLEMENTED` 2 ｜ `PROPOSED` 2 ｜ `DEPRECATED` 2。
 
 ### 4.3 状态迁移示例（本仓库真实发生过的）
 
@@ -169,14 +170,16 @@ MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威
 - `PROPOSED → TESTED`：scenario_dispatch —— 自测 44/44 + 干跑 GO，但 **apply 仍 UNVERIFIED**（未满足 DEPLOYED 三条件）。
 - `DEPLOYED → 需复验`：maa-cli —— L3 已跑通，但**版本/部署会漂**，任何使用前必须重查（技能 `maa-cli-ops` 的版本差异纪律）。
 - `× → DEPRECATED`：前端/Node 图景（`retire(frontend)`）。
+- `未评审 → 评审通过·待批准安装`：`skills-draft/mas-playbooks`（t_ba53e737，2026-09-28；安装前仍不作为可用能力，批准后按审计目录落地包执行）。
+- `UNVERIFIED → DEPLOYED`：#22 肉鸽机队看守（2026-09-28 复验：`MAAOrch-RogueFleet` 在役/日志实时，含当日真实救援；#0 看守 `MAAOrch-Rogue0Watch` 已禁用——另记）；#24 in-repo 栈图景（按代码校正后回写；证据 `docs/audits/2026-09-28_brain_reverify/`）。
 
 ### 4.4 「设计 ≠ 可用」清单（本页已确认的例子）
 
 1. **scheduler_watchdog**：实现齐、演练 `DRILL=PASS`，但计划任务**未注册**（待批准）⇒ 当前没有任何自动看门狗在跑。
 2. **scenario_dispatch**：全靠闸门与自测背书，**真发车（apply）从未实跑**；启用前按 `MAS_SCENARIO_DISPATCH.md` §8 清单走批准。
 3. **activity_switch**：干跑报告看似完整，但**无 state 账本**=从未 live apply；"能用"待首次受控实跑证明。
-4. **maa-cli**：部署与三级验证为真，但用途边界是**受限**的（无记账/无 gui.log 判据/无切号语义），并发日志隔离未验证；**不要把"跑通过一次"说成"可用于生产批跑"**。
-5. **skills-draft/mas-playbooks**：技能草稿**不生效**（不在 profile skills 目录；`docs/skills-draft/README.md`），评审通过前任何会话都不会加载它。
+4. **maa-cli**：部署与三级验证为真，但用途边界是**受限**的（无记账/无 gui.log 判据/无切号语义），并发日志隔离**已实测不成立**（2026-09-28：2 进程同 data 目录=后占者整窗口静默丢日志；并发须逐进程 `MAA_STATE_DIR`）；**不要把"跑通过一次"说成"可用于生产批跑"**。
+5. **skills-draft/mas-playbooks**：评审通过（2026-09-28，`t_ba53e737`；裁定=安装独立技能）；**安装待批准未执行 ⇒ 仍不生效**（不在 profile skills 目录）——批准后按 `docs/audits/2026-09-28_skills_draft_review/`（报告 + 安装脚本）执行；在此之前不得当可用能力引用。
 
 ---
 
@@ -216,7 +219,7 @@ MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威
 
 | 风险 | 说明 | 处置 |
 |---|---|---|
-| **G2 系统代理拦内网（P0，未修）** | 62 个 urllib 工具仅 1 个显式绕代理；间歇 502/10054 ⇒ 误 NO-GO、补跑通道失败 | 现状=手动路径+重试兜底；修复落点见 `MAS_SHIFT_GAPS.md` G2（改前先拍板） |
+| **G2 系统代理拦内网（P0，已修 09-28）** | 五件套（preflight/dispatch/daily_proxy/error_daily/switch_gate）与 `mas_net` 已接线、裸 urlopen 清零；**余 ~51 个直连工具未接**（仍走默认代理路径） | 后续「一行×N」卡按 `mas_net` 口径铺开；证据 `docs/audits/2026-09-28_g2_proxy_bypass/` |
 | `MAA_10/MAA_12` 切号闸门 VIOLATION | 轮末 Temp 还原残留 `masked+false`，永久复现 | 一次性清理方案已出**未执行**（as-of 09-28 01:34） |
 | 幽灵绑定 idx51（官-28） | 启用但未排班 + 实例索引指向已删 VM | 三件一起拍板（重建 ≈+30GB 或停用） |
 | Temp 快照轮末整份还原 | 「勾选/设置消失」真凶；还原值 ≠ 最后跑的号 | 改配置走 run_profile/activity_switch 骨架，别手动绕 |
@@ -232,7 +235,7 @@ MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威
 4. **数字漂移**：工具数/行数/队列数类数字（如"28 队列"=旧快照，实测 33；TOOLBOX §C 表列 mas-dispatch 4 工具，实际 5 含 patch_guard）——数字一律以现查为准。
 5. **"草案特性"混入结论**：`PROPOSED` 内容不得当 `DEPLOYED` 引用（§4.4 五例）。
 
-**已判定 DEPRECATED**：§4.2 第 25/26 行。**待复核（UNVERIFIED）**：§4.2 第 22/24 行。
+**已判定 DEPRECATED**：§4.2 第 25/26 行。**已复验（2026-09-28）**：第 22/24 行 → 均 `DEPLOYED`（证据 `docs/audits/2026-09-28_brain_reverify/`）。
 
 ---
 
@@ -269,10 +272,11 @@ MAAOrch **明确不做**（`POSITIONING.md` §1）：不做大脑（计划权威
 | P1 | scheduler_watchdog 计划任务注册（获批后）→ 补一条"看门狗活体"巡检证据 | TOOLBOX B19 |
 | P1 | scenario_dispatch 首次受控 apply 演练（单号 + 窗口 + 批准链） | `MAS_SCENARIO_DISPATCH.md` §8 |
 | P2 | activity_switch 首次 live apply 演练（先 pretend 报告评审） | `MAS_ACTIVITY_SWITCH.md` |
-| P2 | maa-cli 并发小样（2 进程同 data 目录 asst.log 隔离验证） | `MAA_CLI_DEPLOY.md` §8.1 |
-| P2 | `skills-draft/mas-playbooks` 评审（安装 / 并入 host-ops 二选一） | `docs/skills-draft/README.md` |
+| P2 | ~~maa-cli 并发小样（2 进程同 data 目录 asst.log 隔离验证）~~ **已闭环 2026-09-28（t_72ed337a）：隔离不成立·丢日志形态；并发=逐进程 `MAA_STATE_DIR`** | `docs/audits/2026-09-28_maacli_log_isolation/` |
+| P2 | `skills-draft/mas-playbooks`：评审完成（裁定=安装独立技能，t_ba53e737）；**待批准执行安装**（安装/回读/回滚脚本已备） | `docs/audits/2026-09-28_skills_draft_review/README.md` |
 | P2 | POSITIONING/STRUCTURE 与代码现状对齐（前端退役后的漂移收尾） | §1.1 / §7.2 |
 | P3 | WIKI_GOV 巡检行接线（`t_c8b36f5e` blocked 解锁） | TOOLBOX D/巡检表 |
+| P2 | 游戏内签到 `SignInEvent` 铺开 + 尾链实证核对（t_0dd1e9cc）：官-38 已改已发车（载荷 `signinevent:true` 已验），其余号待「真领到」证据后按组铺开 | `docs/audits/2026-09-28_signin_event/README.md` |
 
 ---
 
