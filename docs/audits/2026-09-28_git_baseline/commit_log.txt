@@ -1,3 +1,13 @@
+a5e266d chore(snapshot): 收尾快照4（kanban_health 第4轮 / 租约冒烟最新态）
+ .../16_round_after_v4.txt                          | 40 ++++++++++++++++++++++
+ .../2026-09-28_kanban_health_wiring/README.md      |  1 +
+ .../2026-09-28_p1_2_lease_consumers/README.md      |  4 ++-
+ .../smoke_orch_seam_20260928.txt                   |  3 ++
+ 4 files changed, 47 insertions(+), 1 deletion(-)
+104fe9b docs: 收尾证据定版（最终）——status_after / commit_log
+ docs/audits/2026-09-28_git_baseline/commit_log.txt | 10 +++++
+ .../2026-09-28_git_baseline/status_after.txt       | 47 ++++++++++++++++++----
+ 2 files changed, 50 insertions(+), 7 deletions(-)
 d5265f1 chore: 去跟踪根级一次性转储（done_tmp/all_done/blk/_verify_done；文件留盘，t_e17a7209 过程件）
  _verify_done.py |   35 -
  all_done.json   | 3926 -------------------------------------------------------
