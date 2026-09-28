@@ -1,3 +1,13 @@
+378348e chore(snapshot): 收尾末次快照2（event_calendar 巡检产物）
+ ...8_event_calendar_wiring.inspection_run2_full.md |   93 +
+ docs/audits/2026-09-28_event_calendar_wiring.json  |  301 ++
+ .../2026-09-28_kanban_conflict_guard/real_scan.txt |   41 +
+ done_tmp.json                                      | 3898 ++++++++++++++++++++
+ 4 files changed, 4333 insertions(+)
+d569211 docs: 收尾证据定版（status_after / commit_log）
+ docs/audits/2026-09-28_git_baseline/commit_log.txt   | 8 ++++++++
+ docs/audits/2026-09-28_git_baseline/status_after.txt | 8 +++++---
+ 2 files changed, 13 insertions(+), 3 deletions(-)
 6568129 chore(snapshot): 收尾末次快照（kanban_conflict_guard 文档）
  docs/KANBAN_CONFLICT_GUARD.md  | 127 +++++++++++++++++++++++++++++++++++++++++
  docs/KANBAN_DISPATCH_POLICY.md |  13 +++++

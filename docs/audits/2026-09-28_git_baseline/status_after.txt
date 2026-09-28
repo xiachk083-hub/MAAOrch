@@ -1,7 +1,3 @@
  M docs/audits/2026-09-28_git_baseline/status_after.txt
- M docs/audits/2026-09-28_kanban_conflict_guard/real_scan.txt
-?? docs/audits/2026-09-28_event_calendar_wiring.inspection_run2_full.md
-GIT_BASELINE=DRIFT:3
-  untracked   docs/audits/2026-09-28_event_calendar_wiring.inspection_run2_full.md
+GIT_BASELINE=DRIFT:1
   uncommitted docs/audits/2026-09-28_git_baseline/status_after.txt
-  uncommitted docs/audits/2026-09-28_kanban_conflict_guard/real_scan.txt
