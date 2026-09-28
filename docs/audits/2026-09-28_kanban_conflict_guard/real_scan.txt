@@ -84,6 +84,47 @@ EXIT=2
 == 零写盘实测：不带 --out 重跑两次，比较 runtime/reports 目录快照 ==
 ZERO_WRITE=OK (runtime/reports 无变化，files=902)
 参考: kanban.db mtime = 2026-09-28 11:49:52.137870900 +0800 （板的活口：其它 worker 心跳也会推它，非本工具）
+==================================================================================
+CLI fail-closed 抽查（真板；期望 rc=2 + ERROR 判据行/ok:false，无裸异常）
+==================================================================================
+$ … tools/kanban_conflict_guard.py --card t_nope
+KANBAN_CONFLICT=ERROR:unknown_card detail=看板 maa-parallel-benchmark-20260926 上没有卡 t_nope
+EXIT=2
+
+$ … tools/kanban_conflict_guard.py --card t_nope --json
+{"schema":"maaorch.kanban_conflict_guard/1","ts":"2026-09-28 11:53:46","board":"-","db":"","ok":false,"status":"ERROR","error":{"kind":"unknown_card","detail":"看板 maa-parallel-benchmark-20260926 上没有卡 t_nope"},"conflicts":[],"cards_scanned":0,"line":"KANBAN_CONFLICT=ERROR:unknown_card detail=看板 maa-parallel-benchmark-20260926 上没有卡 t_nope"}
+EXIT=2
+
+$ … tools/kanban_conflict_guard.py --files ' , '
+KANBAN_CONFLICT=ERROR:empty_input detail=--files 为空：请给逗号分隔的仓库相对路径（如 tools/mas_run_profile.py,docs/x.md）
+EXIT=2
+
+$ … tools/kanban_conflict_guard.py --db C:/nope/none.db
+KANBAN_CONFLICT=ERROR:board_unreadable detail=--db 不存在：C:\nope\none.db
+EXIT=2
+
+$ … tools/kanban_conflict_guard.py --card t_403cd83b --files tools/x.py  （候选源互斥）
+KANBAN_CONFLICT=ERROR:bad_input detail=--card / --files / --body-file 互斥，只能给一个
+EXIT=2
+
+$ … tools/kanban_conflict_guard.py --files tools/git_baseline_check.py  （候选命中 t_1ca5e9ee）
+文件级互斥闸 · board=maa-parallel-benchmark-20260926 · scope=running/ready/todo · 2026-09-28 11:53:47
+扫描卡数=5（在队） 候选模式=files
+
+卡 → 文件清单：
+  [running  ] t_1ca5e9ee p1  tools/git_baseline_check.py, docs/TOOLING_AUDIT.md, docs/CREDENTIAL_EXPOSURE_AUDIT.md, tools/mas_scrub.py, docs/GIT_BASELINE.md
+  [running  ] t_1df99ae5 p1  docs/TOOLING_AUDIT.md, tools/mas_run_profile.py, docs/MAS_INSTANCE_LEASE.md, tools/mas_instance_lease.py, tools/tests/test_regression.py, docs/REGRESSION.md
+  [running  ] t_403cd83b p2  tools/event_calendar.py, docs/EVENT_CALENDAR.md, tools/mas_shift_report.py, tools/mas_observe_mcp.py, docs/HERMES_MAS_HANDOVER.md
+  [running  ] t_4cd871de p3  tools/kanban_health.py, tools/mas_observe_mcp.py, docs/KANBAN_DISPATCH_POLICY.md, docs/KANBAN_HEALTH.md, docs/MCP_TOOL_ROADMAP.md
+  [running  ] t_9ed6574c p2  tools/kanban_conflict_guard.py, docs/KANBAN_DISPATCH_POLICY.md, tools/mas_observe_mcp.py, tools/mas_run_profile.py, tools/mas_probe_farm.py, tools/kanban_health.py, docs/KANBAN_HEALTH.md, docs/KANBAN_TASK_TEMPLATE.md, tools/x.py, docs/KANBAN_CONFLICT_GUARD.md
+  [candidate] (candidate) p2  tools/git_baseline_check.py
+
+冲突对（1）：
+  (candidate) × t_1ca5e9ee @ tools/git_baseline_check.py
+      → 串行/错峰：tools/git_baseline_check.py 的当前持有者 = t_1ca5e9ee(running)；等其收口再派 (candidate)，或先把 (candidate) 的范围改到无冲突文件（真并发写 = 后写覆盖前写）
+
+KANBAN_CONFLICT=WARN:1 conflicts=(candidate):t_1ca5e9ee(shared=tools/git_baseline_check.py)
+EXIT=2
 
 ================================================================================
 2 对复原核对（逐条引用上面 run 的输出原文）
