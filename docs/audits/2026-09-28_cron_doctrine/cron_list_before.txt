@@ -1,0 +1,50 @@
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Scheduled Jobs                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  52b88b0ffca0 [active]
+    Name:      mas-readonly-inspection
+    Schedule:  every 30m
+    Repeat:    ∞
+    Next run:  2026-09-28T12:10:52.741005+08:00
+    Deliver:   local
+    Last run:  2026-09-28T11:10:18.917670+08:00  ok
+    Dispatch:  on time (scheduled 2026-09-28T11:40:18.917670+08:00)
+    Execution: running  330772daf52c4e719a7be62eda3da9e3
+
+  2600f6415f16 [active]
+    Name:      mas-shift-dispatch
+    Schedule:  */3 5,19,20 * * *
+    Repeat:    ∞
+    Next run:  2026-09-28T19:00:00+08:00
+    Deliver:   local
+    Script:    mas_shift_reconcile.py
+    Mode:      no-agent (script stdout delivered directly)
+    Last run:  2026-09-28T05:57:04.837750+08:00  ok
+    Dispatch:  on time (scheduled 2026-09-28T05:57:00+08:00)
+    Execution: completed  9c7e9bdd0a1547f1837ff79d04de717a
+
+  8b1708397046 [active]
+    Name:      mas-shift-report
+    Schedule:  30 8,21,23 * * *
+    Repeat:    ∞
+    Next run:  2026-09-28T21:30:00+08:00
+    Deliver:   local
+    Script:    mas_shift_report_cron.py
+    Mode:      no-agent (script stdout delivered directly)
+    Last run:  2026-09-28T09:56:21.721856+08:00  ok
+    Execution: completed  a91bc597d35d4a699c924b7ffb68d14f
+
+  55337a0a2b62 [active]
+    Name:      mas-rollback-drill
+    Schedule:  0 9 * * 1
+    Repeat:    ∞
+    Next run:  2026-10-05T09:00:00+08:00
+    Deliver:   local
+    Script:    mas_rollback_drill_cron.py
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   D:\1-2\MAAOrch
+    Last run:  2026-09-28T11:09:27.505711+08:00  ok
+    Execution: completed  058957684ded452e9539173be720fb50
+

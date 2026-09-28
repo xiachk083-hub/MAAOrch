@@ -1,0 +1,33 @@
+--- C:/Users/xiach/AppData/Local/hermes/profiles/mas/skills/autonomous-ai-agents/mas-ops-toolbox/SKILL.md.bak-20260928-114422	2026-09-28 11:44:22.530654200 +0800
++++ C:/Users/xiach/AppData/Local/hermes/profiles/mas/skills/autonomous-ai-agents/mas-ops-toolbox/SKILL.md	2026-09-28 11:45:47.531976900 +0800
+@@ -174,7 +174,7 @@
+ $PY312 tools/mas_dispatch.py --dismiss-late 晚班定时6 --apply --note "理由"
+ ```
+ 
+-- Hermes cron `2600f6415f16` 每 3 分钟调 `--reconcile --apply`。输出：`runtime/mas_dispatch_state.json`、`runtime/mas_dispatch_log.jsonl`、`runtime/mas_dispatch_alerts.json`。
++- Hermes cron `2600f6415f16`（`*/3 5,19,20 * * *`，no_agent 脚本）在 05/19/20 三个时段每 3 分钟调 `--reconcile --apply`。输出：`runtime/mas_dispatch_state.json`、`runtime/mas_dispatch_log.jsonl`、`runtime/mas_dispatch_alerts.json`。
+ - 边界（硬）：① 队列级发车/补发只归本工具；超追发窗口（>30min）**不自动补**，只记 late + 告警；② **账号级补跑只归 B1**（正交）；③ 资源冲突（`conflict_inflight`）拒绝且零上游写，是否并行只由人工 `--release`/`--force-conflict` 决定。
+ 
+ ### B11 看现场：谁在跑 / 卡没卡 / 空转
+@@ -208,7 +208,20 @@
+ $PY312 tools/mas_watch.py --force          # L3 守护：立刻出报告
+ ```
+ 
+-- 禁忌：`--reapply`/`--capture` 是写动作（配 `--apply` 才落）；**别新增巡检 cron**（Hermes 侧只保留 `52b88b0ffca0` 一个）。
++- 禁忌：`--reapply`/`--capture` 是写动作（配 `--apply` 才落）；**别新增 agent 型巡检 cron**——no_agent 脚本型定时按卡批准（须 ≤ 每日额度预算并登记）。
++
++#### Hermes 侧定时任务全表（4 个 · 快照 2026-09-28 11:44 `hermes -p mas cron list` 实测）
++
++| job id | 名称 | 计划 | 类型 | 用途 | 归属 |
++|---|---|---|---|---|---|
++| `52b88b0ffca0` | mas-readonly-inspection | every 30m | **agent 型**（LLM，烧 token） | 只读巡检（SWITCH_GATE / PATCH_GUARD / ERR_SUMMARY …） | `docs/HERMES_MAS_HANDOVER.md` §11 落地；历次补丁见 `docs/audits/2026-09-27_*` |
++| `2600f6415f16` | mas-shift-dispatch | `*/3 5,19,20 * * *` | no_agent 脚本（`mas_shift_reconcile.py`） | 队列级发车对账 `--reconcile --apply` | `docs/audits/2026-09-27_hermes_takes_over_mas_scheduler.md` |
++| `8b1708397046` | mas-shift-report | `30 8,21,23 * * *` | no_agent 脚本（零 token） | 班次报告（08:30 / 21:30 / 23:30） | t_af7211cb（`docs/MAS_SHIFT_REPORT.md`） |
++| `55337a0a2b62` | mas-rollback-drill | `0 9 * * 1` | no_agent 脚本（零 token） | 每周一 09:00 回滚演练 | t_7fa96ea5（`docs/ROLLBACK_DRILL.md`） |
++
++- AUTO-MAS 侧 24 条班次定时**已全停**，发车由 `2600f6415f16` 接管（回滚见上表归属审计）。
++- 纪律：动任何 job（pause / resume / edit / remove）先登卡，禁止裸改；停/恢复 = `hermes -p mas cron pause|resume <id>`。
++- agent 型（目前仅 `52b88b0ffca0`）：token 预算上限 **≈10.4M token/天**（30m 节拍 × ~217k token/次，handover §12.2）——"不得再增第二个 agent 型 job"的红线就出在这个量级；超限处置 = `hermes -p mas cron pause 52b88b0ffca0` → 出报告登卡 → 人工定降频/瘦身提示词后再 resume。
+ 
+ ### B14 今日建议 / 补漏候选（只读决策件）
+ 
