@@ -1,0 +1,31 @@
+ M docs/audits/2026-09-28_p1_2_lease_consumers/README.md
+?? .agents/
+?? docs/HERMES_PROJECT_BRAIN.md
+?? docs/MAS_AUDIT_SCHEMA.md
+?? docs/MAS_INSTANCE_LEASE.md
+?? docs/MAS_ONDEMAND.md
+?? docs/MAS_RUN_PROFILE.md
+?? docs/audits/2026-09-28_audit_wire/README.md
+?? docs/audits/2026-09-28_audit_wire/recheck2/README.md
+?? docs/audits/2026-09-28_audit_wire/recheck2/file_hashes.txt
+?? docs/audits/2026-09-28_audit_wire/recheck2/validate2.txt
+?? docs/audits/2026-09-28_cron_doctrine/
+?? docs/audits/2026-09-28_git_baseline/status_after.txt
+?? docs/audits/2026-09-28_kanban_conflict_guard/
+?? docs/audits/2026-09-28_kanban_health_wiring/PROMPT_PATCH_kanban_health_p1p2.md
+?? docs/audits/2026-09-28_kanban_health_wiring/README.md
+?? docs/audits/2026-09-28_p1_2_lease_consumers/selftests_final_20260928.txt
+?? docs/audits/2026-09-28_p1_2_lease_consumers/smoke_crossfamily_20260928.txt
+?? tools/kanban_conflict_guard.py
+?? tools/mas_run_profile.py
+GIT_BASELINE=DRIFT:27
+  untracked   docs/HERMES_PROJECT_BRAIN.md
+  untracked   docs/MAS_AUDIT_SCHEMA.md
+  untracked   docs/MAS_INSTANCE_LEASE.md
+  untracked   docs/MAS_ONDEMAND.md
+  untracked   docs/MAS_RUN_PROFILE.md
+  untracked   docs/audits/2026-09-28_audit_wire/README.md
+  untracked   docs/audits/2026-09-28_audit_wire/recheck2/README.md
+  untracked   docs/audits/2026-09-28_audit_wire/recheck2/file_hashes.txt
+  untracked   docs/audits/2026-09-28_audit_wire/recheck2/validate2.txt
+  untracked   docs/audits/2026-09-28_cron_doctrine/cron_list.txt
