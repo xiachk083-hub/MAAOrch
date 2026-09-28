@@ -1,3 +1,32 @@
+82efdfc chore(snapshot): 运行中卡产物第二批快照（补齐首扫 fresh 跳过项：audit_wire/租约/kanban_health 等）
+ .agents/skills/maaorch-project-brain/SKILL.md      |   70 +
+ docs/HERMES_PROJECT_BRAIN.md                       |  306 ++
+ docs/MAS_AUDIT_SCHEMA.md                           |  507 ++++
+ docs/MAS_INSTANCE_LEASE.md                         |  244 ++
+ docs/MAS_ONDEMAND.md                               |  191 ++
+ docs/MAS_RUN_PROFILE.md                            |  229 ++
+ docs/audits/2026-09-28_audit_wire/README.md        |   99 +
+ .../2026-09-28_audit_wire/recheck2/README.md       |   59 +
+ .../2026-09-28_audit_wire/recheck2/file_hashes.txt |   14 +
+ .../2026-09-28_audit_wire/recheck2/validate2.txt   |   23 +
+ docs/audits/2026-09-28_cron_doctrine/cron_list.txt |   50 +
+ .../2026-09-28_cron_doctrine/cron_list_before.txt  |   50 +
+ .../2026-09-28_cron_doctrine/cron_list_diff.txt    |    0
+ docs/audits/2026-09-28_cron_doctrine/reread.txt    |   25 +
+ .../audits/2026-09-28_cron_doctrine/skill_diff.txt |   33 +
+ .../2026-09-28_cron_doctrine/skill_sha_after.txt   |    2 +
+ .../2026-09-28_cron_doctrine/skill_sha_before.txt  |    1 +
+ .../PROMPT_PATCH_kanban_health_p1p2.md             |   30 +
+ .../2026-09-28_kanban_health_wiring/README.md      |   69 +
+ .../selftests_final_20260928.txt                   |   18 +
+ .../smoke_crossfamily_20260928.txt                 |   61 +
+ tools/kanban_conflict_guard.py                     |  566 ++++
+ tools/mas_run_profile.py                           | 2965 ++++++++++++++++++++
+ 23 files changed, 5612 insertions(+)
+96a057b docs: 基线收尾证据（status_after / commit_log）
+ docs/audits/2026-09-28_git_baseline/commit_log.txt | 493 +++++++++++++++++++++
+ .../2026-09-28_git_baseline/status_after.txt       |  31 ++
+ 2 files changed, 524 insertions(+)
 3740d44 docs: 入库基线治理证据（凭证扫描/复核结论/自测）
  .../2026-09-28_git_baseline/gitignore_review.md    |  54 +++++
  docs/audits/2026-09-28_git_baseline/scrub_hits.txt | 212 +++++++++++++++++
