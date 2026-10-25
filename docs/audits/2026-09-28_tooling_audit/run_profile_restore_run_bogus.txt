@@ -1,8 +1,0 @@
-CMD: mas_run_profile.py --restore-run rp_nonexistent --json
-RC=2 SECS=0.6
-------------------------------------------------------------
---- stdout ---
-
---- stderr ---
-未知 run_id：rp_nonexistent（--status 看台账）
-

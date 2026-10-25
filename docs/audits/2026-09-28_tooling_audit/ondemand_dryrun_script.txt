@@ -1,8 +1,0 @@
-CMD: mas_ondemand.py --script 明日方舟-官-1-1-7 --json
-RC=2 SECS=2.2
-------------------------------------------------------------
---- stdout ---
-{"tool": "mas_ondemand", "action": "dispatch", "generated_at": "2026-09-28 09:20:58", "apply": false, "target": {"kind": "script", "token": "明日方舟-官-1-1-7", "queue_id": "", "token_kind": "name", "uid": "378f7379-bea3-4178-8f91-3369a57ca19a"}, "resources": {"scripts": ["378f7379-bea3-4178-8f91-3369a57ca19a"], "dirs": ["e:\\maa-multi\\maa_6"], "emus": ["13"], "names": ["明日方舟-官-1-1-7"]}, "enabled_accounts": [{"script": "明日方舟-官-1-1-7", "enabled": ["汐影月k", "潮响", "tbNick_2l3vf", "him"], "all": ["汐影月k", "潮响", "tbNick_2l3vf", "him"]}], "warnings": [], "refusals": [{"gate": "G3", "reason": "slot_busy", "detail": "目标目录正在跑 MAA：e:\\maa-multi\\maa_6（pid 1800）"}], "preflight": null, "single_flight": [{"kind": "slot_busy", "with": "MAA.exe pid=1800", "detail": "目标目录正在跑 MAA：e:\\maa-multi\\maa_6（pid 1800）"}], "temp_queues": [], "steps": [{"op": "dispatch_start", "taskId": "378f7379-bea3-4178-8f91-3369a57ca19a", "mode": "AutoProxy"}], "gate_no_go": false, "reachable": {"ok": true, "detail": "code=200"}, "live_check": {"ok": true, "detail": "ok"}, "result": {"ok": false, "refused": "slot_busy", "detail": "目标目录正在跑 MAA：e:\\maa-multi\\maa_6（pid 1800）"}}
-
---- stderr ---
-

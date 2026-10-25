@@ -1,6 +1,0 @@
-  PASS clean                -> OK:0
-  PASS untracked-in-scope   -> DRIFT:1
-  PASS clean-again          -> OK:0
-  PASS modified             -> DRIFT:1
-  PASS two-kinds            -> DRIFT:2
-GIT_BASELINE_SELFTEST=PASS

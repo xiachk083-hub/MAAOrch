@@ -1,7 +1,0 @@
-== 全局对照（本地 state，仅统计）==
-success rows 来源组合：{('drop_statistics', 'fight_log_drop'): 201, ('annihilation_chain_done',): 55, ('fight_log_drop', 'drop_statistics'): 1}
-仅靠 fight_log_drop 判 success 的行（0）：
-仅靠 drop_statistics 的行（0）
-尝试级：result=Success! 且选中过关卡但该次无任何掉落记录（449 例，前20）：2026-08-30/喵喵喵喵/明日方舟-官-29-06-39-23.json[Annihilation] | 2026-08-31/145三月初发货/明日方舟-官-37-01-00-00.json[Annihilation] | 2026-08-31/145三月初发货/明日方舟-官-37-01-04-42.json[AT-4] | 2026-08-31/Gitano/明日方舟-官-3-搓玉-01-06-00.json[Annihilation] | 2026-08-31/Gitano/明日方舟-官-3-搓玉-01-10-48.json[AT-8] | 2026-08-31/LAZA/明日方舟-日-2-01-09-00.json[Annihilation] | 2026-08-31/LEUNG/明日方舟-官-19-01-12-00.json[Annihilation] | 2026-08-31/LEUNG/明日方舟-官-19-01-16-26.json[1-7] | 2026-08-31/MikuKong/明日方舟-b-2-01-15-00.json[Annihilation] | 2026-08-31/MikuKong/明日方舟-b-2-01-20-04.json[AT-8] | 2026-08-31/PAGI/明日方舟-官-11-01-18-00.json[Annihilation] | 2026-08-31/PAGI/明日方舟-官-11-01-23-33.json[1-7] | 2026-08-31/Yeee/明日方舟-官-30-04-06-44.json[Annihilation] | 2026-08-31/Yeee/明日方舟-官-30-04-14-03.json[LS-6] | 2026-08-31/badwxxx/明日方舟-官-16-01-21-00.json[Annihilation] | 2026-08-31/badwxxx/明日方舟-官-16-01-26-23.json[AT-4] | 2026-08-31/emmmmmm/明日方舟-官-32-03-46-30.json[Annihilation] | 2026-08-31/hbznn119-官/明日方舟-官-28-01-44-38.json[Annihilation] | 2026-08-31/hbznn119-官/明日方舟-官-28-01-50-22.json[1-7] | 2026-08-31/hbznn119-日/明日方舟-日-1-01-39-41.json[Annihilation]
-failed 行中 0 次成功的（真没刷成过）：25 / 25
-unknown 行 selected_n：Raiz/1-7=1; v/LS-6=2; 寻找勇者的大魔王/LS-6=2; 摸摸摸摸鱼/LS-6=2; 河清灯_别寄圆通/CA-5=45; 用户_173920298/LS-6=4

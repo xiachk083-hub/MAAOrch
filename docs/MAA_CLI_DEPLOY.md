@@ -1,6 +1,6 @@
 # maa-cli 部署与连通性验证（主机侧，含与 AUTO-MAS 共存）
 
-> v1.2 · 2026-09-27（22:2x 初版；23:57 级别 3 实测后更新）· 2026-09-28 并发日志隔离小样（t_72ed337a；**结论=不成立**，§5/§8.1）· 任务 `t_9fc91afc`（mas）· 目标机 **MRFZ-0000（100.79.173.69）**
+> v1.2 · 2026-09-27（22:2x 初版；23:57 级别 3 实测后更新）· 2026-09-28 并发日志隔离小样（t_72ed337a；**结论=不成立**，§5/§8.1）· 任务 `t_9fc91afc`（mas）· 目标机 **MRFZ-0000（100.79.173.69）** · **v1.3 · 2026-09-29：战略定位补记（§0.1，`t_d7af1a8b`：maa-cli=非日常主链路、MAS 只留日常）**
 > 状态：**已实装；三级验证全部完成**。级别 1/2 通过并留证（§4）；**级别 3 真跑通过**（2026-09-27 23:03–23:53，候选 B=idx19，`RC=0`，StartUp `Completed` 2m24s，见 §4.3 与 `docs/audits/2026-09-27_maa_cli_lv3_transcript.txt`）。
 > 配套文档：能力面/schema = `MAA_CLI_SURVEY.md`（t_8057ebaa）；日志判据 = `MAA_LOG_DICTIONARY.md`；模拟器拓扑 = `MAS_EMULATORS.md`。
 
@@ -20,6 +20,18 @@
 **级别 3 追加（2026-09-27 23:0x）**：仅冷启并操作**实例 19 一台**（停用号 v；先核 `MAA_4/MAA_8` 无 MAA 进程）；未触碰任何在产实例、未改任何配置、未做账号操作；收尾把实例**关回初始态**（详见 §4.3）。
 
 ---
+
+### 0.1 战略定位（2026-09-29 · 三层模型 —— 用户拍板）
+
+**maa-cli = 「非日常」主链路（T2）**。用户口径：**MAS 只留日常；其余（MAA 原生支持而 MAS 不覆盖的）全面转向 maa-cli；MAA 都没有的功能用 MXU/MPE 自编 pipeline 运行（T3）**。
+
+| 层 | 用途 | 执行栈 |
+|---|---|---|
+| T1 日常（班次/队列/补跑） | **仅 MAS / AUTO-MAS**（唯一保留用途） | Hermes cron `2600f6415f16` → `mas_dispatch.py` → AUTO-MAS REST |
+| T2 非日常（MAA 原生支持） | **maa-cli**（本部署位，按波次迁移） | `E:\MAA-CLI\bin\maa.exe` 0.7.5 + core 6.18.0 |
+| T3 MAA 没有的功能 | MXU/MPE 自编 pipeline + 运行 | fw 工坊 + `pi_cli` 无头 + mpelb（例 `maaorch_spa.json`/`maaorch_signin.json`） |
+
+判定顺序：**① 是日常？→ T1；② MAA 原生支持？→ T2；③ 否则 → T3**。路线图/前置清单/分波（W1–W4）：`docs/audits/2026-09-29_maa_cli_pivot/README.md`。使用红线见本文 §5/§7，另追加两条：**一进程一设备（发车前核对）＋ 按实例分 data/state 目录**（并发铁律，t_72ed337a 实证）；T2/T3 运行不碰日常班次窗。
 
 ## 1. 决策：装在哪（主机 vs 本机）
 
@@ -242,3 +254,20 @@ winget uninstall --id MaaAssistantArknights.maa-cli -e --source winget --disable
 
 ---
 *原始 transcript：部署 + 级别 1/2 = `docs/audits/2026-09-27_maa_cli_deploy_transcript.txt`；**级别 3 = `docs/audits/2026-09-27_maa_cli_lv3_transcript.txt`**（含 step1/launch/watch/teardown 全日志与 asst.log 片段）。截图：`docs/audits/shots/` 下 `..._deploy_idx3.png`（2 级）、`..._lv3_idx19_pre.png`、`..._lv3_idx19_post.png`（3 级）。*
+
+---
+
+## 9. 肉鸽（Roguelike）通道可用性实测 —— 2026-09-29 T2-W2（t_e4f6648c）
+
+**结论：可用 ✅**（maa-cli 0.7.5 + MaaCore 6.18.0；官服 idx19 单台试点）。task 文件 → 参数映射 → 进岛 → 开始探索 → 招募 → 首层 → 作战，全程实证；完整取证与判据见 `docs/audits/2026-09-29_rogue_maacli/README.md`。
+
+- 调用面（实证）：`maa --batch run rogue_once -a 127.0.0.1:16992 -p v-official`；task：`[[tasks]] type="Roguelike"` + `params = { theme="Sami", mode=0, starts_count=1, difficulty=2147483647 }`（snake_case 直通 MaaCore integration，asst.log `append_task Roguelike {...}` 原文对拍）。
+- 主题自动滑选命中（无需 GUI 改 Theme）；`starts_count`=局数上限；profile 里 `touch_mode=MaaTouch`。
+- **已知缺口（进入生产前必读）**：
+  1) **首见教学页**：账号首次进某主题时的主题介绍页 MAA 6.18.0 不识别（20/20 卡死）——首见需人工点 X 一次；建议首见清理脚本化（audit §7 缺口 1）。
+  2) **战斗部署 waiting-for-cost 长循环**：观察项，不阻塞推进（audit §7 缺口 4）。
+  3) rc 留痕（cmd 封装 `%errorlevel%` 未展开）与 `MaaResource\resource not found` WARN：见 audit §7 缺口 2/5，无害。
+- 并发与隔离：**逐进程 `MAA_STATE_DIR`** 实证（state\{idx19,idx37} 双树独立并发完整，与 t_72ed337a“同 data 丢日志”闭环）——本通道并发硬前提。
+- 进程生命周期：worker/ssh 断开会话 ≠ 任务终止（进程独立）；看守接手 = 续读 asst.log，无需重启（audit §3.1）。
+- **战斗循环与结算判据（2026-09-29 03:3x–03:46 追加实测，t_dcb9faf0）**：`RoguelikeCombatEnd`=战斗结束（伴随 `_run | leave, N ms` 给本场时长）；`MissionCompletedFlag` 命中 + `ClickToDrops/DropsFlag/GetDrop*`=**结算闭环**；同一进程可连续多拍（#1–#3 全闭环），战斗一拍 ≈2.5min（153.5s 实测）。详见 audit §3.2。
+- **跨 04:00 观测窗纪律**：宿主每日 04:00/19:00 `shutdown /r`（计划任务 `DailyRestart0400/1900`）会回收在飞 maa-cli 进程 —— 先看 Summary 是否已落盘（**进程可能先自行终结**，如 2026-09-29 03:59:05 Error 退出、04:01:18 才重启）；未落盘再判“重启截断”= `LASTBOOT` 更新 + `asst.log` 冻结（audit §9/§9.1）。

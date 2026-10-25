@@ -1,3 +1,0 @@
-{"run_id": "pf_wire_iso", "event": "probe_dispatch", "account": "验收号", "stage": "1-7", "ts": "2026-09-28 11:07:33"}
-{"run_id": "pf_wire_iso", "event": "done", "rc": 0, "account": "验收号", "stage": "1-7", "verdict": "stage_farmed", "farm_rc": 0, "ts": "2026-09-28 11:07:33"}
-{"run_id": "pf_wire_iso", "event": "refused", "reason": "no_go", "env": "MAAORCH_PROBE_FARM_NO_GO", "ts": "2026-09-28 11:07:33"}

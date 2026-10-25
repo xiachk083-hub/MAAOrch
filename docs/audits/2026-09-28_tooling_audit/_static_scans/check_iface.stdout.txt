@@ -1,6 +1,0 @@
-can_farm('y9Flipped','1-7') = success
-can_farm('Nobody','1-7')   = unknown
-detail keys = ['account', 'actions', 'attempt_n', 'fail_after_success', 'fail_n', 'failure_types', 'failures', 'impact']
-probe_farm import check:
-  probe_farm imported; has run/decide: True True
-  run_profile imported; has validate_profile: True

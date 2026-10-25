@@ -1,12 +1,0 @@
-== 回滚演练矩阵 20260928-105851 ==
-演练根=C:\Users\xiach\AppData\Local\Temp\rollback_drill_20260928-105851
-主机 scratch 前缀=E:\AUTO-MAS\_rbdrill*
-
-== H. 生产零改动复核 + 残留 ==
-PASS H1 生产 3 补丁文件哈希与演练前一致（零改动）                  一致
-PASS H2 本次主机 scratch 无残留                        RB_REST=False RB_SC=False
-PASS H3 mumu flag 未被误建（生产仍走新逻辑）                 FLAG=False
-PASS H4 本地演练垃圾清理（留存 $TMPDIR 路径备查）               C:\Users\xiach\AppData\Local\Temp\rollback_drill_20260928-105851
-
-== 合计 4/4 PASS，总耗时 2.1s，演练根=C:\Users\xiach\AppData\Local\Temp\rollback_drill_20260928-105851 ==
-ROLLBACK_DRILL=PASS

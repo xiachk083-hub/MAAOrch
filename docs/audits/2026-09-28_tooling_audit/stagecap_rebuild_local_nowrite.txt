@@ -1,8 +1,0 @@
-CMD: stage_capability.py --rebuild-local --no-write
-RC=0 SECS=0.8
-------------------------------------------------------------
---- stdout ---
-(local) 台账 288 行；unknown 2.1%
-
---- stderr ---
-

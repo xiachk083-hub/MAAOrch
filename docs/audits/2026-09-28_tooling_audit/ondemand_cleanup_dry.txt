@@ -1,8 +1,0 @@
-CMD: mas_ondemand.py --cleanup --json
-RC=0 SECS=0.8
-------------------------------------------------------------
---- stdout ---
-{"tool": "mas_ondemand", "action": "cleanup", "generated_at": "2026-09-28 09:25:46", "apply": false, "refusals": [], "warnings": [], "queues": [{"queueId": "ae9ce6f8-5c03-460c-afd8-fea8d24fb7b7", "name": "临时-按需-20260928_0631-1", "dry_run": "将删除"}]}
-
---- stderr ---
-

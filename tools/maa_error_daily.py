@@ -54,6 +54,12 @@ import sys
 import urllib.request
 from collections import Counter, OrderedDict
 
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+import mas_net  # noqa: E402  G2（t_f79db125）：内网 REST 统一走绕代理 opener
+import mas_logpull as logpull  # noqa: E402  G5（t_4aa03f79）：ssh 传输层（-C/双上限/fail-closed）
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUNTIME = os.path.join(ROOT, "runtime")
 REPORTS = os.path.join(RUNTIME, "reports")
@@ -490,10 +496,16 @@ def _child_env():
 
 
 _REMOTE_PS = "E:\\_hermes_errdaily_probe.ps1"
+CAP_SSH_OUT = int(os.environ.get("MAAORCH_ERRDAILY_SSH_CAP", str(8 * 1024 * 1024)))  # G5 输出字节护栏
 
 
 def ssh_ps(script, timeout=420):
     """远端执行 PowerShell 脚本（只读约定），返回 (stdout, stderr)。
+
+    G5（t_4aa03f79）：传输层接入 mas_logpull —— `ssh -C` 压缩；秒上限超时即
+    `LogPullError("timeout")`（fail-closed，翻 `UNKNOWN:<原因>`）、输出字节护栏
+    `MAAORCH_ERRDAILY_SSH_CAP`（默认 8MiB）超限即 `LogPullError("too_large")`；
+    死链路由 ServerAliveInterval 断言。本工具原有 `--timeout` 语义原样透传。
 
     传输方式定稿（2026-09-27 深夜实测，血泪史，勿回退）：
       * `-EncodedCommand <整段 b64(UTF-16LE)>`：撞 cmd.exe 8191 命令行上限（UTF-16 膨胀 x2.67）。
@@ -518,16 +530,24 @@ def ssh_ps(script, timeout=420):
               "$b=[Convert]::FromBase64String($b64)\n"
               "[IO.File]::WriteAllBytes('%s', $b)\n"
               "Write-Output ('written ' + $b.Length)\n" % (b64, _REMOTE_PS))
-    up = [_ssh_exe(), "-i", KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=20",
-          SSH_HOST, "chcp 65001 >nul & powershell -NoProfile -Command -"]
-    r = subprocess.run(up, input=upload.encode("utf-8"), capture_output=True,
-                       timeout=min(timeout, 180), env=_child_env())
+    up = logpull.ssh_argv(SSH_HOST, KEY, ssh_exe=_ssh_exe(), compress=True) + [
+        "chcp 65001 >nul & powershell -NoProfile -Command -"]
+    try:
+        r = subprocess.run(up, input=upload.encode("utf-8"), capture_output=True,
+                           timeout=min(timeout, 180), env=_child_env())
+    except subprocess.TimeoutExpired as e:
+        raise logpull.LogPullError("timeout", "ssh 上传超时（>%ds）" % min(timeout, 180)) from e
     if b"written" not in r.stdout:
         raise RuntimeError("SSH 上传未确认: " + (r.stdout + r.stderr).decode("utf-8", "replace")[:300])
-    run = [_ssh_exe(), "-i", KEY, "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=20",
-           SSH_HOST, "powershell -NoProfile -ExecutionPolicy Bypass -File " + _REMOTE_PS]
-    r = subprocess.run(run, capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout,
-                       env=_child_env())
+    run = logpull.ssh_argv(SSH_HOST, KEY, ssh_exe=_ssh_exe(), compress=True) + [
+        "powershell -NoProfile -ExecutionPolicy Bypass -File " + _REMOTE_PS]
+    try:
+        r = subprocess.run(run, capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout,
+                           env=_child_env())
+    except subprocess.TimeoutExpired as e:
+        raise logpull.LogPullError("timeout", "ssh 采集超时（>%ds）" % timeout) from e
+    if len(r.stdout) > CAP_SSH_OUT:
+        raise logpull.LogPullError("too_large", "ssh 输出超限（%dB > %dB）" % (len(r.stdout), CAP_SSH_OUT))
     out = r.stdout.decode("utf-8", "replace")
     err = r.stderr.decode("utf-8", "replace")
     return out, err
@@ -562,10 +582,8 @@ def collect_remote(d, timeout=420):
 # ---------------------------------------------------------------- REST（只读，可降级）
 
 def post(path, body=None, timeout=30):
-    req = urllib.request.Request(API + path, data=json.dumps(body or {}).encode("utf-8"),
-                                 method="POST", headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
+    """POST /api/… —— G2：走 mas_net 绕代理 opener。"""
+    return mas_net.post_json(API + path, body if body is not None else {}, timeout=timeout)
 
 
 def rest_maps():

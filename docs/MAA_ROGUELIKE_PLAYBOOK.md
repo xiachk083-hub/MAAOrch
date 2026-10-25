@@ -14,12 +14,13 @@
 - **真源文件**（机队）＝ `E:\maa-alas\fz-maa\l\l-N\config\gui.new.json` 的 `Configurations.Default.TaskQueue`；
   `config/gui.json` 是旧壳（实测不含 TaskQueue，1639B）。
 - **发车**＝主机**登录态**计划任务 `MAAOrch-StartOne-{25,28,31,34,52}`（adb connect → 拉模拟器 → 等 boot → 起 MAA）；
-  自动发车由**本机看守任务 `MAAOrch-RogueFleet`**（每 2 分钟）做（§4.4）。
-- **肉鸽×产线不许并行**（本质约束）：让位区 **04:00–05:33 / 18:30–20:30**；产线在跑 / 内存 <8G 一律不发（§4）。
+  自动发车由**机队看守**（触发者：Hermes cron `mas-rogue-fleet`/`a8049e8f902c`，每 2 分钟；2026-09-28 20:48 接班）做（§4.4）。
+- **肉鸽×产线不许并行**（本质约束）：机会驱动（2026-09-29）——统一口径 = **该实例产线不在跑且不撞其发车点**（前 10min 停发/前 6min 收工，逐台）；产线在跑 / 内存 <8G 一律不发（§4）。
 - **验证**看 `debug/gui.log`：`开始任务: 自动肉鸽` → `Start Task Chain: Roguelike, Task ID: 2` → `已开始探索 N 次` / `关卡: …` / `开始战斗: …`；
   `debug/asst.log` 里 `"cur_task":"<Theme>@Roguelike@…` 证主题（§5.1）。
 - **回滚**＝停 MAA（杀到 0）→ 还原 `gui.new.json.bak-*` → 重启；经 AUTO-MAS 发的用 `/api/dispatch/stop`（§5.4）。
 - **红线**：① 同一模拟器**不许两个 MAA**；② 产线在跑**绝不动那台机**；③ 改配置**先备份**、且**必须在 MAA 不在跑时改**（MAA 退出会把内存里的旧配置写回盘）。
+- **2026-09-29 战略更新（lead）**：非日常能力（肉鸽等）战略首选迁 **maa-cli（R3）**——MAS 只保留日常、未来可能弃用；本机 fz-maa 机队定位降为**过渡/额外产能**；「独立一次」单元语义（触发/单位/收尾/出账）与 R1/R2/R3 对照裁定见 `docs/audits/2026-09-29_rogue_as_annihilation/README.md`（t_a04b9dce）。
 
 ---
 
@@ -119,7 +120,7 @@
 | `BlackFlow` | 黑流树海 | 15 | `…/BlackFlow/` | 襁褓动物（模式 30001）；**旧资源没有**（共享 `E:\MAA-Multi\resource` 就没有，MAA_6 与机队副本有） |
 
 > 「现网存在哪些」两层口径：**资源里有**（上表，随资源版本）＋**该账号客户端里可选**（跟着游戏进度走，机队实测在用 Sami/Sarkaz/JieGarden/Mizuki）。
-> 机队各机当前主题：l-1=Sami｜l-2=Sarkaz｜l-4=Sarkaz(官服)｜l-5=JieGarden｜l-7=Mizuki（2026-09-27 实配）。
+> 机队各机当前主题：l-1=Sami｜l-2=Sarkaz｜l-4=Sarkaz(官服，2026-09-28 撤出)｜l-5=JieGarden｜l-7=Mizuki（2026-09-27 实配）。
 
 ### 2.2 Mode 全表（配置写字符串，核心收数字）
 
@@ -160,12 +161,12 @@
 
 | 路线 | 用在哪 | 发车方式 | 本手册态度 |
 |---|---|---|---|
-| **A. 机队直发（fz-maa）** | 肉鸽专用机队 l-1/l-2/l-4/l-5/l-7（也是产线同款模拟器的另一套 MAA） | 改 `gui.new.json` → 起 MAA（`MAAOrch-StartOne-*`）或交给看守 | **首选**（现有看守/让位链路都围绕它） |
+| **A. 机队直发（fz-maa）** | 肉鸽专用机队 l-1/l-2/l-5/l-7（l-4 于 2026-09-28 撤出；也是产线同款模拟器的另一套 MAA） | 改 `gui.new.json` → 起 MAA（`MAAOrch-StartOne-*`）或交给看守 | **首选**（现有看守/让位链路都围绕它） |
 | **B. AUTO-MAS（AutoProxy）** | 生产 54 用户的那套（MAA_1..MAA_12，同一批模拟器） | `POST /api/dispatch/start {mode:"AutoProxy"}` | 可行但要动生产配置（`IfRoguelike`），**需用户授权**；见 §3.3 |
 
 ### 3.1 路线 A：机队直发（最小可运行）
 
-**改哪**：`E:\maa-alas\fz-maa\l\l-N\config\gui.new.json`（l-1/l-2/l-4/l-5/l-7）→ `Configurations.Default.TaskQueue`。
+**改哪**：`E:\maa-alas\fz-maa\l\l-N\config\gui.new.json`（l-1/l-2/l-5/l-7；l-4 已撤出）→ `Configurations.Default.TaskQueue`。
 
 **完整 TaskQueue 片段**（可直接放进 MAA 配置的形态；下面是「两条任务」的最小集，字段按 6.17.5 机队版）：
 
@@ -231,7 +232,7 @@
 3. **改文件**：编辑 `TaskQueue` 的 `RoguelikeTask`（字段见 §1；JSON 无注释、UTF-8、别加 BOM）。
 4. **发车**（二选一）：
    - 手动：主机上 `schtasks /run /tn MAAOrch-StartOne-<idx>`（idx=25/28/31/34/52），它做 adb connect → `MuMuManager control --vmindex N launch` → 等 `sys.boot_completed` → `Start-Process MAA.exe`（工作目录=该 l-N 目录）。
-   - 自动：等本机看守 `MAAOrch-RogueFleet`（每 2 分钟）在闸门开时发（§4.4）。
+   - 自动：等机队看守（Hermes cron `mas-rogue-fleet`/`a8049e8f902c`，每 2 分钟）在闸门开时发（§4.4）。
 5. **验证**：§5.1 判据表。
 
 **怎么让 MAA 读到**：MAA **只在启动时读** `config/gui.new.json`（工作目录 = `E:\maa-alas\fz-maa\l\l-N`）；运行中改文件**无效**，且退出时**会写回内存态**。所以「改文件」的生效方式永远是：**停→改→重启**。
@@ -241,9 +242,9 @@
 
 | 目标 | 关键字段 | 后续行为 |
 |---|---|---|
-| 发一局 | `StartCount=1` | 打满 1 次探索后任务链正常收尾；**若看守在跑，它会把停着的又拉起来**（process-gone/idle-clean ⇒ 重发）——要真停住用 `runtime/rogue_hold.flag` 或临时 `schtasks /change /tn MAAOrch-RogueFleet /disable` |
+| 发一局 | `StartCount=1` | 打满 1 次探索后任务链正常收尾；**若看守在跑，它会把停着的又拉起来**（process-gone/idle-clean ⇒ 重发）——要真停住用 `runtime/rogue_hold.flag` 或临时 pause 触发者（`hermes -p mas cron pause a8049e8f902c`；原 schtask 已禁用） |
 | 连续刷 | `StartCount=99999` + 三个 Stop* 全 false | 局与局之间自动续（结算→下一局），直到看守收工/让位/出错 |
-| 刷到满级自动停 | `StopWhenLevelMax=true` | 满级后 MAA 自己收尾（l-2 曾因满级+Exp 被判"假完成"，ROGUE_WATCH §5.24——**这不是故障**） |
+| 刷到满级自动停 | `StopWhenLevelMax=true` | 满级后 MAA 自己收尾（l-2 曾因满级+Exp 被判"假完成"，ROGUE_WATCH §5.24——**这不是故障**）。**⚠️ 机队口径（2026-09-29 起）：全部 `false`**——日服萨卡兹勾了就"不会刷"（起链即秒完）；看守已能识别 `done-levelmax`，不再把这种正常收尾当故障来救 |
 
 ### 3.3 路线 B：AUTO-MAS 侧怎么发（AutoProxy vs ManualReview）
 
@@ -294,28 +295,28 @@
 | l-1 | 25 | 日常定时1 / 晚班定时1 | 05:00 | 19:30 | `fz-maa\l\l-1` (6.17.5) | `MAA_1` (6.18.0) |
 | l-2 | 28 | 日常定时2 / 晚班定时2 | 05:03 | 19:33 | `l\l-2` | `MAA_2` |
 | l-5 | 34 | 日常定时9 / 晚班定时9 | 05:24 | 19:54 | `l\l-5` | `MAA_9` |
-| l-4 | 31 | 日常定时10 / 晚班定时10 | 05:27 | 19:57 | `l\l-4` | `MAA_10` |
+| l-4（已撤出 2026-09-28） | 31 | ~~日常定时10 / 晚班定时10~~ | 05:27 | 19:57 | `l\l-4` | `MAA_10` |
 | l-7 | 52 | 日常定时12 / 晚班定时12 | 05:33 | 20:03 | `l\l-7` | `MAA_12` |
 
 （24 条班次队列 05:00/05:03/…/05:33 与 19:30/…/20:03 陆续发车；主机另有 **DailyRestart0400 / DailyRestart1900** 每日 04:00 / 19:00 `shutdown /r`，AUTO-MAS 随开机自启。）
 
 ### 4.3 让位规则（看守实现，参数在 `tools/lib/rogue_plan.mjs`）
 
-- **让位区（不发车/收工）**：**04:00–05:33**（早班 05:00 前 60 分钟 + 爬坡到最后一槽 05:33）与 **18:30–20:30**（晚班 19:30 前 60 分钟 + 爬坡到 20:30）。其余时间**允许**发车。
-- **让路闸（gate）**，全过才发：① 产线**不在跑**（有槽在写 asst.log 或产线 MAA 进程存在 ⇒ 关）；② 产线**连续空闲 ≥6 分钟**；③ 窗口内；④ 主机空闲内存 **≥8G**（<14G 一轮只发 1 台）。fail-closed：拿不准就不发。
-- **收工让路（wrapUp）**：产线一恢复、或进了让位区 ⇒ **收掉我们的 MAA**（不动模拟器），防「同一台模拟器两个 MAA」（红线①）。
-- 时间窗口径一句话：**肉鸽只能吃两班之间的空档**；「先保日常再保肉鸽」。
+- **发车判据（2026-09-29 机会驱动改版，t_c5f70a13）**：**固定让位区已废除**（历史见 `docs/audits/2026-09-29_rogue_opportunistic/`）。**逐台**判：该实例产线**不在跑**（live 证据）且**不撞其下一个发车点**（`START_BLOCK_MIN=10` 前停发 / `WRAP_LEAD_MIN=6` 前收工）且内存 ≥8G —— 全过才发。
+- **让路闸（gate，逐台）**：① 该实例产线**不在跑**（活跃产线目录的 addr 命中该台 ⇒ 关）；② 不撞该实例发车点（前 10min 停发）；③ 主机空闲内存 **≥8G**（<14G 一轮只发 1 台）。fail-closed：拿不准（unknown / 排期读不到 / 地址读不到）就不发。
+- **收工让路（wrapUp，逐台）**：该实例产线**真的回来了**、或该实例发车点前 6min ⇒ **收掉这一台的 MAA**（不动模拟器），防「同一台模拟器两个 MAA」（红线①）；判不出不收（不误杀在刷的局）。
+- 一句话：**日常（该实例）一停就能刷，产线一回来就撤**；「先保日常再保肉鸽」。
 
 ### 4.4 看守任务（谁在替你做让位）
 
 | 任务 | 在哪 | 现状（09-27 20:3x） | 作用 |
 |---|---|---|---|
-| `MAAOrch-RogueFleet` | **本机**（`run_hidden.vbs`→`rogue_fleet_launch.ps1`→`node tools\rogue_fleet_watch.mjs --apply`，每 2 分钟） | Ready（每 2 分钟；20:3x 时正在跑） | 机队发车/救援/让位/收工全自动 |
+| **Hermes cron `mas-rogue-fleet`（job `a8049e8f902c`）** | 本机（no_agent → `profiles/mas/scripts/rogue_fleet_reconcile.py` → `node tools\rogue_fleet_watch.mjs --apply`，每 2 分钟） | **active**（2026-09-28 20:48 接班；原 schtask `MAAOrch-RogueFleet` 已禁用保留） | 机队发车/救援/让位/收工全自动 |
 | `MAAOrch-Rogue0Watch` | 本机 | **Disabled** | #0（本机 desktop 水月号）看守，用户手动开的 MAA |
 | `MAAOrch-RogueWatch` | 主机 MRFZ-0000（`E:\maa-alas\fz-maa\rogue_watch.mjs`） | **Disabled**（旧） | 主机侧旧看守（已由本机那套取代） |
 | `MAAOrch-StartOne-{25,28,31,34,52}` | 主机 | Ready（最近 lastResult=0） | **登录态发车**：拉模拟器+起 MAA |
 
-**人工按住**：`runtime/rogue_hold.flag`（存在=看守不动手）；或 `schtasks /change /tn MAAOrch-RogueFleet /disable`。
+**人工按住**：`runtime/rogue_hold.flag`（存在=看守不动手）；或暂停触发者 `hermes -p mas cron pause a8049e8f902c`（回滚 resume；原 schtask 已禁用）。
 **现状**（写本手册时）：五台全部 `parked`（未在刷），闸门因「产线在跑(3/16)」关闭——这就是让位在工作。
 
 ---
@@ -389,13 +390,23 @@ Get-Content 'E:\maa-alas\fz-maa\l\l-2\debug\asst.log' -Tail 10
 |---|---|
 | 改了 `gui.new.json` 想还原 | **停 MAA（杀到 0）** → `copy /y gui.new.json.bak-<日期>-<原因> gui.new.json` → 重启（`MAAOrch-StartOne-<idx>` 或让看守发） |
 | 经 AUTO-MAS 发的任务要停 | `POST /api/dispatch/stop {"taskId":"<start 返回的 task_uid>"}`（优雅停＋解锁＋`Temp→config` 还原）；**别 kill MAA** |
-| 不想让看守再动手 | `runtime/rogue_hold.flag` 落一个文件（人按住）；长期=disable `MAAOrch-RogueFleet` |
+| 不想让看守再动手 | `runtime/rogue_hold.flag` 落一个文件（人按住）；长期=pause Hermes job `a8049e8f902c`（原 schtask 已禁用） |
 | 要让位给日常（立刻） | 看守的收工让路会做；人工=等闸门/`--drill-wrapup` 演练口径收 MAA（不动模拟器） |
 | 主题与界面不匹配（"救不活"） | 核对 `Theme` 与**游戏当前界面**是否一致，再改（ROGUE_WATCH §5.6 教训）；改前先快照 |
 
 **红线（再强调）**：同一模拟器两个 MAA；产线在跑不动那台；改配置先备份；MAA 在跑时改文件无效；`gui.json` 不是真源。
 
 ---
+
+### 5.5 maa-cli 通道（R3 迁移目标；T2-W2 试点已验，2026-09-29）
+
+2026-09-29 实测（t_e4f6648c，完整取证 `docs/audits/2026-09-29_rogue_maacli/README.md`）：**maa-cli 0.7.5 可跑肉鸽**（Sami 进岛→开始探索→招募→首层→作战→续跑全链实证）。要点：
+
+- 发车：`E:\MAA-CLI\bin\maa.exe --batch run <task> -a <serial> -p <profile>`；`set MAA_STATE_DIR=E:\MAA-CLI\state\idx<NN>` **逐实例**（并发硬前提；同 data 目录=丢日志见 §4）。
+- 干净链：task 文件只写 `StartUp` + `Roguelike`（`params = { theme/mode/starts_count/difficulty }`），无 GUI TaskQueue 混项；主题自动滑选命中。
+- 判据：**无 gui.log** —— 用 asst.log 链锚点（`Sami@Terminal-Entry`/`StartExplore`/`StageCombatOps`/`NextLevel`）+ **战斗/结算锚点（`RoguelikeCombatEnd`、`MissionCompletedFlag` 命中 + `GetDrop*` 流；2026-09-29 追加实证，见 audit §3.2）** + std Summary（rc 留痕修复待办）。
+- 已记缺口：首见主题教学页=一次性人工点 X；战斗部署 waiting-for-cost 长循环（观察项）；详见 audit §7。
+- 与机队关系：R3 迁移的**技术前提已成立**；切换/退役安排归编排卡（见 `2026-09-29_rogue_as_annihilation` 与 t_a04b9dce）。
 
 ## 6. 还没验到的（诚实清单）
 
@@ -412,6 +423,6 @@ Get-Content 'E:\maa-alas\fz-maa\l\l-2\debug\asst.log' -Tail 10
 - **MAA 源**：GitHub `MaaAssistantArknights/MaaAssistantArknights` tag **v6.18.0**：`src/MaaWpfGui/Configuration/Single/MaaTask/RoguelikeTask.cs`（全字段+枚举）、`ViewModels/UserControl/TaskQueue/RoguelikeSettingsUserControlModel.cs`（难度/模式/分队列表）、`Res/Localizations/zh-cn.xaml`（界面文案）；与 tag **v6.17.5** 的 `RoguelikeTask.cs` diff（CoreChar→StartingOpers）。
 - **官方协议**：`docs.maa.plus` protocol → integration「Roguelike」参数节（theme/mode/core_char_list/starts_count/… 取值与默认）。
 - **AUTO-MAS**：线上 `E:\AUTO-MAS`：`config\ScriptConfig.json`（54 用户；`Task.IfRoguelike`）、`config\QueueConfig.json`（24 班次队列 + 时间）、`app\task\MAA\AutoProxy.py`（L416-426 任务清单、L608-627 任务底稿、L836-845 导出）、`app\utils\constants.py`（`MAA_TASKS`）；模式结论见 `docs/audits/2026-09-27_mas_task_modes.md`。
-- **看守/让位**：`D:\1-2\MAAOrch\tools\{rogue_fleet_watch.mjs, lib\rogue_plan.mjs, lib\rogue_judge.mjs}`、`docs\ROGUE_WATCH.md`；本机计划任务 `MAAOrch-RogueFleet`（Ready/2 分钟）。
+- **看守/让位**：`D:\1-2\MAAOrch\tools\{rogue_fleet_watch.mjs, lib\rogue_plan.mjs, lib\rogue_judge.mjs}`、`docs\ROGUE_WATCH.md`；触发者 = Hermes cron `mas-rogue-fleet`（job `a8049e8f902c`，2 分钟；原 schtask `MAAOrch-RogueFleet` 已禁用）。
 - **日志统计**：五台机 `debug\gui.log(+.bak)` 全量解析（本任务，2026-09-27 20:2x）。
 - **主机事实**：计划任务 `MAAOrch-StartOne-{25,28,31,34,52}`（action=`_launch_one.ps1 -Index N -StartMaa`）、`DailyRestart0400/1900`（04:00/19:00 `shutdown /r`）、`AUTO-MAS_AutoStart`；`schtasks` 实测。

@@ -8,11 +8,11 @@
 依赖方向单向：`infrastructure/models`（基础）→ `services`（业务域）→ `network/app`（调用面）。
 
 ```
-main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.path 注入根目录）
+main_web.pyw              唯一入口（FastAPI + uvicorn；端口 = models/config.json api_port（实测 19997），sys.path 注入根目录）
 │
 ├── app/                  仅存共享上下文 dataclass（web_context / service_context）
-├── ui/web/               现行 Web 前端（纯静态原生 JS SPA，无框架）
-├── network/              API 层：api_fastapi.py（唯一实现，3026 行，50+ 端点 + SSE）
+├── ui/web/               已退役（2026-09-26 前端整体退役、目录已删除；原=纯静态原生 JS SPA；人工入口=Node 最小运维页 /status）
+├── network/              API 层：api_fastapi.py（唯一实现，2267 行 / 49 端点 + SSE；2026-09-26 前端退役 140→49，断言 tests/test_routes_whitelist.py）
 ├── services/             核心业务域（见 §2 子域划分）★ 新模块落位看这里
 ├── models/               数据模型 + 权威配置（config.json）+ 每账号状态（accounts/<id>/）
 ├── infrastructure/       无业务语义基础组件（logger/background_thread/maa_core/
@@ -66,6 +66,7 @@ main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.
 
 - **运行数据一律 `logs/`（样本/快照/归档）或 `models/`（配置/账号状态）**，不往根目录塞
 - 根目录当前仍存在（logger/api 硬编码，EventBus 统一时收口 §6）：`debug.log`/`events.log`/`crash.log`（infrastructure/logger.py:7 `_LOG_DIR`）、`oplog.json`（network/api_fastapi.py:18）
+  - （2026-09-28 复核：**已收口** —— 根目录三日志均不存在，实际写 `logs/`（logger.py:8 `_LOG_DIR=logs/`）；oplog 写 `logs/oplog.json`（api_fastapi.py:18-21），根 `oplog.json` 仅剩 legacy 副本）
 - `services/queue.json`、`services/dispatch_pool.json` 为队列持久化（launch_queue/dispatch_pool 的 `Path(__file__).parent` 相对位置，**迁移子域时路径会变，manager 部署保留清单 manager/manager.py:462 必须同步**）
 - `services/maa/` 是 MAA 运行时树（source/instances/），部署跳过清单已保护，**任何结构改动不得移动它**
 - 敏感数据（accounts*.json 副本等）一律进 `debug/`（gitignore），绝不允许入库
@@ -79,13 +80,13 @@ main_web.pyw              唯一入口（FastAPI + uvicorn，端口 19999，sys.
   运行）：覆盖 models/config_manager+account_state、services 全部主链路模块
   （含 emu_service 系/log_watcher/sanity_tracker/depot 系/penguin/activity/
   farm_dispatch/maa_download/vision 等）、app/*、infrastructure 全部、
-  ui/web/style.css、config 三个 JSON。**新增 services 模块必须同时加清单**。
+  ~~ui/web/style.css~~（2026-09-26 前端退役已从清单移除，见 tools/deploy.py:86-87 注释）、config 三个 JSON。**新增 services 模块必须同时加清单**。
 
 ## 6. 迁移路线图（随重构联动，不单独安排）
 
 | 触发重构 | 内容 |
 |---|---|
-| EventBus 落地（ARCHITECTURE_IMPROVEMENTS.md 规划） | 根日志/oplog 写入统一收口 `logs/`，删除 infrastructure/logger.py 的根目录硬编码 |
+| EventBus 落地（ARCHITECTURE_IMPROVEMENTS.md 规划） | 根日志/oplog 写入统一收口 `logs/`，删除 infrastructure/logger.py 的根目录硬编码（2026-09-28 复核：收口已落地，见 §4；EventBus 合流仍未，见 POSITIONING G3） |
 | EmulatorService 状态机收口（EMULATOR_SERVICE.md） | emu_state/emu_service/emu_service_v2 → `services/emulator/` |
 | launch_queue ↔ runner 解耦 | 编排层 → `services/queue/`；顺带清理互引（runner._close_mumu_popups 等跨域私有调用） |
 | 多机节点（node_id 已预留） | manager/ 扩展为多机编排；deploy.py 演进为多机分发 |

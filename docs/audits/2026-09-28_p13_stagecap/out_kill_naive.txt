@@ -1,3 +1,0 @@
-RACE mode=naive reader=raw gap=2ms good=33 torn=4 enoent=0 eacces=0 other=0 [(无 WRITER 行)] killed=1 final_ok=0 tmp_left=0
-RACE mode=naive reader=raw gap=2ms good=32 torn=0 enoent=0 eacces=0 other=0 [(无 WRITER 行)] killed=1 final_ok=0 tmp_left=0
-RACE mode=naive reader=raw gap=2ms good=25 torn=0 enoent=0 eacces=0 other=0 [(无 WRITER 行)] killed=1 final_ok=0 tmp_left=0

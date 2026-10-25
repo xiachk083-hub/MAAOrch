@@ -1,7 +1,0 @@
-OK   state 写入口径：读入 → 新代码 save_state 重写 → 字节一致（attempts=5097，原文件 mtime 2026-09-28 10:27:02）
-OK   报告 JSON 渲染口径一致（render_json 重渲染 == 文件文本；盘上 CRLF 与旧写法一致）
-OK   报告 MD 渲染口径一致（render_md 重渲染 == 文件文本）
-OK   can_farm 样本：145三月初发货 × SR-7 -> success（台账 row=success）
-OK   台账外账号 -> unknown（不猜）
-OK   审计流有 stage.rebuild 行 2 条（最近：{"mode": "update", "state_attempts": 5097, "rows": 288, "scanned": 148, "added": 16, "updated": 0, "dropped": 0}）
-VERIFY=PASS

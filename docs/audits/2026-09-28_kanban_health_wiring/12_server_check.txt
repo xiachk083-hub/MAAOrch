@@ -1,4 +1,0 @@
-mas_observe_mcp --check: OK
-  tools(9)=mas_preflight,mas_report,mas_idle_emulators,mas_client_state,mas_identity_trail,mas_interrupt_guard,event_calendar,mas_kanban_health,audit_waterline
-  cli: mas_preflight.py=OK | maa_error_daily.py=OK | mas_identity_trace.py=OK | interrupt_guard.py=OK | event_calendar.py=OK | kanban_health.py=OK | audit_waterline.py=OK | client_state_check.py=OK | mas_idle_emulators.py=OK
-  readonly_assert=PASS（源码无写端点字样）

@@ -6,6 +6,7 @@
 
 ## 何时用
 
+- **日常无需手动**：每日 13:00 定期链（§7.1，卡 t_57043dfc 起接线）自动做「基线推进 + verify 漂移检测 + patch_guard 串链」；本节的手动流程用于「升级前后」与「排查时」。
 - MAA 弹更新、有人点了「安装更新」前后；
 - 怀疑「切号怎么又不对了 / 注入到底生不生效」（先 `verify`，再按 §3 处置）；
 - 要做整机 MAA 升级的排期（§2 流程 + §4 回滚卡）；
@@ -179,6 +180,7 @@ robocopy "E:\MAA-Multi" "E:\MAA-Multi\backups\upg_%STAMP%__%VER%\_master" MAA.ex
   - `runtime/upgrade_guard/<stamp>/baseline.json`、`<stamp>/tasks/<sha16>.json`、`<stamp>/gui/<槽>.gui.new.json`
   - `runtime/upgrade_guard/<stamp>_verify/report.md`（+ `diff.json`）
   - `runtime/upgrade_guard/current.json`（最近基线指针）、`log.jsonl`（每次一行）、`runtime/maa_upgrade_check.lock`（live 单飞锁）
+  - 定期链（包装层）产物：`runtime/upgrade_guard_cron_log.jsonl`（链流水）、`runtime/reports/upgrade_guard_alert_<date>.json`（告警 payload）、`runtime/upgrade_guard_alerts.jsonl`（告警流水）——见 §7.1
 - 凭据红线：**基线不含凭据**——掩码手机号是身份不是秘密；账号明文 Id/密码不落盘。
 - 环境变量：`MAAORCH_UPGRADE_TIMEOUT`（默认 240）、`MAAORCH_UPGRADE_POLL`（默认 15）、`MAAORCH_UPGRADE_NO_GO` / `MAAORCH_DISPATCH_NO_GO`（硬闸）。
 - 停 live 车：只走官方 stop（工具自己做）；**绝不** kill MAA 进程/重启侧车。
@@ -196,7 +198,39 @@ snapshot ──→ [装新版本] ──→ verify ──→ live ──→ patc
 - `mas_patch_guard`：AUTO-MAS 补丁面的漂移检测；升级 MAA 不动它，但回滚/补丁修复后都要复核。
 - `mas_config_snapshot`：配置面快照/回滚（X3 工具）；升级前的 ② 步。
 - `mas_preflight`：发车前综合体检，可与 `verify` 串用（升级后首班建议手动跑一遍 §2.3）。
-- 建议接线（未接线，待拍板）：30 分钟巡检加一个只读位 `python tools/maa_upgrade_check.py verify`，把「程序/资源变化 + DRIFT/VIOLATION」带进巡检上报。
+- 定期链（**2026-09-28 已接线**，卡 t_57043dfc）：Hermes cron `64cba4657be2`「mas-upgrade-guard」每日 13:00 自动跑本工具（snapshot+verify+patch_guard 串链+告警面，见 §7.1）。
+- 原「30 分钟巡检加只读位」建议**未采纳**：红线=不新增 agent 型巡检 cron（token 预算），改由 §7.1 的 no_agent 脚本链每日兜底；若要并入巡检面属另卡。
+
+### §7.1 定期链（已接线：Hermes cron `64cba4657be2`「mas-upgrade-guard」）
+
+- 排期：每日 **13:00**（`0 13 * * *`，no_agent、零 token、deliver=local）；包装 = Hermes profile 脚本
+  `%LOCALAPPDATA%\hermes\profiles\mas\scripts\mas_upgrade_guard_cron.py`（薄包装只调度，判据逻辑全在本工具）。
+  13:00 在守卫窗/班次窗/04:00·19:00 重启窗外；另设**兜底 SKIP**（03:30–08:00 / 18:30–23:00 内自 SKIP，
+  防 cron 追补迟发落窗；`MAAORCH_UPGRADE_GUARD_FORCE_WINDOW=1` 可逼跑）。
+- 链步：
+  ① 无基线 ⇒ `snapshot` 首建（`MAA_UPGRADE_VERDICT=BOOTSTRAP`）；有基线 ⇒ `verify --baseline <指针>`；
+  ② 任一项漂移 ⇒ 串链 `mas_patch_guard.py --check`（只读；MISSING/UNKNOWN ⇒ 红线升级，**重放仍归人+窗口+审批**）；
+  ③ 告警面（severity=red：schema 漂移/关注节点变化/unknown/补丁坏；yellow：程序升级事件）——
+  payload `runtime/reports/upgrade_guard_alert_<date>.json` + 流水 `runtime/upgrade_guard_alerts.jsonl` + 看板只读卡；
+  真发（email，watchdog.ini 同源）默认**关**，`--alert-send` 或 `MAAORCH_UPGRADE_GUARD_SEND=1` 一行打开（待点名）；
+  ④ 基线推进：schema/关注节点/unknown 全空 ⇒ 追加 `snapshot`（现状成为下一轮基线）；有红线项**不推进**
+  （告警跨天持续，处置后自然归位）。
+- 报告行（机检，stdout 末段）：`MAA_UPGRADE_VERDICT=`（OK/DRIFT/VIOLATION/UNKNOWN/BOOTSTRAP/SKIP）｜
+  `MAA_UPGRADE_DRIFT=<n>`（=程序槽+资源槽+schema 项+关注节点变化+unknown 项）｜
+  `MAA_UPGRADE_PROGRAM|RESOURCE|SCHEMA|WATCH|UNKNOWN=<n>`｜`PATCH_GUARD=`｜`MAAW_STACK=`（K7 §7.2）｜
+  `MAA_UPGRADE_ALERT=`｜`MAA_UPGRADE_ADVANCE=`｜`MAA_UPGRADE_DONE`。退出码：0=无告警（含 VIOLATION-only）｜1=告警（要人看）｜2=fail-closed UNKNOWN。
+- 运维：停/恢复 `hermes -p mas cron pause|resume 64cba4657be2`（改 = L2，先登卡）；手跑包装脚本；
+  单飞锁 `runtime/upgrade_guard_cron.lock`；链流水 `runtime/upgrade_guard_cron_log.jsonl`。
+- 红线不变：**不自动升级、不自动重放补丁**；本链只做检测/告警/基线。
+- 证据/自测：`docs/audits/2026-09-28_upgrade_guard_takeover/`（包装 selftest 33/33；假漂移/假程序版本/基线不可读三态实跑 + 链上实跑）。
+
+### §7.2 MAAW 栈护栏（K7 接线，2026-09-28）
+
+- 背景：MAAW 生态里 **MXU 会静默自更新它自己和脚下的 MaaFramework**（D5 实测 `_update\` 双 zip + 新目录），而 fw/MaaEnd/pi_cli 路线的识别面（SPA/模板）直接吃 framework ⇒ 版本漂既不告警也不留痕。
+- 工具：`tools/maaw_stack_guard.py`（snapshot/verify/show；**只读被测目录**，写入只落 `runtime/maaw_stack_guard/`）。四件套 = `mxu.exe` FileVersion + `maafw\MaaFramework.dll` sha256 + `maafw\.version`（有则读）+ `interface.json` sha256。默认三目标：`MAAW-MXU`（D:\Xiach\M-A\MAAW\MXU）｜`MAAW-fw`（D:\Xiach\M-A\MAAW\maa-arknights-fw）｜`pi-cli`（runtime\pi_cli）；`--dirs` 可覆盖。
+- 链步（包装新增 ③′）：每轮先跑 MAAW（本地只读；无基线⇒首建；有⇒verify）→ 判据 `MAAW_STACK=OK|DRIFT|UNKNOWN|BOOTSTRAP` 进告警面（**DRIFT/UNKNOWN ⇒ red**：栈是钉版冻结的，任何漂移都不是常态）；**本轮 MAAW=OK 才推进 MAAW 基线**（不推进 ⇒ 告警跨天持续）。
+- 处置：核对来源（MXU 自更新/人工部署）→ fw/MaaEnd/pi_cli 路线先跑 SPA/模板回归再上车 → 确认后 `python tools/maaw_stack_guard.py snapshot` 推进基线。**不自动升级/修复**。
+- 证据：`docs/audits/2026-09-28_maaw_k/K7.md`（工具 selftest 25/25、包装 45/45；假变更夹具 DRIFT 逐项检出；fail-closed rc=2；链上实跑 rc=0）。
 
 ## 附：今日实测记录（2026-09-28）
 
@@ -206,3 +240,4 @@ snapshot ──→ [装新版本] ──→ verify ──→ live ──→ patc
 - live 实测（`runtime/upgrade_guard/live_guan23_run2.json`）：`明日方舟-官-23` @ `MAA_1`，窗口外、空闲槽；**读回成功**：`StartUp=185****3616/true`、`Fight=[SR-7, 1-7]`（吃药 off/0）；`stop` 应答 `code=200` 判 `OK`；判定 `PARTIAL`（MAA 未及启动即停，无切换行）——注入面按预期工作。
 - 跨版本样例：`docs/audits/2026-09-28_maa_6168_to_6180_tasks_diff.md`。
 - 回滚数据：见 §4.1（体积/路径/命令均实测）。
+- 定期链接线（13:1x–13:2x，卡 t_57043dfc）：包装 selftest **33/33**；三态实跑（假漂移⇒`DRIFT`+红线；假基线⇒`UNKNOWN` rc=2；无变更⇒`ALERT=none` rc=0）；链上 cron 实跑 rc=0（`MAA_UPGRADE_DRIFT=0` → 基线推进 `20260928_132127`）。证据 `docs/audits/2026-09-28_upgrade_guard_takeover/`。

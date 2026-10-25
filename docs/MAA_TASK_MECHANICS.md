@@ -1,5 +1,7 @@
 # MAA 任务机制手册（图片识别 ↔ 状态转移 ↔ 点击动作）
 
+> 结论层（机制结论 + 判据）见 KB：[[mech-account-switch]]（切号语义——MAA 任务链侧）；本页为源码级/材料层参考。
+
 > 版本：基于 MAA v6.16 自带 `resource/tasks/tasks.json`（869 个任务定义）实测解剖
 > 用途：搞懂 MAA 任务引擎的完整逻辑链，为**自己定义自定义任务**打基础
 > 配套工具：`tools/task_graph.py`（任务转移图）、`tools/vision_translate.py`（图片转译）、`services/task_explainer.py`（DeepSeek 逻辑问答）

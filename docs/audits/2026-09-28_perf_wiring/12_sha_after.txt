@@ -1,3 +1,0 @@
-aff00a329b31fa4ef3fccfcd9b3821c4bcc2479608d9ed5a5c215a0468e1afe9 *C:/Users/xiach/AppData/Local/hermes/profiles/mas/config.yaml
-9407cc453e88e8f9b3a84e29ae9568ef8e61256fd69255db98c1b84f8b65e250 *tools/mas_observe_mcp.py
-# 补注（22:42）：行1 采于 22:14（翻转后态，非还原态）；config.yaml 已于 22:16:12 还原为备份字节，现行 sha b0b8f784a6ec62f7df26cf22196d41269c3d22ef0cf8c4ad07bd071ed8f19ae4（NETZERO，见 README §4）。

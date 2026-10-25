@@ -1,7 +1,0 @@
-# mas_patch_guard --reapply accswitch_v2（默认 dry-run，真实主机，只读）@ 2026-09-28 10:42:21 +0800
-REAPPLY 目标=E:\AUTO-MAS\app\task\MAA\AutoProxy.py
-  patch=accswitch_v2  作用=多号配置的切号注入：官服 AccountName=掩码手机号 + AccountSwitchEnabled=true；B/日/台一律 AccountName="" + false（一实例一号不切）。只注入账号名而不开开关时 MAA 会静默不切号 ⇒ 官服多号串号（inc-2026-09-27-account-cross-run）。
-  当前 sha256=0f94b53b50445600 (49293 B, mtime 2026-09-28 02:20:15)
-  补丁版 sha256=0f94b53b50445600 (49293 B, 录制于 2026-09-28 09:20:52)
-REAPPLY=ALREADY_PATCHED（当前文件已等于补丁版，无需重放）
-RC=0

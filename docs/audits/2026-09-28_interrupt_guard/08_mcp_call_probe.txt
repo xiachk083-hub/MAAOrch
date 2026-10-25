@@ -1,7 +1,0 @@
-TOOLS(6): mas_preflight, mas_report, mas_idle_emulators, mas_client_state, mas_identity_trail, mas_interrupt_guard
-ok=True interrupt_risk=无 risk_line=INTERRUPT_RISK=无
-version: {"running_n": 3, "rows": [{"idx": 2, "pkg": "com.hypergryph.arknights.bilibili", "versionName": "2.7.71", "lastUpdateTime": "2026-09-04 21:07:08", "status": "new", "baseline_versionName": null}, {"idx": 14, "pkg": "com.hypergryph.arknights", "versionName": "2.7.71", "lastUpdateTime": "2026-09-04 21:56:56", "status": "same", "baseline_versionName": null}, {"idx": 25, "pkg": "com.YoStarJP.Arknights", "versionName": "36.7.22", "lastUpdateTime": "2026-08-13 23:10:59", "status": "same", "baseline_ver
-restart.machines.host.in_flight=2 boot=2026-09-28 04:01:18
-restart.next: [{"machine": "host", "task": "DailyRestart1900", "next": "2026-09-28 19:00:00", "minutes": 521.9, "state": "Ready"}, {"machine": "host", "task": "DailyRestart0400", "next": "2026-09-29 04:00:00", "minutes": 1061.9, "state": "Ready"}]
-signals: []
-elapsed_s=13.2 exit_code=0 error=None

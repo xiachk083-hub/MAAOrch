@@ -1,5 +1,0 @@
-# mas_patch_guard --check @ 2026-09-28 10:06:42 +0800
-# cmd: C:/Users/xiach/AppData/Local/Programs/Python/Python312/python.exe tools/mas_patch_guard.py --check
-补丁闸门: 4 条, OK 4, 丢失 0, 未知 0, 漂移 0, 侧车加载=OK, 2026-09-28 10:06:48
-PATCH_GUARD=OK
-RC=0

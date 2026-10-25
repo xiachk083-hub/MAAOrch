@@ -122,7 +122,7 @@ maa-cli 要接这条得自建：号表-实例映射、错峰、通知、记账�
 ### 2.2 肉鸽 → P1（机队路线 A/看守为主；生产槽路线 B 为辅）；P2 仅实验室
 
 - **生产连刷** = 机队直发：`E:\maa-alas\fz-maa\l\*` 五台（l-1/l-2/l-4/l-5/l-7，MAA **6.17.5**），
-  发车 `MAAOrch-StartOne-<idx>`（值：25/28/31/34/52），看守 `MAAOrch-RogueFleet`（每 2 分钟）——
+  发车 `MAAOrch-StartOne-<idx>`（值：25/28/31/34/52），看守 `tools/rogue_fleet_watch.mjs`（触发者：Hermes cron `mas-rogue-fleet`/`a8049e8f902c`，每 2 分钟；原 schtask `MAAOrch-RogueFleet` 已禁用）——
   形态判据（假完成/卡死/掉线/冻结）与「产线空闲 ≥6 分钟 + 让位区（04:00–05:33 / 18:30–20:30）不发车」是**肉鸽最大风险面**，
   恰恰是机队看守的既有资产。
 - **借生产槽跑一发** = 路线 B（AutoProxy + `IfRoguelike`，全队现状 false）；受控入口是 `mas_scenario_dispatch.py --scenario 肉鸽`

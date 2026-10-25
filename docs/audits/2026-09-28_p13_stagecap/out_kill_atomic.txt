@@ -1,3 +1,0 @@
-RACE mode=atomic reader=raw gap=2ms good=24 torn=0 enoent=0 eacces=0 other=0 [(无 WRITER 行)] killed=1 final_ok=1 tmp_left=1
-RACE mode=atomic reader=raw gap=2ms good=26 torn=0 enoent=0 eacces=3 other=0 [(无 WRITER 行)] killed=1 final_ok=1 tmp_left=2
-RACE mode=atomic reader=raw gap=2ms good=24 torn=0 enoent=0 eacces=1 other=0 [(无 WRITER 行)] killed=1 final_ok=1 tmp_left=3

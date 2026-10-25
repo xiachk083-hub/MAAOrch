@@ -1,169 +1,18 @@
-# Logs
-debug.log
-debug.*.log
-crash.log
-events.log
-events.*.log
-
-# Python cache
+# Python
 __pycache__/
 *.pyc
-*.pyo
 
-# User data (config, stats, backups)
-models/config.json
-models/manual_emu_started.json
-models/accounts/
-models/backups/
-
-# 根目录账号/运行数据（2026-08-10 补充 — 敏感，绝不提交）
-accounts*.json
-acc_state.json
-inst_cfg.json
-oplog.json
-snap.json
-queue.json
-services/queue.json
-services/dispatch_pool.json
-logs/
-project_stderr.log
-project_stderr.txt
-screenshots/
-probe_shots/
-batch_result_*.txt
-.mimosa/
-
-# 根目录测试/调试截图（2026-08-10 补充 — 非项目资源）
-/*.png
-/*.jpg
-/*.jpeg
-
-# MAA binaries
-services/maa/
-
-# Runtime data
-services/queue.json
-services/dispatch_pool.json
-stderr.log
-stderr.txt
-stdout.txt
-
-# Agent (deprecated)
-agent/
-
-# Diagnostics
-services/diagnostics/
-
-# Generated files
-MAAOrch.bat
-启动器.bat
-
-# Node
-node_modules/
-package-lock.json
-
-# Virtual env
-venv/
-.venv/
-env/
-
-# OS
-.DS_Store
-Thumbs.db
-queue_snapshot*.md
-
-# 调试归档（2026-08-12 整理：截图/一次性脚本/历史副本）
-debug/
-
-# ZCode 工具目录（2026-08-12）
-.zcode/
-
-# Playwright MCP 调试日志与临时产物归档（2026-08-14）
-.playwright-mcp/
-debug/scratch_*/
-
-# 运行时数据与编译产物（2026-08-14）
-data/
-
-# 本地 MCP 配置（含本机 SSH 密钥路径，不进公开仓库）
-.mcp.json
-
-# 运行时产物 / 临时文件（元 Agent 启用 --apply 前必须干净）
-_trash/
-_tmp_*.py
-data/agent_run/*.log
-data/agent_run/frames/
-data/agent_run/trace*.jsonl
-asst.log
-*.bak_*
-data/agent_run/agents_health.json
-data/agent_run/iterations.jsonl
-data/agent_run/*.png
-
-# 推图 UI 重试通道的 token（ui/control_server.py 生成；进了仓库 = 局域网谁都能点一键推图）
-ui/control_token.txt
-
-# 推图状态/锁：属于值（UID、进度），不进公开仓库
-tools/push/push_state_*.json
-tools/push/emu_*.lock
-data/_trash/
-
-# 看门狗（含 SMTP 凭据，禁止入库）
-runtime/watchdog.ini
-runtime/watchdog_state.json
-runtime/watchdog.log
-
-# 崩溃转储（含生产主机内存镜像，禁止入库）
-runtime/dumps/
-
-# L3 守护（2026-09-21）：本地私有配置含 Discord webhook，报告/台账/状态是运行产物
-runtime/mas_watch.local.json
-runtime/reports/
-# 原始 ScriptConfig.json（含 DPAPI 密文口令）任何层级的副本都不入库；要账号数据用 tools/mas_accounts.py 现取
-ScriptConfig.json
-runtime/mas_ledger.jsonl
-runtime/mas_watch_state.json
-
-# ── 2026-09-26 清理前安全底座（评估 P0）──────────────────────────────
-# 1) 备份副本必须与本体同规则：原来只挡 models/config.json 精确路径，
-#    新建的 .bak-* 副本会绕过它 —— 实测 models/config.json.bak-19997 与
-#    models/config.json.bak-20260921-184914 内含真实 ai_api_key + api_token，
-#    且远端 xiachk083-hub/MAAOrch 为 public。
-models/config.json*
-*.bak-*
-_ams.json
-_remote_s4.b64
-.dsh-meow/
-
-# 2) 工作区灰区（未忽略、未跟踪 → 一次 git add -A 即污染仓库）
+# local runtime / data
 runtime/
-tools/watch/
-tools/emu_maa_tool/maa_instances/
+data/
+logs/
+debug/
+tmp/
+queue/
+models/config.json
+models/accounts/
+lanes/
 
-# 3) 二进制/产物全局限定（原来只在仓库根生效 -> 子目录 PNG 会被提交）
-*.png
-*.jpg
-*.jpeg
-*.pptx
+# local tooling
 *.log
-*.apk
-
-# 4) 游离的嵌套 git 仓库（无 commit checked out）——会让每一次 git add -A 直接 fatal exit 128
-untitled-project/
-
-# 2026-09-26：审计冻结副本与临时分析件不得入库（78ad828 曾误带 14 文件约 2 万行）
-docs/audits/snapshot/
-.tmp_*.json
-
-# 2026-09-26：非项目内容/工具缓存（未忽略会造成下一次 git add -A 地雷）
-.opencode/
-_sanity_check/
-_anni_check/
-
-# ── 2026-09-28 入库基线复核（t_1ca5e9ee）─────────────────────────────
-# 1) 根级 scratch（探针脚本/取证件/从主机拉回的副本，含原始 MAA 配置副本）
-#    ——过程材料，不是项目内容；`git add -A` 地雷面（实测 500+ 文件）
-/tmp/
-# 2) 凭据暴露审计的原始扫描堆（300MB+；preview 字段含真实凭据前缀，属敏感面）
-#    人读脱敏报告见 docs/CREDENTIAL_EXPOSURE_AUDIT.md；本目录仅本地留证
-docs/audits/2026-09-28_cred_exposure/
+*.zip

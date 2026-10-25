@@ -1,8 +1,0 @@
-TIME: 2026-09-28 09:53:47
-timeout: ok
-== A: --help, stdin=/dev/null
-rc=0 secs=10
-== B: --bogus, stdin=/dev/null
-rc=0 secs=10
-== C: --bogus, stdin kept open (procsub sleep 40), hard timeout 12s
-rc=124 secs=12

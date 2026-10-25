@@ -1,5 +1,0 @@
-{"kind": "probe_farm", "ok": true, "run_id": "pf_wire_iso", "scope": "验收号 × 1-7（success）", "detail": "{\"probe_rc\": 0, \"farm_rc\": 0, \"verdict\": {\"status\": \"success\", \"kind\": \"stage_farmed\"}}", "ts": "2026-09-28 11:29:44"}
-{"kind": "stage_fix", "scope": "Info.Stage_1 -> '1-7' × 6 SR-* users", "ok": true, "detail": "api_ok=6/6, disk_bad=0, disk_pending_flush=0, locked_left=0（隔离演练）", "ts": "2026-09-28T11:29:44"}
-{"ts": "2026-09-28 11:29:44", "kind": "fetch_error", "error": "wire-iso：演练用假错误"}
-{"ts": "2026-09-28 11:29:44", "kind": "rerun", "accounts": ["验收号"], "ok": true, "detail": "（隔离演练，未真发车）"}
-{"kind": "activity_switch", "ok": true, "scope": "{\"server\": \"官\", \"accounts\": 1}", "detail": "apply rc=0 {\"applied\": 1} approved_by=wire-iso（隔离演练）", "ts": "2026-09-28 11:29:44"}

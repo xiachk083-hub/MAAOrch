@@ -1,5 +1,0 @@
-# mas_dispatch_mcp --check @ 2026-09-28 10:15:10 +0800
-mas_dispatch_mcp --check: OK
-  tools=list_schedule,dispatch_due,dispatch_queue,switch_gate,patch_guard
-  reachable=True sent_today=12 due_not_sent=[] late=[] drift=[] alerts=0
-RC=0

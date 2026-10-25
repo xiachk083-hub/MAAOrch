@@ -7,8 +7,10 @@ r"""班次前 GO/NO-GO 自检（发车前 5 分钟）——只读。
     python tools/mas_preflight.py --queue 晚班定时1
     python tools/mas_preflight.py --script 明日方舟-官-1-1-7 --json
     python tools/mas_preflight.py --queue 晚班定时1 --skip-screen
+    python tools/mas_preflight.py --queue 晚班定时1 --deadline 480
 
-末行输出 `PREFLIGHT=GO` 或 `PREFLIGHT=NO-GO`（--json 时输出结构化 JSON）。
+末行输出 `PREFLIGHT=GO` / `PREFLIGHT=NO-GO` / `PREFLIGHT=UNKNOWN`（整单超时等无法
+判定时——按 NO-GO 对待，绝不当作 GO）（--json 时输出结构化 JSON，字段为准）。
 
 检查项（任一 FAIL ⇒ NO-GO；WARN 只提示不阻断）：
   1. REST      AUTO-MAS 可达（POST /api/scripts/get code=200）
@@ -33,6 +35,13 @@ r"""班次前 GO/NO-GO 自检（发车前 5 分钟）——只读。
                ≤15 分钟即刻重启 / ≤45 分钟且宿主在飞 MAA>0 ⇒ FAIL；
                待重启标记、重启落班次窗口、WU 完成重启通道启用 ⇒ WARN（窗口建议只出不改）
 
+健壮性（缺口 G9，非独立检查项；t_df7e533a）：`--deadline` 整单时限（默认 600s，
+env MAAORCH_PREFLIGHT_DEADLINE；0=关）——到点停在当前步骤并输出
+`PREFLIGHT=UNKNOWN`（rc=2），不挂死、绝不当作 GO；与 `--timeout`（单次远端命令）
+分层，剩余不足时自动压小单步超时（≥1s）。REST 探测 1+3 次退避重试
+（`--rest-retries` / `--rest-backoff`）；截图单实例重试 1 次（`--shot-retries`），
+仍无有效 PNG ⇒ 该实例转 SKIP 并注明槽位（不整单失败）。
+
 约束：只读——不启动/不关闭实例、不改任何配置、不发车。
 截图只落本地 --shot-dir（默认 runtime/preflight_shots）。
 
@@ -43,10 +52,12 @@ r"""班次前 GO/NO-GO 自检（发车前 5 分钟）——只读。
   MAAORCH_MUMUMANAGER           默认 E:\MuMu Player 12\nx_main\MuMuManager.exe
   MAAORCH_ADB                   默认 E:\MuMu Player 12\shell\adb.exe
   MAAORCH_PREFLIGHT_SKIP_SCREEN 1/true/on = 跳过第 4 项（等价 --skip-screen）
+  MAAORCH_PREFLIGHT_DEADLINE    整单时限（秒；默认 600，0=关闭；等价 --deadline）
   MAAORCH_LEASE_OWNER           第 3L 项判定「自己的租约」的持有者 id（缺省取
                                 HERMES_KANBAN_TASK；两者都没有 ⇒ 任何在租都算被占）
 
-退出码：0=GO；1=NO-GO；2=无法判定/参数错误。
+退出码：0=GO；1=NO-GO；2=无法判定（--deadline 超时 / 目标解析失败 / 远端异常）
+        或参数错误（UNKNOWN 一律按 NO-GO 对待）。
 OCR 依赖：Python312 + rapidocr_onnxruntime（OCR 不可用时第 4 项 FAIL —— 显式
 --skip-screen 才算跳过，fail-closed）。
 """
@@ -61,6 +72,11 @@ import subprocess
 import sys
 import time
 import urllib.request
+
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+import mas_net  # noqa: E402  G2（t_f79db125）：内网 REST 统一走绕代理 opener
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(TOOLS)
@@ -101,11 +117,71 @@ def norm_dir(p) -> str:
     return s.rstrip("\\")
 
 
+# ---------------------------------------------------------------- G9：整单时限 / REST 重试
+
+class DeadlineExceeded(Exception):
+    """整单时限（--deadline）耗尽（t_df7e533a / 缺口 G9）。
+
+    fail-closed：main() 兜底输出 `PREFLIGHT=UNKNOWN`（rc=2）——不挂死、绝不当作 GO。
+    """
+
+    def __init__(self, stage: str, limit: float, elapsed: float):
+        super().__init__("deadline 超时（限 %.0fs，已用 %.1fs，停在「%s」）" % (limit, elapsed, stage))
+        self.stage, self.limit, self.elapsed = stage, limit, elapsed
+
+
+class Deadline:
+    """整单运行上限（G9）：管「整单」，与管「单次远端命令」的 --timeout 分层（P3-12）。
+
+    到点后各检查点 raise DeadlineExceeded；`eff()` 把单次调用超时压到剩余时限内
+    （下限 1s，避免 0 超时误伤）。
+    """
+
+    def __init__(self, seconds: float | None = None):
+        self.limit = float(seconds) if seconds else 0.0
+        self.t0 = time.monotonic()
+        self.t_end = (self.t0 + self.limit) if self.limit > 0 else None
+
+    def left(self) -> float:
+        return float("inf") if self.t_end is None else (self.t_end - time.monotonic())
+
+    def expired(self) -> bool:
+        return self.t_end is not None and self.left() <= 0
+
+    def elapsed(self) -> float:
+        return time.monotonic() - self.t0
+
+    def check(self, stage: str) -> None:
+        if self.expired():
+            raise DeadlineExceeded(stage, self.limit, self.elapsed())
+
+    def eff(self, nominal: float) -> float:
+        if self.t_end is None:
+            return float(nominal)
+        return max(1.0, min(float(nominal), self.left()))
+
+
+DEADLINE = Deadline(None)          # run_preflight() 按 --deadline 重建；默认关
+_INFLIGHT: dict = {"res": None}    # 半成品 res：deadline 中断时 main() 用它补 UNKNOWN 输出
+
+
+def _set_deadline(seconds) -> None:
+    global DEADLINE
+    DEADLINE = Deadline(seconds)
+
+
+def _default_deadline() -> float:
+    raw = os.environ.get("MAAORCH_PREFLIGHT_DEADLINE", "").strip()
+    try:
+        return float(raw) if raw else 600.0
+    except ValueError:
+        return 600.0
+
+
 def post(path: str, body: dict | None = None, timeout: int = 30) -> dict:
-    req = urllib.request.Request(API + path, data=json.dumps(body if body is not None else {}).encode("utf-8"),
-                                 method="POST", headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
+    """POST /api/… —— G2：走 mas_net 绕代理 opener；G9：时限内压到剩余预算。"""
+    return mas_net.post_json(API + path, body if body is not None else {},
+                             timeout=DEADLINE.eff(timeout))
 
 
 # ---------------------------------------------------------------- ssh 辅助
@@ -120,17 +196,19 @@ def ssh_ps(script: str, timeout: int = 240) -> str:
               "$OutputEncoding=[System.Text.Encoding]::UTF8; [Console]::OutputEncoding=[System.Text.Encoding]::UTF8; ")
     cmd = _ssh_base() + ["chcp 65001 >nul & powershell -NoProfile -Command -"]
     r = subprocess.run(cmd, input=(prefix + script).encode("utf-8"),
-                       capture_output=True, timeout=timeout)
+                       capture_output=True, timeout=DEADLINE.eff(timeout))
     return r.stdout.decode("utf-8", "replace")
 
 
 def ssh_cmd(cmdline: str, timeout: int = 90) -> str:
-    r = subprocess.run(_ssh_base() + [cmdline], capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout)
+    r = subprocess.run(_ssh_base() + [cmdline], capture_output=True, stdin=subprocess.DEVNULL,
+                       timeout=DEADLINE.eff(timeout))
     return r.stdout.decode("utf-8", "replace")
 
 
 def ssh_bytes(cmdline: str, timeout: int = 90) -> bytes:
-    r = subprocess.run(_ssh_base() + [cmdline], capture_output=True, stdin=subprocess.DEVNULL, timeout=timeout)
+    r = subprocess.run(_ssh_base() + [cmdline], capture_output=True, stdin=subprocess.DEVNULL,
+                       timeout=DEADLINE.eff(timeout))
     return r.stdout
 
 
@@ -300,9 +378,12 @@ def pkg_class(pkg: str) -> str:
     return "other"
 
 
-def screencap(serial: str, outdir: str, tag: str, timeout: int = 90) -> str:
+def screencap(serial: str, outdir: str, tag: str, timeout: int = 90, retries: int = 1) -> str:
+    """截图（G9）：失败重试 retries 次（默认 1，共 2 次尝试）；仍失败返回 ""——
+    调用侧转 SKIP（`shot_missing_entry`），不整单失败。"""
     os.makedirs(outdir, exist_ok=True)
-    for attempt in (0, 1):
+    attempts = max(1, 1 + int(retries))
+    for attempt in range(attempts):
         try:
             b = ssh_bytes('cmd /S /c ""%s" -s %s exec-out screencap -p"' % (ADB, serial), timeout=timeout)
         except Exception:  # noqa: BLE001
@@ -312,8 +393,15 @@ def screencap(serial: str, outdir: str, tag: str, timeout: int = 90) -> str:
             with open(path, "wb") as f:
                 f.write(b)
             return path
-        time.sleep(1.0)
+        if attempt < attempts - 1:
+            time.sleep(1.0)
     return ""
+
+
+def shot_missing_entry(attempts: int) -> dict:
+    """截图重试后仍无有效 PNG（G9）→ 单实例转 SKIP，注明尝试次数；不整单失败。"""
+    return {"status": "SKIP", "shot_failed": True,
+            "detail": "截图取证失败（screencap 无有效 PNG；共 %d 次尝试）——转 SKIP，不整单失败（G9）" % attempts}
 
 
 # ---------------------------------------------------------------- 注入闸门（第 5 项）
@@ -333,6 +421,7 @@ def gate_meta_for(targets: list) -> dict:
     """{dir_lower: {"servers": set, "masks": set, "odd_official_id_lens": set}}（账号侧只读）。"""
     meta: dict = {}
     for t in targets:
+        DEADLINE.check("第 5 项：账号元数据 %s" % t["name"])
         d = t["dir"].lower()
         m = meta.setdefault(d, {"servers": set(), "masks": set(), "odd_official_id_lens": set(),
                                 "scripts": [t["name"]]})
@@ -372,12 +461,29 @@ class TargetError(Exception):
     """目标名不存在/不唯一（用法问题，退出码 2）。"""
 
 
-def reachable() -> tuple:
-    try:
-        r = post("/api/scripts/get", {}, timeout=15)
-        return (r.get("code") == 200), "code=%s" % r.get("code")
-    except Exception as e:  # noqa: BLE001
-        return False, "%s: %s" % (type(e).__name__, e)
+def reachable(retries: int = 3, backoff: float = 1.0) -> tuple:
+    """REST 探测（G9）：1 次首探 + retries 次退避重试（退避翻倍），全败才判不可达。
+
+    deadline 剩余不足时抛 DeadlineExceeded（→ UNKNOWN），绝不在这里吞掉。
+    """
+    attempts = max(1, 1 + int(retries))
+    last, log = "", []
+    for i in range(attempts):
+        DEADLINE.check("第 1 项：REST 探测")
+        try:
+            r = post("/api/scripts/get", {}, timeout=15)
+            if r.get("code") == 200:
+                if i:
+                    return True, "code=200（第 %d/%d 次尝试成功：%s）" % (i + 1, attempts, "；".join(log))
+                return True, "code=200"
+            last = "code=%s" % r.get("code")
+        except Exception as e:  # noqa: BLE001
+            last = "%s: %s" % (type(e).__name__, e)
+        log.append("第 %d/%d 次失败（%s）" % (i + 1, attempts, last))
+        if i < attempts - 1:
+            time.sleep(min(backoff * (2 ** i), max(0.0, DEADLINE.left())))
+            DEADLINE.check("第 1 项：REST 探测（退避重试中）")
+    return False, "%d 次尝试均失败（退避 %.1fs 起翻倍）：%s" % (attempts, backoff, last)
 
 
 def fetch_scripts() -> dict:
@@ -422,9 +528,29 @@ def resolve_targets(a) -> dict:
         sid = ((v or {}).get("Info") or {}).get("ScriptId")
         s = scripts.get(str(sid))
         if s:
-            targets.append(s)
+            DEADLINE.check("目标解析：用户启用位 %s" % s["name"])
+            reply = post("/api/scripts/user/get", {"scriptId": s["sid"]})
+            if not isinstance(reply, dict) or reply.get("code") != 200:
+                raise RuntimeError("脚本 %r 用户启用位读取失败" % s["name"])
+            users = reply.get("data")
+            if not isinstance(users, dict) or not users:
+                raise RuntimeError("脚本 %r 用户列表为空或无效" % s["name"])
+            statuses = []
+            for uid, user in users.items():
+                if uid == "instances":
+                    continue
+                info = user.get("Info") if isinstance(user, dict) else None
+                status = info.get("Status") if isinstance(info, dict) else None
+                if not isinstance(status, bool):
+                    raise RuntimeError("脚本 %r 用户启用位缺失或无效" % s["name"])
+                statuses.append(status)
+            if not statuses:
+                raise RuntimeError("脚本 %r 无可判定的用户启用位" % s["name"])
+            # 只有明确全禁用才排除；未知/读取失败上抛，绝不按禁用放行。
+            if any(statuses):
+                targets.append(s)
     if not targets:
-        raise RuntimeError("队列 %r 无有效脚本项" % a.queue)
+        raise RuntimeError("队列 %r 无有效启用脚本项" % a.queue)
     return {"kind": "queue", "name": a.queue, "queue_id": quid, "targets": targets}
 
 
@@ -472,16 +598,19 @@ def run_preflight(a) -> dict:
     started = dt.datetime.now()
     res = {"tool": "mas_preflight", "generated_at": started.strftime("%Y-%m-%d %H:%M:%S"),
            "api": API, "target": None, "checks": {}, "reasons": [], "preflight": "NO-GO"}
+    _set_deadline(getattr(a, "deadline", 0))   # G9：整单时限（0/None=关）
+    _INFLIGHT["res"] = res                     # deadline 中断时 main() 用它补 UNKNOWN 输出
 
-    # --- 第 1 项：REST 可达
-    ok, why = reachable()
+    # --- 第 1 项：REST 可达（G9：1+3 次退避重试）
+    ok, why = reachable(retries=getattr(a, "rest_retries", 3), backoff=getattr(a, "rest_backoff", 1.0))
     if not ok:
         res["checks"]["rest"] = {"status": "FAIL", "detail": "AUTO-MAS 不可达：%s" % why}
         res["reasons"].append("AUTO-MAS REST 不可达（%s）" % why)
         return res
-    res["checks"]["rest"] = {"status": "PASS", "detail": "POST /api/scripts/get code=200 @%s" % API}
+    res["checks"]["rest"] = {"status": "PASS", "detail": "POST /api/scripts/get %s @%s" % (why, API)}
 
     # --- 目标解析
+    DEADLINE.check("目标解析")
     res["target"] = resolve_targets(a)  # TargetError 上抛给 main（退出码 2）
 
     tg = res["target"]["targets"]
@@ -492,6 +621,7 @@ def run_preflight(a) -> dict:
     tg_desc = "%s → %d 脚本 / %d 目录 / %d 实例" % (nm, len(tg), len(dirs), len(emus))
 
     # --- 远端巡检（第 2/3/6 项的前置）
+    DEADLINE.check("第 2/3/6 项：远端巡检")
     try:
         survey = remote_survey(timeout=a.timeout)
         ssh_ok, ssh_err = True, ""
@@ -535,6 +665,7 @@ def run_preflight(a) -> dict:
         res["checks"]["residual"] = {"status": "SKIP", "detail": "远端不可达", "per_idx": {}}
         res["reasons"].append("实例检查失败：远端 ssh 不可达")
     else:
+        DEADLINE.check("第 3 项：端口映射")
         try:
             ports_map = netstat_ports()
         except Exception:  # noqa: BLE001
@@ -542,9 +673,11 @@ def run_preflight(a) -> dict:
         off_idxs = [i for i in emus if i not in survey["vmm"]]
         info = mumu_info(off_idxs) if off_idxs else {}
         skip_screen = a.skip_screen or SKIP_SCREEN_ENV
+        shot_retries = max(0, int(getattr(a, "shot_retries", 1)))   # G9：单实例截图重试次数
         ocr_err = ""
         # 第一遍：连通性（第 3 项）
         for i in emus:
+            DEADLINE.check("第 3 项：实例探测 idx=%s" % i)
             row = {"idx": i, "running": i in survey["vmm"]}
             if row["running"]:
                 ports = ports_map.get(int(survey["vmm"][i]), [])
@@ -580,8 +713,9 @@ def run_preflight(a) -> dict:
             except Exception as e:  # noqa: BLE001
                 ocr_err = "OCR 不可用（%s）——用 Python312+rapidocr 或显式 --skip-screen" % e
             busy_dirs = {x["dir"] for x in slot_items if x["busy"]}
-            resid_fail, resid_warn = [], []
+            resid_fail, resid_warn, resid_shot_skip = [], [], []
             for i in emus:
+                DEADLINE.check("第 4 项：残留画面 idx=%s" % i)
                 row = emu_rows[i]
                 if row.get("adb") != "ok":
                     resid_rows[i] = {"status": "SKIP", "detail": "实例未运行/不可连，无残留可查"}
@@ -595,13 +729,13 @@ def run_preflight(a) -> dict:
                     resid_fail.append(i)
                     continue
                 tag = "idx%s_%s" % (i, os.path.basename(d) or "slot")
-                shot = screencap(row["serial"], a.shot_dir, tag, timeout=a.timeout)
+                shot = screencap(row["serial"], a.shot_dir, tag, timeout=a.timeout, retries=shot_retries)
                 fg = foreground_pkg(row["serial"], timeout=a.timeout)
                 entry = {"status": "PASS", "shot": shot, "foreground": fg, "pkg_class": pkg_class(fg),
                          "block": [], "warn": [], "detail": ""}
                 if not shot:
-                    entry.update(status="FAIL", detail="截图取证失败（screencap 无有效 PNG）")
-                    resid_fail.append(i)
+                    entry.update(shot_missing_entry(1 + shot_retries))   # G9：转 SKIP，不整单失败
+                    resid_shot_skip.append(i)
                 else:
                     try:
                         lines = ocr_texts(shot)
@@ -627,9 +761,10 @@ def run_preflight(a) -> dict:
             checked = {i: r for i, r in resid_rows.items() if r.get("status") != "SKIP"}
             if not checked and not resid_fail:
                 st = "SKIP"
+            parts = ["idx%s: %s" % (i, r.get("detail")) for i, r in checked.items()]
+            parts += ["idx%s: %s" % (i, resid_rows[i].get("detail")) for i in resid_shot_skip]  # G9：注明截图失败槽位
             res["checks"]["residual"] = {"status": st, "per_idx": resid_rows,
-                                         "detail": ("; ".join("idx%s: %s" % (i, r.get("detail"))
-                                                              for i, r in checked.items()) or "无在跑实例可查")}
+                                         "detail": "; ".join(parts) or "无在跑实例可查"}
             if resid_fail:
                 res["reasons"].append("残留画面：" + "; ".join("idx%s(%s)" % (i, resid_rows[i].get("detail")) for i in resid_fail))
 
@@ -639,6 +774,7 @@ def run_preflight(a) -> dict:
         res["reasons"].append("实例租约：" + str(res["checks"]["lease"].get("detail") or ""))
 
     # --- 第 5 项：注入闸门
+    DEADLINE.check("第 5 项：注入闸门")
     G = gate_module()
     if G is None:
         res["checks"]["config_gate"] = {"status": "FAIL", "detail": "mas_switch_gate.py 不可导入（需与其同目录）", "per_dir": {}}
@@ -695,8 +831,10 @@ def run_preflight(a) -> dict:
         res["checks"]["client_version"] = {"status": "FAIL", "detail": "interrupt_guard.py 不可导入（需与其同目录）", "per_idx": {}}
         res["reasons"].append("客户端版本：脚本缺失")
     else:
+        DEADLINE.check("第 7 项：客户端版本")
         try:
-            vres = IG.version_check(idxs=[int(i) for i in emus], maxn=max(6, len(emus)), timeout=a.timeout)
+            vres = IG.version_check(idxs=[int(i) for i in emus], maxn=max(6, len(emus)),
+                                    timeout=int(DEADLINE.eff(a.timeout)))
             cmp = vres["compare"]
             off = [i for i in emus if not any(str(r["idx"]) == str(i) for r in cmp["rows"])]
             per = {str(c["idx"]): {"pkg": c["pkg"], "versionName": c.get("versionName"),
@@ -736,8 +874,9 @@ def run_preflight(a) -> dict:
         res["reasons"].append("宿主重启：脚本缺失")
     else:
         HARD = ("restart_imminent", "restart_soon_active")
+        DEADLINE.check("第 8 项：宿主重启")
         try:
-            rres = IG.restart_check(scope=("host", "local"), timeout=a.timeout)
+            rres = IG.restart_check(scope=("host", "local"), timeout=int(DEADLINE.eff(a.timeout)))
             sigs = rres.get("signals") or []
             hard = [s for s in sigs if s["kind"] in HARD]
             soft = [s for s in sigs if s["kind"] not in HARD]
@@ -771,6 +910,7 @@ def run_preflight(a) -> dict:
     fails = [k for k, v in res["checks"].items() if v.get("status") == "FAIL"]
     res["preflight"] = "NO-GO" if fails else "GO"
     res["failing_checks"] = fails
+    res["deadline"] = {"limit_s": (DEADLINE.limit or None), "elapsed_s": round(DEADLINE.elapsed(), 1)}
     return res
 
 
@@ -829,9 +969,25 @@ def print_report(res: dict, as_json: bool) -> None:
         print("  - %s" % r)
 
 
+def finalize_deadline(res, exc: "DeadlineExceeded") -> dict:
+    """G9：整单时限中断 ⇒ 半成品 res 补成 UNKNOWN（fail-closed，绝不当作 GO）。"""
+    if not isinstance(res, dict) or res.get("tool") != "mas_preflight":
+        res = {"tool": "mas_preflight", "generated_at": dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+               "api": API, "target": None, "checks": {}, "reasons": []}
+    res["preflight"] = "UNKNOWN"
+    res["deadline"] = {"limit_s": round(exc.limit, 1), "elapsed_s": round(exc.elapsed, 1), "stage": exc.stage}
+    res["failing_checks"] = [k for k, v in (res.get("checks") or {}).items()
+                             if (v or {}).get("status") == "FAIL"]
+    res.setdefault("reasons", []).append(
+        "deadline 超时（限 %.0fs，已用 %.1fs，停在「%s」）——按 UNKNOWN 处理（与 NO-GO 同效），绝不当作 GO"
+        % (exc.limit, exc.elapsed, exc.stage))
+    return res
+
+
 # ---------------------------------------------------------------- 自检
 
 def selftest() -> int:
+    global post, DEADLINE, ssh_bytes   # G9 用例用假传输替换/还原（零网络）
     bad = 0
 
     def ck(label, got, want):
@@ -906,6 +1062,103 @@ def selftest() -> int:
     finally:
         shutil.rmtree(tmp_lease, ignore_errors=True)
 
+    # G9：整单时限 Deadline 本体（t_df7e533a）
+    dl_off = Deadline(None)
+    ck("deadline 关 ⇒ 不设限", (dl_off.expired(), dl_off.eff(240), dl_off.left() == float("inf")), (False, 240.0, True))
+    ck("deadline eff 下限 1s", Deadline(0.01).eff(240), 1.0)
+    ck("deadline eff 压到剩余内", 1.0 < Deadline(60.0).eff(240) <= 60.0, True)
+    dl_on = Deadline(0.05)
+    t_wait = time.monotonic()          # 轮询等到点（对早醒的 sleep 稳健）
+    while not dl_on.expired() and time.monotonic() - t_wait < 1.0:
+        time.sleep(0.01)
+    ck("deadline 到点 expired", dl_on.expired(), True)
+    stage = ""
+    try:
+        dl_on.check("阶段X")
+    except DeadlineExceeded as e:
+        stage = e.stage
+    ck("deadline 到点 raise 带 stage", stage, "阶段X")
+
+    # G9：deadline 中断 ⇒ UNKNOWN（绝不 GO）
+    exc = DeadlineExceeded("单测阶段", 5.0, 5.3)
+    r2 = finalize_deadline({"tool": "mas_preflight", "checks": {"rest": {"status": "PASS"}}, "reasons": [],
+                            "preflight": "NO-GO"}, exc)
+    ck("deadline 中断 ⇒ UNKNOWN", r2["preflight"], "UNKNOWN")
+    ck("deadline 块带 stage", r2["deadline"]["stage"], "单测阶段")
+    ck("deadline 原因入 reasons", any("deadline" in x for x in r2["reasons"]), True)
+    ck("deadline 无半成品也不炸", finalize_deadline(None, exc)["preflight"], "UNKNOWN")
+
+    # G9：REST 探测重试（假 post；零网络）
+    saved_post, saved_deadline = post, DEADLINE
+    calls = {"n": 0}
+
+    def fake_post_flaky(path, body=None, timeout=30):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise OSError("connection refused (fake)")
+        return {"code": 200}
+
+    post = fake_post_flaky
+    DEADLINE = Deadline(None)
+    ok, why = reachable(retries=3, backoff=0.0)
+    ck("rest 第 3 次尝试成功", (ok, calls["n"]), (True, 3))
+    ck("rest 成功注记尝试数", why.startswith("code=200（第 3/4 次"), True)
+
+    def fake_post_dead(path, body=None, timeout=30):
+        calls["n"] += 1
+        raise OSError("connection refused (fake)")
+
+    calls["n"] = 0
+    post = fake_post_dead
+    ok, why = reachable(retries=2, backoff=0.0)
+    ck("rest 重试耗尽 ⇒ FAIL", (ok, calls["n"]), (False, 3))
+    ck("rest 耗尽说明带次数", "3 次尝试均失败" in why, True)
+
+    calls["n"] = 0
+
+    def fake_post_expire(path, body=None, timeout=30):
+        calls["n"] += 1
+        DEADLINE.t_end = time.monotonic() - 0.001   # 第 1 次调用后时限到点（不依赖 sleep 精度）
+        raise OSError("connection refused (fake)")
+
+    post = fake_post_expire
+    DEADLINE = Deadline(10.0)
+    dline = False
+    try:
+        reachable(retries=3, backoff=0.0)
+    except DeadlineExceeded:
+        dline = True
+    ck("rest 重试途中 deadline ⇒ 抛", (dline, calls["n"]), (True, 1))
+    post, DEADLINE = saved_post, saved_deadline
+
+    # G9：截图重试 + 失败转 SKIP（假 ssh_bytes；零网络/零实例）
+    saved_ssh = ssh_bytes
+    shotdir = tempfile.mkdtemp(prefix="mas_preflight_shot_selftest_")
+    sc_calls = {"n": 0}
+
+    def fake_ssh_garbage(cmdline, timeout=90):
+        sc_calls["n"] += 1
+        return b"not-a-png"
+
+    try:
+        ssh_bytes = fake_ssh_garbage
+        got = screencap("127.0.0.1:1", shotdir, "fake_bad", timeout=5, retries=1)
+        ck("screencap 重试后仍坏 ⇒ ''", (got, sc_calls["n"]), ("", 2))
+
+        def fake_ssh_second_ok(cmdline, timeout=90):
+            sc_calls["n"] += 1
+            return b"" if sc_calls["n"] < 2 else (PNG_MAGIC + b"0" * 20000)
+
+        ssh_bytes = fake_ssh_second_ok
+        sc_calls["n"] = 0
+        got = screencap("127.0.0.1:1", shotdir, "fake_ok", timeout=5, retries=1)
+        ck("screencap 第 2 次成功落盘", (bool(got), sc_calls["n"], os.path.isfile(got) if got else False),
+           (True, 2, True))
+        ck("截图失败转 SKIP（非 FAIL）", shot_missing_entry(2)["status"], "SKIP")
+    finally:
+        ssh_bytes = saved_ssh
+        shutil.rmtree(shotdir, ignore_errors=True)
+
     print("selftest: %s (%d 失败)" % ("OK" if not bad else "FAIL", bad))
     return 0 if not bad else 1
 
@@ -923,7 +1176,13 @@ def main() -> int:
     ap.add_argument("--min-free-gb", type=float, default=10.0, help="磁盘 FAIL 阈值（默认 10GB）")
     ap.add_argument("--warn-free-gb", type=float, default=30.0, help="磁盘 WARN 阈值（默认 30GB）")
     ap.add_argument("--shot-dir", default=os.path.join(ROOT, "runtime", "preflight_shots"))
-    ap.add_argument("--timeout", type=int, default=240, help="单次远端命令超时（秒）")
+    ap.add_argument("--timeout", type=int, default=240, help="单次远端命令超时（秒；与整单 --deadline 分层）")
+    ap.add_argument("--deadline", type=float, default=_default_deadline(),
+                    help="整单运行上限（秒；0=关闭；默认 600，env MAAORCH_PREFLIGHT_DEADLINE）。"
+                         "到点停在当前步骤并输出 PREFLIGHT=UNKNOWN（rc=2），不挂死")
+    ap.add_argument("--rest-retries", type=int, default=3, help="REST 探测重试次数（默认 3，退避翻倍）")
+    ap.add_argument("--rest-backoff", type=float, default=1.0, help="REST 重试退避基数秒（默认 1.0，翻倍）")
+    ap.add_argument("--shot-retries", type=int, default=1, help="截图单实例重试次数（默认 1；仍失败转 SKIP）")
     ap.add_argument("--selftest", action="store_true", help="本地规则自检（不连网）")
     a = ap.parse_args()
     if a.selftest:
@@ -938,6 +1197,10 @@ def main() -> int:
         res = run_preflight(a)
     except TargetError as e:
         print(str(e), file=sys.stderr)
+        return 2
+    except DeadlineExceeded as e:   # G9：整单超时 → UNKNOWN（fail-closed，绝不 GO）
+        res = finalize_deadline(_INFLIGHT.get("res"), e)
+        print_report(res, a.json)
         return 2
     except Exception as e:  # noqa: BLE001
         print("preflight 执行失败: %s: %s" % (type(e).__name__, e), file=sys.stderr)
